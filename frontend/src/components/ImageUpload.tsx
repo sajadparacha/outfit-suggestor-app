@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState, useEffect } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 
 interface ImageUploadProps {
@@ -19,10 +19,6 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   loading
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [showCamera, setShowCamera] = useState(false);
-  const [stream, setStream] = useState<MediaStream | null>(null);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -49,118 +45,12 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     }
   };
 
-  const openCamera = async () => {
-    try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: 'environment', // Try back camera first
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        } 
-      });
-      setStream(mediaStream);
-      setShowCamera(true);
-      
-      // Set the video source
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
-    } catch (error) {
-      console.error('Error accessing camera:', error);
-      // Fallback to file input
-      fileInputRef.current?.click();
-    }
-  };
-
-  const capturePhoto = () => {
-    if (videoRef.current && canvasRef.current) {
-      const canvas = canvasRef.current;
-      const video = videoRef.current;
-      const context = canvas.getContext('2d');
-      
-      if (context) {
-        // Set canvas dimensions to match video
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        
-        // Draw the video frame to canvas
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        // Convert canvas to blob
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
-            setImage(file);
-            closeCamera();
-          }
-        }, 'image/jpeg', 0.8);
-      }
-    }
-  };
-
-  const closeCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-    }
-    setShowCamera(false);
-  };
-
   const openFileDialog = () => {
     fileInputRef.current?.click();
   };
 
-  // Cleanup camera stream on component unmount
-  useEffect(() => {
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, [stream]);
-
   return (
     <div className="space-y-6">
-      {/* Camera Modal */}
-      {showCamera && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="text-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">Take a Photo</h3>
-              <p className="text-sm text-gray-600">Position your item in the frame and click capture</p>
-            </div>
-            
-            <div className="relative">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                className="w-full h-64 object-cover rounded-lg"
-              />
-              <canvas
-                ref={canvasRef}
-                className="hidden"
-              />
-            </div>
-            
-            <div className="flex gap-3 mt-4">
-              <button
-                onClick={capturePhoto}
-                className="flex-1 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
-              >
-                📸 Capture Photo
-              </button>
-              <button
-                onClick={closeCamera}
-                className="flex-1 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Image Upload Area */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -207,33 +97,19 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
               <p className="text-lg text-gray-600">
                 {isDragActive ? 'Drop the image here' : 'Drag & drop an image here'}
               </p>
-              <p className="text-sm text-gray-500">or choose an option below</p>
+              <p className="text-sm text-gray-500">or click below to browse</p>
               
-              {/* Upload Options */}
-              <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
+              {/* Upload Button */}
+              <div className="flex justify-center mt-4">
                 <button
                   onClick={openFileDialog}
-                  className="flex items-center justify-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                  className="flex items-center justify-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
                 >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                   </svg>
                   Choose File
                 </button>
-                {/* 
-                <button
-                  onClick={openCamera}
-                  className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                >
-
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  Open Camera
-                </button>
-              */}
-                
               </div>
               
               <p className="text-xs text-gray-400">
