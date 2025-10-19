@@ -1,6 +1,13 @@
-# Outfit Suggestor App
+# 👔 Outfit Suggestor App
 
-An AI-powered outfit suggestion application that analyzes clothing images and provides complete outfit recommendations.
+> An AI-powered fashion assistant that analyzes your clothing and suggests complete outfits!
+
+[![Live Demo](https://img.shields.io/badge/demo-live-success)](https://sajadparacha.github.io/outfit-suggestor-app)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.12-blue)](https://www.python.org/)
+[![React](https://img.shields.io/badge/react-19-blue)](https://reactjs.org/)
+
+**Upload a photo of your shirt or blazer → Get AI-powered complete outfit suggestions!**
 
 ## Features
 
@@ -24,58 +31,32 @@ An AI-powered outfit suggestion application that analyzes clothing images and pr
 - PIL for image processing
 - Uvicorn ASGI server
 
-## Local Development
+## 🚀 Quick Start
 
-### Prerequisites
-- Node.js 16+ 
-- Python 3.8+
-- OpenAI API key
+```bash
+# 1. Clone and setup
+git clone https://github.com/sajadparacha/outfit-suggestor-app.git
+cd outfit-suggestor-app
 
-### Setup
+# 2. Backend setup
+cd backend
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+echo "OPENAI_API_KEY=your_key_here" > .env
 
-1. **Clone the repository**
-   ```bash
-   git clone <your-repo-url>
-   cd outfit-suggestor-app
-   ```
+# 3. Frontend setup
+cd ../frontend
+npm install
 
-2. **Backend Setup**
-   ```bash
-   cd backend
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   pip install -r requirements.txt
-   ```
+# 4. Run the app
+cd ..
+./start.sh
+```
 
-3. **Environment Variables**
-   Create `backend/.env`:
-   ```
-   OPENAI_API_KEY=your_openai_api_key_here
-   ```
+**That's it!** Open http://localhost:3000/outfit-suggestor-app
 
-4. **Frontend Setup**
-   ```bash
-   cd frontend
-   npm install
-   ```
-
-5. **Run the Application**
-   ```bash
-   # From project root
-   ./start.sh
-   ```
-
-   Or run separately:
-   ```bash
-   # Terminal 1 - Backend
-   cd backend
-   source venv/bin/activate
-   python main.py
-
-   # Terminal 2 - Frontend  
-   cd frontend
-   npm start
-   ```
+📖 **Need more details?** See [QUICKSTART.md](QUICKSTART.md) or [SETUP_GUIDE.md](SETUP_GUIDE.md)
 
 ## Deployment
 
