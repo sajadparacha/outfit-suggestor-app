@@ -1,4 +1,4 @@
-# Outfit Suggestor App
+# AI Outfit Suggestor App
 
 An AI-powered outfit suggestion application that analyzes clothing images and provides complete outfit recommendations.
 

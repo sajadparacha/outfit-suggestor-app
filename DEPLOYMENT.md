@@ -1,4 +1,4 @@
-# Deployment Guide
+# AI Outfit Suggestor - Deployment Guide
 
 ## Frontend Deployment (GitHub Pages)
 
