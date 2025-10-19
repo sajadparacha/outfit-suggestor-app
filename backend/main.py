@@ -20,8 +20,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",  # React dev server
-        "https://*.github.io",    # GitHub Pages
-        "https://yourusername.github.io"  # Replace with your actual GitHub Pages URL
+        "https://sajadparacha.github.io"  # GitHub Pages URL
     ],
     allow_credentials=True,
     allow_methods=["*"],
