@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Start script for Outfit Suggestor App
+# Start script for AI Outfit Suggestor App
 
-echo "Starting Outfit Suggestor App..."
+echo "Starting AI Outfit Suggestor App..."
 
 # Check if .env file exists in backend
 if [ ! -f "backend/.env" ]; then

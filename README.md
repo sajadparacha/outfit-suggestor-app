@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # 👔 Outfit Suggestor App
+=======
+# AI Outfit Suggestor App
+>>>>>>> main
 
 > An AI-powered fashion assistant that analyzes your clothing and suggests complete outfits!
 

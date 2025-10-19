@@ -58,7 +58,7 @@ function App() {
         <div className="max-w-4xl mx-auto">
           <header className="text-center mb-8">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
-              Outfit Suggestor
+              AI Outfit Suggestor
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
               Upload a photo of your shirt or blazer and get personalized outfit suggestions powered by AI

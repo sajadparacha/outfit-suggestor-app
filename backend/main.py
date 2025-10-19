@@ -13,7 +13,7 @@ import json
 load_dotenv()
 
 # Initialize FastAPI app
-app = FastAPI(title="Outfit Suggestor API", version="1.0.0")
+app = FastAPI(title="AI Outfit Suggestor API", version="1.0.0")
 
 # Configure CORS
 app.add_middleware(
@@ -153,7 +153,7 @@ def get_outfit_suggestion(image_base64: str, text_input: str = "") -> OutfitSugg
 
 @app.get("/")
 async def root():
-    return {"message": "Outfit Suggestor API is running!"}
+    return {"message": "AI Outfit Suggestor API is running!"}
 
 @app.post("/api/suggest-outfit", response_model=OutfitSuggestion)
 async def suggest_outfit(
