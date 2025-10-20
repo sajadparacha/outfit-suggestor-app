@@ -1,25 +1,43 @@
 import React, { useState } from 'react';
-import ImageUpload from './components/ImageUpload';
-import OutfitSuggestionComponent from './components/OutfitSuggestion';
-import LoadingSpinner from './components/LoadingSpinner';
+import Hero from './components/Hero';
+import Sidebar from './components/Sidebar';
+import OutfitPreview from './components/OutfitPreview';
+import Toast from './components/Toast';
+import Footer from './components/Footer';
 
 interface OutfitSuggestion {
+  id: string;
   shirt: string;
   trouser: string;
   blazer: string;
   shoes: string;
   belt: string;
   reasoning: string;
+  imageUrl?: string;
+  raw?: unknown;
+  meta?: { usedPrompt: string };
+}
+
+interface Filters {
+  occasion: string;
+  season: string;
+  style: string;
 }
 
 function App() {
   const [image, setImage] = useState<File | null>(null);
-  const [textInput, setTextInput] = useState('');
-  const [suggestion, setSuggestion] = useState<OutfitSuggestion | null>(null);
+  const [filters, setFilters] = useState<Filters>({
+    occasion: 'casual',
+    season: 'all',
+    style: 'modern'
+  });
+  const [preferenceText, setPreferenceText] = useState<string>('');
+  const [currentSuggestion, setCurrentSuggestion] = useState<OutfitSuggestion | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  const handleSubmit = async () => {
+  const handleGetSuggestion = async () => {
     if (!image) {
       setError('Please upload an image first');
       return;
@@ -31,7 +49,12 @@ function App() {
     try {
       const formData = new FormData();
       formData.append('image', image);
-      formData.append('text_input', textInput);
+      // Prefer free-text if provided, otherwise fall back to structured filters
+      const trimmed = preferenceText.trim();
+      const prompt = trimmed.length > 0
+        ? `User preferences (free-text): ${trimmed}`
+        : `Occasion: ${filters.occasion}, Season: ${filters.season}, Style: ${filters.style}`;
+      formData.append('text_input', prompt);
 
       const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8001';
       const response = await fetch(`${apiUrl}/api/suggest-outfit`, {
@@ -44,7 +67,13 @@ function App() {
       }
 
       const data = await response.json();
-      setSuggestion(data);
+      setCurrentSuggestion({
+        ...data,
+        id: Date.now().toString(),
+        imageUrl: image ? URL.createObjectURL(image) : undefined,
+        raw: data,
+        meta: { usedPrompt: prompt }
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -52,41 +81,67 @@ function App() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          <header className="text-center mb-8">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
-              AI Outfit Suggestor
-            </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Upload a photo of your shirt or blazer and get personalized outfit suggestions powered by AI
-            </p>
-          </header>
+  const handleLike = () => {
+    showToast('Thanks for the feedback! 👍', 'success');
+  };
 
-          <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8 mb-8">
-            <ImageUpload 
-              image={image} 
+  const handleDislike = () => {
+    showToast('We\'ll improve our suggestions! 👎', 'success');
+    handleGetSuggestion(); // Get a new suggestion
+  };
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Hero Section */}
+      <Hero />
+
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+          {/* Left Sidebar */}
+          <div className="lg:col-span-3">
+            <Sidebar 
+              filters={filters}
+              setFilters={setFilters}
+              preferenceText={preferenceText}
+              setPreferenceText={setPreferenceText}
+              image={image}
               setImage={setImage}
-              textInput={textInput}
-              setTextInput={setTextInput}
-              onSubmit={handleSubmit}
+              onGetSuggestion={handleGetSuggestion}
               loading={loading}
             />
           </div>
 
-          {loading && <LoadingSpinner />}
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-8">
-              <p className="text-red-600">{error}</p>
-            </div>
-          )}
-
-          {suggestion && <OutfitSuggestionComponent suggestion={suggestion} />}
+          {/* Main Content Area */}
+          <div className="lg:col-span-9">
+            <OutfitPreview
+              suggestion={currentSuggestion}
+              loading={loading}
+              error={error}
+              onLike={handleLike}
+              onDislike={handleDislike}
+              onNext={handleGetSuggestion}
+            />
+          </div>
         </div>
       </div>
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }
