@@ -28,6 +28,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   loading
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -69,6 +70,13 @@ const Sidebar: React.FC<SidebarProps> = ({
       if (file.type.startsWith('image/')) {
         setImage(file);
       }
+    }
+  };
+
+  const handleCameraCapture = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setImage(file);
     }
   };
 
@@ -136,6 +144,30 @@ const Sidebar: React.FC<SidebarProps> = ({
           className="hidden"
           aria-label="File input for clothing photo"
         />
+        
+        {/* Camera Button */}
+        <div className="mt-3">
+          <button
+            onClick={() => cameraInputRef.current?.click()}
+            className="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-medium hover:from-blue-600 hover:to-blue-700 transition-all shadow-md flex items-center justify-center space-x-2"
+            aria-label="Take photo with camera"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span>📷 Take Photo with Camera</span>
+          </button>
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleCameraCapture}
+            className="hidden"
+            aria-label="Camera input for clothing photo"
+          />
+        </div>
       </div>
 
       {/* Filters */}
