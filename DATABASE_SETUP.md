@@ -191,3 +191,4 @@ psql -U sajad -d outfit_suggestor -c "SELECT * FROM outfit_history;"
 4. Deploy to production with managed PostgreSQL
 5. Merge to main branch after testing
 
+

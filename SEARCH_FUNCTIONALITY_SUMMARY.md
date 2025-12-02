@@ -323,3 +323,4 @@ The search functionality is **100% complete and working** with:
 **Trigger:** Search button or Enter key
 **Highlighting:** Yellow background on all matches
 
+
