@@ -35,6 +35,28 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
     });
   };
 
+  // Highlight matching text in search results
+  const highlightText = (text: string, query: string): JSX.Element => {
+    if (!query.trim()) {
+      return <>{text}</>;
+    }
+
+    const parts = text.split(new RegExp(`(${query})`, 'gi'));
+    return (
+      <>
+        {parts.map((part, index) =>
+          part.toLowerCase() === query.toLowerCase() ? (
+            <mark key={index} className="bg-yellow-200 text-gray-900 font-medium">
+              {part}
+            </mark>
+          ) : (
+            <span key={index}>{part}</span>
+          )
+        )}
+      </>
+    );
+  };
+
   // Filter and sort history
   const filteredHistory = useMemo(() => {
     let filtered = [...history];
@@ -239,7 +261,7 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
               {entry.text_input && (
                 <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                   <p className="text-sm text-gray-700 italic">
-                    "{entry.text_input}"
+                    "{highlightText(entry.text_input, searchQuery)}"
                   </p>
                 </div>
               )}
@@ -250,7 +272,9 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
                   <span className="text-lg">👔</span>
                   <div>
                     <p className="text-xs text-gray-500 uppercase">Shirt</p>
-                    <p className="text-sm text-gray-800">{entry.shirt}</p>
+                    <p className="text-sm text-gray-800">
+                      {highlightText(entry.shirt, searchQuery)}
+                    </p>
                   </div>
                 </div>
 
@@ -258,7 +282,9 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
                   <span className="text-lg">👖</span>
                   <div>
                     <p className="text-xs text-gray-500 uppercase">Trouser</p>
-                    <p className="text-sm text-gray-800">{entry.trouser}</p>
+                    <p className="text-sm text-gray-800">
+                      {highlightText(entry.trouser, searchQuery)}
+                    </p>
                   </div>
                 </div>
 
@@ -266,7 +292,9 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
                   <span className="text-lg">🧥</span>
                   <div>
                     <p className="text-xs text-gray-500 uppercase">Blazer</p>
-                    <p className="text-sm text-gray-800">{entry.blazer}</p>
+                    <p className="text-sm text-gray-800">
+                      {highlightText(entry.blazer, searchQuery)}
+                    </p>
                   </div>
                 </div>
 
@@ -274,7 +302,9 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
                   <span className="text-lg">👞</span>
                   <div>
                     <p className="text-xs text-gray-500 uppercase">Shoes</p>
-                    <p className="text-sm text-gray-800">{entry.shoes}</p>
+                    <p className="text-sm text-gray-800">
+                      {highlightText(entry.shoes, searchQuery)}
+                    </p>
                   </div>
                 </div>
 
@@ -282,7 +312,9 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
                   <span className="text-lg">🎀</span>
                   <div>
                     <p className="text-xs text-gray-500 uppercase">Belt</p>
-                    <p className="text-sm text-gray-800">{entry.belt}</p>
+                    <p className="text-sm text-gray-800">
+                      {highlightText(entry.belt, searchQuery)}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -290,7 +322,9 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
               {/* Reasoning */}
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <p className="text-xs text-gray-500 uppercase mb-1">Why this works</p>
-                <p className="text-sm text-gray-700">{entry.reasoning}</p>
+                <p className="text-sm text-gray-700">
+                  {highlightText(entry.reasoning, searchQuery)}
+                </p>
               </div>
             </div>
           </div>
