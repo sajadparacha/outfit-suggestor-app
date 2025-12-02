@@ -23,7 +23,6 @@ function App() {
   const [currentView, setCurrentView] = useState<'main' | 'history'>('main');
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [existingSuggestion, setExistingSuggestion] = useState<OutfitSuggestion | null>(null);
-  const [pendingImage, setPendingImage] = useState<File | null>(null);
 
   // Controllers (Business Logic)
   const {
@@ -70,7 +69,6 @@ function App() {
           imageUrl: URL.createObjectURL(image),
         };
         setExistingSuggestion(suggestion);
-        setPendingImage(image);
         setShowDuplicateModal(true);
       } else {
         // No duplicate - proceed with AI call
@@ -93,14 +91,12 @@ function App() {
     }
     setShowDuplicateModal(false);
     setExistingSuggestion(null);
-    setPendingImage(null);
   };
 
   const handleGetNewSuggestion = async () => {
     // User chose to get new AI suggestion
     setShowDuplicateModal(false);
     setExistingSuggestion(null);
-    setPendingImage(null);
     await getSuggestion();
     await fetchRecentHistory();
   };

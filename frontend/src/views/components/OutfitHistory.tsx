@@ -36,7 +36,7 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
   };
 
   // Highlight matching text in search results
-  const highlightText = (text: string, query: string): JSX.Element => {
+  const highlightText = (text: string, query: string): React.ReactElement => {
     if (!query.trim()) {
       return <>{text}</>;
     }
