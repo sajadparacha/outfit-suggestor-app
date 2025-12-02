@@ -46,6 +46,7 @@ function App() {
     isFullView,
     refreshHistory,
     fetchRecentHistory,
+    ensureFullHistory,
   } = useHistoryController();
 
   const { toast, showToast, hideToast } = useToastController();
@@ -180,6 +181,7 @@ function App() {
             error={historyError}
             isFullView={isFullView}
             onRefresh={refreshHistory}
+            onEnsureFullHistory={ensureFullHistory}
           />
         )}
       </div>

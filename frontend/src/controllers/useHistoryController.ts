@@ -49,6 +49,15 @@ export const useHistoryController = () => {
   };
 
   /**
+   * Ensure all history is loaded (for searching)
+   */
+  const ensureFullHistory = async () => {
+    if (!isFullView) {
+      await refreshHistory();
+    }
+  };
+
+  /**
    * Load initial history (last 2) on component mount
    */
   useEffect(() => {
@@ -64,6 +73,7 @@ export const useHistoryController = () => {
     refreshHistory,
     fetchRecentHistory,
     fetchHistory,
+    ensureFullHistory,
   };
 };
 

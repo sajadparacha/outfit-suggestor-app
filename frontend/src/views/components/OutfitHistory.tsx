@@ -12,6 +12,7 @@ interface OutfitHistoryProps {
   error: string | null;
   isFullView: boolean;
   onRefresh: () => void;
+  onEnsureFullHistory: () => Promise<void>;
 }
 
 const OutfitHistory: React.FC<OutfitHistoryProps> = ({
@@ -20,12 +21,17 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
   error,
   isFullView,
   onRefresh,
+  onEnsureFullHistory,
 }) => {
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
+    // If searching and not in full view, load all history first
+    if (searchInput.trim() && !isFullView) {
+      await onEnsureFullHistory();
+    }
     setSearchQuery(searchInput);
   };
 
