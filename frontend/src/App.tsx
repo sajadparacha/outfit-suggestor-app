@@ -9,6 +9,7 @@ import Hero from './views/components/Hero';
 import Sidebar from './views/components/Sidebar';
 import OutfitPreview from './views/components/OutfitPreview';
 import OutfitHistory from './views/components/OutfitHistory';
+import About from './views/components/About';
 import Toast from './views/components/Toast';
 import Footer from './views/components/Footer';
 import ConfirmationModal from './views/components/ConfirmationModal';
@@ -20,7 +21,7 @@ import { OutfitSuggestion } from './models/OutfitModels';
 
 function App() {
   // View state
-  const [currentView, setCurrentView] = useState<'main' | 'history'>('main');
+  const [currentView, setCurrentView] = useState<'main' | 'history' | 'about'>('main');
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [existingSuggestion, setExistingSuggestion] = useState<OutfitSuggestion | null>(null);
 
@@ -140,13 +141,23 @@ function App() {
             >
               📋 History
             </button>
+            <button
+              onClick={() => setCurrentView('about')}
+              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                currentView === 'about'
+                  ? 'border-indigo-600 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              ℹ️ About
+            </button>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
-        {currentView === 'main' ? (
+        {currentView === 'main' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
             {/* Left Sidebar */}
             <div className="lg:col-span-3">
@@ -174,7 +185,9 @@ function App() {
               />
             </div>
           </div>
-        ) : (
+        )}
+
+        {currentView === 'history' && (
           <OutfitHistory
             history={history}
             loading={historyLoading}
@@ -184,6 +197,8 @@ function App() {
             onEnsureFullHistory={ensureFullHistory}
           />
         )}
+
+        {currentView === 'about' && <About />}
       </div>
 
       {/* Toast Notification */}
