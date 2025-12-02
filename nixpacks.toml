@@ -1,9 +1,9 @@
 [phases.setup]
-nixPkgs = ["python312", "postgresql"]
+nixPkgs = ["python312"]
 
 [phases.install]
-cmds = ["cd backend && pip install -r requirements.txt"]
+cmds = ["pip install -r backend/requirements.txt"]
 
 [start]
-cmd = "cd backend && python main.py"
+cmd = "cd backend && uvicorn main:app --host 0.0.0.0 --port ${PORT:-8001}"
 
