@@ -108,6 +108,37 @@ class ApiService {
       throw new Error('Failed to fetch outfit history');
     }
   }
+
+  /**
+   * Check if an uploaded image is a duplicate
+   * @param image - Image file to check
+   * @returns Promise with duplicate check result
+   */
+  async checkDuplicate(
+    image: File
+  ): Promise<{ is_duplicate: boolean; existing_suggestion?: OutfitResponse }> {
+    try {
+      const formData = new FormData();
+      formData.append('image', image);
+
+      const response = await fetch(`${this.baseUrl}/api/check-duplicate`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error: ApiError = await response.json();
+        throw new Error(error.detail || 'Failed to check duplicate');
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to check duplicate');
+    }
+  }
 }
 
 // Export singleton instance

@@ -14,6 +14,15 @@ from config import get_ai_service
 router = APIRouter(prefix="/api", tags=["outfit"])
 
 
+def images_are_similar(image1: str, image2: str) -> bool:
+    """
+    Compare two base64 images for similarity
+    Simple comparison: exact match for now
+    Can be enhanced with perceptual hashing later
+    """
+    return image1 == image2
+
+
 @router.post("/suggest-outfit", response_model=OutfitSuggestion)
 async def suggest_outfit(
     image: UploadFile = File(...),
@@ -70,6 +79,61 @@ async def suggest_outfit(
         raise HTTPException(
             status_code=500, 
             detail=f"Internal server error: {str(e)}"
+        )
+
+
+@router.post("/check-duplicate")
+async def check_duplicate(
+    image: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Check if an uploaded image already exists in history
+    
+    Args:
+        image: Uploaded image file
+        db: Database session dependency injection
+        
+    Returns:
+        Dict with duplicate status and matching entry if found
+    """
+    try:
+        # Validate and encode image
+        validate_image(image, max_size_mb=10)
+        image_base64 = encode_image(image.file)
+        
+        # Query all history entries with images
+        history = db.query(OutfitHistory)\
+            .filter(OutfitHistory.image_data.isnot(None))\
+            .order_by(OutfitHistory.created_at.desc())\
+            .all()
+        
+        # Check for duplicate
+        for entry in history:
+            if images_are_similar(image_base64, entry.image_data):
+                return {
+                    "is_duplicate": True,
+                    "existing_suggestion": {
+                        "id": entry.id,
+                        "created_at": entry.created_at.isoformat(),
+                        "text_input": entry.text_input,
+                        "shirt": entry.shirt,
+                        "trouser": entry.trouser,
+                        "blazer": entry.blazer,
+                        "shoes": entry.shoes,
+                        "belt": entry.belt,
+                        "reasoning": entry.reasoning
+                    }
+                }
+        
+        return {"is_duplicate": False}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error checking duplicate: {str(e)}"
         )
 
 

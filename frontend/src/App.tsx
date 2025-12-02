@@ -11,13 +11,19 @@ import OutfitPreview from './views/components/OutfitPreview';
 import OutfitHistory from './views/components/OutfitHistory';
 import Toast from './views/components/Toast';
 import Footer from './views/components/Footer';
+import ConfirmationModal from './views/components/ConfirmationModal';
 import { useOutfitController } from './controllers/useOutfitController';
 import { useHistoryController } from './controllers/useHistoryController';
 import { useToastController } from './controllers/useToastController';
+import ApiService from './services/ApiService';
+import { OutfitSuggestion } from './models/OutfitModels';
 
 function App() {
   // View state
   const [currentView, setCurrentView] = useState<'main' | 'history'>('main');
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [existingSuggestion, setExistingSuggestion] = useState<OutfitSuggestion | null>(null);
+  const [pendingImage, setPendingImage] = useState<File | null>(null);
 
   // Controllers (Business Logic)
   const {
@@ -31,6 +37,7 @@ function App() {
     setFilters,
     setPreferenceText,
     getSuggestion,
+    setCurrentSuggestion,
   } = useOutfitController();
 
   const {
@@ -46,8 +53,55 @@ function App() {
 
   // Event Handlers
   const handleGetSuggestion = async () => {
+    if (!image) {
+      showToast('Please upload an image first', 'error');
+      return;
+    }
+
+    try {
+      // Check for duplicate image
+      const duplicateCheck = await ApiService.checkDuplicate(image);
+      
+      if (duplicateCheck.is_duplicate && duplicateCheck.existing_suggestion) {
+        // Found duplicate - show confirmation modal
+        const suggestion: OutfitSuggestion = {
+          ...duplicateCheck.existing_suggestion,
+          id: Date.now().toString(),
+          imageUrl: URL.createObjectURL(image),
+        };
+        setExistingSuggestion(suggestion);
+        setPendingImage(image);
+        setShowDuplicateModal(true);
+      } else {
+        // No duplicate - proceed with AI call
+        await getSuggestion();
+        await fetchRecentHistory();
+      }
+    } catch (err) {
+      // If duplicate check fails, proceed with AI call anyway
+      console.error('Duplicate check failed:', err);
+      await getSuggestion();
+      await fetchRecentHistory();
+    }
+  };
+
+  const handleUseCachedSuggestion = () => {
+    // User chose to use existing suggestion
+    if (existingSuggestion) {
+      setCurrentSuggestion(existingSuggestion);
+      showToast('Loaded suggestion from history! 📋', 'success');
+    }
+    setShowDuplicateModal(false);
+    setExistingSuggestion(null);
+    setPendingImage(null);
+  };
+
+  const handleGetNewSuggestion = async () => {
+    // User chose to get new AI suggestion
+    setShowDuplicateModal(false);
+    setExistingSuggestion(null);
+    setPendingImage(null);
     await getSuggestion();
-    // Refresh history after getting a new suggestion
     await fetchRecentHistory();
   };
 
@@ -142,6 +196,17 @@ function App() {
           onClose={hideToast}
         />
       )}
+
+      {/* Duplicate Image Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showDuplicateModal}
+        title="Similar Image Found!"
+        message="We found an existing outfit suggestion for this image in your history. Would you like to use the existing suggestion or get a new one from AI?"
+        confirmText="Use Existing"
+        cancelText="Get New"
+        onConfirm={handleUseCachedSuggestion}
+        onCancel={handleGetNewSuggestion}
+      />
 
       {/* Footer */}
       <Footer />

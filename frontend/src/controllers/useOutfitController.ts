@@ -21,6 +21,7 @@ interface UseOutfitControllerReturn {
   setImage: (file: File | null) => void;
   setFilters: (filters: Filters) => void;
   setPreferenceText: (text: string) => void;
+  setCurrentSuggestion: (suggestion: OutfitSuggestion | null) => void;
   getSuggestion: () => Promise<void>;
   clearError: () => void;
 }
@@ -96,6 +97,7 @@ export const useOutfitController = (): UseOutfitControllerReturn => {
     setImage,
     setFilters,
     setPreferenceText,
+    setCurrentSuggestion,
     getSuggestion,
     clearError
   };
