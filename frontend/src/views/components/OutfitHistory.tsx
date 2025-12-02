@@ -21,8 +21,24 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
   isFullView,
   onRefresh,
 }) => {
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
+
+  const handleSearch = () => {
+    setSearchQuery(searchInput);
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearchQuery('');
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
@@ -161,18 +177,25 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
       {/* Search and Filter Bar */}
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
         <div className="flex flex-col md:flex-row gap-4">
-          {/* Search Input */}
-          <div className="flex-1">
-            <div className="relative">
+          {/* Search Input with Button */}
+          <div className="flex-1 flex gap-2">
+            <div className="relative flex-1">
               <input
                 type="text"
                 placeholder="Search by clothing items, colors, or context..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyPress={handleKeyPress}
                 className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
               <span className="absolute left-3 top-2.5 text-gray-400">🔍</span>
             </div>
+            <button
+              onClick={handleSearch}
+              className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+            >
+              Search
+            </button>
           </div>
 
           {/* Sort Dropdown */}
@@ -190,7 +213,7 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
           {/* Clear Button */}
           {searchQuery && (
             <button
-              onClick={() => setSearchQuery('')}
+              onClick={handleClearSearch}
               className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
             >
               Clear
@@ -201,7 +224,7 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
         {/* Results Count */}
         {searchQuery && (
           <div className="mt-3 text-sm text-gray-600">
-            Found {filteredHistory.length} {filteredHistory.length === 1 ? 'result' : 'results'}
+            Found {filteredHistory.length} {filteredHistory.length === 1 ? 'result' : 'results'} for "{searchQuery}"
           </div>
         )}
       </div>
@@ -216,7 +239,7 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
               No outfit suggestions match your search "{searchQuery}"
             </p>
             <button
-              onClick={() => setSearchQuery('')}
+              onClick={handleClearSearch}
               className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
             >
               Clear Search
