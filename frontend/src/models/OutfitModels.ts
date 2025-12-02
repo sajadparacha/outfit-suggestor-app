@@ -47,6 +47,7 @@ export interface OutfitHistoryEntry {
   id: number;
   created_at: string;
   text_input: string;
+  image_data: string | null;
   shirt: string;
   trouser: string;
   blazer: string;

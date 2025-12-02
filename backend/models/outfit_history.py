@@ -24,6 +24,9 @@ class OutfitHistory(Base):
 
     # Optional metadata about the request
     text_input: Mapped[str | None] = mapped_column(Text, nullable=True)
+    
+    # Store the uploaded image as base64 string
+    image_data: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Snapshot of the outfit suggestion returned by the AI
     shirt: Mapped[str] = mapped_column(String(512), nullable=False)

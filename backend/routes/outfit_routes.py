@@ -46,9 +46,10 @@ async def suggest_outfit(
         # Get outfit suggestion from AI service
         suggestion = ai_service.get_outfit_suggestion(image_base64, text_input)
         
-        # Save to database
+        # Save to database (including the image)
         history_entry = OutfitHistory(
             text_input=text_input,
+            image_data=image_base64,  # Store the base64 encoded image
             shirt=suggestion.shirt,
             trouser=suggestion.trouser,
             blazer=suggestion.blazer,
@@ -98,6 +99,7 @@ async def get_outfit_history(
                 "id": entry.id,
                 "created_at": entry.created_at.isoformat(),
                 "text_input": entry.text_input,
+                "image_data": entry.image_data,  # Include the base64 image
                 "shirt": entry.shirt,
                 "trouser": entry.trouser,
                 "blazer": entry.blazer,

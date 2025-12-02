@@ -92,76 +92,89 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
         {history.map((entry) => (
           <div
             key={entry.id}
-            className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6"
+            className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden"
           >
-            {/* Header with date */}
-            <div className="flex justify-between items-start mb-4">
-              <span className="text-sm text-gray-500">
-                {formatDate(entry.created_at)}
-              </span>
-              {entry.text_input && (
-                <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded">
-                  Custom
-                </span>
-              )}
-            </div>
-
-            {/* Context if provided */}
-            {entry.text_input && (
-              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-700 italic">
-                  "{entry.text_input}"
-                </p>
+            {/* Uploaded Image */}
+            {entry.image_data && (
+              <div className="w-full h-48 bg-gray-100 overflow-hidden">
+                <img
+                  src={`data:image/jpeg;base64,${entry.image_data}`}
+                  alt="Uploaded outfit"
+                  className="w-full h-full object-cover"
+                />
               </div>
             )}
 
-            {/* Outfit Details */}
-            <div className="space-y-3">
-              <div className="flex items-start space-x-2">
-                <span className="text-lg">👔</span>
-                <div>
-                  <p className="text-xs text-gray-500 uppercase">Shirt</p>
-                  <p className="text-sm text-gray-800">{entry.shirt}</p>
+            <div className="p-6">
+              {/* Header with date */}
+              <div className="flex justify-between items-start mb-4">
+                <span className="text-sm text-gray-500">
+                  {formatDate(entry.created_at)}
+                </span>
+                {entry.text_input && (
+                  <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded">
+                    Custom
+                  </span>
+                )}
+              </div>
+
+              {/* Context if provided */}
+              {entry.text_input && (
+                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-700 italic">
+                    "{entry.text_input}"
+                  </p>
+                </div>
+              )}
+
+              {/* Outfit Details */}
+              <div className="space-y-3">
+                <div className="flex items-start space-x-2">
+                  <span className="text-lg">👔</span>
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase">Shirt</p>
+                    <p className="text-sm text-gray-800">{entry.shirt}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-2">
+                  <span className="text-lg">👖</span>
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase">Trouser</p>
+                    <p className="text-sm text-gray-800">{entry.trouser}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-2">
+                  <span className="text-lg">🧥</span>
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase">Blazer</p>
+                    <p className="text-sm text-gray-800">{entry.blazer}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-2">
+                  <span className="text-lg">👞</span>
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase">Shoes</p>
+                    <p className="text-sm text-gray-800">{entry.shoes}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-2">
+                  <span className="text-lg">🎀</span>
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase">Belt</p>
+                    <p className="text-sm text-gray-800">{entry.belt}</p>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-start space-x-2">
-                <span className="text-lg">👖</span>
-                <div>
-                  <p className="text-xs text-gray-500 uppercase">Trouser</p>
-                  <p className="text-sm text-gray-800">{entry.trouser}</p>
-                </div>
+              {/* Reasoning */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <p className="text-xs text-gray-500 uppercase mb-1">Why this works</p>
+                <p className="text-sm text-gray-700">{entry.reasoning}</p>
               </div>
-
-              <div className="flex items-start space-x-2">
-                <span className="text-lg">🧥</span>
-                <div>
-                  <p className="text-xs text-gray-500 uppercase">Blazer</p>
-                  <p className="text-sm text-gray-800">{entry.blazer}</p>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-2">
-                <span className="text-lg">👞</span>
-                <div>
-                  <p className="text-xs text-gray-500 uppercase">Shoes</p>
-                  <p className="text-sm text-gray-800">{entry.shoes}</p>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-2">
-                <span className="text-lg">🎀</span>
-                <div>
-                  <p className="text-xs text-gray-500 uppercase">Belt</p>
-                  <p className="text-sm text-gray-800">{entry.belt}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Reasoning */}
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <p className="text-xs text-gray-500 uppercase mb-1">Why this works</p>
-              <p className="text-sm text-gray-700">{entry.reasoning}</p>
             </div>
           </div>
         ))}
