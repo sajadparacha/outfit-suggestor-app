@@ -7,3 +7,4 @@ python-dotenv==1.1.1
 requests==2.32.5
 SQLAlchemy==2.0.36
 psycopg2-binary==2.9.10
+imagehash==4.3.1

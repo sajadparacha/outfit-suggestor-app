@@ -2,25 +2,75 @@
 from fastapi import APIRouter, File, UploadFile, Form, HTTPException, Depends
 from typing import Optional, List
 from sqlalchemy.orm import Session
+import imagehash
+from PIL import Image
+import io
+import base64
 
 from models.outfit import OutfitSuggestion
 from models.outfit_history import OutfitHistory
 from models.database import get_db
 from services.ai_service import AIService
 from utils.image_processor import encode_image, validate_image
-from config import get_ai_service
+from config import get_ai_service, Config
 
 
 router = APIRouter(prefix="/api", tags=["outfit"])
 
 
-def images_are_similar(image1: str, image2: str) -> bool:
+def images_are_similar(image1: str, image2: str, threshold: int = None) -> bool:
     """
-    Compare two base64 images for similarity
-    Simple comparison: exact match for now
-    Can be enhanced with perceptual hashing later
+    Compare two base64 images for similarity using perceptual hashing
+    
+    Args:
+        image1: Base64 encoded image string
+        image2: Base64 encoded image string
+        threshold: Hamming distance threshold (0 = identical, higher = more different)
+                  If None, uses Config.IMAGE_SIMILARITY_THRESHOLD
+    
+    Returns:
+        True if images are similar within threshold, False otherwise
+    
+    How it works:
+        - Converts base64 to PIL Images
+        - Computes perceptual hash (pHash) for each image
+        - pHash captures visual features (not exact pixels)
+        - Compares hashes using Hamming distance
+        - Returns True if distance <= threshold
+    
+    Examples:
+        - Same image, different size: distance ~0-2 (similar!)
+        - Same shirt, different angle: distance ~3-7 (similar!)
+        - Different shirts: distance >15 (not similar)
     """
-    return image1 == image2
+    if threshold is None:
+        threshold = Config.IMAGE_SIMILARITY_THRESHOLD
+    
+    try:
+        # Decode base64 to image bytes
+        img1_bytes = base64.b64decode(image1)
+        img2_bytes = base64.b64decode(image2)
+        
+        # Open as PIL Images
+        img1 = Image.open(io.BytesIO(img1_bytes))
+        img2 = Image.open(io.BytesIO(img2_bytes))
+        
+        # Compute perceptual hashes (fingerprints of visual content)
+        hash1 = imagehash.phash(img1)
+        hash2 = imagehash.phash(img2)
+        
+        # Calculate Hamming distance (number of different bits)
+        distance = hash1 - hash2
+        
+        # Log for debugging (optional)
+        print(f"Image comparison - Distance: {distance}, Threshold: {threshold}, Similar: {distance <= threshold}")
+        
+        return distance <= threshold
+        
+    except Exception as e:
+        # If perceptual hashing fails, fall back to exact match
+        print(f"Perceptual hashing failed: {e}, falling back to exact match")
+        return image1 == image2
 
 
 @router.post("/suggest-outfit", response_model=OutfitSuggestion)

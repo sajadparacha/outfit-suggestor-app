@@ -26,6 +26,10 @@ class Config:
         "http://localhost:3000",  # React dev server
         "https://sajadparacha.github.io"  # GitHub Pages URL
     ]
+    
+    # Image similarity threshold for duplicate detection
+    # Lower values = stricter matching (0 = identical, 5 = very similar, 10 = similar)
+    IMAGE_SIMILARITY_THRESHOLD = int(os.getenv("IMAGE_SIMILARITY_THRESHOLD", 5))
 
 
 # Singleton instance of AI Service
