@@ -1,8 +1,9 @@
 """AI Service for outfit suggestions using OpenAI"""
 import json
+from typing import Optional
+
 import openai
 from fastapi import HTTPException
-from typing import Optional
 
 from models.outfit import OutfitSuggestion
 

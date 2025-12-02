@@ -9,9 +9,18 @@ load_dotenv()
 
 class Config:
     """Application configuration"""
+    # API & server settings
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
     PORT = int(os.getenv("PORT", 8001))
-    
+
+    # Database settings
+    # Example Postgres URL:
+    # postgresql://username:password@localhost:5432/outfit_suggestor
+    DATABASE_URL = os.getenv(
+        "DATABASE_URL",
+        "postgresql://postgres:postgres@localhost:5432/outfit_suggestor",
+    )
+
     # CORS settings
     ALLOWED_ORIGINS = [
         "http://localhost:3000",  # React dev server

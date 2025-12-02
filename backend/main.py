@@ -8,6 +8,7 @@ import uvicorn
 
 from config import Config
 from routes.outfit_routes import router as outfit_router
+from models.database import Base, engine
 
 
 # Initialize FastAPI app
@@ -25,6 +26,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Create database tables (simple auto-migration for now)
+Base.metadata.create_all(bind=engine)
 
 # Include routers
 app.include_router(outfit_router)
