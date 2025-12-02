@@ -92,7 +92,7 @@ const About: React.FC = () => {
             <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
               {/* LinkedIn */}
               <a
-                href="https://www.linkedin.com/in/sajadparacha"
+                href="https://www.linkedin.com/in/sajjadparacha/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center space-x-3 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg w-full sm:w-auto justify-center"
