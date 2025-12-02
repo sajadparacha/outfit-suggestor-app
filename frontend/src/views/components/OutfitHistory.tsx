@@ -1,9 +1,9 @@
 /**
  * Outfit History Component
- * Displays a list of past outfit suggestions
+ * Displays a list of past outfit suggestions with search and filter
  */
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { OutfitHistoryEntry } from '../../models/OutfitModels';
 
 interface OutfitHistoryProps {
@@ -21,6 +21,9 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
   isFullView,
   onRefresh,
 }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
+
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -31,6 +34,36 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
       minute: '2-digit',
     });
   };
+
+  // Filter and sort history
+  const filteredHistory = useMemo(() => {
+    let filtered = [...history];
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((entry) => {
+        return (
+          entry.shirt.toLowerCase().includes(query) ||
+          entry.trouser.toLowerCase().includes(query) ||
+          entry.blazer.toLowerCase().includes(query) ||
+          entry.shoes.toLowerCase().includes(query) ||
+          entry.belt.toLowerCase().includes(query) ||
+          entry.reasoning.toLowerCase().includes(query) ||
+          (entry.text_input && entry.text_input.toLowerCase().includes(query))
+        );
+      });
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
+      return sortBy === 'newest' ? dateB - dateA : dateA - dateB;
+    });
+
+    return filtered;
+  }, [history, searchQuery, sortBy]);
 
   if (loading) {
     return (
@@ -77,6 +110,7 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* Header with title and refresh button */}
       <div className="flex justify-between items-center mb-6">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">
@@ -84,7 +118,7 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
           </h2>
           {!isFullView && history.length > 0 && (
             <p className="text-sm text-gray-500 mt-1">
-              Showing last {history.length} {history.length === 1 ? 'entry' : 'entries'}. Click refresh to see all.
+              Showing last {history.length} {history.length === 1 ? 'entry' : 'entries'}. Click load all to see more.
             </p>
           )}
           {isFullView && history.length > 0 && (
@@ -102,8 +136,77 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {history.map((entry) => (
+      {/* Search and Filter Bar */}
+      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+        <div className="flex flex-col md:flex-row gap-4">
+          {/* Search Input */}
+          <div className="flex-1">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search by clothing items, colors, or context..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+              <span className="absolute left-3 top-2.5 text-gray-400">🔍</span>
+            </div>
+          </div>
+
+          {/* Sort Dropdown */}
+          <div className="md:w-48">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'newest' | 'oldest')}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            >
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+            </select>
+          </div>
+
+          {/* Clear Button */}
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        {/* Results Count */}
+        {searchQuery && (
+          <div className="mt-3 text-sm text-gray-600">
+            Found {filteredHistory.length} {filteredHistory.length === 1 ? 'result' : 'results'}
+          </div>
+        )}
+      </div>
+
+      {/* No Results Message */}
+      {filteredHistory.length === 0 && searchQuery && (
+        <div className="bg-white rounded-lg shadow-md p-8">
+          <div className="text-center">
+            <div className="text-gray-400 text-5xl mb-4">🔍</div>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">No Results Found</h3>
+            <p className="text-gray-600 mb-4">
+              No outfit suggestions match your search "{searchQuery}"
+            </p>
+            <button
+              onClick={() => setSearchQuery('')}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              Clear Search
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* History Grid */}
+      {filteredHistory.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {filteredHistory.map((entry) => (
           <div
             key={entry.id}
             className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden"
@@ -192,7 +295,8 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
