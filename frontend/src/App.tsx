@@ -37,19 +37,27 @@ function App() {
     history,
     loading: historyLoading,
     error: historyError,
+    isFullView,
     refreshHistory,
+    fetchRecentHistory,
   } = useHistoryController();
 
   const { toast, showToast, hideToast } = useToastController();
 
   // Event Handlers
+  const handleGetSuggestion = async () => {
+    await getSuggestion();
+    // Refresh history after getting a new suggestion
+    await fetchRecentHistory();
+  };
+
   const handleLike = () => {
     showToast('Thanks for the feedback! 👍', 'success');
   };
 
-  const handleDislike = () => {
+  const handleDislike = async () => {
     showToast("We'll improve our suggestions! 👎", 'success');
-    getSuggestion(); // Get a new suggestion
+    await handleGetSuggestion(); // Get a new suggestion and refresh history
   };
 
   return (
@@ -98,7 +106,7 @@ function App() {
                 setPreferenceText={setPreferenceText}
                 image={image}
                 setImage={setImage}
-                onGetSuggestion={getSuggestion}
+                onGetSuggestion={handleGetSuggestion}
                 loading={loading}
               />
             </div>
@@ -111,7 +119,7 @@ function App() {
                 error={error}
                 onLike={handleLike}
                 onDislike={handleDislike}
-                onNext={getSuggestion}
+                onNext={handleGetSuggestion}
               />
             </div>
           </div>
@@ -120,6 +128,7 @@ function App() {
             history={history}
             loading={historyLoading}
             error={historyError}
+            isFullView={isFullView}
             onRefresh={refreshHistory}
           />
         )}

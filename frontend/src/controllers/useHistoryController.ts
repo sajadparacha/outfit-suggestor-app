@@ -11,11 +11,12 @@ export const useHistoryController = () => {
   const [history, setHistory] = useState<OutfitHistoryEntry[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [isFullView, setIsFullView] = useState<boolean>(false);
 
   /**
    * Fetch outfit history from the API
    */
-  const fetchHistory = async (limit: number = 20) => {
+  const fetchHistory = async (limit: number = 2) => {
     setLoading(true);
     setError(null);
 
@@ -32,24 +33,35 @@ export const useHistoryController = () => {
   };
 
   /**
-   * Refresh history data
+   * Fetch recent history (last 2 entries) - used after new suggestion
    */
-  const refreshHistory = () => {
-    fetchHistory();
+  const fetchRecentHistory = async () => {
+    await fetchHistory(2);
+    setIsFullView(false);
   };
 
   /**
-   * Load history on component mount
+   * Refresh and load all history data
+   */
+  const refreshHistory = async () => {
+    await fetchHistory(50); // Fetch more entries on refresh
+    setIsFullView(true);
+  };
+
+  /**
+   * Load initial history (last 2) on component mount
    */
   useEffect(() => {
-    fetchHistory();
+    fetchRecentHistory();
   }, []);
 
   return {
     history,
     loading,
     error,
+    isFullView,
     refreshHistory,
+    fetchRecentHistory,
     fetchHistory,
   };
 };

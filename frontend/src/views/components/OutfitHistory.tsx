@@ -10,6 +10,7 @@ interface OutfitHistoryProps {
   history: OutfitHistoryEntry[];
   loading: boolean;
   error: string | null;
+  isFullView: boolean;
   onRefresh: () => void;
 }
 
@@ -17,6 +18,7 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
   history,
   loading,
   error,
+  isFullView,
   onRefresh,
 }) => {
   const formatDate = (dateString: string): string => {
@@ -76,15 +78,27 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">
-          Outfit History ({history.length})
-        </h2>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">
+            Outfit History
+          </h2>
+          {!isFullView && history.length > 0 && (
+            <p className="text-sm text-gray-500 mt-1">
+              Showing last {history.length} {history.length === 1 ? 'entry' : 'entries'}. Click refresh to see all.
+            </p>
+          )}
+          {isFullView && history.length > 0 && (
+            <p className="text-sm text-gray-500 mt-1">
+              Showing all {history.length} {history.length === 1 ? 'entry' : 'entries'}
+            </p>
+          )}
+        </div>
         <button
           onClick={onRefresh}
           className="px-4 py-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center space-x-2"
         >
           <span>🔄</span>
-          <span>Refresh</span>
+          <span>{isFullView ? 'Refresh' : 'Load All'}</span>
         </button>
       </div>
 
