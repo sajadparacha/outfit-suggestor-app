@@ -14,12 +14,15 @@ class Config:
     PORT = int(os.getenv("PORT", 8001))
 
     # Database settings
-    # Example Postgres URL:
-    # postgresql://username:password@localhost:5432/outfit_suggestor
-    DATABASE_URL = os.getenv(
-        "DATABASE_URL",
-        "postgresql://postgres:postgres@localhost:5432/outfit_suggestor",
-    )
+    # Railway provides DATABASE_URL, fallback to local for development
+    DATABASE_URL = os.getenv("DATABASE_URL")
+    
+    # If DATABASE_URL is not set, use local default
+    if not DATABASE_URL:
+        DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/outfit_suggestor"
+        print("⚠️  WARNING: DATABASE_URL not set, using local database")
+    else:
+        print(f"✅ Using database: {DATABASE_URL[:30]}...")  # Log first 30 chars for debugging
 
     # CORS settings
     ALLOWED_ORIGINS = [

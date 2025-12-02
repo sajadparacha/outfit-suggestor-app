@@ -5,10 +5,22 @@ Refactored with proper service architecture for multi-platform client support
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+import os
 
 from config import Config
 from routes.outfit_routes import router as outfit_router
 from models.database import Base, engine
+
+# Startup logging
+print("=" * 50)
+print("🚀 Starting AI Outfit Suggestor API")
+print("=" * 50)
+print(f"📊 Environment Variables Check:")
+print(f"   PORT: {os.getenv('PORT', 'Not set (using 8001)')}")
+print(f"   OPENAI_API_KEY: {'✅ Set' if os.getenv('OPENAI_API_KEY') else '❌ Not set'}")
+print(f"   DATABASE_URL: {'✅ Set' if os.getenv('DATABASE_URL') else '❌ Not set'}")
+print(f"   IMAGE_SIMILARITY_THRESHOLD: {os.getenv('IMAGE_SIMILARITY_THRESHOLD', '5 (default)')}")
+print("=" * 50)
 
 
 # Initialize FastAPI app
