@@ -43,3 +43,15 @@ export interface ApiError {
   status?: number;
 }
 
+export interface OutfitHistoryEntry {
+  id: number;
+  created_at: string;
+  text_input: string;
+  shirt: string;
+  trouser: string;
+  blazer: string;
+  shoes: string;
+  belt: string;
+  reasoning: string;
+}
+

@@ -4,7 +4,7 @@
  * This layer can be reused by Android and iOS clients
  */
 
-import { OutfitResponse, ApiError } from '../models/OutfitModels';
+import { OutfitResponse, ApiError, OutfitHistoryEntry } from '../models/OutfitModels';
 
 class ApiService {
   private baseUrl: string;
@@ -83,6 +83,30 @@ class ApiService {
    */
   getBaseUrl(): string {
     return this.baseUrl;
+  }
+
+  /**
+   * Get outfit history from backend API
+   * @param limit - Maximum number of history entries to retrieve (default: 20)
+   * @returns Promise with array of outfit history entries
+   */
+  async getOutfitHistory(limit: number = 20): Promise<OutfitHistoryEntry[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/outfit-history?limit=${limit}`);
+      
+      if (!response.ok) {
+        const error: ApiError = await response.json();
+        throw new Error(error.detail || 'Failed to get outfit history');
+      }
+
+      const data: OutfitHistoryEntry[] = await response.json();
+      return data;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to fetch outfit history');
+    }
   }
 }
 
