@@ -27,7 +27,8 @@ class Config:
     # CORS settings
     ALLOWED_ORIGINS = [
         "http://localhost:3000",  # React dev server
-        "https://sajadparacha.github.io"  # GitHub Pages URL
+        "https://sajadparacha.github.io",  # GitHub Pages URL
+        "https://outfit-suggestor-app-production.up.railway.app"  # Railway backend (for docs)
     ]
     
     # Image similarity threshold for duplicate detection
