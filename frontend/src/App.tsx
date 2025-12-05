@@ -18,6 +18,7 @@ import { useHistoryController } from './controllers/useHistoryController';
 import { useToastController } from './controllers/useToastController';
 import ApiService from './services/ApiService';
 import { OutfitSuggestion } from './models/OutfitModels';
+import { compressImage } from './utils/imageUtils';
 
 function App() {
   // View state
@@ -60,8 +61,11 @@ function App() {
     }
 
     try {
+      // Compress image before sending to reduce size
+      const compressedImage = await compressImage(image);
+      
       // Check for duplicate image
-      const duplicateCheck = await ApiService.checkDuplicate(image);
+      const duplicateCheck = await ApiService.checkDuplicate(compressedImage);
       
       if (duplicateCheck.is_duplicate && duplicateCheck.existing_suggestion) {
         // Found duplicate - show confirmation modal
@@ -74,14 +78,27 @@ function App() {
         setShowDuplicateModal(true);
       } else {
         // No duplicate - proceed with AI call
+        // Temporarily set compressed image for API call
+        const originalImage = image;
+        setImage(compressedImage);
         await getSuggestion();
+        setImage(originalImage); // Restore original for display
         await fetchRecentHistory();
       }
     } catch (err) {
       // If duplicate check fails, proceed with AI call anyway
       console.error('Duplicate check failed:', err);
-      await getSuggestion();
-      await fetchRecentHistory();
+      try {
+        const compressedImage = await compressImage(image);
+        const originalImage = image;
+        setImage(compressedImage);
+        await getSuggestion();
+        setImage(originalImage);
+        await fetchRecentHistory();
+      } catch (compressErr) {
+        console.error('Image compression failed:', compressErr);
+        showToast('Failed to process image. Please try a smaller image.', 'error');
+      }
     }
   };
 
@@ -99,8 +116,24 @@ function App() {
     // User chose to get new AI suggestion
     setShowDuplicateModal(false);
     setExistingSuggestion(null);
-    await getSuggestion();
-    await fetchRecentHistory();
+    
+    if (!image) {
+      showToast('Please upload an image first', 'error');
+      return;
+    }
+    
+    try {
+      // Compress image before sending
+      const compressedImage = await compressImage(image);
+      const originalImage = image;
+      setImage(compressedImage);
+      await getSuggestion();
+      setImage(originalImage); // Restore original for display
+      await fetchRecentHistory();
+    } catch (err) {
+      console.error('Failed to get new suggestion:', err);
+      showToast('Failed to process image. Please try again.', 'error');
+    }
   };
 
   const handleLike = () => {

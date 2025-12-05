@@ -97,7 +97,7 @@ async def suggest_outfit(
     """
     try:
         # Validate image file
-        validate_image(image, max_size_mb=10)
+        validate_image(image, max_size_mb=20)
         
         # Encode image to base64
         image_base64 = encode_image(image.file)
@@ -149,7 +149,7 @@ async def check_duplicate(
     """
     try:
         # Validate and encode image
-        validate_image(image, max_size_mb=10)
+        validate_image(image, max_size_mb=20)
         image_base64 = encode_image(image.file)
         
         # Query all history entries with images

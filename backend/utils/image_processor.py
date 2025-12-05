@@ -5,7 +5,7 @@ from PIL import Image
 from fastapi import UploadFile, HTTPException
 
 
-def validate_image(image: UploadFile, max_size_mb: int = 10) -> None:
+def validate_image(image: UploadFile, max_size_mb: int = 20) -> None:
     """
     Validate uploaded image file
     
