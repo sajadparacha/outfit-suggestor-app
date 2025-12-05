@@ -192,3 +192,4 @@ psql -U sajad -d outfit_suggestor -c "SELECT * FROM outfit_history;"
 5. Merge to main branch after testing
 
 
+
