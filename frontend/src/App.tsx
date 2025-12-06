@@ -181,7 +181,7 @@ function App() {
 
   const handleRegister = async (data: { email: string; password: string; full_name?: string }) => {
     try {
-      const result = await register(data);
+      await register(data);
       // Show activation message instead of auto-login
       showToast('Registration successful! Please check your email to activate your account. 📧', 'success');
       // Switch to login after showing message
