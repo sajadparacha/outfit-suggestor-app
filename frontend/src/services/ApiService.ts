@@ -282,6 +282,37 @@ class ApiService {
   }
 
   /**
+   * Change user password
+   * @param currentPassword - Current password
+   * @param newPassword - New password
+   * @returns Promise with success message
+   */
+  async changePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/auth/change-password`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword,
+        }),
+      });
+
+      if (!response.ok) {
+        const error: ApiError = await response.json();
+        throw new Error(error.detail || 'Failed to change password');
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to change password');
+    }
+  }
+
+  /**
    * Get current authenticated user
    * @returns Promise with current user information
    */

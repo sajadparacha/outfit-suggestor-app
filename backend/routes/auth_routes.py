@@ -46,6 +46,11 @@ class Token(BaseModel):
     user: UserResponse
 
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
 @router.post("/register")
 async def register(
     user_data: UserRegister,
@@ -293,4 +298,65 @@ async def get_current_user_info(
     )
     # Return as dict to ensure proper serialization
     return user_response.model_dump()
+
+
+@router.post("/change-password")
+async def change_password(
+    password_data: ChangePasswordRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Change user password.
+    
+    Args:
+        password_data: Current and new password
+        current_user: Current authenticated user
+        db: Database session
+        
+    Returns:
+        Success message
+        
+    Raises:
+        HTTPException: If current password is incorrect or new password is invalid
+    """
+    # Verify current password
+    if not verify_password(password_data.current_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Current password is incorrect"
+        )
+    
+    # Validate new password (minimum length)
+    if len(password_data.new_password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be at least 6 characters long"
+        )
+    
+    # Check if new password is different from current password
+    if verify_password(password_data.new_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be different from current password"
+        )
+    
+    # Update password
+    try:
+        current_user.hashed_password = get_password_hash(password_data.new_password)
+        db.commit()
+        db.refresh(current_user)
+        
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "message": "Password changed successfully"
+            }
+        )
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to change password: {str(e)}"
+        )
 
