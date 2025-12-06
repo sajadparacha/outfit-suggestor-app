@@ -12,6 +12,7 @@ export interface OutfitSuggestion {
   belt: string;
   reasoning: string;
   imageUrl?: string;
+  model_image?: string | null; // Base64 encoded image of model wearing the outfit
   raw?: unknown;
   meta?: {
     usedPrompt: string;
@@ -36,6 +37,7 @@ export interface OutfitResponse {
   shoes: string;
   belt: string;
   reasoning: string;
+  model_image?: string | null; // Base64 encoded image of model wearing the outfit
 }
 
 export interface ApiError {
@@ -48,6 +50,7 @@ export interface OutfitHistoryEntry {
   created_at: string;
   text_input: string;
   image_data: string | null;
+  model_image: string | null; // Generated model image if available
   shirt: string;
   trouser: string;
   blazer: string;

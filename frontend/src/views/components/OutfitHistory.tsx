@@ -258,23 +258,48 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
       {/* History Grid */}
       {filteredHistory.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredHistory.map((entry) => (
-          <div
-            key={entry.id}
-            className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden"
-          >
-            {/* Uploaded Image */}
-            {entry.image_data && (
-              <div className="w-full h-48 bg-gray-100 overflow-hidden">
-                <img
-                  src={`data:image/jpeg;base64,${entry.image_data}`}
-                  alt="Uploaded outfit"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            )}
+          {filteredHistory.map((entry) => {
+            // Debug: Log entry data
+            if (entry.model_image) {
+              console.log(`History entry ${entry.id} has model_image, length: ${entry.model_image.length}`);
+            } else {
+              console.log(`History entry ${entry.id} has no model_image`);
+            }
+            
+            return (
+            <div
+              key={entry.id}
+              className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden"
+            >
+              {/* Model Image (preferred) or Uploaded Image */}
+              {entry.model_image ? (
+                <div className="w-full bg-gray-100 overflow-hidden relative">
+                  <img
+                    src={`data:image/png;base64,${entry.model_image}`}
+                    alt="AI generated model wearing recommended outfit"
+                    className="w-full h-auto max-h-96 object-contain bg-white"
+                    onError={(e) => {
+                      console.error(`Error loading model image for entry ${entry.id}:`, e);
+                    }}
+                    onLoad={() => {
+                      console.log(`✅ Model image loaded for entry ${entry.id}`);
+                    }}
+                  />
+                  <div className="absolute top-2 right-2 bg-purple-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-lg z-10">
+                    🤖 AI Model
+                  </div>
+                </div>
+              ) : entry.image_data ? (
+                <div className="w-full h-48 bg-gray-100 overflow-hidden">
+                  <img
+                    src={`data:image/jpeg;base64,${entry.image_data}`}
+                    alt="Uploaded outfit"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ) : null}
 
-            <div className="p-6">
+              <div className="p-6">
               {/* Header with date */}
               <div className="flex justify-between items-start mb-4">
                 <span className="text-sm text-gray-500">
@@ -358,7 +383,8 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
               </div>
             </div>
           </div>
-        ))}
+            );
+          })}
         </div>
       )}
     </div>

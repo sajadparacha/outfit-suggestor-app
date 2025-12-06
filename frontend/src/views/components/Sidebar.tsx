@@ -15,6 +15,8 @@ interface SidebarProps {
   setImage: (file: File | null) => void;
   onGetSuggestion: () => void;
   loading: boolean;
+  generateModelImage: boolean;
+  setGenerateModelImage: (generate: boolean) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -25,7 +27,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   preferenceText,
   setPreferenceText,
   onGetSuggestion,
-  loading
+  loading,
+  generateModelImage,
+  setGenerateModelImage
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -366,6 +370,47 @@ const Sidebar: React.FC<SidebarProps> = ({
           rows={3}
         />
         <p className="text-xs text-gray-500 mt-1">Tip: Leave this blank to use the dropdown preferences above.</p>
+      </div>
+
+      {/* AI Model Image Generation Toggle */}
+      <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <label htmlFor="generate-model" className="flex items-center cursor-pointer">
+              <div className="flex-1">
+                <div className="flex items-center space-x-2 mb-1">
+                  <span className="text-lg">🤖</span>
+                  <span className="font-semibold text-gray-800">Generate Model Image</span>
+                </div>
+                <p className="text-xs text-gray-600">
+                  Create an AI-generated image of a model wearing your recommended outfit
+                </p>
+                <p className="text-xs text-purple-600 mt-1">
+                  {generateModelImage ? '📍 Location-based customization enabled' : 'Enable to see outfit on a model'}
+                </p>
+              </div>
+            </label>
+          </div>
+          <div className="ml-4">
+            <button
+              type="button"
+              id="generate-model"
+              onClick={() => setGenerateModelImage(!generateModelImage)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                generateModelImage ? 'bg-purple-600' : 'bg-gray-300'
+              }`}
+              role="switch"
+              aria-checked={generateModelImage}
+              aria-label="Toggle model image generation"
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  generateModelImage ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Get Suggestion Button */}

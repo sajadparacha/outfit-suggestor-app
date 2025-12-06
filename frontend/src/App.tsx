@@ -24,6 +24,7 @@ import { useAuthController } from './controllers/useAuthController';
 import ApiService from './services/ApiService';
 import { OutfitSuggestion } from './models/OutfitModels';
 import { compressImage } from './utils/imageUtils';
+import { getLocationString } from './utils/geolocation';
 
 function App() {
   // Authentication
@@ -58,9 +59,11 @@ function App() {
     currentSuggestion,
     loading,
     error,
+    generateModelImage,
     setImage,
     setFilters,
     setPreferenceText,
+    setGenerateModelImage,
     getSuggestion,
     setCurrentSuggestion,
   } = useOutfitController();
@@ -105,10 +108,30 @@ function App() {
         setShowDuplicateModal(true);
       } else {
         // No duplicate - proceed with AI call
+        // Get user location if model image generation is enabled
+        let location: string | null = null;
+        if (generateModelImage) {
+          try {
+            console.log('Requesting user location...');
+            location = await getLocationString();
+            console.log('Location received:', location);
+            if (location) {
+              showToast('Using your location for personalized model image 🌍', 'success');
+            } else {
+              console.warn('Location is null, will use default model appearance');
+              showToast('Location not available, using default model appearance', 'error');
+            }
+          } catch (err) {
+            console.error('Failed to get location:', err);
+            showToast('Location not available, using default model appearance', 'error');
+          }
+        }
+        
         // Temporarily set compressed image for API call
         const originalImage = image;
         setImage(compressedImage);
-        await getSuggestion();
+        console.log('Calling getSuggestion with:', { generateModelImage, location });
+        await getSuggestion(location);
         setImage(originalImage); // Restore original for display
         await fetchRecentHistory();
       }
@@ -117,9 +140,20 @@ function App() {
       console.error('Duplicate check failed:', err);
       try {
         const compressedImage = await compressImage(image);
+        
+        // Get user location if model image generation is enabled
+        let location: string | null = null;
+        if (generateModelImage) {
+          try {
+            location = await getLocationString();
+          } catch (err) {
+            console.warn('Failed to get location:', err);
+          }
+        }
+        
         const originalImage = image;
         setImage(compressedImage);
-        await getSuggestion();
+        await getSuggestion(location);
         setImage(originalImage);
         await fetchRecentHistory();
       } catch (compressErr) {
@@ -346,6 +380,8 @@ function App() {
                 setImage={setImage}
                 onGetSuggestion={handleGetSuggestion}
                 loading={loading}
+                generateModelImage={generateModelImage}
+                setGenerateModelImage={setGenerateModelImage}
               />
             </div>
 

@@ -79,6 +79,8 @@ def images_are_similar(image1: str, image2: str, threshold: int = None) -> bool:
 async def suggest_outfit(
     image: UploadFile = File(...),
     text_input: str = Form(""),
+    location: str = Form(None),  # User's location (e.g., "New York, USA")
+    generate_model_image: str = Form("false"),  # Whether to generate model image (comes as string from FormData)
     ai_service: AIService = Depends(get_ai_service),
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_optional_user)
@@ -108,11 +110,59 @@ async def suggest_outfit(
         # Get outfit suggestion from AI service
         suggestion = ai_service.get_outfit_suggestion(image_base64, text_input)
         
-        # Save to database (including the image and user if authenticated)
+        # Parse generate_model_image from string to boolean
+        should_generate_model_image = generate_model_image.lower() in ('true', '1', 'yes', 'on')
+        print(f"🔍 DEBUG: Generate model image requested: {should_generate_model_image} (raw value: '{generate_model_image}')")
+        print(f"🔍 DEBUG: Location received: {location}")
+        
+        # Generate model image if requested
+        model_image_base64 = None
+        if should_generate_model_image:
+            print(f"✅ Starting model image generation...")
+            try:
+                # Parse location details if provided as JSON string
+                location_details = None
+                location_string = None
+                
+                if location:
+                    try:
+                        import json
+                        # Try to parse as JSON first
+                        if location.strip().startswith('{'):
+                            location_details = json.loads(location)
+                        else:
+                            # Use as simple string location
+                            location_string = location
+                    except:
+                        # If parsing fails, use as string
+                        location_string = location
+                
+                print(f"🔍 DEBUG: Generating model image with location: {location_string or 'None (using default)'}")
+                print(f"🔍 DEBUG: Calling ai_service.generate_model_image...")
+                model_image_base64 = ai_service.generate_model_image(
+                    suggestion,
+                    location=location_string if location_string else None,
+                    location_details=location_details if location_details else None
+                )
+                print(f"✅ Model image generated successfully, length: {len(model_image_base64) if model_image_base64 else 0}")
+                # Add model image to suggestion
+                suggestion.model_image = model_image_base64
+                print(f"✅ Model image added to suggestion: {bool(suggestion.model_image)}")
+            except Exception as e:
+                # Log error but don't fail the request if image generation fails
+                print(f"❌ ERROR: Failed to generate model image: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                suggestion.model_image = None
+        else:
+            print(f"⏭️  Skipping model image generation (should_generate_model_image = {should_generate_model_image})")
+        
+        # Save to database (including the image, model image, and user if authenticated)
         history_entry = OutfitHistory(
             user_id=current_user.id if current_user else None,
             text_input=text_input,
-            image_data=image_base64,  # Store the base64 encoded image
+            image_data=image_base64,  # Store the base64 encoded uploaded image
+            model_image=suggestion.model_image,  # Store the generated model image if available
             shirt=suggestion.shirt,
             trouser=suggestion.trouser,
             blazer=suggestion.blazer,
@@ -123,6 +173,21 @@ async def suggest_outfit(
         db.add(history_entry)
         db.commit()
         db.refresh(history_entry)
+        
+        # Debug: Log response before returning
+        print(f"🔍 DEBUG: Returning suggestion with model_image: {bool(suggestion.model_image)}")
+        if suggestion.model_image:
+            print(f"✅ Model image length: {len(suggestion.model_image)}")
+            print(f"✅ Model image preview (first 50 chars): {suggestion.model_image[:50]}...")
+        else:
+            print(f"❌ No model_image in suggestion response")
+        
+        # Ensure model_image is included in the response
+        # Return the Pydantic model directly - it should serialize correctly
+        print(f"🔍 DEBUG: Final suggestion object - model_image present: {bool(suggestion.model_image)}")
+        if hasattr(suggestion, 'model_dump'):
+            dump = suggestion.model_dump()
+            print(f"🔍 DEBUG: model_dump() has model_image: {bool(dump.get('model_image'))}")
         
         return suggestion
         
@@ -175,6 +240,7 @@ async def check_duplicate(
                         "id": entry.id,
                         "created_at": entry.created_at.isoformat(),
                         "text_input": entry.text_input,
+                        "model_image": entry.model_image,  # Include model image if available
                         "shirt": entry.shirt,
                         "trouser": entry.trouser,
                         "blazer": entry.blazer,
@@ -235,12 +301,13 @@ async def get_outfit_history(
                     detail=f"Data integrity error: Entry {entry.id} does not belong to user {user_id}"
                 )
         
-        return [
+        result = [
             {
                 "id": entry.id,
                 "created_at": entry.created_at.isoformat(),
                 "text_input": entry.text_input,
-                "image_data": entry.image_data,  # Include the base64 image
+                "image_data": entry.image_data,  # Include the base64 uploaded image
+                "model_image": entry.model_image,  # Include the generated model image if available
                 "shirt": entry.shirt,
                 "trouser": entry.trouser,
                 "blazer": entry.blazer,
@@ -250,6 +317,17 @@ async def get_outfit_history(
             }
             for entry in history
         ]
+        
+        # Debug: Log entries with model images
+        entries_with_model = [r for r in result if r.get("model_image")]
+        if entries_with_model:
+            print(f"📋 Returning {len(entries_with_model)} history entries with model images")
+            for entry in entries_with_model:
+                print(f"  Entry {entry['id']}: model_image length = {len(entry['model_image']) if entry['model_image'] else 0}")
+        else:
+            print("📋 No history entries have model images")
+        
+        return result
         
     except Exception as e:
         raise HTTPException(

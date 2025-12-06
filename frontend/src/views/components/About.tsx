@@ -38,14 +38,21 @@ const About: React.FC = () => {
             <h3 className="text-xl font-semibold text-gray-800 mb-4">About This App</h3>
             <p className="text-gray-700 leading-relaxed mb-4">
               AI Outfit Suggestor is an intelligent fashion assistant that uses advanced AI 
-              technology to analyze your clothing and provide professional outfit recommendations. 
-              Simply upload a photo of your shirt or blazer, and get instant, personalized styling 
-              advice including complementary trousers, shoes, belts, and more.
+              technology to analyze any piece of clothing and provide professional outfit recommendations. 
+              Upload a photo of <strong>any clothing item</strong> - whether it's a shirt, blazer, footwear, 
+              or even a partial outfit combination - and get instant, personalized styling advice.
+            </p>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              The AI intelligently understands what you're wearing and suggests complementary pieces 
+              to complete your look. If you upload a combination, it identifies what's already there 
+              and suggests the missing elements. You can also specify your wardrobe limitations 
+              (like available colors) in preferences, and the AI will tailor suggestions accordingly.
             </p>
             <p className="text-gray-700 leading-relaxed">
-              Built with cutting-edge technologies including OpenAI's GPT-4 Vision, React, FastAPI, 
-              and PostgreSQL, this app combines the power of artificial intelligence with modern 
-              web development to deliver a seamless fashion experience.
+              Built with cutting-edge technologies including OpenAI's GPT-4 Vision and DALL-E 3, 
+              React, FastAPI, and PostgreSQL, this app combines the power of artificial intelligence 
+              with modern web development to deliver a seamless fashion experience. Plus, you can 
+              generate AI-powered model images to visualize how the complete outfit looks!
             </p>
           </div>
 
@@ -54,31 +61,59 @@ const About: React.FC = () => {
             <h3 className="text-xl font-semibold text-gray-800 mb-4">Key Features</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-start space-x-3">
+                <span className="text-2xl">🎯</span>
+                <div>
+                  <h4 className="font-semibold text-gray-800">Flexible Input Support</h4>
+                  <p className="text-sm text-gray-600">Upload any clothing item - shirts, blazers, footwear, or even partial outfit combinations. The AI adapts to what you provide.</p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3">
+                <span className="text-2xl">🧩</span>
+                <div>
+                  <h4 className="font-semibold text-gray-800">Smart Combination Analysis</h4>
+                  <p className="text-sm text-gray-600">Upload a combination and the AI identifies existing pieces, then suggests only the missing elements to complete your look.</p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3">
+                <span className="text-2xl">🎨</span>
+                <div>
+                  <h4 className="font-semibold text-gray-800">Wardrobe-Aware Suggestions</h4>
+                  <p className="text-sm text-gray-600">Specify your available colors or wardrobe limitations in preferences, and get suggestions tailored to what you actually own.</p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3">
                 <span className="text-2xl">🤖</span>
                 <div>
-                  <h4 className="font-semibold text-gray-800">AI-Powered Suggestions</h4>
-                  <p className="text-sm text-gray-600">Advanced AI analyzes your clothing and provides expert recommendations</p>
+                  <h4 className="font-semibold text-gray-800">AI Model Visualization</h4>
+                  <p className="text-sm text-gray-600">Generate stunning AI-powered model images wearing your recommended outfit, customized based on your location for personalized appearance.</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
                 <span className="text-2xl">📋</span>
                 <div>
-                  <h4 className="font-semibold text-gray-800">Outfit History</h4>
-                  <p className="text-sm text-gray-600">Track all your past suggestions with searchable history</p>
+                  <h4 className="font-semibold text-gray-800">Complete Outfit History</h4>
+                  <p className="text-sm text-gray-600">Track all your past suggestions with searchable history, including generated model images for easy reference.</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
                 <span className="text-2xl">🔍</span>
                 <div>
                   <h4 className="font-semibold text-gray-800">Smart Duplicate Detection</h4>
-                  <p className="text-sm text-gray-600">Perceptual hashing detects similar images to save costs</p>
+                  <p className="text-sm text-gray-600">Perceptual hashing detects similar images to save costs and avoid redundant suggestions.</p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3">
+                <span className="text-2xl">🌍</span>
+                <div>
+                  <h4 className="font-semibold text-gray-800">Location-Based Customization</h4>
+                  <p className="text-sm text-gray-600">Model images are customized based on your geographical location for culturally appropriate and relatable appearances.</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
                 <span className="text-2xl">📱</span>
                 <div>
                   <h4 className="font-semibold text-gray-800">Multi-Platform</h4>
-                  <p className="text-sm text-gray-600">Web and iOS support for outfit suggestions anywhere</p>
+                  <p className="text-sm text-gray-600">Web and iOS support for outfit suggestions anywhere, anytime.</p>
                 </div>
               </div>
             </div>
@@ -153,7 +188,10 @@ const About: React.FC = () => {
                 PostgreSQL
               </span>
               <span className="px-4 py-2 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium">
-                OpenAI GPT-4
+                OpenAI GPT-4 Vision
+              </span>
+              <span className="px-4 py-2 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium">
+                DALL-E 3
               </span>
               <span className="px-4 py-2 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium">
                 Tailwind CSS
@@ -167,7 +205,7 @@ const About: React.FC = () => {
           {/* Version Info */}
           <div className="border-t border-gray-200 pt-6 mt-8 text-center">
             <p className="text-sm text-gray-500">
-              Version 2.0.0 • © 2024 Sajad Paracha • All Rights Reserved
+              Version 3.0.0 • © 2024 Sajad Paracha • All Rights Reserved
             </p>
           </div>
         </div>

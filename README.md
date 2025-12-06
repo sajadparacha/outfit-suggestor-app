@@ -4,12 +4,21 @@ An AI-powered outfit suggestion application that analyzes clothing images and pr
 
 ## 🌟 Features
 
-- 🖼️ **Image Analysis**: Upload images of shirts or blazers
-- 🤖 **AI-Powered Suggestions**: Get complete outfit recommendations using OpenAI GPT-4 Vision
-- 🎨 **Complete Outfits**: Receive suggestions for shirts, trousers, blazers, shoes, and belts
-- 💡 **Style Reasoning**: Understand why each outfit works together
-- 📱 **Modern UI**: Clean, responsive React interface with MVC architecture
-- 🔌 **Multi-Platform Ready**: RESTful API can be consumed by Web, Android, iOS, and other clients
+### Core Capabilities
+- 🎯 **Flexible Input Support**: Upload **any clothing item** - shirts, blazers, footwear, or even partial outfit combinations. The AI intelligently adapts to what you provide.
+- 🧩 **Smart Combination Analysis**: Upload a combination and the AI identifies existing pieces, then suggests only the **missing elements** to complete your look.
+- 🎨 **Wardrobe-Aware Suggestions**: Specify your available colors or wardrobe limitations in preferences, and get suggestions **tailored to what you actually own**.
+- 🤖 **AI-Powered Recommendations**: Get complete outfit suggestions using OpenAI GPT-4 Vision with expert styling advice.
+- 🖼️ **AI Model Visualization**: Generate stunning AI-powered model images wearing your recommended outfit, customized based on your location for personalized appearance.
+- 💡 **Style Reasoning**: Understand why each outfit works together with detailed explanations.
+
+### Additional Features
+- 📋 **Complete Outfit History**: Track all your past suggestions with searchable history, including generated model images.
+- 🔍 **Smart Duplicate Detection**: Perceptual hashing detects similar images to save costs and avoid redundant suggestions.
+- 🌍 **Location-Based Customization**: Model images are customized based on your geographical location for culturally appropriate appearances.
+- 📱 **Modern UI**: Clean, responsive React interface with MVC architecture.
+- 🔌 **Multi-Platform Ready**: RESTful API can be consumed by Web, Android, iOS, and other clients.
+- 👤 **User Authentication**: Secure user accounts with email activation and password management.
 
 ## 🏗️ Architecture
 
@@ -41,9 +50,14 @@ frontend/src/
 
 ### Backend
 - **FastAPI** - Modern Python web framework
-- **OpenAI GPT-4 Vision** - AI-powered outfit analysis
+- **OpenAI GPT-4 Vision** - AI-powered outfit analysis and recommendations
+- **OpenAI DALL-E 3** - AI-powered model image generation
+- **PostgreSQL** - Database for outfit history and user data
+- **SQLAlchemy** - ORM for database operations
 - **Pydantic** - Data validation and serialization
 - **PIL/Pillow** - Image processing
+- **Bcrypt** - Password hashing
+- **JWT** - User authentication
 - **Uvicorn** - ASGI server
 
 ### Frontend
@@ -137,8 +151,11 @@ frontend/src/
 - `POST /api/suggest-outfit` - Analyze image and get outfit recommendations
   - **Body**: `multipart/form-data`
   - **Fields**: 
-    - `image` (required): Image file
-    - `text_input` (optional): Additional context
+    - `image` (required): Image file (any clothing item - shirt, blazer, footwear, or combination)
+    - `text_input` (optional): Additional context or preferences (e.g., "I only have navy and brown colors")
+    - `generate_model_image` (optional): Boolean to generate AI model image wearing the outfit
+    - `location` (optional): User location for personalized model appearance
+  - **Response**: Complete outfit suggestion with optional model image
 
 📖 **For complete API documentation**, see [API_DOCUMENTATION.md](./API_DOCUMENTATION.md)
 
@@ -253,9 +270,15 @@ We welcome contributions! Here's how:
 - Check browser console for CORS errors
 
 ### Image upload fails
-- Ensure image is under 10MB
+- Ensure image is under 20MB (automatically compressed on frontend)
 - Check file format (JPEG, PNG, GIF, BMP, WebP supported)
 - Verify internet connection for OpenAI API calls
+
+### Model image not generating
+- Ensure "Generate Model Image" toggle is enabled
+- Check that OpenAI API key has access to DALL-E 3
+- Verify backend logs for any generation errors
+- Model images may take 10-30 seconds to generate
 
 ## 📄 License
 

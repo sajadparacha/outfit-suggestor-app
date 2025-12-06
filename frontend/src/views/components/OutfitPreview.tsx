@@ -9,6 +9,7 @@ interface OutfitSuggestion {
   belt: string;
   reasoning: string;
   imageUrl?: string;
+  model_image?: string | null; // Base64 encoded image of model wearing the outfit
   raw?: unknown;
   meta?: { usedPrompt: string };
 }
@@ -32,6 +33,18 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
 }) => {
   // Hook must be first
   const [showDetails, setShowDetails] = React.useState(false);
+
+  // Debug: Log suggestion data
+  React.useEffect(() => {
+    if (suggestion) {
+      console.log('OutfitPreview - Suggestion data:', {
+        hasModelImage: !!suggestion.model_image,
+        modelImageLength: suggestion.model_image?.length || 0,
+        hasImageUrl: !!suggestion.imageUrl,
+        modelImagePreview: suggestion.model_image ? suggestion.model_image.substring(0, 50) + '...' : null
+      });
+    }
+  }, [suggestion]);
 
   if (loading) {
     return (
@@ -99,22 +112,48 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
 
   return (
     <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all hover:shadow-xl">
-      {/* Image Preview */}
+      {/* Model Image or Uploaded Image Preview */}
       <div className="relative bg-gradient-to-br from-gray-100 to-gray-200">
-        {suggestion.imageUrl ? (
-          <img
-            src={suggestion.imageUrl}
-            alt="Uploaded clothing item"
-            className="w-full h-96 object-contain"
-          />
+        {suggestion.model_image ? (
+          <div className="relative min-h-[400px] bg-white flex items-center justify-center">
+            <img
+              src={`data:image/png;base64,${suggestion.model_image}`}
+              alt="AI generated model wearing recommended outfit"
+              className="w-full h-auto max-h-[600px] object-contain"
+              onError={(e) => {
+                console.error('Error loading model image:', e);
+                console.log('Model image data length:', suggestion.model_image?.length);
+                console.log('Model image preview (first 100 chars):', suggestion.model_image?.substring(0, 100));
+                // Try with jpeg format as fallback
+                const target = e.target as HTMLImageElement;
+                if (target.src.includes('image/png')) {
+                  target.src = `data:image/jpeg;base64,${suggestion.model_image}`;
+                }
+              }}
+              onLoad={() => {
+                console.log('✅ Model image loaded successfully');
+              }}
+            />
+            <div className="absolute top-4 right-4 bg-purple-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg z-10">
+              🤖 AI Model
+            </div>
+          </div>
+        ) : suggestion.imageUrl ? (
+          <div>
+            <img
+              src={suggestion.imageUrl}
+              alt="Uploaded clothing item"
+              className="w-full h-96 object-contain"
+            />
+            <div className="absolute top-4 right-4 bg-teal-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">
+              ✨ AI Generated
+            </div>
+          </div>
         ) : (
           <div className="h-96 flex items-center justify-center">
             <div className="text-6xl">👔</div>
           </div>
         )}
-        <div className="absolute top-4 right-4 bg-teal-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">
-          ✨ AI Generated
-        </div>
       </div>
 
       {/* Outfit Details */}

@@ -10,6 +10,7 @@ class OutfitSuggestion(BaseModel):
     shoes: str = Field(..., description="Description of the recommended shoes")
     belt: str = Field(..., description="Description of the recommended belt")
     reasoning: str = Field(..., description="Explanation of why this outfit works well")
+    model_image: str | None = Field(None, description="Base64 encoded image of model wearing the outfit")
 
 
 class OutfitRequest(BaseModel):

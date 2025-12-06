@@ -63,16 +63,28 @@ class ApiService {
    * Get outfit suggestion from backend API
    * @param image - Image file to analyze
    * @param textInput - Additional context or preferences
+   * @param generateModelImage - Whether to generate AI model image
+   * @param location - User's location for model customization
    * @returns Promise with outfit suggestion
    */
   async getSuggestion(
     image: File,
-    textInput: string = ''
+    textInput: string = '',
+    generateModelImage: boolean = false,
+    location: string | null = null
   ): Promise<OutfitResponse> {
     try {
       const formData = new FormData();
       formData.append('image', image);
       formData.append('text_input', textInput);
+      formData.append('generate_model_image', generateModelImage.toString());
+      console.log('FormData - generate_model_image:', generateModelImage.toString());
+      if (location) {
+        formData.append('location', location);
+        console.log('FormData - location:', location);
+      } else {
+        console.log('FormData - location: not provided');
+      }
 
       const response = await fetch(`${this.baseUrl}/api/suggest-outfit`, {
         method: 'POST',
@@ -86,6 +98,14 @@ class ApiService {
       }
 
       const data: OutfitResponse = await response.json();
+      
+      // Debug: Log the response
+      console.log('API Response received:', {
+        hasModelImage: !!data.model_image,
+        modelImageLength: data.model_image?.length || 0,
+        modelImagePreview: data.model_image ? data.model_image.substring(0, 50) + '...' : null
+      });
+      
       return data;
     } catch (error) {
       if (error instanceof Error) {
@@ -149,6 +169,18 @@ class ApiService {
       }
 
       const data: OutfitHistoryEntry[] = await response.json();
+      
+      // Debug: Log history entries with model images
+      const entriesWithModelImage = data.filter(entry => entry.model_image);
+      if (entriesWithModelImage.length > 0) {
+        console.log(`📋 History: ${entriesWithModelImage.length} entries have model images`);
+        entriesWithModelImage.forEach(entry => {
+          console.log(`  Entry ${entry.id}: model_image length = ${entry.model_image?.length || 0}`);
+        });
+      } else {
+        console.log('📋 History: No entries have model images');
+      }
+      
       return data;
     } catch (error) {
       if (error instanceof Error) {
