@@ -9,10 +9,12 @@ import base64
 
 from models.outfit import OutfitSuggestion
 from models.outfit_history import OutfitHistory
+from models.user import User
 from models.database import get_db
 from services.ai_service import AIService
 from utils.image_processor import encode_image, validate_image
 from config import get_ai_service, Config
+from dependencies import get_current_active_user, get_optional_user
 
 
 router = APIRouter(prefix="/api", tags=["outfit"])
@@ -78,7 +80,8 @@ async def suggest_outfit(
     image: UploadFile = File(...),
     text_input: str = Form(""),
     ai_service: AIService = Depends(get_ai_service),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_optional_user)
 ):
     """
     Analyze an uploaded image and provide outfit suggestions
@@ -105,8 +108,9 @@ async def suggest_outfit(
         # Get outfit suggestion from AI service
         suggestion = ai_service.get_outfit_suggestion(image_base64, text_input)
         
-        # Save to database (including the image)
+        # Save to database (including the image and user if authenticated)
         history_entry = OutfitHistory(
+            user_id=current_user.id if current_user else None,
             text_input=text_input,
             image_data=image_base64,  # Store the base64 encoded image
             shirt=suggestion.shirt,
@@ -135,7 +139,8 @@ async def suggest_outfit(
 @router.post("/check-duplicate")
 async def check_duplicate(
     image: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_optional_user)
 ):
     """
     Check if an uploaded image already exists in history
@@ -152,11 +157,14 @@ async def check_duplicate(
         validate_image(image, max_size_mb=20)
         image_base64 = encode_image(image.file)
         
-        # Query all history entries with images
-        history = db.query(OutfitHistory)\
-            .filter(OutfitHistory.image_data.isnot(None))\
-            .order_by(OutfitHistory.created_at.desc())\
-            .all()
+        # Query user's history entries with images (if authenticated)
+        query = db.query(OutfitHistory).filter(OutfitHistory.image_data.isnot(None))
+        if current_user:
+            query = query.filter(OutfitHistory.user_id == current_user.id)
+        else:
+            # For anonymous users, don't check duplicates (return no duplicates)
+            return {"is_duplicate": False}
+        history = query.order_by(OutfitHistory.created_at.desc()).all()
         
         # Check for duplicate
         for entry in history:
@@ -190,7 +198,8 @@ async def check_duplicate(
 @router.get("/outfit-history", response_model=List[dict])
 async def get_outfit_history(
     limit: int = 20,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_optional_user)
 ):
     """
     Get outfit suggestion history
@@ -203,10 +212,28 @@ async def get_outfit_history(
         List of outfit history entries
     """
     try:
-        history = db.query(OutfitHistory)\
-            .order_by(OutfitHistory.created_at.desc())\
-            .limit(limit)\
+        # CRITICAL: Must be authenticated to see history
+        if not current_user:
+            # For anonymous users, return empty history
+            return []
+        
+        # Strict filtering: Only return entries that belong to the authenticated user
+        user_id = current_user.id
+        history = (
+            db.query(OutfitHistory)
+            .filter(OutfitHistory.user_id == user_id)  # Explicit filter by authenticated user's ID
+            .order_by(OutfitHistory.created_at.desc())
+            .limit(limit)
             .all()
+        )
+        
+        # Double-check: Verify all entries belong to this user (safety check)
+        for entry in history:
+            if entry.user_id != user_id:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Data integrity error: Entry {entry.id} does not belong to user {user_id}"
+                )
         
         return [
             {
