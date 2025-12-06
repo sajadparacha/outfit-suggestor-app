@@ -1,8 +1,8 @@
 """ORM models for persisting outfit suggestion history."""
 from datetime import datetime
 
-from sqlalchemy import Integer, String, DateTime, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Integer, String, DateTime, Text, ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
 
@@ -21,6 +21,12 @@ class OutfitHistory(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, nullable=False, index=True
     )
+
+    # User relationship (nullable for backward compatibility)
+    user_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    user: Mapped["User"] = relationship("User", back_populates="outfit_history")
 
     # Optional metadata about the request
     text_input: Mapped[str | None] = mapped_column(Text, nullable=True)

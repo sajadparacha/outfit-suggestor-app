@@ -9,7 +9,11 @@ import os
 
 from config import Config
 from routes.outfit_routes import router as outfit_router
+from routes.auth_routes import router as auth_router
 from models.database import Base, engine
+# Import models to ensure they're registered with SQLAlchemy
+from models.user import User  # noqa: F401
+from models.outfit_history import OutfitHistory  # noqa: F401
 
 # Startup logging
 print("=" * 50)
@@ -45,6 +49,7 @@ app.add_middleware(
 Base.metadata.create_all(bind=engine)
 
 # Include routers
+app.include_router(auth_router)
 app.include_router(outfit_router)
 
 

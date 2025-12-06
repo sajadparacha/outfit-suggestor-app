@@ -138,20 +138,6 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
     );
   }
 
-  if (history.length === 0) {
-    return (
-      <div className="bg-white rounded-lg shadow-md p-8">
-        <div className="text-center">
-          <div className="text-gray-400 text-6xl mb-4">📋</div>
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">No History Yet</h3>
-          <p className="text-gray-600 mb-4">
-            Your outfit suggestions will appear here once you start using the app.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4">
       {/* Header with title and refresh button */}
@@ -171,13 +157,15 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
             </p>
           )}
         </div>
-        <button
-          onClick={onRefresh}
-          className="px-4 py-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center space-x-2"
-        >
-          <span>🔄</span>
-          <span>{isFullView ? 'Refresh' : 'Load All'}</span>
-        </button>
+        {history.length > 0 && (
+          <button
+            onClick={onRefresh}
+            className="px-4 py-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center space-x-2"
+          >
+            <span>🔄</span>
+            <span>{isFullView ? 'Refresh' : 'Load All'}</span>
+          </button>
+        )}
       </div>
 
       {/* Search and Filter Bar */}
@@ -235,8 +223,21 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
         )}
       </div>
 
+      {/* No History Message */}
+      {history.length === 0 && !searchQuery && (
+        <div className="bg-white rounded-lg shadow-md p-8">
+          <div className="text-center">
+            <div className="text-gray-400 text-6xl mb-4">📋</div>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">No History Yet</h3>
+            <p className="text-gray-600 mb-4">
+              Your outfit suggestions will appear here once you start using the app.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* No Results Message */}
-      {filteredHistory.length === 0 && searchQuery && (
+      {filteredHistory.length === 0 && searchQuery && history.length > 0 && (
         <div className="bg-white rounded-lg shadow-md p-8">
           <div className="text-center">
             <div className="text-gray-400 text-5xl mb-4">🔍</div>

@@ -7,7 +7,12 @@ import { useState, useEffect } from 'react';
 import { OutfitHistoryEntry } from '../models/OutfitModels';
 import apiService from '../services/ApiService';
 
-export const useHistoryController = () => {
+interface UseHistoryControllerOptions {
+  userId?: number | null; // User ID to track authentication changes
+  isAuthenticated?: boolean; // Track authentication state
+}
+
+export const useHistoryController = (options?: UseHistoryControllerOptions) => {
   const [history, setHistory] = useState<OutfitHistoryEntry[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,12 +63,24 @@ export const useHistoryController = () => {
   };
 
   /**
-   * Load initial history (last 2) on component mount
+   * Clear history when user logs out or changes
    */
   useEffect(() => {
+    const isAuthenticated = options?.isAuthenticated ?? false;
+    const currentUserId = options?.userId;
+    
+    if (!isAuthenticated || !currentUserId) {
+      // User logged out or not authenticated - clear history
+      setHistory([]);
+      setIsFullView(false);
+      setError(null);
+      return;
+    }
+    
+    // User logged in or changed - reload history for this user
     fetchRecentHistory();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [options?.userId, options?.isAuthenticated]);
 
   return {
     history,

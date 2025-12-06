@@ -35,6 +35,26 @@ class Config:
     # Image similarity threshold for duplicate detection
     # Lower values = stricter matching (0 = identical, 5 = very similar, 10 = similar)
     IMAGE_SIMILARITY_THRESHOLD = int(os.getenv("IMAGE_SIMILARITY_THRESHOLD", 5))
+    
+    # JWT Authentication settings
+    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
+    JWT_ALGORITHM = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
+    
+    # Email configuration for account activation
+    EMAIL_ENABLED = os.getenv("EMAIL_ENABLED", "true").lower() == "true"
+    EMAIL_SMTP_HOST = os.getenv("EMAIL_SMTP_HOST", "smtp.gmail.com")
+    EMAIL_SMTP_PORT = int(os.getenv("EMAIL_SMTP_PORT", "587"))
+    EMAIL_SMTP_USER = os.getenv("EMAIL_SMTP_USER", "")  # Your email address
+    EMAIL_SMTP_PASSWORD = os.getenv("EMAIL_SMTP_PASSWORD", "")  # Your email password or app password
+    EMAIL_FROM_ADDRESS = os.getenv("EMAIL_FROM_ADDRESS", EMAIL_SMTP_USER)
+    EMAIL_FROM_NAME = os.getenv("EMAIL_FROM_NAME", "Outfit Suggestor")
+    
+    # Frontend URL for activation links
+    FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    
+    # Activation token expiration (in hours)
+    ACTIVATION_TOKEN_EXPIRE_HOURS = int(os.getenv("ACTIVATION_TOKEN_EXPIRE_HOURS", "24"))
 
 
 # Singleton instance of AI Service
