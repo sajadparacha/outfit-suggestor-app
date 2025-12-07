@@ -208,3 +208,4 @@ def send_email(
         logger.error(f"Failed to send email to {to_email}: {str(e)}")
         return False
 
+

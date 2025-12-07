@@ -307,7 +307,7 @@ async def get_outfit_history(
                 "created_at": entry.created_at.isoformat(),
                 "text_input": entry.text_input,
                 "image_data": entry.image_data,  # Include the base64 uploaded image
-                "model_image": entry.model_image,  # Include the generated model image if available
+                "model_image": getattr(entry, 'model_image', None),  # Include the generated model image if available (handle missing column gracefully)
                 "shirt": entry.shirt,
                 "trouser": entry.trouser,
                 "blazer": entry.blazer,

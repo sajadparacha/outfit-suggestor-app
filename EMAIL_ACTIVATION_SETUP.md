@@ -134,3 +134,4 @@ if user:
 - Tokens are single-use (cleared after activation)
 - Email verification prevents fake email registrations
 
+
