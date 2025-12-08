@@ -2,6 +2,7 @@
 from fastapi import APIRouter, File, UploadFile, Form, HTTPException, Depends
 from typing import Optional, List
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 import imagehash
 from PIL import Image
 import io
@@ -285,38 +286,87 @@ async def get_outfit_history(
         
         # Strict filtering: Only return entries that belong to the authenticated user
         user_id = current_user.id
-        history = (
-            db.query(OutfitHistory)
-            .filter(OutfitHistory.user_id == user_id)  # Explicit filter by authenticated user's ID
-            .order_by(OutfitHistory.created_at.desc())
-            .limit(limit)
-            .all()
-        )
         
-        # Double-check: Verify all entries belong to this user (safety check)
-        for entry in history:
-            if entry.user_id != user_id:
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Data integrity error: Entry {entry.id} does not belong to user {user_id}"
-                )
+        # Check if model_image column exists in the database
+        # This handles cases where the migration hasn't been run yet
+        has_model_image_column = False
+        try:
+            result = db.execute(text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='outfit_history' AND column_name='model_image'
+            """))
+            has_model_image_column = result.fetchone() is not None
+        except Exception as e:
+            print(f"⚠️ Warning: Could not check for model_image column: {e}")
+            # If check fails, assume column doesn't exist to be safe
+            has_model_image_column = False
         
-        result = [
-            {
-                "id": entry.id,
-                "created_at": entry.created_at.isoformat(),
-                "text_input": entry.text_input,
-                "image_data": entry.image_data,  # Include the base64 uploaded image
-                "model_image": getattr(entry, 'model_image', None),  # Include the generated model image if available (handle missing column gracefully)
-                "shirt": entry.shirt,
-                "trouser": entry.trouser,
-                "blazer": entry.blazer,
-                "shoes": entry.shoes,
-                "belt": entry.belt,
-                "reasoning": entry.reasoning
-            }
-            for entry in history
-        ]
+        # Query history entries
+        # Use raw SQL if model_image column doesn't exist to avoid SQLAlchemy errors
+        if not has_model_image_column:
+            print("⚠️ model_image column not found, querying without it")
+            # Query without model_image column
+            query = text("""
+                SELECT id, created_at, user_id, text_input, image_data, 
+                       shirt, trouser, blazer, shoes, belt, reasoning
+                FROM outfit_history
+                WHERE user_id = :user_id
+                ORDER BY created_at DESC
+                LIMIT :limit
+            """)
+            rows = db.execute(query, {"user_id": user_id, "limit": limit}).fetchall()
+            
+            result = [
+                {
+                    "id": row.id,
+                    "created_at": row.created_at.isoformat() if hasattr(row.created_at, 'isoformat') else str(row.created_at),
+                    "text_input": row.text_input,
+                    "image_data": row.image_data,
+                    "model_image": None,  # Column doesn't exist
+                    "shirt": row.shirt,
+                    "trouser": row.trouser,
+                    "blazer": row.blazer,
+                    "shoes": row.shoes,
+                    "belt": row.belt,
+                    "reasoning": row.reasoning
+                }
+                for row in rows
+            ]
+        else:
+            # Column exists, use normal SQLAlchemy query
+            history = (
+                db.query(OutfitHistory)
+                .filter(OutfitHistory.user_id == user_id)  # Explicit filter by authenticated user's ID
+                .order_by(OutfitHistory.created_at.desc())
+                .limit(limit)
+                .all()
+            )
+            
+            # Double-check: Verify all entries belong to this user (safety check)
+            for entry in history:
+                if entry.user_id != user_id:
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Data integrity error: Entry {entry.id} does not belong to user {user_id}"
+                    )
+            
+            result = [
+                {
+                    "id": entry.id,
+                    "created_at": entry.created_at.isoformat(),
+                    "text_input": entry.text_input,
+                    "image_data": entry.image_data,  # Include the base64 uploaded image
+                    "model_image": getattr(entry, 'model_image', None),  # Include the generated model image if available
+                    "shirt": entry.shirt,
+                    "trouser": entry.trouser,
+                    "blazer": entry.blazer,
+                    "shoes": entry.shoes,
+                    "belt": entry.belt,
+                    "reasoning": entry.reasoning
+                }
+                for entry in history
+            ]
         
         # Debug: Log entries with model images
         entries_with_model = [r for r in result if r.get("model_image")]
