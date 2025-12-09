@@ -29,6 +29,7 @@ function App() {
   // Authentication
   const { user, isAuthenticated, isLoading: authLoading, login, register, logout, error: authError, clearError } = useAuthController();
   const [showRegister, setShowRegister] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   // View state
   const [currentView, setCurrentView] = useState<'main' | 'history' | 'about' | 'settings'>('main');
@@ -240,34 +241,7 @@ function App() {
     );
   }
 
-  // Show login/register if not authenticated
-  if (!isAuthenticated) {
-    return (
-      <>
-        {showRegister ? (
-          <Register
-            onRegister={handleRegister}
-            onSwitchToLogin={() => {
-              setShowRegister(false);
-              clearError();
-            }}
-            loading={authLoading}
-            error={authError}
-          />
-        ) : (
-          <Login
-            onLogin={handleLogin}
-            onSwitchToRegister={() => {
-              setShowRegister(true);
-              clearError();
-            }}
-            loading={authLoading}
-            error={authError}
-          />
-        )}
-      </>
-    );
-  }
+  // Allow anonymous access - show login/register as optional modal, not required
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -289,16 +263,30 @@ function App() {
               >
                 🎨 Get Suggestion
               </button>
-              <button
-                onClick={() => setCurrentView('history')}
-                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                  currentView === 'history'
-                    ? 'border-indigo-600 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                📋 History
-              </button>
+              {isAuthenticated && (
+                <>
+                  <button
+                    onClick={() => setCurrentView('history')}
+                    className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                      currentView === 'history'
+                        ? 'border-indigo-600 text-indigo-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    📋 History
+                  </button>
+                  <button
+                    onClick={() => setCurrentView('settings')}
+                    className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                      currentView === 'settings'
+                        ? 'border-indigo-600 text-indigo-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    ⚙️ Settings
+                  </button>
+                </>
+              )}
               <button
                 onClick={() => setCurrentView('about')}
                 className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
@@ -309,27 +297,39 @@ function App() {
               >
                 ℹ️ About
               </button>
-              <button
-                onClick={() => setCurrentView('settings')}
-                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                  currentView === 'settings'
-                    ? 'border-indigo-600 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                ⚙️ Settings
-              </button>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">
-                {user?.full_name || user?.email}
-              </span>
-              <button
-                onClick={handleLogout}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-              >
-                Logout
-              </button>
+              {isAuthenticated ? (
+                <>
+                  <span className="text-sm text-gray-600">
+                    {user?.full_name || user?.email}
+                  </span>
+                  <button
+                    onClick={handleLogout}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setShowRegister(true)}
+                    className="px-4 py-2 text-sm font-medium text-indigo-600 bg-white border border-indigo-600 rounded-md hover:bg-indigo-50 transition-colors"
+                  >
+                    Sign Up
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowRegister(false);
+                      setShowLoginModal(true);
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors"
+                  >
+                    Login
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -370,19 +370,33 @@ function App() {
         )}
 
         {currentView === 'history' && (
-          <OutfitHistory
-            history={history}
-            loading={historyLoading}
-            error={historyError}
-            isFullView={isFullView}
-            onRefresh={refreshHistory}
-            onEnsureFullHistory={ensureFullHistory}
-          />
+          isAuthenticated ? (
+            <OutfitHistory
+              history={history}
+              loading={historyLoading}
+              error={historyError}
+              isFullView={isFullView}
+              onRefresh={refreshHistory}
+              onEnsureFullHistory={ensureFullHistory}
+            />
+          ) : (
+            <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-8 text-center">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">History</h2>
+              <p className="text-gray-600 mb-6">Please log in to view your outfit history.</p>
+              <button
+                onClick={() => setShowLoginModal(true)}
+                className="px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+              >
+                Login
+              </button>
+            </div>
+          )
         )}
 
         {currentView === 'about' && <About />}
 
         {currentView === 'settings' && (
+          isAuthenticated ? (
           <div className="max-w-2xl mx-auto">
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Account Settings</h2>
@@ -420,8 +434,75 @@ function App() {
               </div>
             </div>
           </div>
+          ) : (
+            <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-8 text-center">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Settings</h2>
+              <p className="text-gray-600 mb-6">Please log in to access your account settings.</p>
+              <button
+                onClick={() => setShowLoginModal(true)}
+                className="px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+              >
+                Login
+              </button>
+            </div>
+          )
         )}
       </div>
+
+      {/* Login/Register Modal - Only show when explicitly requested */}
+      {(showRegister || showLoginModal) && !isAuthenticated && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" 
+            onClick={() => {
+              setShowRegister(false);
+              setShowLoginModal(false);
+            }}
+          ></div>
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full transform transition-all">
+              <button
+                onClick={() => {
+                  setShowRegister(false);
+                  setShowLoginModal(false);
+                }}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10"
+              >
+                ✕
+              </button>
+              {showRegister ? (
+                <Register
+                  onRegister={async (data) => {
+                    await handleRegister(data);
+                    setShowRegister(false);
+                  }}
+                  onSwitchToLogin={() => {
+                    setShowRegister(false);
+                    setShowLoginModal(true);
+                    clearError();
+                  }}
+                  loading={authLoading}
+                  error={authError}
+                />
+              ) : (
+                <Login
+                  onLogin={async (credentials) => {
+                    await handleLogin(credentials);
+                    setShowLoginModal(false);
+                  }}
+                  onSwitchToRegister={() => {
+                    setShowLoginModal(false);
+                    setShowRegister(true);
+                    clearError();
+                  }}
+                  loading={authLoading}
+                  error={authError}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast Notification */}
       {toast && (

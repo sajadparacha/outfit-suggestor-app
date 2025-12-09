@@ -26,7 +26,7 @@ const About: React.FC = () => {
         <div className="px-8 py-8">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-gray-800 mb-2">
-              Developed by Sajad Paracha
+              Developed by Sajjad Ahmed Paracha
             </h2>
             <p className="text-gray-600">
               Full Stack Developer & AI Enthusiast
@@ -205,7 +205,7 @@ const About: React.FC = () => {
           {/* Version Info */}
           <div className="border-t border-gray-200 pt-6 mt-8 text-center">
             <p className="text-sm text-gray-500">
-              Version 3.0.0 • © 2024 Sajad Paracha • All Rights Reserved
+              Version 3.0.0 • © 2024 Sajjad Ahmed Paracha • All Rights Reserved
             </p>
           </div>
         </div>

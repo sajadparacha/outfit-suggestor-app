@@ -249,21 +249,81 @@ Respond in JSON format with the following structure:
             Detailed description of the clothing features
         """
         analysis_prompt = """
-        Analyze this clothing image in extreme detail. Describe EXACTLY what you see:
+        CRITICAL TASK: Analyze this clothing image with EXTREME precision. Your description will be used to recreate this EXACT item, so every detail matters.
         
-        1. Item type (shirt, blazer, jacket, etc.)
-        2. Exact color(s) - be very specific (e.g., "navy blue with subtle pinstripes", not just "blue")
-        3. Pattern (solid, stripes, checks, plaid, etc.) - describe pattern details precisely
-        4. Material/texture appearance (cotton, wool, silk, etc.)
-        5. Style details (collar type, buttons, pockets, cuffs, lapels, etc.)
-        6. Fit/style (slim fit, regular, etc.)
-        7. Any distinctive features (logos, embroidery, buttons, etc.)
-        8. Any text or branding visible
+        You must provide a COMPLETE, DETAILED description that allows someone to recreate this clothing item with 100% visual accuracy.
         
-        Be extremely precise and detailed. This description will be used to recreate the EXACT same clothing item on a model.
-        Do not suggest changes or improvements - describe ONLY what is actually in the image.
+        STRUCTURE YOUR RESPONSE AS FOLLOWS:
         
-        Format your response as a clear, detailed description that can be used to recreate this exact item.
+        1. ITEM TYPE: 
+           State exactly what type of clothing this is (e.g., "dress shirt", "blazer", "sport coat", "polo shirt", "t-shirt", "sweater")
+        
+        2. EXACT COLORS (BE PRECISE):
+           - Primary color: Use specific color names (e.g., "navy blue", "burgundy", "charcoal gray", "forest green", NOT generic "blue" or "red")
+           - If multiple colors: List each color specifically
+           - Color shade/intensity: Describe the exact shade (e.g., "deep navy", "light blue", "dark charcoal", "bright red")
+           - Any color gradients or variations: Describe exactly how colors transition
+        
+        3. PATTERN DETAILS (IF APPLICABLE):
+           - Pattern type: State clearly (solid, stripes, checks, plaid, dots, geometric, etc.)
+           - If STRIPED: 
+             * Stripe direction (vertical, horizontal, diagonal)
+             * Stripe width (thin, medium, thick, or approximate measurements)
+             * Stripe spacing (close together, medium spacing, wide spacing)
+             * Stripe colors (list each color specifically)
+           - If CHECKED:
+             * Check size (small, medium, large)
+             * Check colors (list each color)
+             * Check pattern style (windowpane, gingham, tattersall, etc.)
+           - If PLAID:
+             * Plaid colors (list all colors in the pattern)
+             * Line thickness (thin, medium, thick)
+             * Pattern complexity (simple, complex)
+           - If DOTS or OTHER PATTERNS:
+             * Pattern size and spacing
+             * Pattern colors
+             * Pattern arrangement
+        
+        4. MATERIAL/TEXTURE APPEARANCE:
+           - Material type: What material it appears to be (cotton, wool, silk, linen, polyester, etc.)
+           - Texture: Describe the surface (smooth, textured, ribbed, knit, woven, etc.)
+           - Finish: Describe the finish (matte, shiny, glossy, brushed, etc.)
+           - Fabric weight: Apparent weight (light, medium, heavy)
+        
+        5. STYLE DETAILS:
+           - Collar: Type and style (if applicable: spread collar, point collar, button-down, mandarin, etc.)
+           - Buttons: Style (standard, decorative), color, material (plastic, metal, fabric-covered), placement
+           - Pockets: Type (chest pocket, side pockets), style, placement
+           - Cuffs: Style (if visible: barrel cuffs, French cuffs, etc.)
+           - Lapels: Style (if applicable: notch lapel, peak lapel, shawl collar, etc.)
+           - Other design elements: Any other distinctive style features
+        
+        6. FIT AND CUT:
+           - Fit: Apparent fit (slim fit, regular fit, relaxed fit, oversized)
+           - Cut: Style (tailored, casual, athletic, etc.)
+        
+        7. DISTINCTIVE FEATURES:
+           - Logos/Branding: Describe any logos, emblems, or brand markings exactly (location, size, colors)
+           - Embroidery: Any embroidery or decorative stitching (describe pattern, colors, location)
+           - Buttons: Material, color, style (if distinctive)
+           - Unique elements: Any other unique design features
+           - Text: Any visible text (quote exactly, including font style if noticeable)
+        
+        8. OVERALL CHARACTERISTICS:
+           - Style category: (formal, business, casual, sporty, etc.)
+           - Any distinctive characteristics that make this item unique
+        
+        CRITICAL RULES FOR YOUR DESCRIPTION:
+        - Describe ONLY what you actually see - do not infer or assume
+        - Use SPECIFIC color names - avoid generic terms
+        - Be PRECISE about patterns - include measurements, spacing, directions
+        - Include ALL visible details - nothing is too small to mention
+        - Do NOT suggest improvements, changes, or alternatives
+        - Do NOT generalize - be specific about every aspect
+        - If uncertain about a detail, describe what you can clearly see
+        
+        Your description must be detailed enough that someone could recreate this EXACT clothing item just from your words.
+        Be thorough, specific, and accurate.
         """
         
         try:
@@ -286,8 +346,8 @@ Respond in JSON format with the following structure:
                         ]
                     }
                 ],
-                max_tokens=500,
-                temperature=0.3  # Lower temperature for more precise analysis
+                max_tokens=800,  # Increased for more detailed analysis
+                temperature=0.1  # Very low temperature for maximum precision
             )
             
             clothing_description = response.choices[0].message.content
@@ -324,16 +384,68 @@ Respond in JSON format with the following structure:
         if exact_clothing_details:
             # Use exact clothing details from uploaded image analysis
             outfit_description = f"""
-            The model is wearing the EXACT clothing item from the uploaded image:
+            ⚠️⚠️⚠️ ABSOLUTE CRITICAL REQUIREMENT - THIS IS THE MOST IMPORTANT INSTRUCTION ⚠️⚠️⚠️
+            
+            THE MODEL MUST WEAR THE EXACT SAME CLOTHING ITEM FROM THE USER'S UPLOADED PHOTO.
+            DO NOT CREATE A SIMILAR ITEM. DO NOT CREATE A VARIATION. IT MUST BE IDENTICAL.
+            
+            EXACT CLOTHING ITEM SPECIFICATIONS (COPY EXACTLY - NO MODIFICATIONS ALLOWED):
             {exact_clothing_details}
             
-            CRITICAL: The clothing item must match EXACTLY as described above. Do not modify, change, or improve the clothing.
-            Preserve all exact colors, patterns, textures, and details precisely as described.
+            ⚠️ MANDATORY REQUIREMENTS - FOLLOW THESE EXACTLY:
             
-            Complete the outfit with:
+            1. COLOR MATCHING (CRITICAL):
+               - Use the EXACT colors specified in the description above
+               - If the description says "navy blue", use NAVY BLUE, not "blue" or "dark blue"
+               - If the description says "burgundy", use BURGUNDY, not "red" or "maroon"
+               - Match the exact shade, tone, and intensity
+               - NO COLOR VARIATIONS OR SUBSTITUTIONS ALLOWED
+            
+            2. PATTERN MATCHING (CRITICAL):
+               - If it has stripes: Use the EXACT same stripe width, spacing, direction, and colors
+               - If it has checks: Use the EXACT same check size, colors, and pattern
+               - If it has plaid: Use the EXACT same plaid pattern, colors, and line thickness
+               - If it's solid: Make it solid with NO patterns
+               - NO PATTERN VARIATIONS OR MODIFICATIONS ALLOWED
+            
+            3. STYLE DETAILS (CRITICAL):
+               - Match the EXACT collar type described
+               - Match the EXACT button style, color, and placement
+               - Match the EXACT pocket style and placement
+               - Match the EXACT cuff style if visible
+               - Match the EXACT lapel style if applicable
+               - NO STYLE MODIFICATIONS ALLOWED
+            
+            4. MATERIAL/TEXTURE (CRITICAL):
+               - Match the EXACT material appearance described
+               - Match the EXACT texture (smooth, textured, matte, shiny)
+               - Match the EXACT fabric weight appearance
+               - NO MATERIAL VARIATIONS ALLOWED
+            
+            5. DISTINCTIVE FEATURES (CRITICAL):
+               - Include ALL logos, emblems, or branding EXACTLY as described
+               - Include ALL embroidery or decorative elements EXACTLY as described
+               - Include ALL unique design elements EXACTLY as described
+               - Include ANY text EXACTLY as shown
+               - NO FEATURES SHOULD BE ADDED OR REMOVED
+            
+            ⚠️ ABSOLUTE PROHIBITIONS:
+            - DO NOT create a "similar" or "inspired by" version
+            - DO NOT improve, enhance, or modify the design
+            - DO NOT use "close enough" colors or patterns
+            - DO NOT add features that weren't in the original
+            - DO NOT remove features that were in the original
+            - DO NOT change the style, fit, or cut
+            - THE CLOTHING MUST BE A PIXEL-PERFECT REPLICA IN TERMS OF APPEARANCE
+            
+            Complete the outfit with these additional items (these can be styled normally):
             - {outfit.trouser}
             - {outfit.shoes}
             - {outfit.belt}
+            
+            ⚠️ FINAL REMINDER: The uploaded clothing item description above is your EXACT blueprint. 
+            Recreate it with 100% fidelity. Every color, pattern, detail, and feature must match exactly.
+            This is more important than any other aspect of the image.
             """.strip()
         else:
             # Use general outfit description
@@ -346,15 +458,38 @@ Respond in JSON format with the following structure:
             - {outfit.belt}
             """.strip()
         
-        prompt = f"""
-        Professional fashion photography of a {model_description} male model, 
-        full body shot, standing in a modern studio setting with neutral background.
-        {outfit_description}
-        
-        The model should be well-groomed, confident pose, professional lighting, 
-        high quality fashion photography style, realistic and detailed.
-        The model's appearance should authentically reflect the specified regional characteristics.
-        """.strip()
+        if exact_clothing_details:
+            # Enhanced prompt when exact clothing must be preserved
+            prompt = f"""
+            {outfit_description}
+            
+            PHOTOGRAPHY SETUP:
+            - Professional fashion photography of a {model_description} male model
+            - Full body shot, standing in a modern studio setting with neutral background
+            - Well-groomed model, confident pose
+            - Professional lighting, high quality fashion photography style
+            - Realistic and detailed
+            - Model's appearance should authentically reflect the specified regional characteristics
+            
+            ⚠️ CRITICAL PRIORITY ORDER:
+            1. FIRST PRIORITY (MOST IMPORTANT): The clothing item must match the exact specifications above with 100% accuracy
+            2. SECOND PRIORITY: Complete the outfit with the additional items listed
+            3. THIRD PRIORITY: Professional photography quality and model appearance
+            
+            REMEMBER: If there is any conflict between making the image look good and matching the exact clothing, 
+            ALWAYS prioritize matching the exact clothing. The clothing accuracy is non-negotiable.
+            """.strip()
+        else:
+            # Standard prompt when no exact clothing to preserve
+            prompt = f"""
+            Professional fashion photography of a {model_description} male model, 
+            full body shot, standing in a modern studio setting with neutral background.
+            {outfit_description}
+            
+            The model should be well-groomed, confident pose, professional lighting, 
+            high quality fashion photography style, realistic and detailed.
+            The model's appearance should authentically reflect the specified regional characteristics.
+            """.strip()
         
         return prompt
     
