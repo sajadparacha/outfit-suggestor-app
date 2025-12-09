@@ -139,9 +139,10 @@ async def suggest_outfit(
                         location_string = location
                 
                 print(f"🔍 DEBUG: Generating model image with location: {location_string or 'None (using default)'}")
-                print(f"🔍 DEBUG: Calling ai_service.generate_model_image...")
+                print(f"🔍 DEBUG: Calling ai_service.generate_model_image with uploaded image...")
                 model_image_base64 = ai_service.generate_model_image(
                     suggestion,
+                    uploaded_image_base64=image_base64,  # Pass uploaded image to preserve exact clothing
                     location=location_string if location_string else None,
                     location_details=location_details if location_details else None
                 )

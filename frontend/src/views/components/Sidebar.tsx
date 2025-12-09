@@ -385,6 +385,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <p className="text-xs text-gray-600">
                   Create an AI-generated image of a model wearing your recommended outfit
                 </p>
+                <p className="text-xs text-green-600 mt-1 font-medium">
+                  ✨ Your uploaded clothing will be preserved exactly as shown
+                </p>
                 <p className="text-xs text-purple-600 mt-1">
                   {generateModelImage ? '📍 Location-based customization enabled' : 'Enable to see outfit on a model'}
                 </p>

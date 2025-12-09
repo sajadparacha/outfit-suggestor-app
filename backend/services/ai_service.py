@@ -164,15 +164,18 @@ Respond in JSON format with the following structure:
     def generate_model_image(
         self,
         outfit_suggestion: OutfitSuggestion,
+        uploaded_image_base64: Optional[str] = None,
         location: Optional[str] = None,
         location_details: Optional[dict] = None
     ) -> str:
         """
         Generate an image of a male model wearing the recommended outfit.
         The model's appearance is customized based on geographical location.
+        If uploaded_image_base64 is provided, the exact clothing from the image will be preserved.
         
         Args:
             outfit_suggestion: The outfit recommendation to visualize
+            uploaded_image_base64: Base64 encoded image of the uploaded clothing (optional)
             location: User's location (e.g., "New York, USA", "London, UK")
             location_details: Optional dict with location info (country, region, etc.)
             
@@ -182,8 +185,20 @@ Respond in JSON format with the following structure:
         Raises:
             HTTPException: If image generation fails
         """
-        # Build prompt for DALL-E based on outfit and location
-        prompt = self._build_model_image_prompt(outfit_suggestion, location, location_details)
+        # Analyze uploaded image in detail if provided to preserve exact clothing features
+        clothing_details = None
+        if uploaded_image_base64:
+            print("🔍 Analyzing uploaded image to preserve exact clothing features...")
+            clothing_details = self._analyze_uploaded_clothing(uploaded_image_base64)
+            print(f"✅ Clothing analysis complete: {clothing_details[:100] if clothing_details else 'None'}...")
+        
+        # Build prompt for DALL-E based on outfit, location, and exact clothing details
+        prompt = self._build_model_image_prompt(
+            outfit_suggestion, 
+            location, 
+            location_details,
+            clothing_details
+        )
         print(f"🔍 DEBUG: DALL-E prompt: {prompt[:200]}...")
         
         try:
@@ -222,11 +237,73 @@ Respond in JSON format with the following structure:
                 detail=f"Error generating model image: {str(e)}"
             )
     
+    def _analyze_uploaded_clothing(self, image_base64: str) -> str:
+        """
+        Analyze the uploaded clothing image in detail to extract exact features.
+        This ensures the generated model image preserves the exact clothing.
+        
+        Args:
+            image_base64: Base64 encoded image of the uploaded clothing
+            
+        Returns:
+            Detailed description of the clothing features
+        """
+        analysis_prompt = """
+        Analyze this clothing image in extreme detail. Describe EXACTLY what you see:
+        
+        1. Item type (shirt, blazer, jacket, etc.)
+        2. Exact color(s) - be very specific (e.g., "navy blue with subtle pinstripes", not just "blue")
+        3. Pattern (solid, stripes, checks, plaid, etc.) - describe pattern details precisely
+        4. Material/texture appearance (cotton, wool, silk, etc.)
+        5. Style details (collar type, buttons, pockets, cuffs, lapels, etc.)
+        6. Fit/style (slim fit, regular, etc.)
+        7. Any distinctive features (logos, embroidery, buttons, etc.)
+        8. Any text or branding visible
+        
+        Be extremely precise and detailed. This description will be used to recreate the EXACT same clothing item on a model.
+        Do not suggest changes or improvements - describe ONLY what is actually in the image.
+        
+        Format your response as a clear, detailed description that can be used to recreate this exact item.
+        """
+        
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": analysis_prompt
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{image_base64}"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                max_tokens=500,
+                temperature=0.3  # Lower temperature for more precise analysis
+            )
+            
+            clothing_description = response.choices[0].message.content
+            print(f"📝 Clothing analysis: {clothing_description[:200]}...")
+            return clothing_description
+            
+        except Exception as e:
+            print(f"⚠️ Warning: Failed to analyze uploaded clothing: {e}")
+            return None
+    
     def _build_model_image_prompt(
         self,
         outfit: OutfitSuggestion,
         location: Optional[str] = None,
-        location_details: Optional[dict] = None
+        location_details: Optional[dict] = None,
+        exact_clothing_details: Optional[str] = None
     ) -> str:
         """
         Build a detailed prompt for DALL-E to generate a model image.
@@ -235,6 +312,7 @@ Respond in JSON format with the following structure:
             outfit: Outfit suggestion details
             location: User's location string
             location_details: Additional location information
+            exact_clothing_details: Detailed analysis of uploaded clothing to preserve exactly
             
         Returns:
             Formatted prompt for DALL-E
@@ -243,14 +321,30 @@ Respond in JSON format with the following structure:
         model_description = self._get_location_based_model_description(location, location_details)
         
         # Build outfit description
-        outfit_description = f"""
-        Wearing:
-        - {outfit.shirt}
-        - {outfit.trouser}
-        - {outfit.blazer}
-        - {outfit.shoes}
-        - {outfit.belt}
-        """.strip()
+        if exact_clothing_details:
+            # Use exact clothing details from uploaded image analysis
+            outfit_description = f"""
+            The model is wearing the EXACT clothing item from the uploaded image:
+            {exact_clothing_details}
+            
+            CRITICAL: The clothing item must match EXACTLY as described above. Do not modify, change, or improve the clothing.
+            Preserve all exact colors, patterns, textures, and details precisely as described.
+            
+            Complete the outfit with:
+            - {outfit.trouser}
+            - {outfit.shoes}
+            - {outfit.belt}
+            """.strip()
+        else:
+            # Use general outfit description
+            outfit_description = f"""
+            Wearing:
+            - {outfit.shirt}
+            - {outfit.trouser}
+            - {outfit.blazer}
+            - {outfit.shoes}
+            - {outfit.belt}
+            """.strip()
         
         prompt = f"""
         Professional fashion photography of a {model_description} male model, 

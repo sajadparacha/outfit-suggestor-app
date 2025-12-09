@@ -16,7 +16,7 @@ interface UseAuthControllerReturn {
   
   // Actions
   login: (credentials: LoginRequest) => Promise<void>;
-  register: (data: RegisterRequest) => Promise<{ message: string; email: string }>;
+  register: (data: RegisterRequest) => Promise<void>;
   logout: () => void;
   clearError: () => void;
   checkAuth: () => Promise<void>;
@@ -69,16 +69,16 @@ export const useAuthController = (): UseAuthControllerReturn => {
   }, []);
 
   /**
-   * Register new user (returns registration result, does not auto-login)
+   * Register new user and automatically log them in
    */
   const register = useCallback(async (data: RegisterRequest) => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const result = await ApiService.register(data);
-      // Return result with message and email (no auto-login - user must activate)
-      return result;
+      const response = await ApiService.register(data);
+      // Auto-login: Set user from registration response
+      setUser(response.user);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Registration failed';
       setError(errorMessage);

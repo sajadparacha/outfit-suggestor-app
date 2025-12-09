@@ -4,7 +4,7 @@
  * Uses controllers for business logic and views for presentation
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Hero from './views/components/Hero';
 import Sidebar from './views/components/Sidebar';
 import OutfitPreview from './views/components/OutfitPreview';
@@ -15,7 +15,6 @@ import Footer from './views/components/Footer';
 import ConfirmationModal from './views/components/ConfirmationModal';
 import Login from './views/components/Login';
 import Register from './views/components/Register';
-import ActivateAccount from './views/components/ActivateAccount';
 import ChangePassword from './views/components/ChangePassword';
 import { useOutfitController } from './controllers/useOutfitController';
 import { useHistoryController } from './controllers/useHistoryController';
@@ -30,26 +29,14 @@ function App() {
   // Authentication
   const { user, isAuthenticated, isLoading: authLoading, login, register, logout, error: authError, clearError } = useAuthController();
   const [showRegister, setShowRegister] = useState(false);
-  
-  // Check for activation token in URL
-  const [activationToken, setActivationToken] = useState<string | null>(null);
-  
-  useEffect(() => {
-    // Check URL for activation token
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
-    if (token) {
-      setActivationToken(token);
-      // Clean URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, []);
 
   // View state
   const [currentView, setCurrentView] = useState<'main' | 'history' | 'about' | 'settings'>('main');
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [existingSuggestion, setExistingSuggestion] = useState<OutfitSuggestion | null>(null);
+  const [showModelImageConfirm, setShowModelImageConfirm] = useState(false);
+  const [modelImageConfirmed, setModelImageConfirmed] = useState(false);
 
   // Controllers (Business Logic)
   const {
@@ -84,10 +71,21 @@ function App() {
   const { toast, showToast, hideToast } = useToastController();
 
   // Event Handlers
-  const handleGetSuggestion = async () => {
+  const handleGetSuggestion = async (skipModelImageConfirm: boolean = false) => {
     if (!image) {
       showToast('Please upload an image first', 'error');
       return;
+    }
+
+    // Show confirmation dialog if model image generation is enabled and not already confirmed
+    if (generateModelImage && !skipModelImageConfirm && !modelImageConfirmed) {
+      setShowModelImageConfirm(true);
+      return;
+    }
+
+    // Reset confirmation state for next time
+    if (skipModelImageConfirm) {
+      setModelImageConfirmed(false);
     }
 
     try {
@@ -218,12 +216,8 @@ function App() {
   const handleRegister = async (data: { email: string; password: string; full_name?: string }) => {
     try {
       await register(data);
-      // Show activation message instead of auto-login
-      showToast('Registration successful! Please check your email to activate your account. 📧', 'success');
-      // Switch to login after showing message
-      setTimeout(() => {
-        setShowRegister(false);
-      }, 2000);
+      // Auto-login happens in the controller
+      showToast('Registration successful! Welcome! 👋', 'success');
     } catch (err) {
       // Error is handled by auth controller
     }
@@ -232,11 +226,6 @@ function App() {
   const handleLogout = () => {
     logout();
     showToast('Logged out successfully', 'success');
-  };
-
-  const handleActivateComplete = () => {
-    setActivationToken(null);
-    showToast('Account activated! You can now log in. ✅', 'success');
   };
 
   // Show loading state while checking authentication
@@ -248,25 +237,6 @@ function App() {
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
-    );
-  }
-
-  // Show activation page if activation token is present
-  if (activationToken) {
-    return (
-      <>
-        <ActivateAccount 
-          token={activationToken} 
-          onActivateComplete={handleActivateComplete}
-        />
-        {toast && (
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            onClose={hideToast}
-          />
-        )}
-      </>
     );
   }
 
@@ -471,6 +441,26 @@ function App() {
         cancelText="Get New"
         onConfirm={handleUseCachedSuggestion}
         onCancel={handleGetNewSuggestion}
+      />
+
+      {/* Model Image Generation Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showModelImageConfirm}
+        title="Generate Model Image?"
+        message="Would you like to create an AI-generated image of a model wearing your recommended outfit? The uploaded clothing item will be preserved exactly as shown in your photo. This may take a few extra seconds."
+        confirmText="Yes, Generate"
+        cancelText="Skip for Now"
+        onConfirm={async () => {
+          setShowModelImageConfirm(false);
+          setModelImageConfirmed(true);
+          await handleGetSuggestion(true);
+        }}
+        onCancel={async () => {
+          setShowModelImageConfirm(false);
+          setGenerateModelImage(false);
+          setModelImageConfirmed(false);
+          await handleGetSuggestion(true);
+        }}
       />
 
       {/* Footer */}

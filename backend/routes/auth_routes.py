@@ -13,9 +13,7 @@ from utils.auth import (
     verify_password,
     get_password_hash,
     create_access_token,
-    generate_activation_token,
 )
-from utils.email_service import send_activation_email
 from config import Config
 from dependencies import get_current_user, get_current_active_user
 
@@ -51,107 +49,68 @@ class ChangePasswordRequest(BaseModel):
     new_password: str
 
 
-@router.post("/register")
+@router.post("/register", response_model=Token)
 async def register(
     user_data: UserRegister,
     db: Session = Depends(get_db)
 ):
     """
-    Register a new user. Sends activation email - user must activate before logging in.
+    Register a new user and automatically log them in.
     
     Args:
         user_data: User registration data (email, password, full_name)
         db: Database session
         
     Returns:
-        Success message with activation instructions
+        Access token and user information (auto-login)
         
     Raises:
-        HTTPException: If email already exists or email sending fails
+        HTTPException: If email already exists
     """
     # Check if user already exists
     existing_user = db.query(User).filter(User.email == user_data.email).first()
     if existing_user:
-        # If user exists but email not verified, allow re-registration (resend activation)
-        if not existing_user.email_verified:
-            # Generate new activation token
-            activation_token = generate_activation_token()
-            existing_user.activation_token = activation_token
-            existing_user.activation_token_expires = datetime.utcnow() + timedelta(
-                hours=Config.ACTIVATION_TOKEN_EXPIRE_HOURS
-            )
-            db.commit()
-            
-            # Send activation email
-            email_sent = send_activation_email(
-                to_email=existing_user.email,
-                activation_token=activation_token,
-                user_name=existing_user.full_name
-            )
-            
-            if not email_sent and Config.EMAIL_ENABLED:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Failed to send activation email. Please try again later."
-                )
-            
-            return JSONResponse(
-                status_code=status.HTTP_200_OK,
-                content={
-                    "message": "Activation email sent. Please check your email to activate your account.",
-                    "email": existing_user.email
-                }
-            )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered and activated"
-            )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
+        )
     
-    # Generate activation token
-    activation_token = generate_activation_token()
-    token_expires = datetime.utcnow() + timedelta(hours=Config.ACTIVATION_TOKEN_EXPIRE_HOURS)
-    
-    # Create new user (email not verified yet)
+    # Create new user (automatically verified and active)
     hashed_password = get_password_hash(user_data.password)
     new_user = User(
         email=user_data.email,
         hashed_password=hashed_password,
         full_name=user_data.full_name,
         is_active=True,
-        email_verified=False,  # User must activate email
-        activation_token=activation_token,
-        activation_token_expires=token_expires
+        email_verified=True,  # Auto-verify on registration
+        activation_token=None,
+        activation_token_expires=None
     )
     
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
     
-    # Send activation email
-    email_sent = send_activation_email(
-        to_email=new_user.email,
-        activation_token=activation_token,
-        user_name=new_user.full_name
+    # Auto-login: Create access token
+    access_token_expires = timedelta(minutes=Config.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": new_user.id}, expires_delta=access_token_expires
     )
     
-    if not email_sent and Config.EMAIL_ENABLED:
-        # Rollback user creation if email fails and email is enabled
-        db.delete(new_user)
-        db.commit()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to send activation email. Please try again later."
-        )
-    
-    # Return success message (no auto-login)
-    return JSONResponse(
-        status_code=status.HTTP_201_CREATED,
-        content={
-            "message": "Registration successful! Please check your email to activate your account.",
-            "email": new_user.email
-        }
+    user_response = UserResponse(
+        id=new_user.id,
+        email=new_user.email,
+        full_name=new_user.full_name,
+        is_active=new_user.is_active,
+        email_verified=new_user.email_verified,
+        created_at=new_user.created_at.isoformat() if new_user.created_at else ""
     )
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": user_response.model_dump()
+    }
 
 
 @router.get("/activate/{token}")
@@ -244,13 +203,6 @@ async def login(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is inactive"
-        )
-    
-    # Check if email is verified
-    if not user.email_verified:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Please activate your account by clicking the link in your email before logging in."
         )
     
     # Create access token (user.id will be converted to string in create_access_token)

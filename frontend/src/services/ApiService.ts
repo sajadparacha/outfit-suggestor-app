@@ -223,11 +223,11 @@ class ApiService {
   }
 
   /**
-   * Register a new user
+   * Register a new user and automatically log them in
    * @param registerData - User registration data
-   * @returns Promise with registration success message and email
+   * @returns Promise with access token and user information (auto-login)
    */
-  async register(registerData: RegisterRequest): Promise<{ message: string; email: string }> {
+  async register(registerData: RegisterRequest): Promise<TokenResponse> {
     try {
       const response = await fetch(`${this.baseUrl}/api/auth/register`, {
         method: 'POST',
@@ -242,7 +242,14 @@ class ApiService {
         throw new Error(error.detail || 'Registration failed');
       }
 
-      return await response.json();
+      const data: TokenResponse = await response.json();
+      
+      // Auto-login: Set token from registration response
+      if (data.access_token) {
+        this.setAuthToken(data.access_token);
+      }
+      
+      return data;
     } catch (error) {
       if (error instanceof Error) {
         throw error;
