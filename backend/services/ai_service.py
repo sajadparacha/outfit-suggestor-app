@@ -1,28 +1,43 @@
-"""AI Service for outfit suggestions and image generation using OpenAI"""
+"""AI Service for outfit suggestions and image generation using OpenAI and Stable Diffusion"""
 import json
 import base64
-from typing import Optional, Tuple
+import io
+from typing import Optional, Tuple, Literal
 
 import openai
 from fastapi import HTTPException
+from PIL import Image
 
 from models.outfit import OutfitSuggestion
+
+# Try to import replicate, but make it optional
+try:
+    import replicate
+    REPLICATE_AVAILABLE = True
+except ImportError:
+    REPLICATE_AVAILABLE = False
+    replicate = None
 
 
 class AIService:
     """Service for interacting with OpenAI API"""
     
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, replicate_token: Optional[str] = None):
         """
         Initialize AI Service
         
         Args:
             api_key: OpenAI API key
+            replicate_token: Replicate API token (optional, for Stable Diffusion)
         """
         self.client = openai.OpenAI(api_key=api_key)
         self.model = "gpt-4o"
         self.max_tokens = 1000
         self.temperature = 0.7
+        self.replicate_token = replicate_token
+        self.replicate_client = None
+        if replicate_token and REPLICATE_AVAILABLE:
+            self.replicate_client = replicate.Client(api_token=replicate_token)
     
     def get_outfit_suggestion(
         self, 
@@ -166,7 +181,8 @@ Respond in JSON format with the following structure:
         outfit_suggestion: OutfitSuggestion,
         uploaded_image_base64: Optional[str] = None,
         location: Optional[str] = None,
-        location_details: Optional[dict] = None
+        location_details: Optional[dict] = None,
+        model: Literal["dalle3", "stable-diffusion"] = "dalle3"
     ) -> str:
         """
         Generate an image of a male model wearing the recommended outfit.
@@ -178,12 +194,38 @@ Respond in JSON format with the following structure:
             uploaded_image_base64: Base64 encoded image of the uploaded clothing (optional)
             location: User's location (e.g., "New York, USA", "London, UK")
             location_details: Optional dict with location info (country, region, etc.)
+            model: Image generation model to use ("dalle3" or "stable-diffusion")
             
         Returns:
             Base64 encoded image of the model wearing the outfit
             
         Raises:
             HTTPException: If image generation fails
+        """
+        if model == "stable-diffusion":
+            return self._generate_with_stable_diffusion(
+                outfit_suggestion,
+                uploaded_image_base64,
+                location,
+                location_details
+            )
+        else:
+            return self._generate_with_dalle3(
+                outfit_suggestion,
+                uploaded_image_base64,
+                location,
+                location_details
+            )
+    
+    def _generate_with_dalle3(
+        self,
+        outfit_suggestion: OutfitSuggestion,
+        uploaded_image_base64: Optional[str] = None,
+        location: Optional[str] = None,
+        location_details: Optional[dict] = None
+    ) -> str:
+        """
+        Generate model image using DALL-E 3 (text-to-image only).
         """
         # Analyze uploaded image in detail if provided to preserve exact clothing features
         # NOTE: DALL-E 3 API only accepts text prompts, not image inputs.
@@ -237,8 +279,146 @@ Respond in JSON format with the following structure:
         except Exception as e:
             raise HTTPException(
                 status_code=500,
-                detail=f"Error generating model image: {str(e)}"
+                detail=f"Error generating model image with DALL-E 3: {str(e)}"
             )
+    
+    def _generate_with_stable_diffusion(
+        self,
+        outfit_suggestion: OutfitSuggestion,
+        uploaded_image_base64: Optional[str] = None,
+        location: Optional[str] = None,
+        location_details: Optional[dict] = None
+    ) -> str:
+        """
+        Generate model image using Stable Diffusion (supports image-to-image with reference).
+        This provides better color accuracy as it can use the uploaded image as reference.
+        """
+        if not REPLICATE_AVAILABLE:
+            raise HTTPException(
+                status_code=500,
+                detail="Stable Diffusion requires 'replicate' package. Install with: pip install replicate"
+            )
+        
+        if not self.replicate_token:
+            raise HTTPException(
+                status_code=500,
+                detail="REPLICATE_API_TOKEN environment variable is not set"
+            )
+        
+        try:
+            print("🔍 Generating model image with Stable Diffusion (image-to-image)...")
+            if not self.replicate_client:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Replicate client not initialized. Check REPLICATE_API_TOKEN."
+                )
+            
+            # Build prompt for Stable Diffusion
+            model_description = self._get_location_based_model_description(location, location_details)
+            prompt = self._build_stable_diffusion_prompt(
+                outfit_suggestion,
+                model_description,
+                uploaded_image_base64 is not None
+            )
+            
+            # Prepare input image if provided
+            init_image = None
+            if uploaded_image_base64:
+                # Decode base64 to image
+                image_data = base64.b64decode(uploaded_image_base64)
+                init_image = Image.open(io.BytesIO(image_data))
+                print("✅ Using uploaded image as reference for Stable Diffusion")
+            
+            # Use Stable Diffusion XL with image-to-image capability
+            # Model: stability-ai/sdxl
+            if init_image:
+                # Image-to-image mode - preserves the uploaded clothing better
+                output = self.replicate_client.run(
+                    "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
+                    input={
+                        "prompt": prompt,
+                        "image": init_image,
+                        "strength": 0.7,  # How much to preserve from original (0.7 = 70% original, 30% new)
+                        "num_outputs": 1,
+                        "aspect_ratio": "9:16",  # Tall portrait for full body
+                        "output_format": "png"
+                    }
+                )
+            else:
+                # Text-to-image mode (no reference image)
+                output = self.replicate_client.run(
+                    "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
+                    input={
+                        "prompt": prompt,
+                        "num_outputs": 1,
+                        "aspect_ratio": "9:16",
+                        "output_format": "png"
+                    }
+                )
+            
+            # Get the generated image URL
+            if isinstance(output, list):
+                image_url = output[0]
+            else:
+                image_url = output
+            
+            # Download and convert to base64
+            import requests
+            image_response = requests.get(image_url)
+            image_response.raise_for_status()
+            
+            image_base64 = base64.b64encode(image_response.content).decode('utf-8')
+            print(f"✅ Stable Diffusion image generated, base64 length: {len(image_base64)}")
+            
+            return image_base64
+            
+        except Exception as e:
+            print(f"❌ Stable Diffusion generation failed: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error generating model image with Stable Diffusion: {str(e)}"
+            )
+    
+    def _build_stable_diffusion_prompt(
+        self,
+        outfit: OutfitSuggestion,
+        model_description: str,
+        has_reference_image: bool
+    ) -> str:
+        """
+        Build prompt for Stable Diffusion.
+        When has_reference_image is True, the prompt focuses on completing the outfit.
+        """
+        if has_reference_image:
+            # Image-to-image mode - reference image preserves the shirt
+            prompt = f"""
+Professional fashion photo: {model_description} male model, full body head to toe, studio background.
+
+Complete the outfit with:
+- Blazer/Jacket: {outfit.blazer} (worn over the shirt)
+- Trousers: {outfit.trouser}
+- Dress Shoes: {outfit.shoes}
+- Belt: {outfit.belt}
+
+Full body shot showing complete outfit. Professional fashion photography, high quality, realistic.
+"""
+        else:
+            # Text-to-image mode - describe full outfit
+            prompt = f"""
+Professional fashion photo: {model_description} male model, full body head to toe, studio background.
+
+Complete outfit:
+- Shirt: {outfit.shirt}
+- Blazer: {outfit.blazer}
+- Trousers: {outfit.trouser}
+- Shoes: {outfit.shoes}
+- Belt: {outfit.belt}
+
+Full body shot showing complete outfit. Professional fashion photography, high quality, realistic.
+"""
+        return prompt.strip()
     
     def _analyze_uploaded_clothing(self, image_base64: str) -> str:
         """

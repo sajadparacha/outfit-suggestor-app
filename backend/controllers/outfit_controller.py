@@ -33,8 +33,9 @@ class OutfitController:
         text_input: str,
         location: Optional[str],
         generate_model_image: str,
-        db: Session,
-        current_user: Optional[User]
+        image_model: Optional[str] = None,
+        db: Session = None,
+        current_user: Optional[User] = None
     ) -> OutfitSuggestion:
         """
         Handle outfit suggestion request
@@ -68,10 +69,13 @@ class OutfitController:
             
             # Generate model image if requested
             if should_generate_model_image:
+                # Use provided model or default to DALL-E 3
+                model = image_model if image_model in ["dalle3", "stable-diffusion"] else "dalle3"
                 model_image_base64 = await self._generate_model_image(
                     suggestion,
                     image_base64,
-                    location
+                    location,
+                    model
                 )
                 suggestion.model_image = model_image_base64
             
@@ -100,7 +104,8 @@ class OutfitController:
         self,
         suggestion: OutfitSuggestion,
         uploaded_image_base64: str,
-        location: Optional[str]
+        location: Optional[str],
+        model: str = "dalle3"
     ) -> Optional[str]:
         """
         Generate model image using AI service
@@ -131,7 +136,8 @@ class OutfitController:
                 suggestion,
                 uploaded_image_base64=uploaded_image_base64,
                 location=location_string if location_string else None,
-                location_details=location_details if location_details else None
+                location_details=location_details if location_details else None,
+                model=model
             )
         except Exception as e:
             # Log error but don't fail the request

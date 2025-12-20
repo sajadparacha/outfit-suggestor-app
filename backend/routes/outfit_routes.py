@@ -20,6 +20,7 @@ async def suggest_outfit(
     text_input: str = Form(""),
     location: str = Form(None),
     generate_model_image: str = Form("false"),
+    image_model: str = Form("dalle3"),
     outfit_controller: OutfitController = Depends(get_outfit_controller),
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_optional_user)
@@ -47,6 +48,7 @@ async def suggest_outfit(
         text_input=text_input,
         location=location,
         generate_model_image=generate_model_image,
+        image_model=image_model,
         db=db,
         current_user=current_user
     )

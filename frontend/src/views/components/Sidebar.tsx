@@ -17,6 +17,8 @@ interface SidebarProps {
   loading: boolean;
   generateModelImage: boolean;
   setGenerateModelImage: (generate: boolean) => void;
+  imageModel: string;
+  setImageModel: (model: string) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -29,7 +31,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   onGetSuggestion,
   loading,
   generateModelImage,
-  setGenerateModelImage
+  setGenerateModelImage,
+  imageModel,
+  setImageModel
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -414,6 +418,29 @@ const Sidebar: React.FC<SidebarProps> = ({
             </button>
           </div>
         </div>
+        
+        {/* Model Selection Dropdown - Only show when generateModelImage is enabled */}
+        {generateModelImage && (
+          <div className="mt-4 pt-4 border-t border-purple-200">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Image Generation Model
+            </label>
+            <select
+              value={imageModel}
+              onChange={(e) => setImageModel(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all bg-white"
+              aria-label="Select image generation model"
+            >
+              <option value="dalle3">DALL-E 3 (OpenAI)</option>
+              <option value="stable-diffusion">Stable Diffusion (Better Color Accuracy)</option>
+            </select>
+            <p className="text-xs text-gray-500 mt-2">
+              {imageModel === "dalle3" 
+                ? "⚡ Fast generation, good quality" 
+                : "🎨 Better color matching with your uploaded image"}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Get Suggestion Button */}

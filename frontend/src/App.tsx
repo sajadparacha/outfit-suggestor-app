@@ -43,11 +43,13 @@ function App() {
     loading,
     error,
     generateModelImage,
+    imageModel,
     showDuplicateModal,
     setImage,
     setFilters,
     setPreferenceText,
     setGenerateModelImage,
+    setImageModel,
     getSuggestion,
     handleUseCachedSuggestion,
     handleGetNewSuggestion,
@@ -262,6 +264,8 @@ function App() {
                 loading={loading}
                 generateModelImage={generateModelImage}
                 setGenerateModelImage={setGenerateModelImage}
+                imageModel={imageModel}
+                setImageModel={setImageModel}
               />
             </div>
 

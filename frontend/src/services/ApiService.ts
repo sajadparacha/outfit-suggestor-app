@@ -71,14 +71,17 @@ class ApiService {
     image: File,
     textInput: string = '',
     generateModelImage: boolean = false,
-    location: string | null = null
+    location: string | null = null,
+    imageModel: string = 'dalle3'
   ): Promise<OutfitResponse> {
     try {
       const formData = new FormData();
       formData.append('image', image);
       formData.append('text_input', textInput);
       formData.append('generate_model_image', generateModelImage.toString());
+      formData.append('image_model', imageModel);
       console.log('FormData - generate_model_image:', generateModelImage.toString());
+      console.log('FormData - image_model:', imageModel);
       if (location) {
         formData.append('location', location);
         console.log('FormData - location:', location);

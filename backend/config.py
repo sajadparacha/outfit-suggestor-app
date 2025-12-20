@@ -13,7 +13,11 @@ class Config:
     """Application configuration"""
     # API & server settings
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")
     PORT = int(os.getenv("PORT", 8001))
+    
+    # Image generation model settings
+    DEFAULT_IMAGE_MODEL = os.getenv("DEFAULT_IMAGE_MODEL", "dalle3")  # "dalle3" or "stable-diffusion"
 
     # Database settings
     # Railway provides DATABASE_URL, fallback to local for development
@@ -79,7 +83,8 @@ def get_ai_service() -> AIService:
         api_key = Config.OPENAI_API_KEY
         if not api_key:
             raise ValueError("OPENAI_API_KEY environment variable is not set")
-        _ai_service_instance = AIService(api_key=api_key)
+        replicate_token = Config.REPLICATE_API_TOKEN
+        _ai_service_instance = AIService(api_key=api_key, replicate_token=replicate_token)
     
     return _ai_service_instance
 
