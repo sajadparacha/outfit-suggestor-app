@@ -186,9 +186,12 @@ Respond in JSON format with the following structure:
             HTTPException: If image generation fails
         """
         # Analyze uploaded image in detail if provided to preserve exact clothing features
+        # NOTE: DALL-E 3 API only accepts text prompts, not image inputs.
+        # Therefore, we use GPT-4 Vision to create an extremely detailed text description
+        # of the uploaded image, which is then passed to DALL-E 3 in the prompt.
         clothing_details = None
         if uploaded_image_base64:
-            print("🔍 Analyzing uploaded image to preserve exact clothing features...")
+            print("🔍 Analyzing uploaded image with GPT-4 Vision to create detailed description for DALL-E...")
             clothing_details = self._analyze_uploaded_clothing(uploaded_image_base64)
             print(f"✅ Clothing analysis complete: {clothing_details[:100] if clothing_details else 'None'}...")
         
@@ -203,11 +206,11 @@ Respond in JSON format with the following structure:
         
         try:
             print(f"🔍 DEBUG: Calling OpenAI DALL-E 3 API...")
-            # Generate image using DALL-E 3
+            # Generate image using DALL-E 3 - use tall portrait format for full body
             response = self.client.images.generate(
                 model="dall-e-3",
                 prompt=prompt,
-                size="1024x1024",
+                size="1024x1792",  # Tall portrait format for full body head-to-toe
                 quality="standard",
                 n=1,
             )
@@ -249,20 +252,26 @@ Respond in JSON format with the following structure:
             Detailed description of the clothing features
         """
         analysis_prompt = """
-        CRITICAL TASK: Analyze this clothing image with EXTREME precision. Your description will be used to recreate this EXACT item, so every detail matters.
+        CRITICAL MISSION: You are analyzing a user's uploaded clothing image. This description will be sent to DALL-E 3 to recreate this EXACT SAME clothing item on a model. DALL-E 3 cannot see the image - it ONLY receives your text description. Therefore, your description must be EXTREMELY detailed and precise so DALL-E can recreate it pixel-perfectly.
         
-        You must provide a COMPLETE, DETAILED description that allows someone to recreate this clothing item with 100% visual accuracy.
+        Your description is the ONLY way DALL-E will know what the clothing looks like. Be EXTREMELY specific about EVERY visual detail, especially COLORS.
         
-        STRUCTURE YOUR RESPONSE AS FOLLOWS:
+        START YOUR RESPONSE WITH A COLOR SUMMARY:
+        PRIMARY COLOR: [Exact color name and shade, e.g., "Navy blue", "Burgundy red", "Charcoal gray"]
+        SECONDARY COLORS (if any): [List all other colors with exact shades]
+        
+        THEN PROVIDE DETAILED ANALYSIS:
         
         1. ITEM TYPE: 
            State exactly what type of clothing this is (e.g., "dress shirt", "blazer", "sport coat", "polo shirt", "t-shirt", "sweater")
         
-        2. EXACT COLORS (BE PRECISE):
-           - Primary color: Use specific color names (e.g., "navy blue", "burgundy", "charcoal gray", "forest green", NOT generic "blue" or "red")
-           - If multiple colors: List each color specifically
-           - Color shade/intensity: Describe the exact shade (e.g., "deep navy", "light blue", "dark charcoal", "bright red")
-           - Any color gradients or variations: Describe exactly how colors transition
+        2. EXACT COLORS (MOST CRITICAL - BE EXTREMELY PRECISE):
+           - Primary color: Use SPECIFIC color names (e.g., "navy blue", "burgundy", "charcoal gray", "forest green", "royal blue", "crimson red", NOT generic "blue" or "red")
+           - Color shade/intensity: Describe EXACT shade (e.g., "deep navy blue", "light sky blue", "dark charcoal gray", "bright cherry red", "olive green")
+           - If multiple colors: List EACH color with its EXACT shade and location
+           - Color saturation: Describe if colors are vibrant, muted, pastel, etc.
+           - Any color gradients or variations: Describe EXACTLY how colors transition
+           - IMPORTANT: If the shirt is blue, say "blue" AND the exact shade (e.g., "navy blue", "sky blue", "royal blue"). Do NOT just say "blue".
         
         3. PATTERN DETAILS (IF APPLICABLE):
            - Pattern type: State clearly (solid, stripes, checks, plaid, dots, geometric, etc.)
@@ -314,16 +323,20 @@ Respond in JSON format with the following structure:
            - Any distinctive characteristics that make this item unique
         
         CRITICAL RULES FOR YOUR DESCRIPTION:
+        - COLORS ARE THE MOST IMPORTANT: Use SPECIFIC color names with exact shades (e.g., "navy blue" not "blue", "burgundy red" not "red", "charcoal gray" not "gray")
+        - If you see blue, identify the EXACT shade: navy blue, sky blue, royal blue, powder blue, etc.
+        - If you see red, identify the EXACT shade: burgundy, crimson, cherry red, scarlet, etc.
         - Describe ONLY what you actually see - do not infer or assume
-        - Use SPECIFIC color names - avoid generic terms
         - Be PRECISE about patterns - include measurements, spacing, directions
         - Include ALL visible details - nothing is too small to mention
         - Do NOT suggest improvements, changes, or alternatives
         - Do NOT generalize - be specific about every aspect
         - If uncertain about a detail, describe what you can clearly see
         
-        Your description must be detailed enough that someone could recreate this EXACT clothing item just from your words.
-        Be thorough, specific, and accurate.
+        FINAL REMINDER: Colors are CRITICAL. If the shirt is blue, you MUST specify the exact shade of blue. 
+        DALL-E will use your exact words, so "blue" will give a generic blue, but "navy blue" will give navy blue.
+        Your description must be detailed enough that DALL-E can recreate this EXACT clothing item with 100% color accuracy.
+        Be thorough, specific, and accurate - especially with colors.
         """
         
         try:
@@ -346,7 +359,7 @@ Respond in JSON format with the following structure:
                         ]
                     }
                 ],
-                max_tokens=800,  # Increased for more detailed analysis
+                max_tokens=1500,  # Maximum detail for pixel-perfect recreation
                 temperature=0.1  # Very low temperature for maximum precision
             )
             
@@ -380,116 +393,62 @@ Respond in JSON format with the following structure:
         # Build location-based model description
         model_description = self._get_location_based_model_description(location, location_details)
         
-        # Build outfit description
+        # Build outfit description using ChatGPT's recommendations
+        # Truncate clothing details if provided to fit within DALL-E's 4000 char limit
+        # DALL-E 3 has a 4000 character prompt limit, so we need to balance detail vs length
+        truncated_details = ""
         if exact_clothing_details:
-            # Use exact clothing details from uploaded image analysis
-            outfit_description = f"""
-            ⚠️⚠️⚠️ ABSOLUTE CRITICAL REQUIREMENT - THIS IS THE MOST IMPORTANT INSTRUCTION ⚠️⚠️⚠️
-            
-            THE MODEL MUST WEAR THE EXACT SAME CLOTHING ITEM FROM THE USER'S UPLOADED PHOTO.
-            DO NOT CREATE A SIMILAR ITEM. DO NOT CREATE A VARIATION. IT MUST BE IDENTICAL.
-            
-            EXACT CLOTHING ITEM SPECIFICATIONS (COPY EXACTLY - NO MODIFICATIONS ALLOWED):
-            {exact_clothing_details}
-            
-            ⚠️ MANDATORY REQUIREMENTS - FOLLOW THESE EXACTLY:
-            
-            1. COLOR MATCHING (CRITICAL):
-               - Use the EXACT colors specified in the description above
-               - If the description says "navy blue", use NAVY BLUE, not "blue" or "dark blue"
-               - If the description says "burgundy", use BURGUNDY, not "red" or "maroon"
-               - Match the exact shade, tone, and intensity
-               - NO COLOR VARIATIONS OR SUBSTITUTIONS ALLOWED
-            
-            2. PATTERN MATCHING (CRITICAL):
-               - If it has stripes: Use the EXACT same stripe width, spacing, direction, and colors
-               - If it has checks: Use the EXACT same check size, colors, and pattern
-               - If it has plaid: Use the EXACT same plaid pattern, colors, and line thickness
-               - If it's solid: Make it solid with NO patterns
-               - NO PATTERN VARIATIONS OR MODIFICATIONS ALLOWED
-            
-            3. STYLE DETAILS (CRITICAL):
-               - Match the EXACT collar type described
-               - Match the EXACT button style, color, and placement
-               - Match the EXACT pocket style and placement
-               - Match the EXACT cuff style if visible
-               - Match the EXACT lapel style if applicable
-               - NO STYLE MODIFICATIONS ALLOWED
-            
-            4. MATERIAL/TEXTURE (CRITICAL):
-               - Match the EXACT material appearance described
-               - Match the EXACT texture (smooth, textured, matte, shiny)
-               - Match the EXACT fabric weight appearance
-               - NO MATERIAL VARIATIONS ALLOWED
-            
-            5. DISTINCTIVE FEATURES (CRITICAL):
-               - Include ALL logos, emblems, or branding EXACTLY as described
-               - Include ALL embroidery or decorative elements EXACTLY as described
-               - Include ALL unique design elements EXACTLY as described
-               - Include ANY text EXACTLY as shown
-               - NO FEATURES SHOULD BE ADDED OR REMOVED
-            
-            ⚠️ ABSOLUTE PROHIBITIONS:
-            - DO NOT create a "similar" or "inspired by" version
-            - DO NOT improve, enhance, or modify the design
-            - DO NOT use "close enough" colors or patterns
-            - DO NOT add features that weren't in the original
-            - DO NOT remove features that were in the original
-            - DO NOT change the style, fit, or cut
-            - THE CLOTHING MUST BE A PIXEL-PERFECT REPLICA IN TERMS OF APPEARANCE
-            
-            Complete the outfit with these additional items (these can be styled normally):
-            - {outfit.trouser}
-            - {outfit.shoes}
-            - {outfit.belt}
-            
-            ⚠️ FINAL REMINDER: The uploaded clothing item description above is your EXACT blueprint. 
-            Recreate it with 100% fidelity. Every color, pattern, detail, and feature must match exactly.
-            This is more important than any other aspect of the image.
-            """.strip()
-        else:
-            # Use general outfit description
-            outfit_description = f"""
-            Wearing:
-            - {outfit.shirt}
-            - {outfit.trouser}
-            - {outfit.blazer}
-            - {outfit.shoes}
-            - {outfit.belt}
-            """.strip()
+            # Keep up to 1200 chars of the detailed analysis (leaves room for other prompt text)
+            truncated_details = exact_clothing_details[:1200] if len(exact_clothing_details) > 1200 else exact_clothing_details
         
-        if exact_clothing_details:
-            # Enhanced prompt when exact clothing must be preserved
+        if truncated_details:
+            # User uploaded a shirt - MUST preserve it exactly
+            # NOTE: DALL-E 3 cannot see the original image - it only receives this text description
+            # Therefore, the description below must be followed EXACTLY
             prompt = f"""
-            {outfit_description}
-            
-            PHOTOGRAPHY SETUP:
-            - Professional fashion photography of a {model_description} male model
-            - Full body shot, standing in a modern studio setting with neutral background
-            - Well-groomed model, confident pose
-            - Professional lighting, high quality fashion photography style
-            - Realistic and detailed
-            - Model's appearance should authentically reflect the specified regional characteristics
-            
-            ⚠️ CRITICAL PRIORITY ORDER:
-            1. FIRST PRIORITY (MOST IMPORTANT): The clothing item must match the exact specifications above with 100% accuracy
-            2. SECOND PRIORITY: Complete the outfit with the additional items listed
-            3. THIRD PRIORITY: Professional photography quality and model appearance
-            
-            REMEMBER: If there is any conflict between making the image look good and matching the exact clothing, 
-            ALWAYS prioritize matching the exact clothing. The clothing accuracy is non-negotiable.
-            """.strip()
+⚠️⚠️⚠️ ABSOLUTE PRIORITY: USER-UPLOADED SHIRT ⚠️⚠️⚠️
+
+The model MUST wear this EXACT shirt. This description was created by analyzing the user's actual uploaded image.
+You MUST recreate it with 100% accuracy - same colors, same patterns, same style, same EVERYTHING.
+
+SHIRT TO RECREATE (THIS IS THE MOST IMPORTANT PART - MATCH EXACTLY):
+{truncated_details}
+
+CRITICAL COLOR MATCHING RULES:
+- If the description says a specific color (e.g., "navy blue", "burgundy", "charcoal gray"), use THAT EXACT COLOR
+- Do NOT use a similar color or a "close enough" color
+- Do NOT change the color shade or intensity
+- If it says "blue", check the description for the exact shade (navy, sky, royal, etc.) and use that EXACT shade
+
+Fashion catalog photo: {model_description} male model, full body head to toe, studio background.
+
+The model is wearing the EXACT shirt described above, plus:
+- Blazer/Jacket: {outfit.blazer} (worn over the shirt)
+- Trousers: {outfit.trouser}
+- Dress Shoes: {outfit.shoes}
+- Belt: {outfit.belt}
+
+MANDATORY:
+1. The shirt is the TOP PRIORITY - it must match the description EXACTLY
+2. Colors must match EXACTLY - no variations or "close enough" colors
+3. Show complete outfit: shirt + blazer + trousers + shoes (all visible)
+4. Full body shot from head to feet
+5. Professional fashion photography quality
+""".strip()
         else:
-            # Standard prompt when no exact clothing to preserve
+            # No uploaded clothing - use ChatGPT's full recommendation
             prompt = f"""
-            Professional fashion photography of a {model_description} male model, 
-            full body shot, standing in a modern studio setting with neutral background.
-            {outfit_description}
-            
-            The model should be well-groomed, confident pose, professional lighting, 
-            high quality fashion photography style, realistic and detailed.
-            The model's appearance should authentically reflect the specified regional characteristics.
-            """.strip()
+Fashion photo: {model_description} male model, full body head to toe, studio background.
+
+COMPLETE OUTFIT:
+- Shirt: {outfit.shirt}
+- Blazer: {outfit.blazer}
+- Trousers: {outfit.trouser}
+- Shoes: {outfit.shoes}
+- Belt: {outfit.belt}
+
+Show all items clearly. Full body shot with visible shoes. Professional quality.
+""".strip()
         
         return prompt
     

@@ -33,6 +33,7 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
 }) => {
   // Hook must be first
   const [showDetails, setShowDetails] = React.useState(false);
+  const [showFullImage, setShowFullImage] = React.useState(false);
 
   // Debug: Log suggestion data
   React.useEffect(() => {
@@ -112,19 +113,59 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
 
   return (
     <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all hover:shadow-xl">
-      {/* Model Image or Uploaded Image Preview */}
+      {/* Side by Side: Uploaded Image and Generated Model Image */}
       <div className="relative bg-gradient-to-br from-gray-100 to-gray-200">
-        {suggestion.model_image ? (
+        {suggestion.model_image && suggestion.imageUrl ? (
+          // Show both images side by side
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+            {/* Uploaded Image - Left Side */}
+            <div className="relative bg-white rounded-lg overflow-hidden shadow-md">
+              <div className="absolute top-2 left-2 bg-teal-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-lg z-10">
+                📤 Your Upload
+              </div>
+              <img
+                src={suggestion.imageUrl}
+                alt="Uploaded clothing item"
+                className="w-full h-auto max-h-[600px] object-contain"
+              />
+            </div>
+            
+            {/* Generated Model Image - Right Side */}
+            <div className="relative bg-white rounded-lg overflow-hidden shadow-md">
+              <div className="absolute top-2 left-2 bg-purple-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-lg z-10">
+                🤖 AI Model
+              </div>
+              <div className="absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded-full text-xs font-medium z-10">
+                🔍 Click to expand
+              </div>
+              <img
+                src={`data:image/png;base64,${suggestion.model_image}`}
+                alt="AI generated model wearing recommended outfit"
+                className="w-full h-auto max-h-[600px] object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => setShowFullImage(true)}
+                onError={(e) => {
+                  console.error('Error loading model image:', e);
+                  const target = e.target as HTMLImageElement;
+                  if (target.src.includes('image/png')) {
+                    target.src = `data:image/jpeg;base64,${suggestion.model_image}`;
+                  }
+                }}
+                onLoad={() => {
+                  console.log('✅ Model image loaded successfully');
+                }}
+              />
+            </div>
+          </div>
+        ) : suggestion.model_image ? (
+          // Only model image available
           <div className="relative min-h-[400px] bg-white flex items-center justify-center">
             <img
               src={`data:image/png;base64,${suggestion.model_image}`}
               alt="AI generated model wearing recommended outfit"
-              className="w-full h-auto max-h-[600px] object-contain"
+              className="w-full h-auto max-h-[600px] object-contain cursor-pointer hover:opacity-90 transition-opacity"
+              onClick={() => setShowFullImage(true)}
               onError={(e) => {
                 console.error('Error loading model image:', e);
-                console.log('Model image data length:', suggestion.model_image?.length);
-                console.log('Model image preview (first 100 chars):', suggestion.model_image?.substring(0, 100));
-                // Try with jpeg format as fallback
                 const target = e.target as HTMLImageElement;
                 if (target.src.includes('image/png')) {
                   target.src = `data:image/jpeg;base64,${suggestion.model_image}`;
@@ -137,16 +178,20 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
             <div className="absolute top-4 right-4 bg-purple-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg z-10">
               🤖 AI Model
             </div>
+            <div className="absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1 rounded-full text-xs font-medium z-10">
+              🔍 Click to expand
+            </div>
           </div>
         ) : suggestion.imageUrl ? (
-          <div>
+          // Only uploaded image available
+          <div className="relative">
             <img
               src={suggestion.imageUrl}
               alt="Uploaded clothing item"
               className="w-full h-96 object-contain"
             />
             <div className="absolute top-4 right-4 bg-teal-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">
-              ✨ AI Generated
+              📤 Your Upload
             </div>
           </div>
         ) : (
@@ -275,6 +320,39 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Full Image View */}
+      {showFullImage && suggestion.model_image && (
+        <div 
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 cursor-pointer" 
+          role="dialog" 
+          aria-modal="true"
+          onClick={() => setShowFullImage(false)}
+        >
+          <button
+            onClick={() => setShowFullImage(false)}
+            aria-label="Close full image"
+            className="absolute top-4 right-4 p-3 bg-white/20 hover:bg-white/30 rounded-full text-white text-xl transition-colors z-10"
+          >
+            ✕
+          </button>
+          <img
+            src={`data:image/png;base64,${suggestion.model_image}`}
+            alt="AI generated model wearing recommended outfit - Full view"
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              if (target.src.includes('image/png')) {
+                target.src = `data:image/jpeg;base64,${suggestion.model_image}`;
+              }
+            }}
+          />
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/50 text-white px-4 py-2 rounded-full text-sm">
+            Click anywhere to close
           </div>
         </div>
       )}

@@ -8,7 +8,10 @@ from email.mime.multipart import MIMEMultipart
 from typing import Optional
 import logging
 
-from config import Config
+try:  # Support running both as a package (backend.*) and from backend/ directly
+    from config import Config
+except ImportError:  # When imported as backend.utils.email_service
+    from backend.config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -207,5 +210,8 @@ def send_email(
     except Exception as e:
         logger.error(f"Failed to send email to {to_email}: {str(e)}")
         return False
+
+
+
 
 

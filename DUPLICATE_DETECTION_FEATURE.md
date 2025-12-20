@@ -383,3 +383,8 @@ def images_are_similar(image1: str, image2: str, threshold: int = 5) -> bool:
 
 
 
+
+
+
+
+

@@ -1,13 +1,16 @@
 """
-Test script to verify login works on Railway database.
-This helps debug 401 errors.
+Standalone script to verify login works on the Railway database.
+This is NOT a pytest test and is intended to be run manually, for example:
+
+    python -m backend.test_railway_login "postgresql://..." "password"
 """
 
 import sys
 from sqlalchemy import create_engine, text
-from utils.auth import verify_password
+from backend.utils.auth import verify_password
 
-def test_login():
+
+def main():
     if len(sys.argv) < 3:
         print("Usage: python test_railway_login.py 'postgresql://...' 'password'")
         sys.exit(1)
@@ -52,6 +55,9 @@ def test_login():
             print("   Try resetting the password or check if you're using the correct password.")
 
 if __name__ == "__main__":
-    test_login()
+    main()
+
+
+
 
 

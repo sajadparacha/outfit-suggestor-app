@@ -2,6 +2,8 @@
 import os
 from dotenv import load_dotenv
 from services.ai_service import AIService
+from services.auth_service import AuthService
+from controllers.outfit_controller import OutfitController
 
 # Load environment variables
 load_dotenv()
@@ -57,8 +59,11 @@ class Config:
     ACTIVATION_TOKEN_EXPIRE_HOURS = int(os.getenv("ACTIVATION_TOKEN_EXPIRE_HOURS", "24"))
 
 
-# Singleton instance of AI Service
+# Singleton instances
 _ai_service_instance = None
+_auth_service_instance = None
+_outfit_controller_instance = None
+_auth_controller_instance = None
 
 
 def get_ai_service() -> AIService:
@@ -77,4 +82,59 @@ def get_ai_service() -> AIService:
         _ai_service_instance = AIService(api_key=api_key)
     
     return _ai_service_instance
+
+
+
+
+def get_auth_service() -> AuthService:
+    """
+    Get Auth Service instance (dependency injection)
+    
+    Returns:
+        AuthService singleton instance
+    """
+    global _auth_service_instance
+    
+    if _auth_service_instance is None:
+        _auth_service_instance = AuthService()
+    
+    return _auth_service_instance
+
+
+def get_outfit_controller() -> OutfitController:
+    """
+    Get Outfit Controller instance (dependency injection)
+    
+    Returns:
+        OutfitController singleton instance
+    """
+    global _outfit_controller_instance
+    
+    if _outfit_controller_instance is None:
+        from services.outfit_service import OutfitService  # Lazy import to avoid circular dependency
+
+        ai_service = get_ai_service()
+        outfit_service = OutfitService()
+        _outfit_controller_instance = OutfitController(ai_service, outfit_service)
+    
+    return _outfit_controller_instance
+
+
+def get_auth_controller():
+    """
+    Get Auth Controller instance (dependency injection)
+    
+    Returns:
+        AuthController singleton instance
+    """
+    # Lazy import to avoid circular dependency (AuthController imports Config)
+    from controllers.auth_controller import AuthController  # type: ignore
+
+    global _auth_controller_instance
+    
+    if _auth_controller_instance is None:
+        auth_service = get_auth_service()
+        _auth_controller_instance = AuthController(auth_service)
+    
+    return _auth_controller_instance
 

@@ -1,10 +1,11 @@
 /**
  * Outfit History Component
- * Displays a list of past outfit suggestions with search and filter
+ * Pure presentation component - displays a list of past outfit suggestions
  */
 
-import React, { useState, useMemo } from 'react';
+import React from 'react';
 import { OutfitHistoryEntry } from '../../models/OutfitModels';
+import { useHistorySearchController } from '../../controllers/useHistorySearchController';
 
 interface OutfitHistoryProps {
   history: OutfitHistoryEntry[];
@@ -13,6 +14,7 @@ interface OutfitHistoryProps {
   isFullView: boolean;
   onRefresh: () => void;
   onEnsureFullHistory: () => Promise<void>;
+  searchController?: ReturnType<typeof useHistorySearchController>;
 }
 
 const OutfitHistory: React.FC<OutfitHistoryProps> = ({
@@ -22,23 +24,30 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
   isFullView,
   onRefresh,
   onEnsureFullHistory,
+  searchController: providedSearchController,
 }) => {
-  const [searchInput, setSearchInput] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
+  // Always call the hook (hooks must be called unconditionally)
+  // If a controller is provided, we'll use it, otherwise create a default one
+  const defaultSearchController = useHistorySearchController(
+    history,
+    onEnsureFullHistory,
+    isFullView
+  );
+  
+  // Use provided search controller or the default one
+  const searchController = providedSearchController || defaultSearchController;
 
-  const handleSearch = async () => {
-    // If searching and not in full view, load all history first
-    if (searchInput.trim() && !isFullView) {
-      await onEnsureFullHistory();
-    }
-    setSearchQuery(searchInput);
-  };
-
-  const handleClearSearch = () => {
-    setSearchInput('');
-    setSearchQuery('');
-  };
+  const {
+    searchInput,
+    searchQuery,
+    sortBy,
+    filteredHistory,
+    setSearchInput,
+    setSortBy,
+    handleSearch,
+    handleClearSearch,
+    highlightText
+  } = searchController;
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -56,58 +65,6 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
       minute: '2-digit',
     });
   };
-
-  // Highlight matching text in search results
-  const highlightText = (text: string, query: string): React.ReactElement => {
-    if (!query.trim()) {
-      return <>{text}</>;
-    }
-
-    const parts = text.split(new RegExp(`(${query})`, 'gi'));
-    return (
-      <>
-        {parts.map((part, index) =>
-          part.toLowerCase() === query.toLowerCase() ? (
-            <mark key={index} className="bg-yellow-200 text-gray-900 font-medium">
-              {part}
-            </mark>
-          ) : (
-            <span key={index}>{part}</span>
-          )
-        )}
-      </>
-    );
-  };
-
-  // Filter and sort history
-  const filteredHistory = useMemo(() => {
-    let filtered = [...history];
-
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((entry) => {
-        return (
-          entry.shirt.toLowerCase().includes(query) ||
-          entry.trouser.toLowerCase().includes(query) ||
-          entry.blazer.toLowerCase().includes(query) ||
-          entry.shoes.toLowerCase().includes(query) ||
-          entry.belt.toLowerCase().includes(query) ||
-          entry.reasoning.toLowerCase().includes(query) ||
-          (entry.text_input && entry.text_input.toLowerCase().includes(query))
-        );
-      });
-    }
-
-    // Apply sorting
-    filtered.sort((a, b) => {
-      const dateA = new Date(a.created_at).getTime();
-      const dateB = new Date(b.created_at).getTime();
-      return sortBy === 'newest' ? dateB - dateA : dateA - dateB;
-    });
-
-    return filtered;
-  }, [history, searchQuery, sortBy]);
 
   if (loading) {
     return (
@@ -258,7 +215,7 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
       {/* History Grid */}
       {filteredHistory.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredHistory.map((entry) => {
+          {filteredHistory.map((entry: OutfitHistoryEntry) => {
             // Debug: Log entry data
             if (entry.model_image) {
               console.log(`History entry ${entry.id} has model_image, length: ${entry.model_image.length}`);

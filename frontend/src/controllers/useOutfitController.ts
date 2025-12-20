@@ -7,6 +7,8 @@
 import { useState, useCallback } from 'react';
 import { OutfitSuggestion, Filters } from '../models/OutfitModels';
 import ApiService from '../services/ApiService';
+import { compressImage } from '../utils/imageUtils';
+import { getLocationString } from '../utils/geolocation';
 
 interface UseOutfitControllerReturn {
   // State
@@ -17,6 +19,8 @@ interface UseOutfitControllerReturn {
   loading: boolean;
   error: string | null;
   generateModelImage: boolean;
+  existingSuggestion: OutfitSuggestion | null;
+  showDuplicateModal: boolean;
   
   // Actions
   setImage: (file: File | null) => void;
@@ -24,11 +28,15 @@ interface UseOutfitControllerReturn {
   setPreferenceText: (text: string) => void;
   setCurrentSuggestion: (suggestion: OutfitSuggestion | null) => void;
   setGenerateModelImage: (generate: boolean) => void;
-  getSuggestion: (location?: string | null) => Promise<void>;
+  getSuggestion: (skipDuplicateCheck?: boolean) => Promise<void>;
   clearError: () => void;
+  handleUseCachedSuggestion: () => void;
+  handleGetNewSuggestion: () => Promise<void>;
+  setShowDuplicateModal: (show: boolean) => void;
+  onSuggestionSuccess?: () => void; // Callback for when suggestion is successful
 }
 
-export const useOutfitController = (): UseOutfitControllerReturn => {
+export const useOutfitController = (options?: { onSuggestionSuccess?: () => void }): UseOutfitControllerReturn => {
   const [image, setImage] = useState<File | null>(null);
   const [filters, setFilters] = useState<Filters>({
     occasion: 'casual',
@@ -40,12 +48,15 @@ export const useOutfitController = (): UseOutfitControllerReturn => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generateModelImage, setGenerateModelImage] = useState<boolean>(false);
+  const [existingSuggestion, setExistingSuggestion] = useState<OutfitSuggestion | null>(null);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
 
   /**
    * Get outfit suggestion from API
-   * @param location - Optional user location for model image generation
+   * Handles duplicate checking, image compression, and location fetching
+   * @param skipDuplicateCheck - Skip duplicate check and go straight to AI
    */
-  const getSuggestion = useCallback(async (location?: string | null) => {
+  const getSuggestion = useCallback(async (skipDuplicateCheck: boolean = false) => {
     if (!image) {
       setError('Please upload an image first');
       return;
@@ -55,15 +66,53 @@ export const useOutfitController = (): UseOutfitControllerReturn => {
     setError(null);
 
     try {
+      // Compress image before sending to reduce size
+      const compressedImage = await compressImage(image);
+      
+      // Check for duplicate image (unless skipped)
+      if (!skipDuplicateCheck) {
+        try {
+          const duplicateCheck = await ApiService.checkDuplicate(compressedImage);
+          
+          if (duplicateCheck.is_duplicate && duplicateCheck.existing_suggestion) {
+            // Found duplicate - show confirmation modal
+            const suggestion: OutfitSuggestion = {
+              ...duplicateCheck.existing_suggestion,
+              id: Date.now().toString(),
+              imageUrl: URL.createObjectURL(image),
+            };
+            setExistingSuggestion(suggestion);
+            setShowDuplicateModal(true);
+            setLoading(false);
+            return;
+          }
+        } catch (duplicateErr) {
+          // If duplicate check fails, proceed with AI call anyway
+          console.error('Duplicate check failed:', duplicateErr);
+        }
+      }
+      
+      // Get user location if model image generation is enabled
+      let location: string | null = null;
+      if (generateModelImage) {
+        try {
+          console.log('Requesting user location...');
+          location = await getLocationString();
+          console.log('Location received:', location);
+        } catch (err) {
+          console.warn('Failed to get location:', err);
+        }
+      }
+
       // Build prompt from filters or preference text
       const trimmed = preferenceText.trim();
       const prompt = trimmed.length > 0
         ? `User preferences (free-text): ${trimmed}`
         : `Occasion: ${filters.occasion}, Season: ${filters.season}, Style: ${filters.style}`;
 
-      // Call API service with model image generation option
+      // Call API service with compressed image and model image generation option
       const data = await ApiService.getSuggestion(
-        image, 
+        compressedImage, 
         prompt, 
         generateModelImage, 
         location || null
@@ -81,7 +130,7 @@ export const useOutfitController = (): UseOutfitControllerReturn => {
       const suggestion: OutfitSuggestion = {
         ...data,
         id: Date.now().toString(),
-        imageUrl: URL.createObjectURL(image),
+        imageUrl: URL.createObjectURL(image), // Use original image for display
         model_image: data.model_image || null,
         raw: data,
         meta: { usedPrompt: prompt }
@@ -93,12 +142,39 @@ export const useOutfitController = (): UseOutfitControllerReturn => {
       });
 
       setCurrentSuggestion(suggestion);
+      setLoading(false);
+      
+      // Call success callback if provided
+      if (options?.onSuggestionSuccess) {
+        options.onSuggestionSuccess();
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+      console.error('Error getting outfit suggestion:', err);
+      setError(errorMessage);
       setLoading(false);
     }
-  }, [image, filters, preferenceText, generateModelImage]);
+  }, [image, filters, preferenceText, generateModelImage, options]);
+
+  /**
+   * Handle using cached/duplicate suggestion
+   */
+  const handleUseCachedSuggestion = useCallback(() => {
+    if (existingSuggestion) {
+      setCurrentSuggestion(existingSuggestion);
+    }
+    setShowDuplicateModal(false);
+    setExistingSuggestion(null);
+  }, [existingSuggestion]);
+
+  /**
+   * Handle getting new AI suggestion (user chose to ignore duplicate)
+   */
+  const handleGetNewSuggestion = useCallback(async () => {
+    setShowDuplicateModal(false);
+    setExistingSuggestion(null);
+    await getSuggestion(true); // Skip duplicate check
+  }, [getSuggestion]);
 
   /**
    * Clear error message
@@ -116,6 +192,8 @@ export const useOutfitController = (): UseOutfitControllerReturn => {
     loading,
     error,
     generateModelImage,
+    existingSuggestion,
+    showDuplicateModal,
     
     // Actions
     setImage,
@@ -124,7 +202,11 @@ export const useOutfitController = (): UseOutfitControllerReturn => {
     setCurrentSuggestion,
     setGenerateModelImage,
     getSuggestion,
-    clearError
+    clearError,
+    handleUseCachedSuggestion,
+    handleGetNewSuggestion,
+    setShowDuplicateModal,
+    onSuggestionSuccess: options?.onSuggestionSuccess
   };
 };
 

@@ -7,7 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import os
 
-from config import Config
+try:  # Support running both as a package (backend.*) and from backend/ directly
+    from config import Config
+except ImportError:  # When imported as backend.main
+    from backend.config import Config
 from routes.outfit_routes import router as outfit_router
 from routes.auth_routes import router as auth_router
 from models.database import Base, engine

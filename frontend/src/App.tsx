@@ -18,12 +18,9 @@ import Register from './views/components/Register';
 import ChangePassword from './views/components/ChangePassword';
 import { useOutfitController } from './controllers/useOutfitController';
 import { useHistoryController } from './controllers/useHistoryController';
+import { useHistorySearchController } from './controllers/useHistorySearchController';
 import { useToastController } from './controllers/useToastController';
 import { useAuthController } from './controllers/useAuthController';
-import ApiService from './services/ApiService';
-import { OutfitSuggestion } from './models/OutfitModels';
-import { compressImage } from './utils/imageUtils';
-import { getLocationString } from './utils/geolocation';
 
 function App() {
   // Authentication
@@ -31,11 +28,9 @@ function App() {
   const [showRegister, setShowRegister] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
 
-  // View state
+  // View state (UI-only state)
   const [currentView, setCurrentView] = useState<'main' | 'history' | 'about' | 'settings'>('main');
   const [showChangePassword, setShowChangePassword] = useState(false);
-  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
-  const [existingSuggestion, setExistingSuggestion] = useState<OutfitSuggestion | null>(null);
   const [showModelImageConfirm, setShowModelImageConfirm] = useState(false);
   const [modelImageConfirmed, setModelImageConfirmed] = useState(false);
 
@@ -48,13 +43,19 @@ function App() {
     loading,
     error,
     generateModelImage,
+    showDuplicateModal,
     setImage,
     setFilters,
     setPreferenceText,
     setGenerateModelImage,
     getSuggestion,
-    setCurrentSuggestion,
-  } = useOutfitController();
+    handleUseCachedSuggestion,
+    handleGetNewSuggestion,
+  } = useOutfitController({
+    onSuggestionSuccess: async () => {
+      await fetchRecentHistory();
+    }
+  });
 
   const {
     history,
@@ -69,9 +70,16 @@ function App() {
     isAuthenticated: isAuthenticated,
   });
 
+  // History search controller
+  const historySearchController = useHistorySearchController(
+    history,
+    ensureFullHistory,
+    isFullView
+  );
+
   const { toast, showToast, hideToast } = useToastController();
 
-  // Event Handlers
+  // Event Handlers (UI orchestration only)
   const handleGetSuggestion = async (skipModelImageConfirm: boolean = false) => {
     if (!image) {
       showToast('Please upload an image first', 'error');
@@ -89,111 +97,13 @@ function App() {
       setModelImageConfirmed(false);
     }
 
-    try {
-      // Compress image before sending to reduce size
-      const compressedImage = await compressImage(image);
-      
-      // Check for duplicate image
-      const duplicateCheck = await ApiService.checkDuplicate(compressedImage);
-      
-      if (duplicateCheck.is_duplicate && duplicateCheck.existing_suggestion) {
-        // Found duplicate - show confirmation modal
-        const suggestion: OutfitSuggestion = {
-          ...duplicateCheck.existing_suggestion,
-          id: Date.now().toString(),
-          imageUrl: URL.createObjectURL(image),
-        };
-        setExistingSuggestion(suggestion);
-        setShowDuplicateModal(true);
-      } else {
-        // No duplicate - proceed with AI call
-        // Get user location if model image generation is enabled
-        let location: string | null = null;
-        if (generateModelImage) {
-          try {
-            console.log('Requesting user location...');
-            location = await getLocationString();
-            console.log('Location received:', location);
-            if (location) {
-              showToast('Using your location for personalized model image 🌍', 'success');
-            } else {
-              console.warn('Location is null, will use default model appearance');
-              showToast('Location not available, using default model appearance', 'error');
-            }
-          } catch (err) {
-            console.error('Failed to get location:', err);
-            showToast('Location not available, using default model appearance', 'error');
-          }
-        }
-        
-        // Temporarily set compressed image for API call
-        const originalImage = image;
-        setImage(compressedImage);
-        console.log('Calling getSuggestion with:', { generateModelImage, location });
-        await getSuggestion(location);
-        setImage(originalImage); // Restore original for display
-        await fetchRecentHistory();
-      }
-    } catch (err) {
-      // If duplicate check fails, proceed with AI call anyway
-      console.error('Duplicate check failed:', err);
-      try {
-        const compressedImage = await compressImage(image);
-        
-        // Get user location if model image generation is enabled
-        let location: string | null = null;
-        if (generateModelImage) {
-          try {
-            location = await getLocationString();
-          } catch (err) {
-            console.warn('Failed to get location:', err);
-          }
-        }
-        
-        const originalImage = image;
-        setImage(compressedImage);
-        await getSuggestion(location);
-        setImage(originalImage);
-        await fetchRecentHistory();
-      } catch (compressErr) {
-        console.error('Image compression failed:', compressErr);
-        showToast('Failed to process image. Please try a smaller image.', 'error');
-      }
-    }
+    // All business logic is now in the controller
+    await getSuggestion();
   };
 
-  const handleUseCachedSuggestion = () => {
-    // User chose to use existing suggestion
-    if (existingSuggestion) {
-      setCurrentSuggestion(existingSuggestion);
-      showToast('Loaded suggestion from history! 📋', 'success');
-    }
-    setShowDuplicateModal(false);
-    setExistingSuggestion(null);
-  };
-
-  const handleGetNewSuggestion = async () => {
-    // User chose to get new AI suggestion
-    setShowDuplicateModal(false);
-    setExistingSuggestion(null);
-    
-    if (!image) {
-      showToast('Please upload an image first', 'error');
-      return;
-    }
-    
-    try {
-      // Compress image before sending
-      const compressedImage = await compressImage(image);
-      const originalImage = image;
-      setImage(compressedImage);
-      await getSuggestion();
-      setImage(originalImage); // Restore original for display
-      await fetchRecentHistory();
-    } catch (err) {
-      console.error('Failed to get new suggestion:', err);
-      showToast('Failed to process image. Please try again.', 'error');
-    }
+  const handleUseCachedSuggestionWrapper = () => {
+    handleUseCachedSuggestion();
+    showToast('Loaded suggestion from history! 📋', 'success');
   };
 
   const handleLike = () => {
@@ -202,7 +112,7 @@ function App() {
 
   const handleDislike = async () => {
     showToast("We'll improve our suggestions! 👎", 'success');
-    await handleGetSuggestion(); // Get a new suggestion and refresh history
+    await handleGetSuggestion(); // Get a new suggestion
   };
 
   const handleLogin = async (credentials: { username: string; password: string }) => {
@@ -378,6 +288,7 @@ function App() {
               isFullView={isFullView}
               onRefresh={refreshHistory}
               onEnsureFullHistory={ensureFullHistory}
+              searchController={historySearchController}
             />
           ) : (
             <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-8 text-center">
@@ -520,7 +431,7 @@ function App() {
         message="We found an existing outfit suggestion for this image in your history. Would you like to use the existing suggestion or get a new one from AI?"
         confirmText="Use Existing"
         cancelText="Get New"
-        onConfirm={handleUseCachedSuggestion}
+        onConfirm={handleUseCachedSuggestionWrapper}
         onCancel={handleGetNewSuggestion}
       />
 

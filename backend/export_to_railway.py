@@ -42,7 +42,10 @@ def export_import_data():
     
     # Get local database URL
     print("Step 1: Getting local database connection...")
-    from config import Config
+    try:  # Support running both as a package (backend.*) and from backend/ directly
+        from config import Config
+    except ImportError:  # When imported as backend.export_to_railway
+        from backend.config import Config
     local_db_url = Config.DATABASE_URL
     
     if not local_db_url:

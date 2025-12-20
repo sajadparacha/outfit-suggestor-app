@@ -5,8 +5,6 @@ from jose import JWTError, jwt
 import bcrypt
 import secrets
 
-from config import Config
-
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
@@ -79,9 +77,22 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
+        # Import Config lazily to avoid import-time dependency issues
+        try:  # Support running both as a package (backend.*) and from backend/ directly
+            from config import Config  # type: ignore
+        except ImportError:  # When imported as backend.utils.auth
+            from backend.config import Config  # type: ignore
+
         expire = datetime.utcnow() + timedelta(minutes=Config.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
     
     to_encode.update({"exp": expire})
+
+    # Import Config lazily here as well
+    try:  # Support running both as a package (backend.*) and from backend/ directly
+        from config import Config  # type: ignore
+    except ImportError:  # When imported as backend.utils.auth
+        from backend.config import Config  # type: ignore
+
     encoded_jwt = jwt.encode(to_encode, Config.JWT_SECRET_KEY, algorithm=Config.JWT_ALGORITHM)
     return encoded_jwt
 
@@ -97,6 +108,12 @@ def decode_access_token(token: str) -> Optional[dict]:
         Dictionary containing the decoded token data, or None if token is invalid
     """
     try:
+        # Import Config lazily to avoid import-time dependency issues
+        try:  # Support running both as a package (backend.*) and from backend/ directly
+            from config import Config  # type: ignore
+        except ImportError:  # When imported as backend.utils.auth
+            from backend.config import Config  # type: ignore
+
         payload = jwt.decode(token, Config.JWT_SECRET_KEY, algorithms=[Config.JWT_ALGORITHM])
         return payload
     except JWTError:

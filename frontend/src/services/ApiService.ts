@@ -93,8 +93,14 @@ class ApiService {
       });
 
       if (!response.ok) {
-        const error: ApiError = await response.json();
-        throw new Error(error.detail || 'Failed to get outfit suggestion');
+        let errorMessage = 'Failed to get outfit suggestion';
+        try {
+          const error: ApiError = await response.json();
+          errorMessage = error.detail || errorMessage;
+        } catch (parseError) {
+          errorMessage = `Server error: ${response.status} ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
       const data: OutfitResponse = await response.json();
