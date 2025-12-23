@@ -132,13 +132,34 @@ class OutfitController:
                 except:
                     location_string = location
             
-            return self.ai_service.generate_model_image(
+            result = self.ai_service.generate_model_image(
                 suggestion,
                 uploaded_image_base64=uploaded_image_base64,
                 location=location_string if location_string else None,
                 location_details=location_details if location_details else None,
                 model=model
             )
+            return result
+        except HTTPException as http_err:
+            # If Stable Diffusion fails and user requested it, try DALL-E 3 as fallback
+            if model == "stable-diffusion":
+                print(f"⚠️ Stable Diffusion failed: {http_err.detail}")
+                print("🔄 Falling back to DALL-E 3...")
+                try:
+                    return self.ai_service.generate_model_image(
+                        suggestion,
+                        uploaded_image_base64=uploaded_image_base64,
+                        location=location_string if location_string else None,
+                        location_details=location_details if location_details else None,
+                        model="dalle3"
+                    )
+                except Exception as fallback_err:
+                    print(f"❌ DALL-E 3 fallback also failed: {str(fallback_err)}")
+                    return None
+            else:
+                # DALL-E 3 failed, just return None
+                print(f"❌ ERROR: Failed to generate model image with {model}: {str(http_err)}")
+                return None
         except Exception as e:
             # Log error but don't fail the request
             print(f"❌ ERROR: Failed to generate model image: {str(e)}")

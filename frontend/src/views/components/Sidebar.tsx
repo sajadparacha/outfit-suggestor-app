@@ -19,6 +19,7 @@ interface SidebarProps {
   setGenerateModelImage: (generate: boolean) => void;
   imageModel: string;
   setImageModel: (model: string) => void;
+  modelGenerationEnabled?: boolean;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -33,7 +34,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   generateModelImage,
   setGenerateModelImage,
   imageModel,
-  setImageModel
+  setImageModel,
+  modelGenerationEnabled = false
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -376,7 +378,8 @@ const Sidebar: React.FC<SidebarProps> = ({
         <p className="text-xs text-gray-500 mt-1">Tip: Leave this blank to use the dropdown preferences above.</p>
       </div>
 
-      {/* AI Model Image Generation Toggle */}
+      {/* AI Model Image Generation Toggle - Only show if modelGeneration=true in URL */}
+      {modelGenerationEnabled && (
       <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
         <div className="flex items-center justify-between">
           <div className="flex-1">
@@ -442,6 +445,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         )}
       </div>
+      )}
 
       {/* Get Suggestion Button */}
       <button

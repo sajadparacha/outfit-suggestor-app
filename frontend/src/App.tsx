@@ -23,6 +23,12 @@ import { useToastController } from './controllers/useToastController';
 import { useAuthController } from './controllers/useAuthController';
 
 function App() {
+  // Check URL parameter for model generation feature flag
+  const modelGenerationEnabled = React.useMemo(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('modelGeneration') === 'true';
+  }, []);
+
   // Authentication
   const { user, isAuthenticated, isLoading: authLoading, login, register, logout, error: authError, clearError } = useAuthController();
   const [showRegister, setShowRegister] = useState(false);
@@ -80,6 +86,13 @@ function App() {
   );
 
   const { toast, showToast, hideToast } = useToastController();
+
+  // Ensure model generation is disabled if feature flag is off
+  React.useEffect(() => {
+    if (!modelGenerationEnabled && generateModelImage) {
+      setGenerateModelImage(false);
+    }
+  }, [modelGenerationEnabled, generateModelImage, setGenerateModelImage]);
 
   // Event Handlers (UI orchestration only)
   const handleGetSuggestion = async (skipModelImageConfirm: boolean = false) => {
@@ -266,6 +279,7 @@ function App() {
                 setGenerateModelImage={setGenerateModelImage}
                 imageModel={imageModel}
                 setImageModel={setImageModel}
+                modelGenerationEnabled={modelGenerationEnabled}
               />
             </div>
 

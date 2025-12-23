@@ -300,9 +300,15 @@ Respond in JSON format with the following structure:
             )
         
         if not self.replicate_token:
+            error_msg = (
+                "REPLICATE_API_TOKEN environment variable is not set. "
+                "To use Stable Diffusion, please set REPLICATE_API_TOKEN in your .env file. "
+                "Get your token from: https://replicate.com/account/api-tokens"
+            )
+            print(f"❌ {error_msg}")
             raise HTTPException(
                 status_code=500,
-                detail="REPLICATE_API_TOKEN environment variable is not set"
+                detail=error_msg
             )
         
         try:
@@ -329,38 +335,64 @@ Respond in JSON format with the following structure:
                 init_image = Image.open(io.BytesIO(image_data))
                 print("✅ Using uploaded image as reference for Stable Diffusion")
             
-            # Use Stable Diffusion XL with image-to-image capability
-            # Model: stability-ai/sdxl
-            if init_image:
-                # Image-to-image mode - preserves the uploaded clothing better
-                output = self.replicate_client.run(
-                    "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
-                    input={
-                        "prompt": prompt,
-                        "image": init_image,
-                        "strength": 0.7,  # How much to preserve from original (0.7 = 70% original, 30% new)
-                        "num_outputs": 1,
-                        "aspect_ratio": "9:16",  # Tall portrait for full body
-                        "output_format": "png"
-                    }
-                )
-            else:
-                # Text-to-image mode (no reference image)
-                output = self.replicate_client.run(
-                    "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
-                    input={
-                        "prompt": prompt,
-                        "num_outputs": 1,
-                        "aspect_ratio": "9:16",
-                        "output_format": "png"
-                    }
-                )
+            # Use Stable Diffusion XL 
+            # Note: SDXL on Replicate may not support direct image-to-image
+            # So we'll use text-to-image with a very detailed description of the uploaded clothing
+            if init_image and uploaded_image_base64:
+                print(f"🔍 Analyzing uploaded image for Stable Diffusion prompt...")
+                # Get detailed description of uploaded clothing
+                clothing_details = self._analyze_uploaded_clothing(uploaded_image_base64)
+                if clothing_details:
+                    # Enhance prompt with detailed clothing description
+                    enhanced_prompt = f"""
+{prompt}
+
+CRITICAL: The model is wearing a USER-UPLOADED SHIRT. You MUST recreate it EXACTLY as described below.
+
+UPLOADED SHIRT DESCRIPTION (MATCH EXACTLY):
+{clothing_details[:800]}
+
+The shirt must match the description above EXACTLY - same colors, same patterns, same style.
+"""
+                    prompt = enhanced_prompt.strip()
+                    print(f"✅ Enhanced prompt with clothing details")
+            
+            print(f"🔍 Calling Replicate API with Stable Diffusion...")
+            print(f"   Prompt length: {len(prompt)} characters")
+            
+            # Use SDXL model for text-to-image generation
+            output = self.replicate_client.run(
+                "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
+                input={
+                    "prompt": prompt,
+                    "num_outputs": 1,
+                    "aspect_ratio": "9:16",
+                    "output_format": "png"
+                }
+            )
+            
+            print(f"✅ Replicate API response received: {type(output)}")
             
             # Get the generated image URL
+            # Replicate returns a list or a single URL
             if isinstance(output, list):
-                image_url = output[0]
-            else:
+                image_url = output[0] if len(output) > 0 else None
+            elif isinstance(output, str):
                 image_url = output
+            else:
+                # Handle generator/async response
+                image_url = None
+                for item in output:
+                    image_url = item
+                    break
+            
+            if not image_url:
+                raise HTTPException(
+                    status_code=500,
+                    detail="No image URL returned from Replicate API"
+                )
+            
+            print(f"📥 Image URL: {image_url}")
             
             # Download and convert to base64
             import requests
@@ -614,7 +646,7 @@ MANDATORY:
 3. Show complete outfit: shirt + blazer + trousers + shoes (all visible)
 4. Full body shot from head to feet
 5. Professional fashion photography quality
-""".strip()
+            """.strip()
         else:
             # No uploaded clothing - use ChatGPT's full recommendation
             prompt = f"""
@@ -628,7 +660,7 @@ COMPLETE OUTFIT:
 - Belt: {outfit.belt}
 
 Show all items clearly. Full body shot with visible shoes. Professional quality.
-""".strip()
+            """.strip()
         
         return prompt
     
