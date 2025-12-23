@@ -49,10 +49,11 @@ const About: React.FC = () => {
               (like available colors) in preferences, and the AI will tailor suggestions accordingly.
             </p>
             <p className="text-gray-700 leading-relaxed">
-              Built with cutting-edge technologies including OpenAI's GPT-4 Vision and DALL-E 3, 
-              React, FastAPI, and PostgreSQL, this app combines the power of artificial intelligence 
-              with modern web development to deliver a seamless fashion experience. Plus, you can 
-              generate AI-powered model images to visualize how the complete outfit looks!
+              Built with cutting-edge technologies including OpenAI's GPT-4 Vision, DALL-E 3, and 
+              Stable Diffusion, React, FastAPI, and PostgreSQL, this app combines the power of 
+              artificial intelligence with modern web development to deliver a seamless fashion 
+              experience. Plus, you can generate AI-powered model images to visualize how the 
+              complete outfit looks using either DALL-E 3 or Stable Diffusion!
             </p>
           </div>
 
@@ -85,7 +86,7 @@ const About: React.FC = () => {
                 <span className="text-2xl">🤖</span>
                 <div>
                   <h4 className="font-semibold text-gray-800">AI Model Visualization</h4>
-                  <p className="text-sm text-gray-600">Generate stunning AI-powered model images wearing your recommended outfit, customized based on your location for personalized appearance.</p>
+                  <p className="text-sm text-gray-600">Generate stunning AI-powered model images wearing your recommended outfit using DALL-E 3 or Stable Diffusion, customized based on your location for personalized appearance.</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
@@ -107,6 +108,13 @@ const About: React.FC = () => {
                 <div>
                   <h4 className="font-semibold text-gray-800">Location-Based Customization</h4>
                   <p className="text-sm text-gray-600">Model images are customized based on your geographical location for culturally appropriate and relatable appearances.</p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3">
+                <span className="text-2xl">🎛️</span>
+                <div>
+                  <h4 className="font-semibold text-gray-800">Multiple AI Models</h4>
+                  <p className="text-sm text-gray-600">Choose between DALL-E 3 and Stable Diffusion for model image generation, each with unique strengths for different use cases.</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
@@ -194,6 +202,9 @@ const About: React.FC = () => {
                 DALL-E 3
               </span>
               <span className="px-4 py-2 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium">
+                Stable Diffusion
+              </span>
+              <span className="px-4 py-2 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium">
                 Tailwind CSS
               </span>
               <span className="px-4 py-2 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium">
@@ -227,7 +238,7 @@ const About: React.FC = () => {
           <div className="text-3xl mb-3">🎨</div>
           <h4 className="font-semibold text-gray-800 mb-2">AI Fashion Expert</h4>
           <p className="text-sm text-gray-600">
-            Powered by OpenAI's GPT-4 Vision for professional styling advice
+            Powered by OpenAI's GPT-4 Vision for styling advice and multiple AI models (DALL-E 3 & Stable Diffusion) for image generation
           </p>
         </div>
 
