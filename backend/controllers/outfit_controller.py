@@ -70,7 +70,7 @@ class OutfitController:
             # Generate model image if requested
             if should_generate_model_image:
                 # Use provided model or default to DALL-E 3
-                model = image_model if image_model in ["dalle3", "stable-diffusion"] else "dalle3"
+                model = image_model if image_model in ["dalle3", "stable-diffusion", "nano-banana"] else "dalle3"
                 model_image_base64 = await self._generate_model_image(
                     suggestion,
                     image_base64,
@@ -141,9 +141,9 @@ class OutfitController:
             )
             return result
         except HTTPException as http_err:
-            # If Stable Diffusion fails and user requested it, try DALL-E 3 as fallback
-            if model == "stable-diffusion":
-                print(f"⚠️ Stable Diffusion failed: {http_err.detail}")
+            # If alternative model fails, try DALL-E 3 as fallback
+            if model in ["stable-diffusion", "nano-banana"]:
+                print(f"⚠️ {model} failed: {http_err.detail}")
                 print("🔄 Falling back to DALL-E 3...")
                 try:
                     return self.ai_service.generate_model_image(

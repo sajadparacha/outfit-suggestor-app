@@ -436,11 +436,14 @@ const Sidebar: React.FC<SidebarProps> = ({
             >
               <option value="dalle3">DALL-E 3 (OpenAI)</option>
               <option value="stable-diffusion">Stable Diffusion (Better Color Accuracy)</option>
+              <option value="nano-banana">Nano Banana (Advanced Image-to-Image)</option>
             </select>
             <p className="text-xs text-gray-500 mt-2">
               {imageModel === "dalle3" 
                 ? "⚡ Fast generation, good quality" 
-                : "🎨 Better color matching with your uploaded image"}
+                : imageModel === "stable-diffusion"
+                ? "🎨 Better color matching with your uploaded image"
+                : "🚀 Advanced image-to-image generation with superior detail preservation"}
             </p>
           </div>
         )}

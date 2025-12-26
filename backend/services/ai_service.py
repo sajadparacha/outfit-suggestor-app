@@ -20,24 +20,33 @@ except ImportError:
 
 
 class AIService:
-    """Service for interacting with OpenAI API"""
+    """Service for interacting with OpenAI API, Nano Banana, and other AI services"""
     
-    def __init__(self, api_key: str, replicate_token: Optional[str] = None):
+    def __init__(
+        self, 
+        api_key: str, 
+        replicate_token: Optional[str] = None,
+        nano_banana_key: Optional[str] = None,
+        chatgpt_model: str = "gpt-4o"
+    ):
         """
         Initialize AI Service
         
         Args:
             api_key: OpenAI API key
             replicate_token: Replicate API token (optional, for Stable Diffusion)
+            nano_banana_key: Nano Banana API key (optional, for Nano Banana image generation)
+            chatgpt_model: ChatGPT model version to use (default: "gpt-4o", can be "gpt-5.2" when available)
         """
         self.client = openai.OpenAI(api_key=api_key)
-        self.model = "gpt-4o"
+        self.model = chatgpt_model  # Use configurable model
         self.max_tokens = 1000
         self.temperature = 0.7
         self.replicate_token = replicate_token
         self.replicate_client = None
         if replicate_token and REPLICATE_AVAILABLE:
             self.replicate_client = replicate.Client(api_token=replicate_token)
+        self.nano_banana_key = nano_banana_key
     
     def get_outfit_suggestion(
         self, 
@@ -182,7 +191,7 @@ Respond in JSON format with the following structure:
         uploaded_image_base64: Optional[str] = None,
         location: Optional[str] = None,
         location_details: Optional[dict] = None,
-        model: Literal["dalle3", "stable-diffusion"] = "dalle3"
+        model: Literal["dalle3", "stable-diffusion", "nano-banana"] = "dalle3"
     ) -> str:
         """
         Generate an image of a male model wearing the recommended outfit.
@@ -204,6 +213,13 @@ Respond in JSON format with the following structure:
         """
         if model == "stable-diffusion":
             return self._generate_with_stable_diffusion(
+                outfit_suggestion,
+                uploaded_image_base64,
+                location,
+                location_details
+            )
+        elif model == "nano-banana":
+            return self._generate_with_nano_banana(
                 outfit_suggestion,
                 uploaded_image_base64,
                 location,
@@ -413,6 +429,173 @@ The shirt must match the description above EXACTLY - same colors, same patterns,
                 detail=f"Error generating model image with Stable Diffusion: {str(e)}"
             )
     
+    def _generate_with_nano_banana(
+        self,
+        outfit_suggestion: OutfitSuggestion,
+        uploaded_image_base64: Optional[str] = None,
+        location: Optional[str] = None,
+        location_details: Optional[dict] = None
+    ) -> str:
+        """
+        Generate model image using Nano Banana API.
+        Nano Banana supports image-to-image generation which can better preserve uploaded clothing details.
+        """
+        if not self.nano_banana_key:
+            error_msg = (
+                "NANO_BANANA_API_KEY environment variable is not set. "
+                "To use Nano Banana, please set NANO_BANANA_API_KEY in your .env file. "
+                "Get your token from: https://nanobnana.com"
+            )
+            print(f"❌ {error_msg}")
+            raise HTTPException(
+                status_code=500,
+                detail=error_msg
+            )
+        
+        try:
+            import requests
+            
+            print("🔍 Generating model image with Nano Banana...")
+            
+            # Build prompt for Nano Banana
+            model_description = self._get_location_based_model_description(location, location_details)
+            prompt = self._build_nano_banana_prompt(
+                outfit_suggestion,
+                model_description,
+                uploaded_image_base64 is not None
+            )
+            
+            # Prepare the request
+            api_url = "https://api.nanobnana.com/v1/generate"  # Update with actual endpoint
+            headers = {
+                "Authorization": f"Bearer {self.nano_banana_key}",
+                "Content-Type": "application/json"
+            }
+            
+            # Build request payload
+            payload = {
+                "prompt": prompt,
+                "aspect_ratio": "9:16",  # Portrait for full body
+                "output_format": "png"
+            }
+            
+            # If we have an uploaded image, use it as reference
+            if uploaded_image_base64:
+                # Analyze uploaded image for detailed description
+                print(f"🔍 Analyzing uploaded image for Nano Banana prompt...")
+                clothing_details = self._analyze_uploaded_clothing(uploaded_image_base64)
+                if clothing_details:
+                    # Enhance prompt with detailed clothing description
+                    enhanced_prompt = f"""
+{prompt}
+
+CRITICAL: The model is wearing a USER-UPLOADED SHIRT. You MUST recreate it EXACTLY as described below.
+
+UPLOADED SHIRT DESCRIPTION (MATCH EXACTLY):
+{clothing_details[:800]}
+
+The shirt must match the description above EXACTLY - same colors, same patterns, same style.
+"""
+                    payload["prompt"] = enhanced_prompt.strip()
+                    print(f"✅ Enhanced prompt with clothing details")
+                
+                # Add image reference if Nano Banana supports it
+                payload["reference_image"] = uploaded_image_base64
+            
+            print(f"🔍 Calling Nano Banana API...")
+            print(f"   Prompt length: {len(payload['prompt'])} characters")
+            
+            # Make API request
+            response = requests.post(api_url, headers=headers, json=payload, timeout=120)
+            response.raise_for_status()
+            
+            result = response.json()
+            print(f"✅ Nano Banana API response received: {type(result)}")
+            
+            # Extract image URL or base64 from response
+            # Adjust based on actual Nano Banana API response format
+            image_url = None
+            if isinstance(result, dict):
+                image_url = result.get("image_url") or result.get("url") or result.get("data", {}).get("url")
+            elif isinstance(result, str):
+                image_url = result
+            
+            if not image_url:
+                # Check if response contains base64 image directly
+                if isinstance(result, dict) and result.get("image_base64"):
+                    image_base64 = result["image_base64"]
+                    print(f"✅ Nano Banana image generated from base64, length: {len(image_base64)}")
+                    return image_base64
+                else:
+                    raise HTTPException(
+                        status_code=500,
+                        detail="No image URL or base64 returned from Nano Banana API"
+                    )
+            
+            print(f"📥 Image URL: {image_url}")
+            
+            # Download and convert to base64
+            image_response = requests.get(image_url)
+            image_response.raise_for_status()
+            
+            image_base64 = base64.b64encode(image_response.content).decode('utf-8')
+            print(f"✅ Nano Banana image generated, base64 length: {len(image_base64)}")
+            
+            return image_base64
+            
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Nano Banana API request failed: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error calling Nano Banana API: {str(e)}"
+            )
+        except Exception as e:
+            print(f"❌ Nano Banana generation failed: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error generating model image with Nano Banana: {str(e)}"
+            )
+    
+    def _build_nano_banana_prompt(
+        self,
+        outfit: OutfitSuggestion,
+        model_description: str,
+        has_reference_image: bool
+    ) -> str:
+        """
+        Build prompt for Nano Banana image generation.
+        """
+        if has_reference_image:
+            # Image-to-image mode - reference image preserves the shirt
+            prompt = f"""
+Professional fashion photo: {model_description} male model, full body head to toe, studio background.
+
+Complete the outfit with:
+- Blazer/Jacket: {outfit.blazer} (worn over the shirt)
+- Trousers: {outfit.trouser}
+- Dress Shoes: {outfit.shoes}
+- Belt: {outfit.belt}
+
+Full body shot showing complete outfit. Professional fashion photography, high quality, realistic, detailed.
+"""
+        else:
+            # Text-to-image mode - describe full outfit
+            prompt = f"""
+Professional fashion photo: {model_description} male model, full body head to toe, studio background.
+
+Complete outfit (ALL ITEMS MANDATORY):
+- Shirt: {outfit.shirt}
+- ⚠️ MANDATORY BLAZER/JACKET: {outfit.blazer} (MUST be worn over the shirt, fully visible)
+- Trousers: {outfit.trouser}
+- Shoes: {outfit.shoes}
+- Belt: {outfit.belt}
+
+CRITICAL: The model MUST be wearing ALL items, especially the blazer/jacket. The blazer must be clearly visible on the model's upper body. Full body shot showing complete outfit including the blazer. Professional fashion photography, high quality, realistic, detailed.
+"""
+        return prompt.strip()
+    
     def _build_stable_diffusion_prompt(
         self,
         outfit: OutfitSuggestion,
@@ -428,27 +611,27 @@ The shirt must match the description above EXACTLY - same colors, same patterns,
             prompt = f"""
 Professional fashion photo: {model_description} male model, full body head to toe, studio background.
 
-Complete the outfit with:
-- Blazer/Jacket: {outfit.blazer} (worn over the shirt)
+Complete the outfit with (ALL MANDATORY):
+- ⚠️ MANDATORY BLAZER/JACKET: {outfit.blazer} (MUST be worn over the shirt, fully visible, clearly present)
 - Trousers: {outfit.trouser}
 - Dress Shoes: {outfit.shoes}
 - Belt: {outfit.belt}
 
-Full body shot showing complete outfit. Professional fashion photography, high quality, realistic.
+CRITICAL: The blazer/jacket is MANDATORY and MUST be visible on the model. The model must be wearing the blazer over the shirt. Full body shot showing complete outfit including the blazer. Professional fashion photography, high quality, realistic.
 """
         else:
             # Text-to-image mode - describe full outfit
             prompt = f"""
 Professional fashion photo: {model_description} male model, full body head to toe, studio background.
 
-Complete outfit:
+Complete outfit (ALL ITEMS MANDATORY):
 - Shirt: {outfit.shirt}
-- Blazer: {outfit.blazer}
+- ⚠️ MANDATORY BLAZER/JACKET: {outfit.blazer} (MUST be worn over the shirt, fully visible)
 - Trousers: {outfit.trouser}
 - Shoes: {outfit.shoes}
 - Belt: {outfit.belt}
 
-Full body shot showing complete outfit. Professional fashion photography, high quality, realistic.
+CRITICAL: The model MUST be wearing ALL items, especially the blazer/jacket. The blazer must be clearly visible on the model's upper body. Full body shot showing complete outfit including the blazer. Professional fashion photography, high quality, realistic.
 """
         return prompt.strip()
     
@@ -635,31 +818,33 @@ CRITICAL COLOR MATCHING RULES:
 Fashion catalog photo: {model_description} male model, full body head to toe, studio background.
 
 The model is wearing the EXACT shirt described above, plus:
-- Blazer/Jacket: {outfit.blazer} (worn over the shirt)
+- ⚠️ MANDATORY BLAZER/JACKET: {outfit.blazer} (MUST be worn over the shirt, fully visible, buttoned or unbuttoned but clearly present)
 - Trousers: {outfit.trouser}
 - Dress Shoes: {outfit.shoes}
 - Belt: {outfit.belt}
 
-MANDATORY:
+MANDATORY REQUIREMENTS (ALL MUST BE VISIBLE):
 1. The shirt is the TOP PRIORITY - it must match the description EXACTLY
-2. Colors must match EXACTLY - no variations or "close enough" colors
-3. Show complete outfit: shirt + blazer + trousers + shoes (all visible)
-4. Full body shot from head to feet
-5. Professional fashion photography quality
+2. ⚠️ THE BLAZER IS MANDATORY - The model MUST be wearing a blazer/jacket: {outfit.blazer}. The blazer must be clearly visible, worn over the shirt, and match the description exactly. DO NOT omit the blazer.
+3. Colors must match EXACTLY - no variations or "close enough" colors
+4. Show complete outfit: shirt + BLAZER (mandatory) + trousers + shoes (all visible)
+5. Full body shot from head to feet
+6. Professional fashion photography quality
+7. The blazer must be visible on the model's upper body - either fully buttoned, partially buttoned, or open but clearly worn
             """.strip()
         else:
             # No uploaded clothing - use ChatGPT's full recommendation
             prompt = f"""
 Fashion photo: {model_description} male model, full body head to toe, studio background.
 
-COMPLETE OUTFIT:
+COMPLETE OUTFIT (ALL ITEMS MANDATORY):
 - Shirt: {outfit.shirt}
-- Blazer: {outfit.blazer}
+- ⚠️ MANDATORY BLAZER/JACKET: {outfit.blazer} (MUST be worn over the shirt, fully visible)
 - Trousers: {outfit.trouser}
 - Shoes: {outfit.shoes}
 - Belt: {outfit.belt}
 
-Show all items clearly. Full body shot with visible shoes. Professional quality.
+CRITICAL: The model MUST be wearing ALL items listed above, especially the blazer/jacket. The blazer must be clearly visible on the model's upper body. Show all items clearly. Full body shot with visible shoes. Professional quality.
             """.strip()
         
         return prompt

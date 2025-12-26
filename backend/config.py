@@ -14,10 +14,14 @@ class Config:
     # API & server settings
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
     REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")
+    NANO_BANANA_API_KEY = os.getenv("NANO_BANANA_API_KEY")
     PORT = int(os.getenv("PORT", 8001))
     
     # Image generation model settings
-    DEFAULT_IMAGE_MODEL = os.getenv("DEFAULT_IMAGE_MODEL", "dalle3")  # "dalle3" or "stable-diffusion"
+    DEFAULT_IMAGE_MODEL = os.getenv("DEFAULT_IMAGE_MODEL", "dalle3")  # "dalle3", "stable-diffusion", "nano-banana"
+    
+    # ChatGPT model version for outfit suggestions
+    CHATGPT_MODEL = os.getenv("CHATGPT_MODEL", "gpt-4o")  # "gpt-4o" or "gpt-5.2" (when available)
 
     # Database settings
     # Railway provides DATABASE_URL, fallback to local for development
@@ -84,7 +88,13 @@ def get_ai_service() -> AIService:
         if not api_key:
             raise ValueError("OPENAI_API_KEY environment variable is not set")
         replicate_token = Config.REPLICATE_API_TOKEN
-        _ai_service_instance = AIService(api_key=api_key, replicate_token=replicate_token)
+        nano_banana_key = Config.NANO_BANANA_API_KEY
+        _ai_service_instance = AIService(
+            api_key=api_key, 
+            replicate_token=replicate_token,
+            nano_banana_key=nano_banana_key,
+            chatgpt_model=Config.CHATGPT_MODEL
+        )
     
     return _ai_service_instance
 
