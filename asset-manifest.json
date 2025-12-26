@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/outfit-suggestor-app/static/css/main.a6665135.css",
-    "main.js": "/outfit-suggestor-app/static/js/main.0ba591a1.js",
+    "main.js": "/outfit-suggestor-app/static/js/main.f18b7bce.js",
     "static/js/453.d7446e4a.chunk.js": "/outfit-suggestor-app/static/js/453.d7446e4a.chunk.js",
     "index.html": "/outfit-suggestor-app/index.html",
     "main.a6665135.css.map": "/outfit-suggestor-app/static/css/main.a6665135.css.map",
-    "main.0ba591a1.js.map": "/outfit-suggestor-app/static/js/main.0ba591a1.js.map",
+    "main.f18b7bce.js.map": "/outfit-suggestor-app/static/js/main.f18b7bce.js.map",
     "453.d7446e4a.chunk.js.map": "/outfit-suggestor-app/static/js/453.d7446e4a.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.a6665135.css",
-    "static/js/main.0ba591a1.js"
+    "static/js/main.f18b7bce.js"
   ]
 }
