@@ -2,7 +2,7 @@
 import json
 import base64
 import io
-from typing import Optional, Tuple, Literal
+from typing import Optional, Tuple, Literal, Dict, List
 
 import openai
 from fastapi import HTTPException
@@ -51,7 +51,8 @@ class AIService:
     def get_outfit_suggestion(
         self, 
         image_base64: str, 
-        text_input: str = ""
+        text_input: str = "",
+        wardrobe_items: Optional[dict] = None
     ) -> OutfitSuggestion:
         """
         Get outfit suggestion from OpenAI based on image analysis
@@ -59,6 +60,7 @@ class AIService:
         Args:
             image_base64: Base64 encoded image
             text_input: Additional context or preferences
+            wardrobe_items: Optional dict of wardrobe items by category (e.g., {"shirt": [...], "trouser": [...]})
             
         Returns:
             OutfitSuggestion object
@@ -66,7 +68,7 @@ class AIService:
         Raises:
             HTTPException: If API call fails
         """
-        prompt = self._build_prompt(text_input)
+        prompt = self._build_prompt(text_input, wardrobe_items)
         
         try:
             response = self.client.chat.completions.create(
@@ -102,19 +104,52 @@ class AIService:
                 detail=f"Error calling OpenAI API: {str(e)}"
             )
     
-    def _build_prompt(self, text_input: str = "") -> str:
+    def _build_prompt(self, text_input: str = "", wardrobe_items: Optional[dict] = None) -> str:
         """
         Build the prompt for OpenAI API
         
         Args:
             text_input: Additional context from user
+            wardrobe_items: Optional dict of wardrobe items by category
             
         Returns:
             Formatted prompt string
         """
+        wardrobe_context = ""
+        if wardrobe_items:
+            wardrobe_context = "\n\n⚠️ IMPORTANT: The user has the following items in their wardrobe. "
+            wardrobe_context += "PRIORITIZE using items from their wardrobe when possible. "
+            wardrobe_context += "Only suggest items they don't have if necessary for a complete outfit.\n\n"
+            wardrobe_context += "USER'S WARDROBE:\n"
+            
+            for category, items in wardrobe_items.items():
+                if items:
+                    wardrobe_context += f"\n{category.upper()} ({len(items)} item(s)):\n"
+                    for item in items:
+                        item_desc = []
+                        if hasattr(item, 'name') and item.name:
+                            item_desc.append(f"Name: {item.name}")
+                        if hasattr(item, 'color') and item.color:
+                            item_desc.append(f"Color: {item.color}")
+                        if hasattr(item, 'description') and item.description:
+                            item_desc.append(f"Description: {item.description}")
+                        if hasattr(item, 'brand') and item.brand:
+                            item_desc.append(f"Brand: {item.brand}")
+                        
+                        if item_desc:
+                            wardrobe_context += f"  - {' | '.join(item_desc)}\n"
+                        else:
+                            wardrobe_context += f"  - {category} item\n"
+            
+            wardrobe_context += "\nWhen making recommendations:\n"
+            wardrobe_context += "1. FIRST check if the user has suitable items in their wardrobe\n"
+            wardrobe_context += "2. If they have matching items, recommend using those (mention 'you already have...')\n"
+            wardrobe_context += "3. Only suggest new items if their wardrobe doesn't have suitable options\n"
+            wardrobe_context += "4. For items from their wardrobe, reference the description/color/brand you listed above\n"
+        
         prompt = """
 You are a professional fashion stylist. Analyze the uploaded image of a shirt or blazer and provide a complete outfit suggestion.
-
+{wardrobe_context}
 {context}
 
 Please provide a complete outfit recommendation including:
@@ -131,17 +166,21 @@ Consider:
 - Style consistency
 - Seasonal appropriateness
 - Professional vs casual context
+- User's existing wardrobe items (prioritize using what they have)
 
 Respond in JSON format with the following structure:
 {{
-    "shirt": "detailed description of the shirt",
-    "trouser": "detailed description of the trousers/pants",
-    "blazer": "detailed description of the blazer/jacket",
-    "shoes": "detailed description of the shoes",
-    "belt": "detailed description of the belt",
+    "shirt": "detailed description of the shirt (mention if from user's wardrobe)",
+    "trouser": "detailed description of the trousers/pants (mention if from user's wardrobe)",
+    "blazer": "detailed description of the blazer/jacket (mention if from user's wardrobe)",
+    "shoes": "detailed description of the shoes (mention if from user's wardrobe)",
+    "belt": "detailed description of the belt (mention if from user's wardrobe)",
     "reasoning": "brief explanation of why this outfit works well together"
 }}
-""".format(context=f"Additional context: {text_input}" if text_input else "")
+""".format(
+            wardrobe_context=wardrobe_context,
+            context=f"\nAdditional context: {text_input}" if text_input else ""
+        )
         
         return prompt
     

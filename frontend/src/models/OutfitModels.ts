@@ -3,6 +3,22 @@
  * These models define the shape of data used throughout the application
  */
 
+export interface MatchingWardrobeItem {
+  id: number;
+  category: string;
+  color: string | null;
+  description: string | null;
+  image_data: string | null;
+}
+
+export interface MatchingWardrobeItems {
+  shirt: MatchingWardrobeItem[];
+  trouser: MatchingWardrobeItem[];
+  blazer: MatchingWardrobeItem[];
+  shoes: MatchingWardrobeItem[];
+  belt: MatchingWardrobeItem[];
+}
+
 export interface OutfitSuggestion {
   id: string;
   shirt: string;
@@ -13,6 +29,7 @@ export interface OutfitSuggestion {
   reasoning: string;
   imageUrl?: string;
   model_image?: string | null; // Base64 encoded image of model wearing the outfit
+  matching_wardrobe_items?: MatchingWardrobeItems; // Items from user's wardrobe that match the suggestion
   raw?: unknown;
   meta?: {
     usedPrompt: string;

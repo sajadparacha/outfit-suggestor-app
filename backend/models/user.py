@@ -33,5 +33,10 @@ class User(Base):
     outfit_history: Mapped[list["OutfitHistory"]] = relationship(
         "OutfitHistory", back_populates="user", cascade="all, delete-orphan"
     )
+    
+    # Relationship to wardrobe items (one user can have many wardrobe items)
+    wardrobe_items: Mapped[list["WardrobeItem"]] = relationship(
+        "WardrobeItem", back_populates="user", cascade="all, delete-orphan"
+    )
 
 

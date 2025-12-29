@@ -6,6 +6,7 @@
 
 import { OutfitResponse, ApiError, OutfitHistoryEntry } from '../models/OutfitModels';
 import { RegisterRequest, LoginRequest, TokenResponse, User } from '../models/AuthModels';
+import { WardrobeItem, WardrobeItemCreate, WardrobeItemUpdate, WardrobeSummary } from '../models/WardrobeModels';
 
 class ApiService {
   private baseUrl: string;
@@ -394,6 +395,249 @@ class ApiService {
    */
   logout(): void {
     this.setAuthToken(null);
+  }
+
+  /**
+   * Add a new item to user's wardrobe
+   * @param itemData - Wardrobe item data
+   * @param image - Optional image file
+   * @returns Promise with created wardrobe item
+   */
+  async addWardrobeItem(
+    itemData: WardrobeItemCreate,
+    image?: File
+  ): Promise<WardrobeItem> {
+    try {
+      const formData = new FormData();
+      formData.append('category', itemData.category);
+      formData.append('color', itemData.color);
+      formData.append('description', itemData.description);
+      if (image) formData.append('image', image);
+
+      const response = await fetch(`${this.baseUrl}/api/wardrobe`, {
+        method: 'POST',
+        headers: this.getHeaders(true, true), // isFormData = true
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error: ApiError = await response.json();
+        throw new Error(error.detail || 'Failed to add wardrobe item');
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to add wardrobe item');
+    }
+  }
+
+  /**
+   * Get user's wardrobe items
+   * @param category - Optional category filter
+   * @returns Promise with array of wardrobe items
+   */
+  async getWardrobe(category?: string): Promise<WardrobeItem[]> {
+    try {
+      const url = category 
+        ? `${this.baseUrl}/api/wardrobe?category=${encodeURIComponent(category)}`
+        : `${this.baseUrl}/api/wardrobe`;
+      
+      const response = await fetch(url, {
+        headers: this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        const error: ApiError = await response.json();
+        throw new Error(error.detail || 'Failed to get wardrobe');
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to get wardrobe');
+    }
+  }
+
+  /**
+   * Get wardrobe summary/statistics
+   * @returns Promise with wardrobe summary
+   */
+  async getWardrobeSummary(): Promise<WardrobeSummary> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/wardrobe/summary`, {
+        headers: this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        const error: ApiError = await response.json();
+        throw new Error(error.detail || 'Failed to get wardrobe summary');
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to get wardrobe summary');
+    }
+  }
+
+  /**
+   * Get a specific wardrobe item
+   * @param itemId - Wardrobe item ID
+   * @returns Promise with wardrobe item
+   */
+  async getWardrobeItem(itemId: number): Promise<WardrobeItem> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/wardrobe/${itemId}`, {
+        headers: this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        const error: ApiError = await response.json();
+        throw new Error(error.detail || 'Failed to get wardrobe item');
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to get wardrobe item');
+    }
+  }
+
+  /**
+   * Update a wardrobe item
+   * @param itemId - Wardrobe item ID
+   * @param itemData - Updated item data
+   * @param image - Optional new image file
+   * @returns Promise with updated wardrobe item
+   */
+  async updateWardrobeItem(
+    itemId: number,
+    itemData: WardrobeItemUpdate,
+    image?: File
+  ): Promise<WardrobeItem> {
+    try {
+      const formData = new FormData();
+      if (itemData.category) formData.append('category', itemData.category);
+      if (itemData.name !== undefined) formData.append('name', itemData.name || '');
+      if (itemData.description !== undefined) formData.append('description', itemData.description || '');
+      if (itemData.color !== undefined) formData.append('color', itemData.color || '');
+      if (itemData.brand !== undefined) formData.append('brand', itemData.brand || '');
+      if (itemData.size !== undefined) formData.append('size', itemData.size || '');
+      if (itemData.tags !== undefined) formData.append('tags', itemData.tags || '');
+      if (itemData.condition !== undefined) formData.append('condition', itemData.condition || '');
+      if (image) formData.append('image', image);
+
+      const response = await fetch(`${this.baseUrl}/api/wardrobe/${itemId}`, {
+        method: 'PUT',
+        headers: this.getHeaders(true, true), // isFormData = true
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error: ApiError = await response.json();
+        throw new Error(error.detail || 'Failed to update wardrobe item');
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to update wardrobe item');
+    }
+  }
+
+  /**
+   * Analyze a wardrobe item image and extract properties using AI
+   * @param image - Image file to analyze
+   * @returns Promise with extracted properties
+   */
+  async analyzeWardrobeImage(image: File, modelType: string = 'blip'): Promise<{
+    category: string;
+    color: string;
+    description: string;
+    model_used?: string;
+  }> {
+    try {
+      const formData = new FormData();
+      formData.append('image', image);
+      formData.append('model_type', modelType); // Pass model selection to backend
+
+      const url = `${this.baseUrl}/api/wardrobe/analyze-image`;
+      const headers = this.getHeaders(true, true); // isFormData = true
+      
+      console.log('🔍 Analyzing wardrobe image:', {
+        url,
+        hasToken: !!this.getAuthToken(),
+        method: 'POST'
+      });
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        body: formData,
+      });
+
+      console.log('📡 Response status:', response.status, response.statusText);
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to analyze image';
+        try {
+          const error: ApiError = await response.json();
+          errorMessage = error.detail || errorMessage;
+          console.error('❌ API Error:', error);
+        } catch (parseError) {
+          errorMessage = `Server error: ${response.status} ${response.statusText}`;
+          console.error('❌ Parse Error:', parseError);
+        }
+        throw new Error(errorMessage);
+      }
+
+      const result = await response.json();
+      console.log('✅ Analysis result:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Analyze image error:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to analyze wardrobe image');
+    }
+  }
+
+  /**
+   * Delete a wardrobe item
+   * @param itemId - Wardrobe item ID
+   * @returns Promise with success message
+   */
+  async deleteWardrobeItem(itemId: number): Promise<{ message: string }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/wardrobe/${itemId}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        const error: ApiError = await response.json();
+        throw new Error(error.detail || 'Failed to delete wardrobe item');
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to delete wardrobe item');
+    }
   }
 }
 

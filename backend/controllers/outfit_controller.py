@@ -10,6 +10,7 @@ from models.outfit_history import OutfitHistory
 from models.user import User
 from services.ai_service import AIService
 from services.outfit_service import OutfitService
+from services.wardrobe_matcher import WardrobeMatcher
 from utils.image_processor import encode_image, validate_image
 
 
@@ -26,6 +27,7 @@ class OutfitController:
         """
         self.ai_service = ai_service
         self.outfit_service = outfit_service
+        self.wardrobe_matcher = WardrobeMatcher()
     
     async def suggest_outfit(
         self,
@@ -61,8 +63,13 @@ class OutfitController:
             # Encode image to base64
             image_base64 = encode_image(image.file)
             
-            # Get outfit suggestion from AI service
-            suggestion = self.ai_service.get_outfit_suggestion(image_base64, text_input)
+            # Get outfit suggestion from AI service (INDEPENDENT of wardrobe)
+            # Suggestions are created without considering user's existing wardrobe
+            suggestion = self.ai_service.get_outfit_suggestion(
+                image_base64, 
+                text_input,
+                wardrobe_items=None  # Don't pass wardrobe items - create independent suggestions
+            )
             
             # Parse generate_model_image from string to boolean
             should_generate_model_image = generate_model_image.lower() in ('true', '1', 'yes', 'on')
@@ -78,6 +85,25 @@ class OutfitController:
                     model
                 )
                 suggestion.model_image = model_image_base64
+            
+            # Match wardrobe items to outfit suggestion
+            if current_user:
+                # Get all wardrobe items
+                from services.wardrobe_service import WardrobeService
+                wardrobe_service = WardrobeService()
+                all_wardrobe_items = wardrobe_service.get_user_wardrobe(
+                    db=db,
+                    user_id=current_user.id
+                )
+                
+                # Find matching items
+                matching_items = self.wardrobe_matcher.match_wardrobe_to_outfit(
+                    suggestion,
+                    all_wardrobe_items
+                )
+                
+                # Add matching items to suggestion (Pydantic will handle serialization)
+                suggestion.matching_wardrobe_items = matching_items
             
             # Save to database using outfit service
             self.outfit_service.save_outfit_history(

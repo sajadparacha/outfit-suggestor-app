@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 from services.ai_service import AIService
 from services.auth_service import AuthService
+from services.wardrobe_ai_service import WardrobeAIService
 from controllers.outfit_controller import OutfitController
 
 # Load environment variables
@@ -15,7 +16,14 @@ class Config:
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
     REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")
     NANO_BANANA_API_KEY = os.getenv("NANO_BANANA_API_KEY")
+    HUGGINGFACE_API_TOKEN = os.getenv("HUGGINGFACE_API_TOKEN")  # Optional: for Inference API
     PORT = int(os.getenv("PORT", 8001))
+    
+    # Wardrobe AI model selection: "openai" or "huggingface"
+    WARDROBE_AI_MODEL = os.getenv("WARDROBE_AI_MODEL", "openai")  # Default to OpenAI
+    
+    # Hugging Face model selection: "blip" or "vit-gpt2"
+    HUGGINGFACE_MODEL_TYPE = os.getenv("HUGGINGFACE_MODEL_TYPE", "blip")  # Default to BLIP
     
     # Image generation model settings
     DEFAULT_IMAGE_MODEL = os.getenv("DEFAULT_IMAGE_MODEL", "dalle3")  # "dalle3", "stable-diffusion", "nano-banana"
@@ -72,6 +80,9 @@ _ai_service_instance = None
 _auth_service_instance = None
 _outfit_controller_instance = None
 _auth_controller_instance = None
+_wardrobe_service_instance = None
+_wardrobe_controller_instance = None
+_wardrobe_ai_service_instance = None
 
 
 def get_ai_service() -> AIService:
@@ -152,4 +163,71 @@ def get_auth_controller():
         _auth_controller_instance = AuthController(auth_service)
     
     return _auth_controller_instance
+
+
+def get_wardrobe_service():
+    """
+    Get Wardrobe Service instance (dependency injection)
+    
+    Returns:
+        WardrobeService singleton instance
+    """
+    from services.wardrobe_service import WardrobeService  # Lazy import to avoid circular dependency
+    
+    global _wardrobe_service_instance
+    
+    if _wardrobe_service_instance is None:
+        _wardrobe_service_instance = WardrobeService()
+    
+    return _wardrobe_service_instance
+
+
+def get_wardrobe_controller():
+    """
+    Get Wardrobe Controller instance (dependency injection)
+    
+    Returns:
+        WardrobeController singleton instance
+    """
+    from controllers.wardrobe_controller import WardrobeController  # Lazy import to avoid circular dependency
+    
+    global _wardrobe_controller_instance
+    
+    if _wardrobe_controller_instance is None:
+        wardrobe_service = get_wardrobe_service()
+        wardrobe_ai_service = get_wardrobe_ai_service()
+        _wardrobe_controller_instance = WardrobeController(wardrobe_service, wardrobe_ai_service)
+    
+    return _wardrobe_controller_instance
+
+
+def get_wardrobe_ai_service():
+    """
+    Get Wardrobe AI Service instance (dependency injection)
+    Supports both OpenAI and Hugging Face models
+    
+    Returns:
+        WardrobeAIService or WardrobeAIServiceHF singleton instance
+    """
+    global _wardrobe_ai_service_instance
+    
+    if _wardrobe_ai_service_instance is None:
+        model_type = Config.WARDROBE_AI_MODEL.lower()
+        
+        if model_type == "huggingface" or model_type == "hf":
+            # Use Hugging Face (FREE)
+            from services.wardrobe_ai_service_hf import WardrobeAIServiceHF
+            hf_token = Config.HUGGINGFACE_API_TOKEN  # Optional - can be None for local models
+            hf_model_type = Config.HUGGINGFACE_MODEL_TYPE  # "blip" or "vit-gpt2"
+            _wardrobe_ai_service_instance = WardrobeAIServiceHF(hf_api_token=hf_token, model_type=hf_model_type)
+            print(f"✅ Using Hugging Face {hf_model_type.upper()} (FREE) for wardrobe analysis")
+        else:
+            # Use OpenAI (default)
+            api_key = Config.OPENAI_API_KEY
+            if not api_key:
+                raise ValueError("OPENAI_API_KEY environment variable is not set")
+            _wardrobe_ai_service_instance = WardrobeAIService(api_key=api_key)
+            print("✅ Using OpenAI GPT-4o for wardrobe analysis")
+    
+    return _wardrobe_ai_service_instance
 

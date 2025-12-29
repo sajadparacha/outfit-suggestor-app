@@ -10,6 +10,7 @@ import Sidebar from './views/components/Sidebar';
 import OutfitPreview from './views/components/OutfitPreview';
 import OutfitHistory from './views/components/OutfitHistory';
 import About from './views/components/About';
+import Wardrobe from './views/components/Wardrobe';
 import Toast from './views/components/Toast';
 import Footer from './views/components/Footer';
 import ConfirmationModal from './views/components/ConfirmationModal';
@@ -35,7 +36,8 @@ function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   // View state (UI-only state)
-  const [currentView, setCurrentView] = useState<'main' | 'history' | 'about' | 'settings'>('main');
+  const [currentView, setCurrentView] = useState<'main' | 'history' | 'wardrobe' | 'about' | 'settings'>('main');
+  const [wardrobeCategoryFilter, setWardrobeCategoryFilter] = useState<string | null>(null);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showModelImageConfirm, setShowModelImageConfirm] = useState(false);
   const [modelImageConfirmed, setModelImageConfirmed] = useState(false);
@@ -201,6 +203,16 @@ function App() {
                     📋 History
                   </button>
                   <button
+                    onClick={() => setCurrentView('wardrobe')}
+                    className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                      currentView === 'wardrobe'
+                        ? 'border-indigo-600 text-indigo-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    👔 Wardrobe
+                  </button>
+                  <button
                     onClick={() => setCurrentView('settings')}
                     className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
                       currentView === 'settings'
@@ -292,9 +304,35 @@ function App() {
                 onLike={handleLike}
                 onDislike={handleDislike}
                 onNext={handleGetSuggestion}
+                onNavigateToWardrobe={(category?: string) => {
+                  setWardrobeCategoryFilter(category || null);
+                  setCurrentView('wardrobe');
+                }}
               />
             </div>
           </div>
+        )}
+
+        {currentView === 'wardrobe' && (
+          isAuthenticated ? (
+            <Wardrobe initialCategory={wardrobeCategoryFilter} />
+          ) : (
+            <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-8 text-center">
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">👔 Wardrobe Management</h2>
+              <p className="text-gray-600 mb-6">
+                Please log in to manage your wardrobe and get personalized outfit suggestions based on your existing clothes.
+              </p>
+              <button
+                onClick={() => {
+                  setShowRegister(false);
+                  setShowLoginModal(true);
+                }}
+                className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
+              >
+                Login to Continue
+              </button>
+            </div>
+          )
         )}
 
         {currentView === 'history' && (

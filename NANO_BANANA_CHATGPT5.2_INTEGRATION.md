@@ -91,3 +91,4 @@ No changes to API endpoints - the existing `/api/suggest-outfit` endpoint now ac
    - Remove `NANO_BANANA_API_KEY` or use an invalid key
    - Verify that the system falls back to DALL-E 3 gracefully
 
+
