@@ -9,6 +9,8 @@ interface OutfitPreviewProps {
   onDislike: () => void;
   onNext: () => void;
   onNavigateToWardrobe?: (category?: string) => void; // Optional callback to navigate to wardrobe
+  isAuthenticated?: boolean; // Whether user is logged in
+  onAddToWardrobe?: () => void; // Callback to add uploaded item to wardrobe
 }
 
 const OutfitPreview: React.FC<OutfitPreviewProps> = ({
@@ -18,7 +20,9 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
   onLike,
   onDislike,
   onNext,
-  onNavigateToWardrobe
+  onNavigateToWardrobe,
+  isAuthenticated = false,
+  onAddToWardrobe
 }) => {
   // Hook must be first
   const [showDetails, setShowDetails] = React.useState(false);
@@ -411,7 +415,7 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
         </div>
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
           <button
             onClick={onNext}
             className="px-4 py-3 bg-teal-500 text-white rounded-lg font-medium hover:bg-teal-600 transition-all transform hover:scale-105 shadow-md"
@@ -436,6 +440,23 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
             👎 Dislike
           </button>
         </div>
+
+        {/* Add to Wardrobe Button - Only show if authenticated */}
+        {isAuthenticated && onAddToWardrobe && (
+          <div className="flex flex-col items-center gap-2">
+            <button
+              onClick={onAddToWardrobe}
+              className="px-6 py-3 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600 transition-all transform hover:scale-105 shadow-md flex items-center gap-2"
+              aria-label="Add new item to your wardrobe"
+            >
+              <span>👔</span>
+              <span>Add to Wardrobe</span>
+            </button>
+            <p className="text-sm text-gray-500 text-center">
+              If you want to add a new item to your wardrobe, press this button.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Modal: AI Details */}

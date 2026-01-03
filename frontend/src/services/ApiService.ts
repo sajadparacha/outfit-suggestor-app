@@ -398,6 +398,44 @@ class ApiService {
   }
 
   /**
+   * Check if a wardrobe image is a duplicate
+   * @param image - Image file to check
+   * @returns Promise with duplicate check result
+   */
+  async checkWardrobeDuplicate(
+    image: File
+  ): Promise<{ is_duplicate: boolean; existing_item?: WardrobeItem }> {
+    try {
+      const formData = new FormData();
+      formData.append('image', image);
+
+      const response = await fetch(`${this.baseUrl}/api/wardrobe/check-duplicate`, {
+        method: 'POST',
+        headers: this.getHeaders(true, true), // isFormData = true
+        body: formData,
+      });
+
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        try {
+          const error: ApiError = await response.json();
+          errorMessage = error.detail || errorMessage;
+        } catch (e) {
+          // If JSON parsing fails, use status text
+        }
+        throw new Error(errorMessage);
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to check duplicate');
+    }
+  }
+
+  /**
    * Add a new item to user's wardrobe
    * @param itemData - Wardrobe item data
    * @param image - Optional image file

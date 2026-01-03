@@ -17,8 +17,11 @@ const About: React.FC = () => {
             </div>
           </div>
           <h1 className="text-3xl font-bold mb-2">AI Outfit Suggestor</h1>
-          <p className="text-indigo-100 text-lg">
+          <p className="text-indigo-100 text-lg mb-2">
             Your Personal AI Fashion Stylist
+          </p>
+          <p className="text-indigo-200 text-sm font-medium">
+            Multi-Model AI Application
           </p>
         </div>
 
@@ -45,15 +48,17 @@ const About: React.FC = () => {
             <p className="text-gray-700 leading-relaxed mb-4">
               The AI intelligently understands what you're wearing and suggests complementary pieces 
               to complete your look. If you upload a combination, it identifies what's already there 
-              and suggests the missing elements. You can also specify your wardrobe limitations 
-              (like available colors) in preferences, and the AI will tailor suggestions accordingly.
+              and suggests the missing elements. The app now features a <strong>smart wardrobe management system</strong> 
+              that learns your collection and prioritizes suggestions based on items you already own, 
+              making outfit recommendations more practical and personalized.
             </p>
             <p className="text-gray-700 leading-relaxed">
-              Built with cutting-edge technologies including OpenAI's GPT-4 Vision, DALL-E 3, and 
-              Stable Diffusion, React, FastAPI, and PostgreSQL, this app combines the power of 
-              artificial intelligence with modern web development to deliver a seamless fashion 
-              experience. Plus, you can generate AI-powered model images to visualize how the 
-              complete outfit looks using either DALL-E 3 or Stable Diffusion!
+              Built with cutting-edge technologies including OpenAI's GPT-4 Vision, DALL-E 3, Stable Diffusion, 
+              Hugging Face BLIP and ViT-GPT2 models, React, FastAPI, and PostgreSQL, this app combines the 
+              power of artificial intelligence with modern web development to deliver a seamless fashion 
+              experience. Generate stunning AI-powered model images to visualize complete outfits, manage 
+              your wardrobe with intelligent duplicate detection, and get outfit suggestions that work with 
+              your actual clothing collection.
             </p>
           </div>
 
@@ -69,6 +74,20 @@ const About: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-start space-x-3">
+                <span className="text-2xl">👔</span>
+                <div>
+                  <h4 className="font-semibold text-gray-800">Smart Wardrobe Management</h4>
+                  <p className="text-sm text-gray-600">Build and manage your digital wardrobe with AI-powered item recognition. Automatically categorize items, filter by category (shirts, trousers, blazers, shoes, belts), and get outfit suggestions that prioritize your existing clothing.</p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3">
+                <span className="text-2xl">🔍</span>
+                <div>
+                  <h4 className="font-semibold text-gray-800">Intelligent Duplicate Detection</h4>
+                  <p className="text-sm text-gray-600">Advanced perceptual hashing prevents duplicate wardrobe items and outfit suggestions, saving time and API costs while keeping your wardrobe organized.</p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3">
                 <span className="text-2xl">🧩</span>
                 <div>
                   <h4 className="font-semibold text-gray-800">Smart Combination Analysis</h4>
@@ -79,11 +98,18 @@ const About: React.FC = () => {
                 <span className="text-2xl">🎨</span>
                 <div>
                   <h4 className="font-semibold text-gray-800">Wardrobe-Aware Suggestions</h4>
-                  <p className="text-sm text-gray-600">Specify your available colors or wardrobe limitations in preferences, and get suggestions tailored to what you actually own.</p>
+                  <p className="text-sm text-gray-600">The AI analyzes your wardrobe and prioritizes outfit suggestions using items you already own, making recommendations practical and personalized to your collection.</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
                 <span className="text-2xl">🤖</span>
+                <div>
+                  <h4 className="font-semibold text-gray-800">AI-Powered Item Analysis</h4>
+                  <p className="text-sm text-gray-600">Add items to your wardrobe with automatic AI analysis using BLIP or ViT-GPT2 models. The AI extracts category, color, and description from your photos, ready for you to review and edit.</p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3">
+                <span className="text-2xl">🖼️</span>
                 <div>
                   <h4 className="font-semibold text-gray-800">AI Model Visualization</h4>
                   <p className="text-sm text-gray-600">Generate stunning AI-powered model images wearing your recommended outfit using DALL-E 3 or Stable Diffusion, customized based on your location for personalized appearance.</p>
@@ -93,14 +119,14 @@ const About: React.FC = () => {
                 <span className="text-2xl">📋</span>
                 <div>
                   <h4 className="font-semibold text-gray-800">Complete Outfit History</h4>
-                  <p className="text-sm text-gray-600">Track all your past suggestions with searchable history, including generated model images for easy reference.</p>
+                  <p className="text-sm text-gray-600">Track all your past suggestions with searchable history, including generated model images for easy reference and inspiration.</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <span className="text-2xl">🔍</span>
+                <span className="text-2xl">🔐</span>
                 <div>
-                  <h4 className="font-semibold text-gray-800">Smart Duplicate Detection</h4>
-                  <p className="text-sm text-gray-600">Perceptual hashing detects similar images to save costs and avoid redundant suggestions.</p>
+                  <h4 className="font-semibold text-gray-800">Secure User Accounts</h4>
+                  <p className="text-sm text-gray-600">Create an account to save your wardrobe, outfit history, and preferences. Your data is securely stored and private.</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
@@ -114,14 +140,14 @@ const About: React.FC = () => {
                 <span className="text-2xl">🎛️</span>
                 <div>
                   <h4 className="font-semibold text-gray-800">Multiple AI Models</h4>
-                  <p className="text-sm text-gray-600">Choose between DALL-E 3 and Stable Diffusion for model image generation, each with unique strengths for different use cases.</p>
+                  <p className="text-sm text-gray-600">Choose between DALL-E 3 and Stable Diffusion for model image generation, and BLIP or ViT-GPT2 for wardrobe item analysis - each optimized for different use cases.</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
                 <span className="text-2xl">📱</span>
                 <div>
-                  <h4 className="font-semibold text-gray-800">Multi-Platform</h4>
-                  <p className="text-sm text-gray-600">Web and iOS support for outfit suggestions anywhere, anytime.</p>
+                  <h4 className="font-semibold text-gray-800">Multi-Platform Support</h4>
+                  <p className="text-sm text-gray-600">Web and iOS apps available, with seamless synchronization of your wardrobe and outfit history across devices.</p>
                 </div>
               </div>
             </div>
@@ -205,10 +231,22 @@ const About: React.FC = () => {
                 Stable Diffusion
               </span>
               <span className="px-4 py-2 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium">
+                Hugging Face BLIP
+              </span>
+              <span className="px-4 py-2 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium">
+                ViT-GPT2
+              </span>
+              <span className="px-4 py-2 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium">
                 Tailwind CSS
               </span>
               <span className="px-4 py-2 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium">
                 SQLAlchemy
+              </span>
+              <span className="px-4 py-2 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium">
+                JWT Authentication
+              </span>
+              <span className="px-4 py-2 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium">
+                SwiftUI (iOS)
               </span>
             </div>
           </div>
@@ -216,7 +254,7 @@ const About: React.FC = () => {
           {/* Version Info */}
           <div className="border-t border-gray-200 pt-6 mt-8 text-center">
             <p className="text-sm text-gray-500">
-              Version 3.0.0 • © 2024 Sajjad Ahmed Paracha • All Rights Reserved
+              Version 4.0.0 • © 2024 Sajjad Ahmed Paracha • All Rights Reserved
             </p>
           </div>
         </div>
@@ -238,7 +276,7 @@ const About: React.FC = () => {
           <div className="text-3xl mb-3">🎨</div>
           <h4 className="font-semibold text-gray-800 mb-2">AI Fashion Expert</h4>
           <p className="text-sm text-gray-600">
-            Powered by OpenAI's GPT-4 Vision for styling advice and multiple AI models (DALL-E 3 & Stable Diffusion) for image generation
+            Powered by OpenAI's GPT-4 Vision for styling advice, BLIP/ViT-GPT2 for wardrobe analysis, and DALL-E 3 & Stable Diffusion for stunning outfit visualizations
           </p>
         </div>
 

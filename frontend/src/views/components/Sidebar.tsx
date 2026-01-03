@@ -20,6 +20,9 @@ interface SidebarProps {
   imageModel: string;
   setImageModel: (model: string) => void;
   modelGenerationEnabled?: boolean;
+  isAuthenticated?: boolean;
+  onAddToWardrobe?: () => void;
+  addingToWardrobe?: boolean;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -35,7 +38,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   setGenerateModelImage,
   imageModel,
   setImageModel,
-  modelGenerationEnabled = false
+  modelGenerationEnabled = false,
+  isAuthenticated = false,
+  onAddToWardrobe,
+  addingToWardrobe = false
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -290,6 +296,48 @@ const Sidebar: React.FC<SidebarProps> = ({
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Add to Wardrobe Button - Quick Access */}
+      {isAuthenticated && onAddToWardrobe && (
+        <div className="mb-6">
+          <button
+            onClick={onAddToWardrobe}
+            disabled={!image || loading || addingToWardrobe}
+            className={`w-full px-4 py-3 rounded-lg font-medium transition-all shadow-md flex items-center justify-center space-x-2 ${
+              !image || loading || addingToWardrobe
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-indigo-600 text-white hover:bg-indigo-700'
+            }`}
+            aria-label="Add current image to wardrobe"
+            title={!image ? 'Upload an image first' : addingToWardrobe ? 'Adding to wardrobe...' : 'Add this item to your wardrobe'}
+          >
+            {addingToWardrobe ? (
+              <>
+                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                <span>Adding...</span>
+              </>
+            ) : (
+              <>
+                <span>👔</span>
+                <span>Add to Wardrobe</span>
+              </>
+            )}
+          </button>
+          {!image && (
+            <p className="text-xs text-gray-500 text-center mt-2">
+              Upload an image first to add it to your wardrobe
+            </p>
+          )}
+          {addingToWardrobe && (
+            <p className="text-xs text-indigo-600 text-center mt-2">
+              AI is analyzing your image...
+            </p>
+          )}
         </div>
       )}
 

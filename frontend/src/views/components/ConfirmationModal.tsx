@@ -8,7 +8,7 @@ import React from 'react';
 interface ConfirmationModalProps {
   isOpen: boolean;
   title: string;
-  message: string;
+  message: string | React.ReactNode;
   confirmText?: string;
   cancelText?: string;
   onConfirm: () => void;
@@ -48,9 +48,13 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           </h3>
 
           {/* Message */}
-          <p className="text-sm text-gray-600 text-center mb-6">
-            {message}
-          </p>
+          <div className="text-sm text-gray-600 mb-6">
+            {typeof message === 'string' ? (
+              <p className="text-center">{message}</p>
+            ) : (
+              message
+            )}
+          </div>
 
           {/* Buttons */}
           <div className="flex space-x-3">

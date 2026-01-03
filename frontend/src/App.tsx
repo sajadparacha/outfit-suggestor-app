@@ -22,6 +22,8 @@ import { useHistoryController } from './controllers/useHistoryController';
 import { useHistorySearchController } from './controllers/useHistorySearchController';
 import { useToastController } from './controllers/useToastController';
 import { useAuthController } from './controllers/useAuthController';
+import { useWardrobeController } from './controllers/useWardrobeController';
+import ApiService from './services/ApiService';
 
 function App() {
   // Check URL parameter for model generation feature flag
@@ -41,6 +43,11 @@ function App() {
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showModelImageConfirm, setShowModelImageConfirm] = useState(false);
   const [modelImageConfirmed, setModelImageConfirmed] = useState(false);
+  const [showAddWardrobeModal, setShowAddWardrobeModal] = useState(false);
+  const [wardrobeFormData, setWardrobeFormData] = useState<{category: string; color: string; description: string} | null>(null);
+  const [wardrobeImageToAdd, setWardrobeImageToAdd] = useState<File | null>(null);
+  const [showWardrobeDuplicateModal, setShowWardrobeDuplicateModal] = useState(false);
+  const [duplicateWardrobeItem, setDuplicateWardrobeItem] = useState<any>(null);
 
   // Controllers (Business Logic)
   const {
@@ -88,6 +95,10 @@ function App() {
   );
 
   const { toast, showToast, hideToast } = useToastController();
+
+  // Wardrobe controller for auto-add functionality
+  const { analyzeImage, addItem, loading: wardrobeLoading } = useWardrobeController();
+  const [addingToWardrobe, setAddingToWardrobe] = useState(false);
 
   // Ensure model generation is disabled if feature flag is off
   React.useEffect(() => {
@@ -292,6 +303,57 @@ function App() {
                 imageModel={imageModel}
                 setImageModel={setImageModel}
                 modelGenerationEnabled={modelGenerationEnabled}
+                isAuthenticated={isAuthenticated}
+                onAddToWardrobe={async () => {
+                  if (!image) {
+                    showToast('Please upload an image first to add it to your wardrobe', 'error');
+                    return;
+                  }
+
+                  if (addingToWardrobe || wardrobeLoading) {
+                    return; // Prevent multiple clicks
+                  }
+
+                  setAddingToWardrobe(true);
+                  try {
+                    console.log('🔍 Checking for duplicate...');
+                    
+                    // Check for duplicate FIRST before AI analysis
+                    const duplicateCheck = await ApiService.checkWardrobeDuplicate(image);
+                    
+                    if (duplicateCheck.is_duplicate && duplicateCheck.existing_item) {
+                      // Show duplicate notification immediately
+                      setDuplicateWardrobeItem(duplicateCheck.existing_item);
+                      setWardrobeImageToAdd(image);
+                      setShowWardrobeDuplicateModal(true);
+                      setAddingToWardrobe(false);
+                      return;
+                    }
+                    
+                    console.log('✅ No duplicate found, proceeding with AI analysis...');
+                    
+                    // No duplicate found, proceed with AI analysis
+                    console.log('📸 Analyzing image with AI...');
+                    const properties = await analyzeImage(image, 'blip');
+                    console.log('✅ Analysis complete:', properties);
+                    
+                    // Show form modal with extracted data for user to review/edit
+                    setWardrobeFormData({
+                      category: properties.category || 'shirt',
+                      color: properties.color || '',
+                      description: properties.description || '',
+                    });
+                    setWardrobeImageToAdd(image);
+                    setShowAddWardrobeModal(true);
+                  } catch (err) {
+                    console.error('❌ Error:', err);
+                    const errorMessage = err instanceof Error ? err.message : 'Failed to process image';
+                    showToast(errorMessage, 'error');
+                  } finally {
+                    setAddingToWardrobe(false);
+                  }
+                }}
+                addingToWardrobe={addingToWardrobe}
               />
             </div>
 
@@ -307,6 +369,50 @@ function App() {
                 onNavigateToWardrobe={(category?: string) => {
                   setWardrobeCategoryFilter(category || null);
                   setCurrentView('wardrobe');
+                }}
+                isAuthenticated={isAuthenticated}
+                onAddToWardrobe={async () => {
+                  if (!image) {
+                    showToast('No image to add. Please upload an image first.', 'error');
+                    return;
+                  }
+
+                  setAddingToWardrobe(true);
+                  try {
+                    console.log('🔍 Checking for duplicate...');
+                    
+                    // Check for duplicate FIRST before AI analysis
+                    const duplicateCheck = await ApiService.checkWardrobeDuplicate(image);
+                    
+                    if (duplicateCheck.is_duplicate && duplicateCheck.existing_item) {
+                      // Show duplicate notification immediately
+                      setDuplicateWardrobeItem(duplicateCheck.existing_item);
+                      setWardrobeImageToAdd(image);
+                      setShowWardrobeDuplicateModal(true);
+                      setAddingToWardrobe(false);
+                      return;
+                    }
+                    
+                    console.log('✅ No duplicate found, proceeding with AI analysis...');
+                    
+                    // No duplicate found, proceed with AI analysis
+                    const properties = await analyzeImage(image, 'blip');
+                    
+                    // Show form modal with extracted data for user to review/edit
+                    setWardrobeFormData({
+                      category: properties.category || 'shirt',
+                      color: properties.color || '',
+                      description: properties.description || '',
+                    });
+                    setWardrobeImageToAdd(image);
+                    setShowAddWardrobeModal(true);
+                  } catch (err) {
+                    const errorMessage = err instanceof Error ? err.message : 'Failed to process image';
+                    showToast(errorMessage, 'error');
+                    console.error('Failed to process image:', err);
+                  } finally {
+                    setAddingToWardrobe(false);
+                  }
                 }}
               />
             </div>
@@ -397,6 +503,18 @@ function App() {
                       Change Password
                     </button>
                   )}
+                </div>
+                <div className="border-t pt-4">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-4">Wardrobe Management</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Manage your wardrobe items to get personalized outfit suggestions based on what you own.
+                  </p>
+                  <button
+                    onClick={() => setCurrentView('wardrobe')}
+                    className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                  >
+                    👔 Manage Wardrobe
+                  </button>
                 </div>
               </div>
             </div>
@@ -508,6 +626,196 @@ function App() {
           setGenerateModelImage(false);
           setModelImageConfirmed(false);
           await handleGetSuggestion(true);
+        }}
+      />
+
+      {/* Add to Wardrobe Modal with Editable Form */}
+      {showAddWardrobeModal && wardrobeFormData && wardrobeImageToAdd && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">✏️ Review & Add to Wardrobe</h2>
+                <button
+                  onClick={() => {
+                    setShowAddWardrobeModal(false);
+                    setWardrobeFormData(null);
+                    setWardrobeImageToAdd(null);
+                  }}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                if (!wardrobeFormData || !wardrobeImageToAdd) return;
+
+                try {
+                  setAddingToWardrobe(true);
+                  
+                  // No need to check duplicate again - already checked before AI analysis
+                  // Proceed directly with adding
+                  await addItem(wardrobeFormData, wardrobeImageToAdd);
+                  showToast('Item added to wardrobe! ✅', 'success');
+                  setShowAddWardrobeModal(false);
+                  setWardrobeFormData(null);
+                  setWardrobeImageToAdd(null);
+                } catch (err) {
+                  const errorMessage = err instanceof Error ? err.message : 'Failed to add item to wardrobe';
+                  showToast(errorMessage, 'error');
+                  console.error('Failed to add item to wardrobe:', err);
+                } finally {
+                  setAddingToWardrobe(false);
+                }
+              }} className="space-y-4">
+                {/* Image Preview */}
+                <div className="mb-4">
+                  <img
+                    src={URL.createObjectURL(wardrobeImageToAdd)}
+                    alt="Item preview"
+                    className="w-full max-h-48 object-contain rounded-lg border border-gray-200"
+                  />
+                </div>
+
+                {/* Category */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Category *
+                  </label>
+                  <select
+                    value={wardrobeFormData.category}
+                    onChange={(e) => setWardrobeFormData({ ...wardrobeFormData, category: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    required
+                  >
+                    <option value="shirt">Shirt</option>
+                    <option value="trouser">Trouser</option>
+                    <option value="blazer">Blazer</option>
+                    <option value="shoes">Shoes</option>
+                    <option value="belt">Belt</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                {/* Color */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Color *
+                  </label>
+                  <input
+                    type="text"
+                    value={wardrobeFormData.color}
+                    onChange={(e) => setWardrobeFormData({ ...wardrobeFormData, color: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    placeholder="e.g., Navy blue, Black"
+                    required
+                  />
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Description *
+                  </label>
+                  <textarea
+                    value={wardrobeFormData.description}
+                    onChange={(e) => setWardrobeFormData({ ...wardrobeFormData, description: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    rows={3}
+                    placeholder="e.g., Classic fit, casual style"
+                    required
+                  />
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-blue-800">
+                    ✨ <strong>AI Analysis Complete!</strong> Review and edit the extracted details above before saving.
+                  </p>
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddWardrobeModal(false);
+                      setWardrobeFormData(null);
+                      setWardrobeImageToAdd(null);
+                    }}
+                    className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={addingToWardrobe || wardrobeLoading}
+                    className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-all disabled:opacity-50"
+                  >
+                    {addingToWardrobe || wardrobeLoading ? 'Adding...' : '✅ Save to Wardrobe'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Duplicate Wardrobe Item Modal */}
+      <ConfirmationModal
+        isOpen={showWardrobeDuplicateModal}
+        title="Similar Item Found! ⚠️"
+        message={
+          duplicateWardrobeItem ? (
+            <div className="space-y-4">
+              <p>We found a similar item already in your wardrobe:</p>
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                {duplicateWardrobeItem.image_data && (
+                  <img
+                    src={`data:image/jpeg;base64,${duplicateWardrobeItem.image_data}`}
+                    alt="Existing item"
+                    className="w-full max-h-32 object-contain mb-3 rounded"
+                  />
+                )}
+                <p className="font-semibold text-gray-800 capitalize">{duplicateWardrobeItem.category}</p>
+                {duplicateWardrobeItem.color && (
+                  <p className="text-sm text-gray-600">Color: {duplicateWardrobeItem.color}</p>
+                )}
+                {duplicateWardrobeItem.description && (
+                  <p className="text-sm text-gray-600 mt-1">{duplicateWardrobeItem.description}</p>
+                )}
+              </div>
+              <p className="text-sm text-gray-600">Do you still want to add this item anyway?</p>
+            </div>
+          ) : (
+            "A similar item already exists in your wardrobe. Do you still want to add it?"
+          )
+        }
+        confirmText="Yes, Add Anyway"
+        cancelText="Cancel"
+        onConfirm={async () => {
+          setShowWardrobeDuplicateModal(false);
+          if (!wardrobeFormData || !wardrobeImageToAdd) return;
+          
+          try {
+            setAddingToWardrobe(true);
+            await addItem(wardrobeFormData, wardrobeImageToAdd);
+            showToast('Item added to wardrobe! ✅', 'success');
+            setShowAddWardrobeModal(false);
+            setWardrobeFormData(null);
+            setWardrobeImageToAdd(null);
+            setDuplicateWardrobeItem(null);
+          } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to add item to wardrobe';
+            showToast(errorMessage, 'error');
+            console.error('Failed to add item to wardrobe:', err);
+          } finally {
+            setAddingToWardrobe(false);
+          }
+        }}
+        onCancel={() => {
+          setShowWardrobeDuplicateModal(false);
+          setDuplicateWardrobeItem(null);
         }}
       />
 

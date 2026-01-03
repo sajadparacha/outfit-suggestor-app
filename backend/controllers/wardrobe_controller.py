@@ -327,4 +327,51 @@ class WardrobeController:
                 status_code=500,
                 detail=f"Error fetching wardrobe summary: {str(e)}"
             )
+    
+    async def check_duplicate_wardrobe_image(
+        self,
+        image: UploadFile,
+        db: Session,
+        current_user: User
+    ) -> dict:
+        """
+        Check if an image already exists in user's wardrobe
+        
+        Args:
+            image: Image file to check
+            db: Database session
+            current_user: Current authenticated user
+            
+        Returns:
+            Dictionary with is_duplicate flag and existing item if found
+        """
+        try:
+            # Validate and encode image
+            validate_image(image, max_size_mb=20)
+            image_data = encode_image(image.file)
+            
+            # Check for duplicate
+            duplicate_item = self.wardrobe_service.check_duplicate_image(
+                db=db,
+                user_id=current_user.id,
+                image_base64=image_data
+            )
+            
+            if duplicate_item:
+                return {
+                    "is_duplicate": True,
+                    "existing_item": WardrobeItemResponse.model_validate(duplicate_item)
+                }
+            else:
+                return {
+                    "is_duplicate": False
+                }
+                
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error checking duplicate: {str(e)}"
+            )
 

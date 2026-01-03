@@ -2,9 +2,16 @@
 from typing import Optional, List
 from sqlalchemy.orm import Session
 from datetime import datetime
+import imagehash
+from PIL import Image
+import io
+import base64
 
 from models.wardrobe import WardrobeItem
 from models.user import User
+
+# Default threshold - will be overridden by Config if available
+DEFAULT_IMAGE_SIMILARITY_THRESHOLD = 5
 
 
 class WardrobeService:
@@ -227,4 +234,87 @@ class WardrobeService:
             items = self.get_user_wardrobe(db, user_id, category=category.lower())
             result[category.lower()] = items
         return result
+    
+    def check_duplicate_image(
+        self,
+        db: Session,
+        user_id: int,
+        image_base64: str,
+        threshold: Optional[int] = None
+    ) -> Optional[WardrobeItem]:
+        """
+        Check if an image already exists in user's wardrobe using perceptual hashing
+        
+        Args:
+            db: Database session
+            user_id: User ID
+            image_base64: Base64 encoded image to check
+            threshold: Hamming distance threshold (default from Config)
+            
+        Returns:
+            Matching WardrobeItem if duplicate found, None otherwise
+        """
+        if threshold is None:
+            # Lazy import to avoid circular dependency
+            try:
+                from config import Config
+                threshold = Config.IMAGE_SIMILARITY_THRESHOLD
+            except ImportError:
+                threshold = DEFAULT_IMAGE_SIMILARITY_THRESHOLD
+        
+        # Query user's wardrobe items with images
+        items = (
+            db.query(WardrobeItem)
+            .filter(WardrobeItem.user_id == user_id)
+            .filter(WardrobeItem.image_data.isnot(None))
+            .order_by(WardrobeItem.created_at.desc())
+            .all()
+        )
+        
+        # Check for duplicate using perceptual hashing
+        for item in items:
+            if item.image_data and self._images_are_similar(image_base64, item.image_data, threshold):
+                return item
+        
+        return None
+    
+    def _images_are_similar(
+        self,
+        image1: str,
+        image2: str,
+        threshold: int
+    ) -> bool:
+        """
+        Compare two base64 images for similarity using perceptual hashing
+        
+        Args:
+            image1: Base64 encoded image string
+            image2: Base64 encoded image string
+            threshold: Hamming distance threshold (0 = identical, higher = more different)
+            
+        Returns:
+            True if images are similar within threshold, False otherwise
+        """
+        try:
+            # Decode base64 to image bytes
+            img1_bytes = base64.b64decode(image1)
+            img2_bytes = base64.b64decode(image2)
+            
+            # Open as PIL Images
+            img1 = Image.open(io.BytesIO(img1_bytes))
+            img2 = Image.open(io.BytesIO(img2_bytes))
+            
+            # Compute perceptual hashes
+            hash1 = imagehash.phash(img1)
+            hash2 = imagehash.phash(img2)
+            
+            # Calculate Hamming distance
+            distance = hash1 - hash2
+            
+            return distance <= threshold
+            
+        except Exception as e:
+            # If perceptual hashing fails, fall back to exact match
+            print(f"⚠️ Perceptual hashing failed: {e}, falling back to exact match")
+            return image1 == image2
 

@@ -20,7 +20,34 @@ router = APIRouter(prefix="/api/wardrobe", tags=["wardrobe"])
 
 
 # IMPORTANT: More specific routes must be defined BEFORE less specific ones
-# This route must come before @router.post("") to avoid route conflicts
+# These routes must come before @router.post("") to avoid route conflicts
+
+@router.post("/check-duplicate", name="check_wardrobe_duplicate")
+async def check_wardrobe_duplicate(
+    image: UploadFile = File(...),
+    wardrobe_controller: WardrobeController = Depends(get_wardrobe_controller),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Check if an image already exists in user's wardrobe
+    
+    Args:
+        image: Image file to check for duplicates
+        wardrobe_controller: Wardrobe controller dependency injection
+        db: Database session dependency injection
+        current_user: Current authenticated user
+        
+    Returns:
+        Dictionary with is_duplicate flag and existing_item if duplicate found
+    """
+    return await wardrobe_controller.check_duplicate_wardrobe_image(
+        image=image,
+        db=db,
+        current_user=current_user
+    )
+
+
 @router.post("/analyze-image", name="analyze_wardrobe_image")
 async def analyze_wardrobe_image(
     image: UploadFile = File(...),
