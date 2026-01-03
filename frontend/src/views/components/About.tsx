@@ -64,90 +64,123 @@ const About: React.FC = () => {
 
           {/* Features */}
           <div className="mb-8">
-            <h3 className="text-xl font-semibold text-gray-800 mb-4">Key Features</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-start space-x-3">
-                <span className="text-2xl">🎯</span>
-                <div>
-                  <h4 className="font-semibold text-gray-800">Flexible Input Support</h4>
-                  <p className="text-sm text-gray-600">Upload any clothing item - shirts, blazers, footwear, or even partial outfit combinations. The AI adapts to what you provide.</p>
+            <h3 className="text-xl font-semibold text-gray-800 mb-6">Key Features</h3>
+            
+            {/* Wardrobe Management Section */}
+            <div className="mb-8">
+              <h4 className="text-lg font-semibold text-gray-700 mb-4 pb-2 border-b border-gray-200">👔 Wardrobe Management</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-start space-x-3">
+                  <span className="text-2xl">👔</span>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Smart Wardrobe Management</h4>
+                    <p className="text-sm text-gray-600">Build and manage your digital wardrobe with AI-powered item recognition. Automatically categorize items, filter by category (shirts, trousers, blazers, shoes, belts), and get outfit suggestions that prioritize your existing clothing.</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <span className="text-2xl">🤖</span>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">AI-Powered Item Analysis</h4>
+                    <p className="text-sm text-gray-600">Add items to your wardrobe with automatic AI analysis using BLIP or ViT-GPT2 models. The AI extracts category, color, and description from your photos, ready for you to review and edit.</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <span className="text-2xl">🔍</span>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Intelligent Duplicate Detection</h4>
+                    <p className="text-sm text-gray-600">Advanced perceptual hashing prevents duplicate wardrobe items and outfit suggestions, saving time and API costs while keeping your wardrobe organized.</p>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-start space-x-3">
-                <span className="text-2xl">👔</span>
-                <div>
-                  <h4 className="font-semibold text-gray-800">Smart Wardrobe Management</h4>
-                  <p className="text-sm text-gray-600">Build and manage your digital wardrobe with AI-powered item recognition. Automatically categorize items, filter by category (shirts, trousers, blazers, shoes, belts), and get outfit suggestions that prioritize your existing clothing.</p>
+            </div>
+
+            {/* Outfit Suggestions Section */}
+            <div className="mb-8">
+              <h4 className="text-lg font-semibold text-gray-700 mb-4 pb-2 border-b border-gray-200">🎯 Outfit Suggestions</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-start space-x-3">
+                  <span className="text-2xl">🎯</span>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Flexible Input Support</h4>
+                    <p className="text-sm text-gray-600">Upload any clothing item - shirts, blazers, footwear, or even partial outfit combinations. The AI adapts to what you provide.</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <span className="text-2xl">🧩</span>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Smart Combination Analysis</h4>
+                    <p className="text-sm text-gray-600">Upload a combination and the AI identifies existing pieces, then suggests only the missing elements to complete your look.</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <span className="text-2xl">🎨</span>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Wardrobe-Aware Suggestions</h4>
+                    <p className="text-sm text-gray-600">The AI analyzes your wardrobe and prioritizes outfit suggestions using items you already own, making recommendations practical and personalized to your collection.</p>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-start space-x-3">
-                <span className="text-2xl">🔍</span>
-                <div>
-                  <h4 className="font-semibold text-gray-800">Intelligent Duplicate Detection</h4>
-                  <p className="text-sm text-gray-600">Advanced perceptual hashing prevents duplicate wardrobe items and outfit suggestions, saving time and API costs while keeping your wardrobe organized.</p>
+            </div>
+
+            {/* AI & Visualization Section */}
+            <div className="mb-8">
+              <h4 className="text-lg font-semibold text-gray-700 mb-4 pb-2 border-b border-gray-200">🖼️ AI & Visualization</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-start space-x-3">
+                  <span className="text-2xl">🖼️</span>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">AI Model Visualization</h4>
+                    <p className="text-sm text-gray-600">Generate stunning AI-powered model images wearing your recommended outfit using DALL-E 3 or Stable Diffusion, customized based on your location for personalized appearance.</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <span className="text-2xl">🌍</span>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Location-Based Customization</h4>
+                    <p className="text-sm text-gray-600">Model images are customized based on your geographical location for culturally appropriate and relatable appearances.</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <span className="text-2xl">🎛️</span>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Multiple AI Models</h4>
+                    <p className="text-sm text-gray-600">Choose between DALL-E 3 and Stable Diffusion for model image generation, and BLIP or ViT-GPT2 for wardrobe item analysis - each optimized for different use cases.</p>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-start space-x-3">
-                <span className="text-2xl">🧩</span>
-                <div>
-                  <h4 className="font-semibold text-gray-800">Smart Combination Analysis</h4>
-                  <p className="text-sm text-gray-600">Upload a combination and the AI identifies existing pieces, then suggests only the missing elements to complete your look.</p>
+            </div>
+
+            {/* History & Organization Section */}
+            <div className="mb-8">
+              <h4 className="text-lg font-semibold text-gray-700 mb-4 pb-2 border-b border-gray-200">📋 History & Organization</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-start space-x-3">
+                  <span className="text-2xl">📋</span>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Complete Outfit History</h4>
+                    <p className="text-sm text-gray-600">Track all your past suggestions with searchable history, including generated model images for easy reference and inspiration.</p>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-start space-x-3">
-                <span className="text-2xl">🎨</span>
-                <div>
-                  <h4 className="font-semibold text-gray-800">Wardrobe-Aware Suggestions</h4>
-                  <p className="text-sm text-gray-600">The AI analyzes your wardrobe and prioritizes outfit suggestions using items you already own, making recommendations practical and personalized to your collection.</p>
+            </div>
+
+            {/* User Experience Section */}
+            <div className="mb-8">
+              <h4 className="text-lg font-semibold text-gray-700 mb-4 pb-2 border-b border-gray-200">🔐 User Experience</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-start space-x-3">
+                  <span className="text-2xl">🔐</span>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Secure User Accounts</h4>
+                    <p className="text-sm text-gray-600">Create an account to save your wardrobe, outfit history, and preferences. Your data is securely stored and private.</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <span className="text-2xl">🤖</span>
-                <div>
-                  <h4 className="font-semibold text-gray-800">AI-Powered Item Analysis</h4>
-                  <p className="text-sm text-gray-600">Add items to your wardrobe with automatic AI analysis using BLIP or ViT-GPT2 models. The AI extracts category, color, and description from your photos, ready for you to review and edit.</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <span className="text-2xl">🖼️</span>
-                <div>
-                  <h4 className="font-semibold text-gray-800">AI Model Visualization</h4>
-                  <p className="text-sm text-gray-600">Generate stunning AI-powered model images wearing your recommended outfit using DALL-E 3 or Stable Diffusion, customized based on your location for personalized appearance.</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <span className="text-2xl">📋</span>
-                <div>
-                  <h4 className="font-semibold text-gray-800">Complete Outfit History</h4>
-                  <p className="text-sm text-gray-600">Track all your past suggestions with searchable history, including generated model images for easy reference and inspiration.</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <span className="text-2xl">🔐</span>
-                <div>
-                  <h4 className="font-semibold text-gray-800">Secure User Accounts</h4>
-                  <p className="text-sm text-gray-600">Create an account to save your wardrobe, outfit history, and preferences. Your data is securely stored and private.</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <span className="text-2xl">🌍</span>
-                <div>
-                  <h4 className="font-semibold text-gray-800">Location-Based Customization</h4>
-                  <p className="text-sm text-gray-600">Model images are customized based on your geographical location for culturally appropriate and relatable appearances.</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <span className="text-2xl">🎛️</span>
-                <div>
-                  <h4 className="font-semibold text-gray-800">Multiple AI Models</h4>
-                  <p className="text-sm text-gray-600">Choose between DALL-E 3 and Stable Diffusion for model image generation, and BLIP or ViT-GPT2 for wardrobe item analysis - each optimized for different use cases.</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <span className="text-2xl">📱</span>
-                <div>
-                  <h4 className="font-semibold text-gray-800">Multi-Platform Support</h4>
-                  <p className="text-sm text-gray-600">Web and iOS apps available, with seamless synchronization of your wardrobe and outfit history across devices.</p>
+                <div className="flex items-start space-x-3">
+                  <span className="text-2xl">📱</span>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Multi-Platform Support</h4>
+                    <p className="text-sm text-gray-600">Web and iOS apps available, with seamless synchronization of your wardrobe and outfit history across devices.</p>
+                  </div>
                 </div>
               </div>
             </div>
