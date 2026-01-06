@@ -203,3 +203,4 @@ psql -U sajad -d outfit_suggestor -c "SELECT * FROM outfit_history;"
 
 
 
+

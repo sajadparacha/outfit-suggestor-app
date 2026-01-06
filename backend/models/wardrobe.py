@@ -70,3 +70,4 @@ class WardrobeItem(Base):
     user: Mapped["User"] = relationship("User", back_populates="wardrobe_items")
 
 
+

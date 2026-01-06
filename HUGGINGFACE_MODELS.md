@@ -69,3 +69,4 @@ After the first download, models are cached locally and load instantly.
 You can switch between models anytime by changing `HUGGINGFACE_MODEL_TYPE` in `.env` and restarting the backend.
 
 
+
