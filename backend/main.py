@@ -14,11 +14,13 @@ except ImportError:  # When imported as backend.main
 from routes.outfit_routes import router as outfit_router
 from routes.auth_routes import router as auth_router
 from routes.wardrobe_routes import router as wardrobe_router
+from routes.access_log_routes import router as access_log_router
 from models.database import Base, engine
 # Import models to ensure they're registered with SQLAlchemy
 from models.user import User  # noqa: F401
 from models.outfit_history import OutfitHistory  # noqa: F401
 from models.wardrobe import WardrobeItem  # noqa: F401
+from models.access_log import AccessLog  # noqa: F401
 
 # Startup logging
 print("=" * 50)
@@ -51,6 +53,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add access logging middleware
+try:
+    from middleware.access_logging import AccessLoggingMiddleware
+    app.add_middleware(AccessLoggingMiddleware)
+    print("✅ Access logging middleware enabled")
+except ImportError:
+    print("⚠️  Access logging middleware not available")
+
 # Create database tables (simple auto-migration for now)
 Base.metadata.create_all(bind=engine)
 
@@ -58,6 +68,7 @@ Base.metadata.create_all(bind=engine)
 app.include_router(auth_router)
 app.include_router(outfit_router)
 app.include_router(wardrobe_router)
+app.include_router(access_log_router)
 
 
 @app.get("/")
