@@ -1,14 +1,29 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useWardrobeController } from '../../controllers/useWardrobeController';
-import { WardrobeItem, WardrobeItemCreate } from '../../models/WardrobeModels';
+import { WardrobeItem, WardrobeItemCreate, WardrobeItemUpdate } from '../../models/WardrobeModels';
 import ApiService from '../../services/ApiService';
 import ConfirmationModal from './ConfirmationModal';
 
 interface WardrobeProps {
   initialCategory?: string | null;
+  onSuggestionReady?: (suggestion: any) => void; // Callback when outfit suggestion is ready
+  onNavigateToMain?: () => void; // Callback to navigate to main view
+  outfitController?: {
+    setImage: (image: File | null) => void;
+    getSuggestion: (skipDuplicateCheck?: boolean) => Promise<void>;
+    loading: boolean;
+    error: string | null;
+    showDuplicateModal: boolean;
+    handleUseCachedSuggestion: () => void;
+  }; // Outfit controller to use same logic as main view
 }
 
-const Wardrobe: React.FC<WardrobeProps> = ({ initialCategory = null }) => {
+const Wardrobe: React.FC<WardrobeProps> = ({ 
+  initialCategory = null,
+  onSuggestionReady,
+  onNavigateToMain,
+  outfitController
+}) => {
   const {
     wardrobeItems,
     summary,
@@ -18,6 +33,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({ initialCategory = null }) => {
     loadWardrobe,
     analyzeImage,
     addItem,
+    updateItem,
     deleteItem,
     setSelectedCategory,
     clearError,
@@ -36,6 +52,25 @@ const Wardrobe: React.FC<WardrobeProps> = ({ initialCategory = null }) => {
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [duplicateItem, setDuplicateItem] = useState<WardrobeItem | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Edit state
+  const [editingItem, setEditingItem] = useState<WardrobeItem | null>(null);
+  const [editFormData, setEditFormData] = useState<WardrobeItemCreate>({
+    category: 'shirt',
+    color: '',
+    description: '',
+  });
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
+  const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
+  const [editAnalyzing, setEditAnalyzing] = useState(false);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Image viewer state
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
+  
+  // State for outfit suggestion from wardrobe item
+  const [suggestionLoading, setSuggestionLoading] = useState<number | null>(null); // Store item ID being processed
+  const [suggestionError, setSuggestionError] = useState<string | null>(null);
 
   // Essential categories only - matches outfit suggestion structure
   const categories = ['shirt', 'trouser', 'blazer', 'shoes', 'belt', 'other'];
@@ -162,6 +197,164 @@ const Wardrobe: React.FC<WardrobeProps> = ({ initialCategory = null }) => {
     }
   };
 
+  const handleEditItem = (item: WardrobeItem) => {
+    setEditingItem(item);
+    setEditFormData({
+      category: item.category,
+      color: item.color || '',
+      description: item.description || '',
+    });
+    setEditImagePreview(item.image_data ? `data:image/jpeg;base64,${item.image_data}` : null);
+    setEditImageFile(null);
+  };
+
+  const handleEditImageUpload = async (file: File) => {
+    setEditImageFile(file);
+    setEditAnalyzing(true);
+    
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setEditImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+    
+    try {
+      const properties = await analyzeImage(file, 'blip');
+      setEditFormData({
+        category: properties.category || editFormData.category,
+        color: properties.color || editFormData.color,
+        description: properties.description || editFormData.description,
+      });
+    } catch (err) {
+      console.error('Failed to analyze image:', err);
+      // Continue without AI analysis
+    } finally {
+      setEditAnalyzing(false);
+    }
+  };
+
+  const handleUpdateItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingItem) return;
+
+    try {
+      const updateData: WardrobeItemUpdate = {
+        category: editFormData.category,
+        color: editFormData.color,
+        description: editFormData.description,
+      };
+      await updateItem(
+        editingItem.id,
+        updateData,
+        editImageFile || undefined
+      );
+      handleCloseEditModal();
+    } catch (err) {
+      console.error('Error updating item:', err);
+      // Error is handled by controller
+    }
+  };
+
+  const handleCloseEditModal = () => {
+    setEditingItem(null);
+    setEditFormData({
+      category: 'shirt',
+      color: '',
+      description: '',
+    });
+    setEditImageFile(null);
+    setEditImagePreview(null);
+    setEditAnalyzing(false);
+    if (editFileInputRef.current) {
+      editFileInputRef.current.value = '';
+    }
+  };
+
+  const handleViewImage = (imageData: string) => {
+    setViewingImage(`data:image/jpeg;base64,${imageData}`);
+  };
+
+  const handleGetAISuggestion = async (item: WardrobeItem) => {
+    if (!item.image_data) {
+      setSuggestionError('This item doesn\'t have an image. Please add an image first.');
+      return;
+    }
+
+    // If outfit controller is provided, use the same logic as main view
+    if (outfitController) {
+      setSuggestionLoading(item.id);
+      setSuggestionError(null);
+
+      try {
+        // Convert base64 image to File object
+        const base64Image = item.image_data;
+        const response = await fetch(`data:image/jpeg;base64,${base64Image}`);
+        const blob = await response.blob();
+        const file = new File([blob], `wardrobe-item-${item.id}.jpg`, { type: 'image/jpeg' });
+
+        // Set the image in the outfit controller (same as main view)
+        outfitController.setImage(file);
+
+        // Navigate to main view BEFORE getting suggestion
+        // This ensures duplicate modal (if shown) appears on main view
+        // and the suggestion will be displayed correctly
+        if (onNavigateToMain) {
+          onNavigateToMain();
+        }
+
+        // Get suggestion using the same logic as main view
+        // This will handle duplicate checking, compression, filters, etc.
+        // If duplicate is found, modal will show on main view
+        // If no duplicate, suggestion will be set and displayed on main view
+        await outfitController.getSuggestion(false); // Don't skip duplicate check
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to get outfit suggestion';
+        setSuggestionError(errorMessage);
+        console.error('Error getting outfit suggestion:', err);
+      } finally {
+        setSuggestionLoading(null);
+      }
+    } else {
+      // Fallback to old behavior if controller not provided
+      setSuggestionLoading(item.id);
+      setSuggestionError(null);
+
+      try {
+        const data = await ApiService.getSuggestionFromWardrobeItem(
+          item.id,
+          '', // text_input - can be enhanced later
+          false, // generate_model_image - default to false
+          null,
+          'dalle3'
+        );
+
+        const suggestion = {
+          ...data,
+          id: Date.now().toString(),
+          imageUrl: item.image_data ? `data:image/jpeg;base64,${item.image_data}` : null,
+          model_image: data.model_image || null,
+          raw: data,
+          meta: { source: 'wardrobe_item', wardrobeItemId: item.id, base64Image: item.image_data }
+        };
+
+        if (onSuggestionReady) {
+          onSuggestionReady(suggestion);
+        }
+
+        if (onNavigateToMain) {
+          onNavigateToMain();
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to get outfit suggestion';
+        setSuggestionError(errorMessage);
+        console.error('Error getting outfit suggestion:', err);
+      } finally {
+        setSuggestionLoading(null);
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">
       <div className="max-w-4xl mx-auto">
@@ -212,11 +405,23 @@ const Wardrobe: React.FC<WardrobeProps> = ({ initialCategory = null }) => {
           </div>
         </div>
 
-        {/* Error Message */}
+        {/* Error Messages */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center justify-between">
             <span className="text-red-800">{error}</span>
             <button onClick={clearError} className="text-red-600 hover:text-red-800">✕</button>
+          </div>
+        )}
+        {outfitController?.error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center justify-between">
+            <span className="text-red-800">{outfitController.error}</span>
+            <button onClick={clearError} className="text-red-600 hover:text-red-800">✕</button>
+          </div>
+        )}
+        {suggestionError && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center justify-between">
+            <span className="text-red-800">{suggestionError}</span>
+            <button onClick={() => setSuggestionError(null)} className="text-red-600 hover:text-red-800">✕</button>
           </div>
         )}
 
@@ -243,12 +448,21 @@ const Wardrobe: React.FC<WardrobeProps> = ({ initialCategory = null }) => {
             {wardrobeItems.map((item) => (
               <div key={item.id} className="bg-white rounded-xl shadow-md p-4 flex items-center gap-4 hover:shadow-lg transition-shadow">
                 {item.image_data && (
-                  <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                  <div 
+                    className="w-32 h-32 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 cursor-pointer hover:ring-2 ring-indigo-500 transition-all"
+                    onClick={() => handleViewImage(item.image_data!)}
+                    title="Click to view full size"
+                  >
                     <img
                       src={`data:image/jpeg;base64,${item.image_data}`}
                       alt={item.category}
                       className="w-full h-full object-cover"
                     />
+                  </div>
+                )}
+                {!item.image_data && (
+                  <div className="w-32 h-32 bg-gray-100 rounded-lg flex-shrink-0 flex items-center justify-center">
+                    <span className="text-gray-400 text-4xl">📷</span>
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
@@ -264,13 +478,41 @@ const Wardrobe: React.FC<WardrobeProps> = ({ initialCategory = null }) => {
                         <p className="text-sm text-gray-500 mt-1 line-clamp-2">{item.description}</p>
                       )}
                     </div>
-                    <button
-                      onClick={() => handleDeleteItem(item.id)}
-                      className="text-red-500 hover:text-red-700 text-xl ml-4 flex-shrink-0"
-                      title="Delete item"
-                    >
-                      🗑️
-                    </button>
+                    <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                      {item.image_data && (
+                        <button
+                          onClick={() => handleGetAISuggestion(item)}
+                          disabled={suggestionLoading === item.id || (outfitController?.loading ?? false)}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
+                          title="Get AI outfit suggestion for this item"
+                        >
+                          {suggestionLoading === item.id || (outfitController?.loading ?? false) ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              Getting...
+                            </>
+                          ) : (
+                            <>
+                              ✨ Get AI Suggestion
+                            </>
+                          )}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleEditItem(item)}
+                        className="text-blue-500 hover:text-blue-700 text-xl"
+                        title="Edit item"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={() => handleDeleteItem(item.id)}
+                        className="text-red-500 hover:text-red-700 text-xl"
+                        title="Delete item"
+                      >
+                        🗑️
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -543,6 +785,253 @@ const Wardrobe: React.FC<WardrobeProps> = ({ initialCategory = null }) => {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Item Modal */}
+        {editingItem && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-gray-800">
+                    {editImagePreview && !editAnalyzing ? '✏️ Edit Wardrobe Item' : '✏️ Edit Wardrobe Item'}
+                  </h2>
+                  <button
+                    onClick={handleCloseEditModal}
+                    className="text-gray-500 hover:text-gray-700 text-2xl"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {editAnalyzing ? (
+                  <div className="text-center py-12">
+                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
+                    <p className="text-gray-600 font-medium">🤖 AI is analyzing your image...</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {editImagePreview ? (
+                      <>
+                        <div className="mb-4">
+                          <img
+                            src={editImagePreview}
+                            alt="Preview"
+                            className="w-full max-h-64 mx-auto rounded-lg shadow-lg cursor-pointer"
+                            onClick={() => setViewingImage(editImagePreview)}
+                            title="Click to view full size"
+                          />
+                        </div>
+                        <form onSubmit={handleUpdateItem} className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Category *
+                            </label>
+                            <select
+                              value={editFormData.category}
+                              onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                              required
+                            >
+                              {categories.map((cat) => (
+                                <option key={cat} value={cat}>
+                                  {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Color *
+                            </label>
+                            <input
+                              type="text"
+                              value={editFormData.color}
+                              onChange={(e) => setEditFormData({ ...editFormData, color: e.target.value })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                              placeholder="e.g., Navy blue, Black"
+                              required
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Description *
+                            </label>
+                            <textarea
+                              value={editFormData.description}
+                              onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                              rows={3}
+                              placeholder="e.g., Classic fit, casual style"
+                              required
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Change Image (Optional)
+                            </label>
+                            <div
+                              onClick={() => editFileInputRef.current?.click()}
+                              className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-indigo-500 transition-colors"
+                            >
+                              <div className="text-2xl mb-2">📸</div>
+                              <p className="text-gray-600 text-sm">Click to upload new image</p>
+                            </div>
+                            <input
+                              ref={editFileInputRef}
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  handleEditImageUpload(file);
+                                }
+                              }}
+                              className="hidden"
+                            />
+                          </div>
+
+                          <div className="flex gap-4 pt-4">
+                            <button
+                              type="button"
+                              onClick={handleCloseEditModal}
+                              className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-all"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="submit"
+                              disabled={loading}
+                              className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-all disabled:opacity-50"
+                            >
+                              {loading ? 'Updating...' : '✅ Update Item'}
+                            </button>
+                          </div>
+                        </form>
+                      </>
+                    ) : (
+                      <form onSubmit={handleUpdateItem} className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Category *
+                          </label>
+                          <select
+                            value={editFormData.category}
+                            onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            required
+                          >
+                            {categories.map((cat) => (
+                              <option key={cat} value={cat}>
+                                {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Color *
+                          </label>
+                          <input
+                            type="text"
+                            value={editFormData.color}
+                            onChange={(e) => setEditFormData({ ...editFormData, color: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            placeholder="e.g., Navy blue, Black"
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Description *
+                          </label>
+                          <textarea
+                            value={editFormData.description}
+                            onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            rows={3}
+                            placeholder="e.g., Classic fit, casual style"
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Add Image (Optional)
+                          </label>
+                          <div
+                            onClick={() => editFileInputRef.current?.click()}
+                            className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-indigo-500 transition-colors"
+                          >
+                            <div className="text-2xl mb-2">📸</div>
+                            <p className="text-gray-600 text-sm">Click to upload image</p>
+                          </div>
+                          <input
+                            ref={editFileInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                handleEditImageUpload(file);
+                              }
+                            }}
+                            className="hidden"
+                          />
+                        </div>
+
+                        <div className="flex gap-4 pt-4">
+                          <button
+                            type="button"
+                            onClick={handleCloseEditModal}
+                            className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-all"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={loading}
+                            className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-all disabled:opacity-50"
+                          >
+                            {loading ? 'Updating...' : '✅ Update Item'}
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Image Viewer Modal */}
+        {viewingImage && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4"
+            onClick={() => setViewingImage(null)}
+          >
+            <div className="relative max-w-7xl max-h-[90vh] w-full h-full flex items-center justify-center">
+              <img
+                src={viewingImage}
+                alt="Full size view"
+                className="max-w-full max-h-full object-contain rounded-lg"
+                onClick={(e) => e.stopPropagation()}
+              />
+              <button
+                onClick={() => setViewingImage(null)}
+                className="absolute top-4 right-4 text-white bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full p-3 text-2xl transition-all"
+                title="Close"
+              >
+                ✕
+              </button>
             </div>
           </div>
         )}

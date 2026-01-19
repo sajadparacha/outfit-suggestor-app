@@ -63,6 +63,26 @@ export const useHistoryController = (options?: UseHistoryControllerOptions) => {
   };
 
   /**
+   * Delete a history entry
+   */
+  const deleteHistoryEntry = async (entryId: number) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      await apiService.deleteOutfitHistory(entryId);
+      // Remove deleted entry from local state
+      setHistory(prevHistory => prevHistory.filter(entry => entry.id !== entryId));
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete history entry';
+      setError(errorMessage);
+      throw err; // Re-throw so caller can handle
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
    * Clear history when user logs out or changes
    */
   useEffect(() => {
@@ -91,6 +111,7 @@ export const useHistoryController = (options?: UseHistoryControllerOptions) => {
     fetchRecentHistory,
     fetchHistory,
     ensureFullHistory,
+    deleteHistoryEntry,
   };
 };
 

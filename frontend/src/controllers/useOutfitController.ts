@@ -165,11 +165,21 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
    */
   const handleUseCachedSuggestion = useCallback(() => {
     if (existingSuggestion) {
-      setCurrentSuggestion(existingSuggestion);
+      // Set the existing suggestion with proper image URL
+      const suggestion: OutfitSuggestion = {
+        ...existingSuggestion,
+        imageUrl: image ? URL.createObjectURL(image) : existingSuggestion.imageUrl,
+      };
+      setCurrentSuggestion(suggestion);
+      
+      // Call success callback if provided
+      if (options?.onSuggestionSuccess) {
+        options.onSuggestionSuccess();
+      }
     }
     setShowDuplicateModal(false);
     setExistingSuggestion(null);
-  }, [existingSuggestion]);
+  }, [existingSuggestion, image, options]);
 
   /**
    * Handle getting new AI suggestion (user chose to ignore duplicate)

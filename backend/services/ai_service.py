@@ -9,6 +9,7 @@ from fastapi import HTTPException
 from PIL import Image
 
 from models.outfit import OutfitSuggestion
+from utils.cost_calculator import CostCalculator
 
 # Try to import replicate, but make it optional
 try:
@@ -53,7 +54,7 @@ class AIService:
         image_base64: str, 
         text_input: str = "",
         wardrobe_items: Optional[dict] = None
-    ) -> OutfitSuggestion:
+    ) -> Tuple[OutfitSuggestion, Dict[str, any]]:
         """
         Get outfit suggestion from OpenAI based on image analysis
         
@@ -63,7 +64,7 @@ class AIService:
             wardrobe_items: Optional dict of wardrobe items by category (e.g., {"shirt": [...], "trouser": [...]})
             
         Returns:
-            OutfitSuggestion object
+            Tuple of (OutfitSuggestion object, cost information dict)
             
         Raises:
             HTTPException: If API call fails
@@ -94,9 +95,32 @@ class AIService:
                 temperature=self.temperature
             )
             
+            # Extract usage information
+            usage = response.usage
+            input_tokens = usage.prompt_tokens if usage else 0
+            output_tokens = usage.completion_tokens if usage else 0
+            
+            # Calculate cost
+            gpt4_cost = CostCalculator.calculate_gpt4_cost(
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                has_image=True
+            )
+            
             # Extract and parse the response
             content = response.choices[0].message.content
-            return self._parse_response(content)
+            suggestion = self._parse_response(content)
+            
+            # Cost information
+            cost_info = {
+                "gpt4_cost": gpt4_cost,
+                "total_cost": gpt4_cost,
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "model_image_cost": 0.0
+            }
+            
+            return suggestion, cost_info
             
         except Exception as e:
             raise HTTPException(
@@ -231,7 +255,7 @@ Respond in JSON format with the following structure:
         location: Optional[str] = None,
         location_details: Optional[dict] = None,
         model: Literal["dalle3", "stable-diffusion", "nano-banana"] = "dalle3"
-    ) -> str:
+    ) -> Tuple[str, float]:
         """
         Generate an image of a male model wearing the recommended outfit.
         The model's appearance is customized based on geographical location.
@@ -251,26 +275,29 @@ Respond in JSON format with the following structure:
             HTTPException: If image generation fails
         """
         if model == "stable-diffusion":
-            return self._generate_with_stable_diffusion(
+            image, cost = self._generate_with_stable_diffusion(
                 outfit_suggestion,
                 uploaded_image_base64,
                 location,
                 location_details
             )
+            return image, cost
         elif model == "nano-banana":
-            return self._generate_with_nano_banana(
+            image, cost = self._generate_with_nano_banana(
                 outfit_suggestion,
                 uploaded_image_base64,
                 location,
                 location_details
             )
+            return image, cost
         else:
-            return self._generate_with_dalle3(
+            image, cost = self._generate_with_dalle3(
                 outfit_suggestion,
                 uploaded_image_base64,
                 location,
                 location_details
             )
+            return image, cost
     
     def _generate_with_dalle3(
         self,
@@ -278,7 +305,7 @@ Respond in JSON format with the following structure:
         uploaded_image_base64: Optional[str] = None,
         location: Optional[str] = None,
         location_details: Optional[dict] = None
-    ) -> str:
+    ) -> Tuple[str, float]:
         """
         Generate model image using DALL-E 3 (text-to-image only).
         """
@@ -329,7 +356,10 @@ Respond in JSON format with the following structure:
             image_base64 = base64.b64encode(image_response.content).decode('utf-8')
             print(f"Base64 encoded, length: {len(image_base64)}")
             
-            return image_base64
+            # Calculate DALL-E 3 cost (using size from response)
+            dalle3_cost = CostCalculator.calculate_dalle3_cost(size="1024x1792", quality="standard")
+            
+            return image_base64, dalle3_cost
             
         except Exception as e:
             raise HTTPException(
@@ -343,7 +373,7 @@ Respond in JSON format with the following structure:
         uploaded_image_base64: Optional[str] = None,
         location: Optional[str] = None,
         location_details: Optional[dict] = None
-    ) -> str:
+    ) -> Tuple[str, float]:
         """
         Generate model image using Stable Diffusion (supports image-to-image with reference).
         This provides better color accuracy as it can use the uploaded image as reference.
@@ -457,7 +487,10 @@ The shirt must match the description above EXACTLY - same colors, same patterns,
             image_base64 = base64.b64encode(image_response.content).decode('utf-8')
             print(f"✅ Stable Diffusion image generated, base64 length: {len(image_base64)}")
             
-            return image_base64
+            # Calculate Stable Diffusion cost
+            sd_cost = CostCalculator.calculate_stable_diffusion_cost()
+            
+            return image_base64, sd_cost
             
         except Exception as e:
             print(f"❌ Stable Diffusion generation failed: {str(e)}")
@@ -474,7 +507,7 @@ The shirt must match the description above EXACTLY - same colors, same patterns,
         uploaded_image_base64: Optional[str] = None,
         location: Optional[str] = None,
         location_details: Optional[dict] = None
-    ) -> str:
+    ) -> Tuple[str, float]:
         """
         Generate model image using Nano Banana API.
         Nano Banana supports image-to-image generation which can better preserve uploaded clothing details.
@@ -564,7 +597,9 @@ The shirt must match the description above EXACTLY - same colors, same patterns,
                 if isinstance(result, dict) and result.get("image_base64"):
                     image_base64 = result["image_base64"]
                     print(f"✅ Nano Banana image generated from base64, length: {len(image_base64)}")
-                    return image_base64
+                    # Calculate Nano Banana cost
+                    nb_cost = CostCalculator.calculate_nano_banana_cost()
+                    return image_base64, nb_cost
                 else:
                     raise HTTPException(
                         status_code=500,
@@ -580,7 +615,10 @@ The shirt must match the description above EXACTLY - same colors, same patterns,
             image_base64 = base64.b64encode(image_response.content).decode('utf-8')
             print(f"✅ Nano Banana image generated, base64 length: {len(image_base64)}")
             
-            return image_base64
+            # Calculate Nano Banana cost
+            nb_cost = CostCalculator.calculate_nano_banana_cost()
+            
+            return image_base64, nb_cost
             
         except requests.exceptions.RequestException as e:
             print(f"❌ Nano Banana API request failed: {str(e)}")

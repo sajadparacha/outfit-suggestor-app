@@ -1,5 +1,5 @@
 """Outfit Controller - Handles outfit-related request orchestration"""
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Tuple
 from fastapi import UploadFile, HTTPException
 from sqlalchemy.orm import Session
 import json
@@ -65,7 +65,7 @@ class OutfitController:
             
             # Get outfit suggestion from AI service (INDEPENDENT of wardrobe)
             # Suggestions are created without considering user's existing wardrobe
-            suggestion = self.ai_service.get_outfit_suggestion(
+            suggestion, cost_info = self.ai_service.get_outfit_suggestion(
                 image_base64, 
                 text_input,
                 wardrobe_items=None  # Don't pass wardrobe items - create independent suggestions
@@ -78,13 +78,15 @@ class OutfitController:
             if should_generate_model_image:
                 # Use provided model or default to DALL-E 3
                 model = image_model if image_model in ["dalle3", "stable-diffusion", "nano-banana"] else "dalle3"
-                model_image_base64 = await self._generate_model_image(
+                model_image_base64, model_image_cost = await self._generate_model_image(
                     suggestion,
                     image_base64,
                     location,
                     model
                 )
                 suggestion.model_image = model_image_base64
+                cost_info["model_image_cost"] = model_image_cost
+                cost_info["total_cost"] = cost_info["gpt4_cost"] + model_image_cost
             
             # Match wardrobe items to outfit suggestion
             if current_user:
@@ -115,7 +117,21 @@ class OutfitController:
                 suggestion=suggestion
             )
             
-            return suggestion
+            # Ensure cost_info has model_image_cost set
+            if "model_image_cost" not in cost_info:
+                cost_info["model_image_cost"] = 0.0
+            if "total_cost" not in cost_info or cost_info["total_cost"] == cost_info.get("gpt4_cost", 0):
+                cost_info["total_cost"] = cost_info.get("gpt4_cost", 0) + cost_info.get("model_image_cost", 0)
+            
+            # Add cost information to suggestion
+            if hasattr(suggestion, 'model_dump'):
+                suggestion_dict = suggestion.model_dump()
+                suggestion_dict["cost"] = cost_info
+                return OutfitSuggestion(**suggestion_dict)
+            else:
+                # For Pydantic v1 compatibility
+                suggestion.cost = cost_info
+                return suggestion
             
         except HTTPException:
             raise
@@ -132,7 +148,7 @@ class OutfitController:
         uploaded_image_base64: str,
         location: Optional[str],
         model: str = "dalle3"
-    ) -> Optional[str]:
+    ) -> Tuple[Optional[str], float]:
         """
         Generate model image using AI service
         
@@ -158,27 +174,28 @@ class OutfitController:
                 except:
                     location_string = location
             
-            result = self.ai_service.generate_model_image(
+            result, cost = self.ai_service.generate_model_image(
                 suggestion,
                 uploaded_image_base64=uploaded_image_base64,
                 location=location_string if location_string else None,
                 location_details=location_details if location_details else None,
                 model=model
             )
-            return result
+            return result, cost
         except HTTPException as http_err:
             # If alternative model fails, try DALL-E 3 as fallback
             if model in ["stable-diffusion", "nano-banana"]:
                 print(f"⚠️ {model} failed: {http_err.detail}")
                 print("🔄 Falling back to DALL-E 3...")
                 try:
-                    return self.ai_service.generate_model_image(
+                    result, cost = self.ai_service.generate_model_image(
                         suggestion,
                         uploaded_image_base64=uploaded_image_base64,
                         location=location_string if location_string else None,
                         location_details=location_details if location_details else None,
                         model="dalle3"
                     )
+                    return result, cost
                 except Exception as fallback_err:
                     print(f"❌ DALL-E 3 fallback also failed: {str(fallback_err)}")
                     return None
@@ -306,6 +323,190 @@ class OutfitController:
             raise HTTPException(
                 status_code=500,
                 detail=f"Error fetching history: {str(e)}"
+            )
+    
+    async def delete_outfit_history(
+        self,
+        entry_id: int,
+        db: Session,
+        current_user: Optional[User]
+    ) -> dict:
+        """
+        Delete an outfit history entry
+        
+        Args:
+            entry_id: History entry ID to delete
+            db: Database session
+            current_user: Current authenticated user (required)
+            
+        Returns:
+            Dict with success message
+            
+        Raises:
+            HTTPException: If not authenticated or entry not found
+        """
+        try:
+            # Must be authenticated to delete history
+            if not current_user:
+                raise HTTPException(
+                    status_code=401,
+                    detail="Authentication required to delete history"
+                )
+            
+            # Use outfit service to delete entry
+            deleted = self.outfit_service.delete_history_entry(
+                db=db,
+                entry_id=entry_id,
+                user_id=current_user.id
+            )
+            
+            if not deleted:
+                raise HTTPException(
+                    status_code=404,
+                    detail="History entry not found or doesn't belong to user"
+                )
+            
+            return {"message": "History entry deleted successfully"}
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error deleting history entry: {str(e)}"
+            )
+    
+    async def suggest_outfit_from_wardrobe_item(
+        self,
+        wardrobe_item_id: int,
+        text_input: str,
+        location: Optional[str],
+        generate_model_image: str,
+        image_model: Optional[str] = None,
+        db: Session = None,
+        current_user: Optional[User] = None
+    ) -> OutfitSuggestion:
+        """
+        Handle outfit suggestion request using a wardrobe item's image
+        
+        Args:
+            wardrobe_item_id: ID of the wardrobe item to use
+            text_input: Additional context or preferences
+            location: User's location (optional)
+            generate_model_image: Whether to generate model image (as string)
+            image_model: Image generation model (optional)
+            db: Database session
+            current_user: Current authenticated user (required)
+            
+        Returns:
+            OutfitSuggestion object
+            
+        Raises:
+            HTTPException: If validation fails or processing error occurs
+        """
+        try:
+            # Require authentication
+            if not current_user:
+                raise HTTPException(
+                    status_code=401,
+                    detail="Authentication required to use wardrobe items"
+                )
+            
+            # Get wardrobe item
+            from services.wardrobe_service import WardrobeService
+            wardrobe_service = WardrobeService()
+            wardrobe_item = wardrobe_service.get_wardrobe_item(
+                db=db,
+                item_id=wardrobe_item_id,
+                user_id=current_user.id
+            )
+            
+            if not wardrobe_item:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Wardrobe item not found or doesn't belong to user"
+                )
+            
+            # Check if item has an image
+            if not wardrobe_item.image_data:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Wardrobe item doesn't have an image. Please upload an image for this item first."
+                )
+            
+            # Use wardrobe item's image for outfit suggestion
+            image_base64 = wardrobe_item.image_data
+            
+            # Get outfit suggestion from AI service (INDEPENDENT of wardrobe)
+            # Suggestions are created without considering user's existing wardrobe
+            suggestion, cost_info = self.ai_service.get_outfit_suggestion(
+                image_base64,
+                text_input,
+                wardrobe_items=None  # Don't pass wardrobe items - create independent suggestions
+            )
+            
+            # Parse generate_model_image from string to boolean
+            should_generate_model_image = generate_model_image.lower() in ('true', '1', 'yes', 'on')
+            
+            # Generate model image if requested
+            if should_generate_model_image:
+                model = image_model if image_model in ["dalle3", "stable-diffusion", "nano-banana"] else "dalle3"
+                model_image_base64, model_image_cost = await self._generate_model_image(
+                    suggestion,
+                    image_base64,
+                    location,
+                    model
+                )
+                suggestion.model_image = model_image_base64
+                cost_info["model_image_cost"] = model_image_cost
+                cost_info["total_cost"] = cost_info["gpt4_cost"] + model_image_cost
+            
+            # Match wardrobe items to outfit suggestion
+            all_wardrobe_items = wardrobe_service.get_user_wardrobe(
+                db=db,
+                user_id=current_user.id
+            )
+            
+            matching_items = self.wardrobe_matcher.match_wardrobe_to_outfit(
+                suggestion,
+                all_wardrobe_items
+            )
+            suggestion.matching_wardrobe_items = matching_items
+            
+            # Save to database using outfit service
+            self.outfit_service.save_outfit_history(
+                db=db,
+                user_id=current_user.id,
+                text_input=text_input,
+                image_data=image_base64,
+                model_image=suggestion.model_image,
+                suggestion=suggestion
+            )
+            
+            # Ensure cost_info has model_image_cost set
+            if "model_image_cost" not in cost_info:
+                cost_info["model_image_cost"] = 0.0
+            if "total_cost" not in cost_info or cost_info["total_cost"] == cost_info.get("gpt4_cost", 0):
+                cost_info["total_cost"] = cost_info.get("gpt4_cost", 0) + cost_info.get("model_image_cost", 0)
+            
+            # Add cost information to suggestion
+            if hasattr(suggestion, 'model_dump'):
+                suggestion_dict = suggestion.model_dump()
+                suggestion_dict["cost"] = cost_info
+                return OutfitSuggestion(**suggestion_dict)
+            else:
+                # For Pydantic v1 compatibility
+                suggestion.cost = cost_info
+                return suggestion
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(
+                status_code=500,
+                detail=f"Internal server error: {str(e)}"
             )
 
 

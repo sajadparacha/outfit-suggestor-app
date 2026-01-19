@@ -19,6 +19,14 @@ export interface MatchingWardrobeItems {
   belt: MatchingWardrobeItem[];
 }
 
+export interface OutfitCost {
+  gpt4_cost: number;
+  model_image_cost?: number;
+  total_cost: number;
+  input_tokens?: number;
+  output_tokens?: number;
+}
+
 export interface OutfitSuggestion {
   id: string;
   shirt: string;
@@ -30,6 +38,7 @@ export interface OutfitSuggestion {
   imageUrl?: string;
   model_image?: string | null; // Base64 encoded image of model wearing the outfit
   matching_wardrobe_items?: MatchingWardrobeItems; // Items from user's wardrobe that match the suggestion
+  cost?: OutfitCost; // Cost breakdown for the AI suggestion in USD
   raw?: unknown;
   meta?: {
     usedPrompt: string;
@@ -55,6 +64,7 @@ export interface OutfitResponse {
   belt: string;
   reasoning: string;
   model_image?: string | null; // Base64 encoded image of model wearing the outfit
+  cost?: OutfitCost; // Cost breakdown for the AI suggestion in USD
 }
 
 export interface ApiError {

@@ -201,6 +201,91 @@ class ApiService {
   }
 
   /**
+   * Get outfit suggestion from a wardrobe item
+   * @param wardrobeItemId - ID of the wardrobe item to use
+   * @param textInput - Additional context or preferences
+   * @param generateModelImage - Whether to generate AI model image
+   * @param location - User's location for model customization
+   * @param imageModel - Image generation model (dalle3, stable-diffusion, nano-banana)
+   * @returns Promise with outfit suggestion
+   */
+  async getSuggestionFromWardrobeItem(
+    wardrobeItemId: number,
+    textInput: string = '',
+    generateModelImage: boolean = false,
+    location: string | null = null,
+    imageModel: string = 'dalle3'
+  ): Promise<OutfitResponse> {
+    try {
+      const formData = new FormData();
+      formData.append('text_input', textInput);
+      formData.append('generate_model_image', generateModelImage.toString());
+      formData.append('image_model', imageModel);
+      if (location) {
+        formData.append('location', location);
+      }
+
+      const response = await fetch(`${this.baseUrl}/api/suggest-outfit-from-wardrobe-item/${wardrobeItemId}`, {
+        method: 'POST',
+        headers: this.getHeaders(true, true), // isFormData = true
+        body: formData,
+      });
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to get outfit suggestion';
+        try {
+          const error: ApiError = await response.json();
+          errorMessage = error.detail || errorMessage;
+        } catch (parseError) {
+          errorMessage = `Server error: ${response.status} ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const data: OutfitResponse = await response.json();
+      
+      console.log('API Response received (wardrobe item):', {
+        hasModelImage: !!data.model_image,
+        modelImageLength: data.model_image?.length || 0,
+      });
+      
+      return data;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('An unexpected error occurred');
+    }
+  }
+
+  /**
+   * Delete an outfit history entry
+   * @param entryId - History entry ID to delete
+   * @returns Promise with success message
+   */
+  async deleteOutfitHistory(entryId: number): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/outfit-history/${entryId}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        const error: ApiError = await response.json();
+        throw new Error(error.detail || 'Failed to delete history entry');
+      }
+
+      // No response body expected for successful delete
+      return;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to delete outfit history entry');
+    }
+  }
+
+  /**
    * Check if an uploaded image is a duplicate
    * @param image - Image file to check
    * @returns Promise with duplicate check result

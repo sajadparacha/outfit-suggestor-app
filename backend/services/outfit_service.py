@@ -163,6 +163,37 @@ class OutfitService:
             
             return history
     
+    def delete_history_entry(
+        self,
+        db: Session,
+        entry_id: int,
+        user_id: int
+    ) -> bool:
+        """
+        Delete an outfit history entry
+        
+        Args:
+            db: Database session
+            entry_id: History entry ID to delete
+            user_id: User ID (for security - can only delete own entries)
+            
+        Returns:
+            True if deleted, False if not found or doesn't belong to user
+        """
+        entry = (
+            db.query(OutfitHistory)
+            .filter(OutfitHistory.id == entry_id)
+            .filter(OutfitHistory.user_id == user_id)
+            .first()
+        )
+        
+        if not entry:
+            return False
+        
+        db.delete(entry)
+        db.commit()
+        return True
+    
     def _images_are_similar(
         self,
         image1: str,

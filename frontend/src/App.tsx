@@ -63,6 +63,7 @@ function App() {
     setImage,
     setFilters,
     setPreferenceText,
+    setCurrentSuggestion,
     setGenerateModelImage,
     setImageModel,
     getSuggestion,
@@ -82,6 +83,7 @@ function App() {
     refreshHistory,
     fetchRecentHistory,
     ensureFullHistory,
+    deleteHistoryEntry,
   } = useHistoryController({
     userId: user?.id ?? null,
     isAuthenticated: isAuthenticated,
@@ -421,7 +423,24 @@ function App() {
 
         {currentView === 'wardrobe' && (
           isAuthenticated ? (
-            <Wardrobe initialCategory={wardrobeCategoryFilter} />
+            <Wardrobe 
+              initialCategory={wardrobeCategoryFilter}
+              onSuggestionReady={(suggestion) => {
+                // Suggestion is already set by the outfit controller's getSuggestion
+                setCurrentSuggestion(suggestion);
+              }}
+              onNavigateToMain={() => {
+                setCurrentView('main');
+              }}
+              outfitController={{
+                setImage,
+                getSuggestion,
+                loading,
+                error,
+                showDuplicateModal,
+                handleUseCachedSuggestion
+              }}
+            />
           ) : (
             <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-8 text-center">
               <h2 className="text-2xl font-bold text-gray-800 mb-4">👔 Wardrobe Management</h2>
@@ -450,6 +469,7 @@ function App() {
               isFullView={isFullView}
               onRefresh={refreshHistory}
               onEnsureFullHistory={ensureFullHistory}
+              onDelete={deleteHistoryEntry}
               searchController={historySearchController}
             />
           ) : (

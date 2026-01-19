@@ -28,6 +28,17 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
   const [showDetails, setShowDetails] = React.useState(false);
   const [showFullImage, setShowFullImage] = React.useState(false);
 
+  // Format cost for display
+  const formatCost = (cost: number): string => {
+    if (cost < 0.01) {
+      return `$${cost.toFixed(4)}`;
+    } else if (cost < 0.10) {
+      return `$${cost.toFixed(3)}`;
+    } else {
+      return `$${cost.toFixed(2)}`;
+    }
+  };
+
   // Debug: Log suggestion data
   React.useEffect(() => {
     if (suggestion) {
@@ -35,6 +46,7 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
         hasModelImage: !!suggestion.model_image,
         modelImageLength: suggestion.model_image?.length || 0,
         hasImageUrl: !!suggestion.imageUrl,
+        cost: suggestion.cost,
         modelImagePreview: suggestion.model_image ? suggestion.model_image.substring(0, 50) + '...' : null
       });
     }
@@ -407,12 +419,35 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
         <div className="bg-gradient-to-r from-teal-50 to-purple-50 rounded-lg p-6 mb-6">
           <div className="flex items-start space-x-3">
             <div className="text-2xl">💡</div>
-            <div>
+            <div className="flex-1">
               <h3 className="font-semibold text-gray-800 mb-2">Why This Works</h3>
               <p className="text-gray-700 leading-relaxed">{suggestion.reasoning}</p>
             </div>
           </div>
         </div>
+
+        {/* Cost Display */}
+        {suggestion.cost && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-blue-900 mb-1">💰 AI Suggestion Cost</h3>
+                <div className="text-sm text-blue-700 space-y-1">
+                  <div>GPT-4 Vision: {formatCost(suggestion.cost.gpt4_cost)}</div>
+                  {suggestion.cost.model_image_cost !== undefined && suggestion.cost.model_image_cost > 0 && (
+                    <div>Model Image ({suggestion.model_image?.length ? 'DALL-E 3' : 'Other'}): {formatCost(suggestion.cost.model_image_cost)}</div>
+                  )}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-blue-900">
+                  {formatCost(suggestion.cost.total_cost)}
+                </div>
+                <div className="text-xs text-blue-600">Total</div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">

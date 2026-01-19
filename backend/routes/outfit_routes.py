@@ -80,6 +80,73 @@ async def check_duplicate(
     )
 
 
+@router.delete("/outfit-history/{entry_id}")
+async def delete_outfit_history(
+    entry_id: int,
+    outfit_controller: OutfitController = Depends(get_outfit_controller),
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_optional_user)
+):
+    """
+    Delete an outfit history entry
+    
+    Args:
+        entry_id: History entry ID to delete
+        outfit_controller: Outfit controller dependency injection
+        db: Database session dependency injection
+        current_user: Current authenticated user (required)
+        
+    Returns:
+        Dict with success message
+    """
+    return await outfit_controller.delete_outfit_history(
+        entry_id=entry_id,
+        db=db,
+        current_user=current_user
+    )
+
+
+@router.post("/suggest-outfit-from-wardrobe-item/{wardrobe_item_id}", response_model=OutfitSuggestion)
+async def suggest_outfit_from_wardrobe_item(
+    wardrobe_item_id: int,
+    text_input: str = Form(""),
+    location: str = Form(None),
+    generate_model_image: str = Form("false"),
+    image_model: str = Form("dalle3"),
+    outfit_controller: OutfitController = Depends(get_outfit_controller),
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_optional_user)
+):
+    """
+    Generate outfit suggestions using a wardrobe item's image
+    
+    Args:
+        wardrobe_item_id: ID of the wardrobe item to use for outfit suggestion
+        text_input: Additional context or preferences (optional)
+        location: User's location (optional)
+        generate_model_image: Whether to generate model image (as string)
+        image_model: Image generation model (optional)
+        outfit_controller: Outfit controller dependency injection
+        db: Database session dependency injection
+        current_user: Current authenticated user (required)
+        
+    Returns:
+        OutfitSuggestion object with complete outfit recommendation
+        
+    Raises:
+        HTTPException: If wardrobe item not found or processing error occurs
+    """
+    return await outfit_controller.suggest_outfit_from_wardrobe_item(
+        wardrobe_item_id=wardrobe_item_id,
+        text_input=text_input,
+        location=location,
+        generate_model_image=generate_model_image,
+        image_model=image_model,
+        db=db,
+        current_user=current_user
+    )
+
+
 @router.get("/outfit-history", response_model=List[dict])
 async def get_outfit_history(
     limit: int = 20,

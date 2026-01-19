@@ -3,7 +3,7 @@
  * Pure presentation component - displays a list of past outfit suggestions
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { OutfitHistoryEntry } from '../../models/OutfitModels';
 import { useHistorySearchController } from '../../controllers/useHistorySearchController';
 
@@ -14,6 +14,7 @@ interface OutfitHistoryProps {
   isFullView: boolean;
   onRefresh: () => void;
   onEnsureFullHistory: () => Promise<void>;
+  onDelete: (entryId: number) => Promise<void>;
   searchController?: ReturnType<typeof useHistorySearchController>;
 }
 
@@ -24,6 +25,7 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
   isFullView,
   onRefresh,
   onEnsureFullHistory,
+  onDelete,
   searchController: providedSearchController,
 }) => {
   // Always call the hook (hooks must be called unconditionally)
@@ -48,6 +50,30 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
     handleClearSearch,
     highlightText
   } = searchController;
+
+  // Image viewer state
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const [viewingImageType, setViewingImageType] = useState<'model' | 'upload' | null>(null);
+
+  const handleViewImage = (imageData: string, type: 'model' | 'upload') => {
+    if (type === 'model') {
+      setViewingImage(`data:image/png;base64,${imageData}`);
+    } else {
+      setViewingImage(`data:image/jpeg;base64,${imageData}`);
+    }
+    setViewingImageType(type);
+  };
+
+  const handleDeleteEntry = async (entryId: number) => {
+    if (window.confirm('Are you sure you want to delete this outfit history entry?')) {
+      try {
+        await onDelete(entryId);
+      } catch (err) {
+        console.error('Error deleting history entry:', err);
+        // Error is handled by controller
+      }
+    }
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -230,7 +256,11 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
             >
               {/* Model Image (preferred) or Uploaded Image */}
               {entry.model_image ? (
-                <div className="w-full bg-gray-100 overflow-hidden relative">
+                <div 
+                  className="w-full bg-gray-100 overflow-hidden relative cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => handleViewImage(entry.model_image!, 'model')}
+                  title="Click to view full size"
+                >
                   <img
                     src={`data:image/png;base64,${entry.model_image}`}
                     alt="AI generated model wearing recommended outfit"
@@ -245,28 +275,55 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
                   <div className="absolute top-2 right-2 bg-purple-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-lg z-10">
                     🤖 AI Model
                   </div>
+                  <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-5 transition-all flex items-center justify-center">
+                    <div className="text-white bg-black bg-opacity-50 px-3 py-1 rounded text-xs opacity-0 hover:opacity-100 transition-opacity">
+                      Click to enlarge
+                    </div>
+                  </div>
                 </div>
               ) : entry.image_data ? (
-                <div className="w-full h-48 bg-gray-100 overflow-hidden">
+                <div 
+                  className="w-full h-48 bg-gray-100 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity relative"
+                  onClick={() => handleViewImage(entry.image_data!, 'upload')}
+                  title="Click to view full size"
+                >
                   <img
                     src={`data:image/jpeg;base64,${entry.image_data}`}
                     alt="Uploaded outfit"
                     className="w-full h-full object-cover"
                   />
+                  <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-5 transition-all flex items-center justify-center">
+                    <div className="text-white bg-black bg-opacity-50 px-3 py-1 rounded text-xs opacity-0 hover:opacity-100 transition-opacity">
+                      Click to enlarge
+                    </div>
+                  </div>
                 </div>
               ) : null}
 
               <div className="p-6">
-              {/* Header with date */}
+              {/* Header with date and delete button */}
               <div className="flex justify-between items-start mb-4">
                 <span className="text-sm text-gray-500">
                   {formatDate(entry.created_at)}
                 </span>
-                {entry.text_input && (
-                  <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded">
-                    Custom
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {entry.text_input && (
+                    <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded">
+                      Custom
+                    </span>
+                  )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteEntry(entry.id);
+                    }}
+                    className="text-red-500 hover:text-red-700 text-xl transition-colors"
+                    title="Delete this entry"
+                    disabled={loading}
+                  >
+                    🗑️
+                  </button>
+                </div>
               </div>
 
               {/* Context if provided */}
@@ -342,6 +399,41 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
           </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Image Viewer Modal */}
+      {viewingImage && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4"
+          onClick={() => {
+            setViewingImage(null);
+            setViewingImageType(null);
+          }}
+        >
+          <div className="relative max-w-7xl max-h-[90vh] w-full h-full flex items-center justify-center">
+            <img
+              src={viewingImage}
+              alt={viewingImageType === 'model' ? 'AI generated model' : 'Uploaded outfit'}
+              className="max-w-full max-h-full object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
+            {viewingImageType === 'model' && (
+              <div className="absolute top-4 right-20 bg-purple-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">
+                🤖 AI Model
+              </div>
+            )}
+            <button
+              onClick={() => {
+                setViewingImage(null);
+                setViewingImageType(null);
+              }}
+              className="absolute top-4 right-4 text-white bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full p-3 text-2xl transition-all"
+              title="Close"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       )}
     </div>
