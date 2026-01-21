@@ -57,8 +57,9 @@ const About: React.FC = () => {
               Hugging Face BLIP and ViT-GPT2 models, React, FastAPI, and PostgreSQL, this app combines the 
               power of artificial intelligence with modern web development to deliver a seamless fashion 
               experience. Generate stunning AI-powered model images to visualize complete outfits, manage 
-              your wardrobe with intelligent duplicate detection, and get outfit suggestions that work with 
-              your actual clothing collection.
+              and edit your wardrobe with intelligent duplicate detection, get outfit suggestions directly from 
+              wardrobe items, and track costs transparently. All suggestions are saved to your searchable history 
+              with full-screen image viewing capabilities for easy reference.
             </p>
           </div>
 
@@ -78,6 +79,13 @@ const About: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
+                  <span className="text-2xl">✏️</span>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Edit Wardrobe Items</h4>
+                    <p className="text-sm text-gray-600">Update category, color, description, and images for any wardrobe item. All changes are saved instantly, keeping your wardrobe up-to-date and accurate.</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
                   <span className="text-2xl">🤖</span>
                   <div>
                     <h4 className="font-semibold text-gray-800">AI-Powered Item Analysis</h4>
@@ -85,10 +93,24 @@ const About: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
+                  <span className="text-2xl">✨</span>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Get Suggestions from Wardrobe</h4>
+                    <p className="text-sm text-gray-600">Click "Get AI Suggestion" on any wardrobe item to instantly get outfit recommendations. Uses the same powerful duplicate detection and filtering as the main suggestion flow.</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
                   <span className="text-2xl">🔍</span>
                   <div>
                     <h4 className="font-semibold text-gray-800">Intelligent Duplicate Detection</h4>
                     <p className="text-sm text-gray-600">Advanced perceptual hashing prevents duplicate wardrobe items and outfit suggestions, saving time and API costs while keeping your wardrobe organized.</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <span className="text-2xl">🔍</span>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Image Viewer</h4>
+                    <p className="text-sm text-gray-600">Click on any wardrobe item image to view it in full-screen mode. Perfect for inspecting details and getting a better look at your clothing items.</p>
                   </div>
                 </div>
               </div>
@@ -134,6 +156,13 @@ const About: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
+                  <span className="text-2xl">💰</span>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Transparent Cost Display</h4>
+                    <p className="text-sm text-gray-600">See the exact cost breakdown in USD for each AI suggestion, including GPT-4 Vision analysis and optional model image generation. Full transparency on AI service costs.</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
                   <span className="text-2xl">🌍</span>
                   <div>
                     <h4 className="font-semibold text-gray-800">Location-Based Customization</h4>
@@ -158,7 +187,21 @@ const About: React.FC = () => {
                   <span className="text-2xl">📋</span>
                   <div>
                     <h4 className="font-semibold text-gray-800">Complete Outfit History</h4>
-                    <p className="text-sm text-gray-600">Track all your past suggestions with searchable history, including generated model images for easy reference and inspiration.</p>
+                    <p className="text-sm text-gray-600">Track all your past suggestions with searchable history, including generated model images for easy reference and inspiration. Search by clothing items, colors, or context.</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <span className="text-2xl">🗑️</span>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Manage History</h4>
+                    <p className="text-sm text-gray-600">Delete individual outfit history entries you no longer need. Keep your history clean and organized with simple deletion controls.</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <span className="text-2xl">🔍</span>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Full-Screen Image Viewing</h4>
+                    <p className="text-sm text-gray-600">Click on any outfit history image (uploaded photos or AI-generated model images) to view them in full-screen mode for better detail inspection.</p>
                   </div>
                 </div>
               </div>

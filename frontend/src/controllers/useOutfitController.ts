@@ -30,7 +30,7 @@ interface UseOutfitControllerReturn {
   setCurrentSuggestion: (suggestion: OutfitSuggestion | null) => void;
   setGenerateModelImage: (generate: boolean) => void;
   setImageModel: (model: string) => void;
-  getSuggestion: (skipDuplicateCheck?: boolean) => Promise<void>;
+  getSuggestion: (skipDuplicateCheck?: boolean, sourceImage?: File | null) => Promise<void>;
   clearError: () => void;
   handleUseCachedSuggestion: () => void;
   handleGetNewSuggestion: () => Promise<void>;
@@ -59,8 +59,10 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
    * Handles duplicate checking, image compression, and location fetching
    * @param skipDuplicateCheck - Skip duplicate check and go straight to AI
    */
-  const getSuggestion = useCallback(async (skipDuplicateCheck: boolean = false) => {
-    if (!image) {
+  const getSuggestion = useCallback(async (skipDuplicateCheck: boolean = false, sourceImage?: File | null) => {
+    const effectiveImage = sourceImage ?? image;
+
+    if (!effectiveImage) {
       setError('Please upload an image first');
       return;
     }
@@ -70,7 +72,7 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
 
     try {
       // Compress image before sending to reduce size
-      const compressedImage = await compressImage(image);
+      const compressedImage = await compressImage(effectiveImage);
       
       // Check for duplicate image (unless skipped)
       if (!skipDuplicateCheck) {
@@ -82,7 +84,7 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
             const suggestion: OutfitSuggestion = {
               ...duplicateCheck.existing_suggestion,
               id: Date.now().toString(),
-              imageUrl: URL.createObjectURL(image),
+              imageUrl: URL.createObjectURL(effectiveImage),
             };
             setExistingSuggestion(suggestion);
             setShowDuplicateModal(true);
@@ -134,7 +136,7 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
       const suggestion: OutfitSuggestion = {
         ...data,
         id: Date.now().toString(),
-        imageUrl: URL.createObjectURL(image), // Use original image for display
+        imageUrl: URL.createObjectURL(effectiveImage), // Use the effective image for display
         model_image: data.model_image || null,
         raw: data,
         meta: { usedPrompt: prompt }

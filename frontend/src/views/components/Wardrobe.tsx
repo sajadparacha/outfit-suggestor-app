@@ -10,7 +10,7 @@ interface WardrobeProps {
   onNavigateToMain?: () => void; // Callback to navigate to main view
   outfitController?: {
     setImage: (image: File | null) => void;
-    getSuggestion: (skipDuplicateCheck?: boolean) => Promise<void>;
+    getSuggestion: (skipDuplicateCheck?: boolean, sourceImage?: File | null) => Promise<void>;
     loading: boolean;
     error: string | null;
     showDuplicateModal: boolean;
@@ -305,9 +305,12 @@ const Wardrobe: React.FC<WardrobeProps> = ({
 
         // Get suggestion using the same logic as main view
         // This will handle duplicate checking, compression, filters, etc.
-        // If duplicate is found, modal will show on main view
-        // If no duplicate, suggestion will be set and displayed on main view
-        await outfitController.getSuggestion(false); // Don't skip duplicate check
+        // IMPORTANT: pass the same File we just created so duplicate
+        // detection and the final suggestion both use this wardrobe item's
+        // image, avoiding any stale state from previous uploads.
+        // If duplicate is found, the confirmation modal on the main view
+        // will allow you to "Use Existing" or "Get New".
+        await outfitController.getSuggestion(false, file); // Enable duplicate check with explicit image
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to get outfit suggestion';
         setSuggestionError(errorMessage);
