@@ -254,15 +254,30 @@ class OutfitService:
             True if column exists, False otherwise
         """
         try:
-            result = db.execute(text("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name='outfit_history' AND column_name='model_image'
-            """))
-            return result.fetchone() is not None
-        except Exception as e:
-            print(f"⚠️ Warning: Could not check for model_image column: {e}")
-            return False
+            # Try to query the column directly - if it exists, this will work
+            # If it doesn't exist, we'll get an error and return False
+            db.execute(text("SELECT model_image FROM outfit_history LIMIT 1"))
+            return True
+        except Exception:
+            # Column doesn't exist or table doesn't exist
+            # For SQLite, we can also check pragma
+            try:
+                # SQLite-specific check
+                if 'sqlite' in str(db.bind.url):
+                    result = db.execute(text("PRAGMA table_info(outfit_history)"))
+                    columns = [row[1] for row in result.fetchall()]
+                    return 'model_image' in columns
+                else:
+                    # PostgreSQL/other databases
+                    result = db.execute(text("""
+                        SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name='outfit_history' AND column_name='model_image'
+                    """))
+                    return result.fetchone() is not None
+            except Exception as e:
+                print(f"⚠️ Warning: Could not check for model_image column: {e}")
+                return False
 
 
 

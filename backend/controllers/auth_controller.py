@@ -161,7 +161,8 @@ class AuthController:
             HTTPException: If current password is incorrect or new password is invalid
         """
         # Verify current password
-        if not self.auth_service.verify_password(current_password, current_user.hashed_password):
+        from utils.auth import verify_password
+        if not verify_password(current_password, current_user.hashed_password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Current password is incorrect"
