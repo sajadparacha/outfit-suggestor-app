@@ -13,12 +13,22 @@ import shutil
 from io import BytesIO
 from PIL import Image
 
-# Configure logging for tests
+# Configure logging for tests - simplified output
 logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s [%(levelname)8s] %(name)s: %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    level=logging.INFO,
+    format='[%(levelname)s] %(message)s',
+    datefmt='%H:%M:%S'
 )
+
+# Suppress verbose logs from third-party libraries
+logging.getLogger('urllib3').setLevel(logging.WARNING)
+logging.getLogger('httpcore').setLevel(logging.WARNING)
+logging.getLogger('httpx').setLevel(logging.WARNING)
+logging.getLogger('openai').setLevel(logging.WARNING)
+logging.getLogger('python_multipart').setLevel(logging.WARNING)
+logging.getLogger('asyncio').setLevel(logging.WARNING)
+logging.getLogger('sqlalchemy').setLevel(logging.WARNING)
+
 logger = logging.getLogger(__name__)
 
 # Import app and database
@@ -48,13 +58,11 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 @pytest.fixture(scope="function")
 def db():
     """Create a fresh database for each test"""
-    logger.debug("Creating fresh database for test")
     Base.metadata.create_all(bind=engine)
     db = TestingSessionLocal()
     try:
         yield db
     finally:
-        logger.debug("Cleaning up database after test")
         db.close()
         Base.metadata.drop_all(bind=engine)
 
