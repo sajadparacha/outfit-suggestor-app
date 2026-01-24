@@ -14,6 +14,7 @@ import Wardrobe from './views/components/Wardrobe';
 import Toast from './views/components/Toast';
 import Footer from './views/components/Footer';
 import ConfirmationModal from './views/components/ConfirmationModal';
+import LoadingOverlay from './views/components/LoadingOverlay';
 import Login from './views/components/Login';
 import Register from './views/components/Register';
 import ChangePassword from './views/components/ChangePassword';
@@ -184,7 +185,10 @@ function App() {
   // Allow anonymous access - show login/register as optional modal, not required
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div 
+      className="min-h-screen bg-gray-50"
+      style={{ pointerEvents: loading ? 'none' : 'auto' }}
+    >
       {/* Hero Section */}
       <Hero />
 
@@ -286,7 +290,10 @@ function App() {
       </div>
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-8">
+      <div 
+        className="container mx-auto px-4 py-8"
+        style={{ pointerEvents: loading ? 'none' : 'auto' }}
+      >
         {currentView === 'main' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
             {/* Left Sidebar */}
@@ -838,6 +845,9 @@ function App() {
           setDuplicateWardrobeItem(null);
         }}
       />
+
+      {/* Loading Overlay - Disables entire app when generating suggestion */}
+      <LoadingOverlay isLoading={loading} />
 
       {/* Footer */}
       <Footer />

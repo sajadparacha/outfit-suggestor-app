@@ -30,14 +30,22 @@ const Wardrobe: React.FC<WardrobeProps> = ({
     loading,
     error,
     selectedCategory,
+    totalCount,
+    currentPage,
+    itemsPerPage,
+    searchQuery,
     loadWardrobe,
+    loadSummary,
     analyzeImage,
     addItem,
     updateItem,
     deleteItem,
     setSelectedCategory,
+    setSearchQuery,
     clearError,
   } = useWardrobeController();
+
+  const [localSearchQuery, setLocalSearchQuery] = useState<string>('');
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [formData, setFormData] = useState<WardrobeItemCreate>({
@@ -75,32 +83,85 @@ const Wardrobe: React.FC<WardrobeProps> = ({
   // Essential categories only - matches outfit suggestion structure
   const categories = ['shirt', 'trouser', 'blazer', 'shoes', 'belt', 'other'];
 
-  // Load wardrobe on mount or when initialCategory changes
+  // Load wardrobe and summary on mount or when initialCategory changes
   React.useEffect(() => {
+    // Load summary first to get counts
+    loadSummary();
+    
     if (initialCategory) {
       setSelectedCategory(initialCategory);
-      loadWardrobe(initialCategory);
+      loadWardrobe(initialCategory, undefined, 1);
     } else {
-      loadWardrobe();
+      loadWardrobe(undefined, undefined, 1);
     }
-  }, [loadWardrobe, initialCategory, setSelectedCategory]);
+  }, [loadWardrobe, loadSummary, initialCategory, setSelectedCategory]);
 
   // Handle category filter
   const handleCategoryFilter = (category: string | null) => {
     if (category === selectedCategory) {
       // If clicking the same category, deselect it to show all
       setSelectedCategory(null);
-      loadWardrobe();
+      loadWardrobe(undefined, searchQuery || undefined, 1);
     } else {
       setSelectedCategory(category);
-      loadWardrobe(category || undefined);
+      loadWardrobe(category || undefined, searchQuery || undefined, 1);
     }
   };
 
-  // Get category count from summary
+  // Handle search
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSearchQuery(localSearchQuery);
+    loadWardrobe(selectedCategory || undefined, localSearchQuery || undefined, 1);
+  };
+
+  // Handle pagination
+  const handlePageChange = (page: number) => {
+    loadWardrobe(selectedCategory || undefined, searchQuery || undefined, page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const totalPages = totalCount > 0 ? Math.ceil(totalCount / itemsPerPage) : 0;
+
+  // Function to highlight search term in text
+  const highlightSearchTerm = (text: string | null, searchTerm: string): React.ReactNode => {
+    if (!text || !searchTerm) return text || '';
+    
+    const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const parts = text.split(regex);
+    
+    return (
+      <>
+        {parts.map((part, index) => 
+          regex.test(part) ? (
+            <mark key={index} className="bg-yellow-300 text-gray-900 font-medium px-0.5 rounded">
+              {part}
+            </mark>
+          ) : (
+            <span key={index}>{part}</span>
+          )
+        )}
+      </>
+    );
+  };
+
+  // Get category count from summary (case-insensitive)
   const getCategoryCount = (category: string): number => {
-    if (!summary || !summary.by_category) return 0;
-    return summary.by_category[category] || 0;
+    if (!summary || !summary.by_category) {
+      return 0;
+    }
+    // Try exact match first
+    if (summary.by_category[category]) {
+      return summary.by_category[category];
+    }
+    // Try case-insensitive match
+    const categoryLower = category.toLowerCase();
+    for (const [key, value] of Object.entries(summary.by_category)) {
+      if (key.toLowerCase() === categoryLower) {
+        return value as number;
+      }
+    }
+    return 0;
   };
 
   const handleImageUpload = async (file: File) => {
@@ -388,7 +449,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                All {summary && `(${summary.total_items || 0})`}
+                All <span className="ml-1 font-semibold">({summary ? summary.total_items || 0 : 0})</span>
               </button>
               {categories.map((category) => (
                 <button
@@ -401,11 +462,50 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                   }`}
                 >
                   {category === 'trouser' ? 'Trousers' : category.charAt(0).toUpperCase() + category.slice(1)}
-                  {summary && ` (${getCategoryCount(category)})`}
+                  <span className="ml-1 font-semibold">
+                    {summary ? `(${getCategoryCount(category)})` : '(0)'}
+                  </span>
                 </button>
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Search Bar */}
+        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+          <form onSubmit={handleSearch} className="flex gap-3">
+            <input
+              type="text"
+              value={localSearchQuery}
+              onChange={(e) => setLocalSearchQuery(e.target.value)}
+              placeholder="Search by description, color, or name..."
+              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+            />
+            <button
+              type="submit"
+              className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+            >
+              🔍 Search
+            </button>
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setLocalSearchQuery('');
+                  setSearchQuery('');
+                  loadWardrobe(selectedCategory || undefined, undefined, 1);
+                }}
+                className="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+              >
+                Clear
+              </button>
+            )}
+          </form>
+          {searchQuery && (
+            <p className="text-sm text-gray-600 mt-2">
+              Searching for: <strong>"{searchQuery}"</strong>
+            </p>
+          )}
         </div>
 
         {/* Error Messages */}
@@ -434,7 +534,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
             <p className="mt-4 text-gray-600">Loading wardrobe...</p>
           </div>
-        ) : wardrobeItems.length === 0 ? (
+        ) : !wardrobeItems || (Array.isArray(wardrobeItems) && wardrobeItems.length === 0) ? (
           <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
             <div className="text-6xl mb-4">👔</div>
             <h3 className="text-2xl font-bold text-gray-800 mb-2">Your wardrobe is empty</h3>
@@ -448,7 +548,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
           </div>
         ) : (
           <div className="space-y-4">
-            {wardrobeItems.map((item) => (
+            {wardrobeItems && Array.isArray(wardrobeItems) && wardrobeItems.map((item) => (
               <div key={item.id} className="bg-white rounded-xl shadow-md p-4 flex items-center gap-4 hover:shadow-lg transition-shadow">
                 {item.image_data && (
                   <div 
@@ -474,11 +574,20 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                       <h3 className="font-bold text-gray-800 capitalize text-lg">{item.category}</h3>
                       {item.color && (
                         <p className="text-sm text-gray-600 mt-1">
-                          <span className="font-medium">Color:</span> {item.color}
+                          <span className="font-medium">Color:</span>{' '}
+                          {searchQuery ? highlightSearchTerm(item.color, searchQuery) : item.color}
                         </p>
                       )}
                       {item.description && (
-                        <p className="text-sm text-gray-500 mt-1 line-clamp-2">{item.description}</p>
+                        <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                          {searchQuery ? highlightSearchTerm(item.description, searchQuery) : item.description}
+                        </p>
+                      )}
+                      {item.name && (
+                        <p className="text-sm text-gray-600 mt-1">
+                          <span className="font-medium">Name:</span>{' '}
+                          {searchQuery ? highlightSearchTerm(item.name, searchQuery) : item.name}
+                        </p>
                       )}
                     </div>
                     <div className="flex items-center gap-2 ml-4 flex-shrink-0">
@@ -520,6 +629,69 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="bg-white rounded-2xl shadow-lg p-6 mt-6">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-600">
+                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount} items
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1 || loading}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    currentPage === 1 || loading
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  ← Previous
+                </button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum: number;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => handlePageChange(pageNum)}
+                        disabled={loading}
+                        className={`px-3 py-2 rounded-lg font-medium transition-colors ${
+                          currentPage === pageNum
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages || loading}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    currentPage === totalPages || loading
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

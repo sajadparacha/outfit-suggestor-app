@@ -93,9 +93,13 @@ class OutfitController:
                 # Get all wardrobe items
                 from services.wardrobe_service import WardrobeService
                 wardrobe_service = WardrobeService()
-                all_wardrobe_items = wardrobe_service.get_user_wardrobe(
+                all_wardrobe_items, _ = wardrobe_service.get_user_wardrobe(
                     db=db,
-                    user_id=current_user.id
+                    user_id=current_user.id,
+                    category=None,
+                    search=None,
+                    limit=None,
+                    offset=None
                 )
                 
                 # Find matching items
@@ -463,9 +467,13 @@ class OutfitController:
                 cost_info["total_cost"] = cost_info["gpt4_cost"] + model_image_cost
             
             # Match wardrobe items to outfit suggestion
-            all_wardrobe_items = wardrobe_service.get_user_wardrobe(
+            all_wardrobe_items, _ = wardrobe_service.get_user_wardrobe(
                 db=db,
-                user_id=current_user.id
+                user_id=current_user.id,
+                category=None,
+                search=None,
+                limit=None,
+                offset=None
             )
             
             matching_items = self.wardrobe_matcher.match_wardrobe_to_outfit(

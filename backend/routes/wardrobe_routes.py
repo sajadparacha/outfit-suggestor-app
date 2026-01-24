@@ -1,7 +1,8 @@
 """Wardrobe API routes - Thin HTTP layer using controllers"""
-from fastapi import APIRouter, File, UploadFile, Depends, Form
+from fastapi import APIRouter, File, UploadFile, Depends, Form, Query
 from typing import Optional, List
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 
 from models.wardrobe_schemas import (
     WardrobeItemCreate, 
@@ -113,29 +114,42 @@ async def add_wardrobe_item(
     )
 
 
-@router.get("", response_model=List[WardrobeItemResponse])
+@router.get("")
 async def get_wardrobe(
     category: Optional[str] = None,
+    search: Optional[str] = Query(None, description="Search query for description, color, or name"),
+    limit: Optional[int] = Query(None, ge=1, le=100, description="Number of items to return"),
+    offset: Optional[int] = Query(None, ge=0, description="Number of items to skip"),
     wardrobe_controller: WardrobeController = Depends(get_wardrobe_controller),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """
-    Get user's wardrobe items, optionally filtered by category
+    Get user's wardrobe items with pagination and search
     
     Args:
         category: Optional category filter
+        search: Optional search query (searches in description, color, name)
+        limit: Optional limit for pagination (default: 10, max: 100)
+        offset: Optional offset for pagination
         wardrobe_controller: Wardrobe controller dependency injection
         db: Database session dependency injection
         current_user: Current authenticated user
         
     Returns:
-        List of WardrobeItemResponse
+        Dictionary with items, total count, and pagination info
     """
+    # Default to 10 items if limit not specified
+    if limit is None:
+        limit = 10
+    
     return await wardrobe_controller.get_wardrobe(
         category=category,
         db=db,
-        current_user=current_user
+        current_user=current_user,
+        search=search,
+        limit=limit,
+        offset=offset
     )
 
 

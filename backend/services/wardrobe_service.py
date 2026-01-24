@@ -1,6 +1,7 @@
 """Wardrobe Service - Business logic for wardrobe operations"""
 from typing import Optional, List
 from sqlalchemy.orm import Session
+from sqlalchemy import or_, and_
 from datetime import datetime
 import imagehash
 from PIL import Image
@@ -63,25 +64,130 @@ class WardrobeService:
         self,
         db: Session,
         user_id: int,
-        category: Optional[str] = None
-    ) -> List[WardrobeItem]:
+        category: Optional[str] = None,
+        search: Optional[str] = None,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None
+    ) -> tuple[List[WardrobeItem], int]:
         """
-        Get user's wardrobe items, optionally filtered by category
+        Get user's wardrobe items with pagination and search
         
         Args:
             db: Database session
             user_id: User ID
             category: Optional category filter
+            search: Optional search query (searches in description, color, name)
+            limit: Optional limit for pagination
+            offset: Optional offset for pagination
             
         Returns:
-            List of WardrobeItem objects
+            Tuple of (List of WardrobeItem objects, total count)
         """
         query = db.query(WardrobeItem).filter(WardrobeItem.user_id == user_id)
         
         if category:
             query = query.filter(WardrobeItem.category == category.lower())
         
-        return query.order_by(WardrobeItem.created_at.desc()).all()
+        if search:
+            # Split search into individual words and search for all of them (AND logic)
+            search_words = [word.strip() for word in search.lower().split() if word.strip()]
+            
+            if not search_words:
+                # If no valid words, skip search
+                pass
+            else:
+                # Common category keywords
+                category_keywords = ['shirt', 'trouser', 'trousers', 'pants', 'blazer', 'jacket', 
+                                   'shoes', 'belt', 'tie', 'suit', 'sweater', 'polo', 't-shirt', 
+                                   'jeans', 'shorts', 'other']
+                
+                # Common color keywords
+                color_keywords = ['red', 'blue', 'green', 'yellow', 'black', 'white', 'gray', 'grey',
+                                'brown', 'orange', 'purple', 'pink', 'navy', 'beige', 'tan', 'maroon',
+                                'burgundy', 'olive', 'khaki', 'cream', 'ivory', 'silver', 'gold']
+                
+                # Build conditions for each word
+                word_conditions = []
+                
+                for word in search_words:
+                    word_term = f"%{word}%"
+                    word_or_conditions = []
+                    
+                    # Check if word is a category keyword - if so, prioritize category match
+                    is_category_keyword = any(cat == word or word in cat for cat in category_keywords)
+                    # Check if word is a color keyword - if so, prioritize color match
+                    is_color_keyword = any(col == word or word in col for col in color_keywords)
+                    
+                    # If it's a category keyword, ONLY match in category field (strict)
+                    if is_category_keyword:
+                        word_or_conditions.append(
+                            WardrobeItem.category.ilike(word_term)
+                        )
+                    # If it's a color keyword, ONLY match in color field (strict)
+                    elif is_color_keyword:
+                        word_or_conditions.append(
+                            and_(
+                                WardrobeItem.color.isnot(None),
+                                WardrobeItem.color.ilike(word_term)
+                            )
+                        )
+                    # Otherwise, search in all fields
+                    else:
+                        # Word in description
+                        word_or_conditions.append(
+                            and_(
+                                WardrobeItem.description.isnot(None),
+                                WardrobeItem.description.ilike(word_term)
+                            )
+                        )
+                        
+                        # Word in color
+                        word_or_conditions.append(
+                            and_(
+                                WardrobeItem.color.isnot(None),
+                                WardrobeItem.color.ilike(word_term)
+                            )
+                        )
+                        
+                        # Word in name
+                        word_or_conditions.append(
+                            and_(
+                                WardrobeItem.name.isnot(None),
+                                WardrobeItem.name.ilike(word_term)
+                            )
+                        )
+                        
+                        # Word in category
+                        word_or_conditions.append(
+                            WardrobeItem.category.ilike(word_term)
+                        )
+                    
+                    # At least one field must contain this word
+                    if word_or_conditions:
+                        word_conditions.append(or_(*word_or_conditions))
+                    else:
+                        # If no conditions (shouldn't happen), skip this word
+                        continue
+                
+                # All words must match (AND logic across words)
+                if word_conditions:
+                    query = query.filter(and_(*word_conditions))
+                # If no word conditions (shouldn't happen), search is effectively skipped
+        
+        # Get total count before pagination
+        total_count = query.count()
+        
+        # Apply ordering
+        query = query.order_by(WardrobeItem.created_at.desc())
+        
+        # Apply pagination
+        if offset is not None:
+            query = query.offset(offset)
+        if limit is not None:
+            query = query.limit(limit)
+        
+        items = query.all()
+        return items, total_count
     
     def get_wardrobe_item(
         self,
@@ -186,27 +292,52 @@ class WardrobeService:
         Returns:
             Dictionary with category counts and summaries
         """
-        items = self.get_user_wardrobe(db, user_id)
+        # Get all items for summary directly (no pagination, no search)
+        # Query directly instead of calling get_user_wardrobe to avoid any tuple unpacking issues
+        query = db.query(WardrobeItem).filter(WardrobeItem.user_id == user_id)
+        items = query.all()
+        
+        # Ensure items is a list
+        if not isinstance(items, list):
+            items = []
+        
+        total_count = len(items)
         
         summary = {
-            'total_items': len(items),
+            'total_items': total_count,
             'by_category': {},
             'by_color': {},
             'categories': []
         }
         
+        # Process each item
         for item in items:
-            # Count by category
-            category = item.category
-            if category not in summary['by_category']:
-                summary['by_category'][category] = 0
-            summary['by_category'][category] += 1
+            # Validate item has required attributes (more reliable than isinstance)
+            if not hasattr(item, 'category'):
+                # Skip if item doesn't have category attribute
+                continue
+            
+            # Count by category (normalize to lowercase for consistency)
+            try:
+                category = item.category.lower() if item.category else 'other'
+                if category not in summary['by_category']:
+                    summary['by_category'][category] = 0
+                summary['by_category'][category] += 1
+            except (AttributeError, TypeError):
+                # Skip this item if category access fails
+                continue
             
             # Count by color
-            if item.color:
-                if item.color not in summary['by_color']:
-                    summary['by_color'][item.color] = 0
-                summary['by_color'][item.color] += 1
+            try:
+                if hasattr(item, 'color') and item.color:
+                    if item.color not in summary['by_color']:
+                        summary['by_color'][item.color] = 0
+                    summary['by_color'][item.color] += 1
+            except (AttributeError, TypeError):
+                # Skip color counting for this item
+                pass
+        
+        summary['categories'] = list(summary['by_category'].keys())
         
         summary['categories'] = list(summary['by_category'].keys())
         
@@ -231,7 +362,14 @@ class WardrobeService:
         """
         result = {}
         for category in categories:
-            items = self.get_user_wardrobe(db, user_id, category=category.lower())
+            items, _ = self.get_user_wardrobe(
+                db=db,
+                user_id=user_id,
+                category=category.lower(),
+                search=None,
+                limit=None,
+                offset=None
+            )
             result[category.lower()] = items
         return result
     

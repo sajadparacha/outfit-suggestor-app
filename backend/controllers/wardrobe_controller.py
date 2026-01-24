@@ -128,27 +128,41 @@ class WardrobeController:
         self,
         category: Optional[str],
         db: Session,
-        current_user: User
-    ) -> List[WardrobeItemResponse]:
+        current_user: User,
+        search: Optional[str] = None,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None
+    ) -> dict:
         """
-        Get user's wardrobe items
+        Get user's wardrobe items with pagination and search
         
         Args:
             category: Optional category filter
             db: Database session
             current_user: Current authenticated user
+            search: Optional search query
+            limit: Optional limit for pagination
+            offset: Optional offset for pagination
             
         Returns:
-            List of WardrobeItemResponse
+            Dictionary with items and pagination info
         """
         try:
-            items = self.wardrobe_service.get_user_wardrobe(
+            items, total_count = self.wardrobe_service.get_user_wardrobe(
                 db=db,
                 user_id=current_user.id,
-                category=category
+                category=category,
+                search=search,
+                limit=limit,
+                offset=offset
             )
             
-            return [WardrobeItemResponse.model_validate(item) for item in items]
+            return {
+                "items": [WardrobeItemResponse.model_validate(item) for item in items],
+                "total": total_count,
+                "limit": limit,
+                "offset": offset or 0
+            }
             
         except Exception as e:
             raise HTTPException(

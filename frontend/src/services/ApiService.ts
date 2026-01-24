@@ -558,15 +558,27 @@ class ApiService {
   }
 
   /**
-   * Get user's wardrobe items
+   * Get user's wardrobe items with pagination and search
    * @param category - Optional category filter
-   * @returns Promise with array of wardrobe items
+   * @param search - Optional search query
+   * @param limit - Optional limit for pagination (default: 10)
+   * @param offset - Optional offset for pagination
+   * @returns Promise with paginated wardrobe items response
    */
-  async getWardrobe(category?: string): Promise<WardrobeItem[]> {
+  async getWardrobe(
+    category?: string, 
+    search?: string, 
+    limit?: number, 
+    offset?: number
+  ): Promise<{ items: WardrobeItem[]; total: number; limit: number; offset: number }> {
     try {
-      const url = category 
-        ? `${this.baseUrl}/api/wardrobe?category=${encodeURIComponent(category)}`
-        : `${this.baseUrl}/api/wardrobe`;
+      const params = new URLSearchParams();
+      if (category) params.append('category', category);
+      if (search) params.append('search', search);
+      if (limit !== undefined) params.append('limit', limit.toString());
+      if (offset !== undefined) params.append('offset', offset.toString());
+      
+      const url = `${this.baseUrl}/api/wardrobe${params.toString() ? '?' + params.toString() : ''}`;
       
       const response = await fetch(url, {
         headers: this.getHeaders(),
