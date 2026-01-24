@@ -2,6 +2,7 @@
 Pytest configuration and fixtures for API endpoint tests
 """
 import pytest
+import logging
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -11,6 +12,14 @@ import tempfile
 import shutil
 from io import BytesIO
 from PIL import Image
+
+# Configure logging for tests
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s [%(levelname)8s] %(name)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
 
 # Import app and database
 import sys
@@ -39,11 +48,13 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 @pytest.fixture(scope="function")
 def db():
     """Create a fresh database for each test"""
+    logger.debug("Creating fresh database for test")
     Base.metadata.create_all(bind=engine)
     db = TestingSessionLocal()
     try:
         yield db
     finally:
+        logger.debug("Cleaning up database after test")
         db.close()
         Base.metadata.drop_all(bind=engine)
 
