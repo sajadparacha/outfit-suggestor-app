@@ -9,6 +9,7 @@ This directory contains comprehensive test cases for all API endpoints in the Ou
 - `test_outfit_endpoints.py` - Outfit suggestion endpoints tests
 - `test_wardrobe_endpoints.py` - Wardrobe management endpoints tests
 - `test_access_log_endpoints.py` - Access logging endpoints tests
+- `test_integration_outfit_flow.py` - End-to-end integration tests for complete user workflows
 
 ## Running Tests
 
@@ -29,6 +30,7 @@ pytest tests/
 
 ```bash
 pytest tests/test_auth_endpoints.py
+pytest tests/test_integration_outfit_flow.py  # Integration tests
 ```
 
 ### Run with Verbose Output
@@ -79,6 +81,15 @@ pytest tests/ --cov=. --cov-report=html
 - ✅ Pagination (limit, offset)
 - ✅ Get statistics
 - ✅ Authentication required
+
+### Integration Tests (`test_integration_outfit_flow.py`)
+- ✅ Complete user flow: Login → Upload image → Get suggestion
+- ✅ Duplicate detection: Use existing suggestion scenario
+- ✅ Duplicate detection: Get new suggestion scenario
+- ✅ Model image generation workflow
+- ✅ Wardrobe item to outfit suggestion flow
+- ✅ Cost calculation verification
+- ✅ End-to-end duplicate detection workflow
 
 ## Test Fixtures
 
