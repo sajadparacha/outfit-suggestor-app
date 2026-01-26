@@ -60,13 +60,19 @@ class TestWardrobeEndpoints:
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
     
     def test_get_wardrobe_success(self, client, auth_headers, wardrobe_item):
-        """Test getting wardrobe items"""
+        """Test getting wardrobe items with paginated response"""
         response = client.get("/api/wardrobe", headers=auth_headers)
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert isinstance(data, list)
-        assert len(data) > 0
-        assert any(item["id"] == wardrobe_item.id for item in data)
+        # Should return paginated response format
+        assert "items" in data
+        assert "total" in data
+        assert "limit" in data
+        assert "offset" in data
+        assert isinstance(data["items"], list)
+        assert len(data["items"]) > 0
+        assert any(item["id"] == wardrobe_item.id for item in data["items"])
+        assert data["total"] > 0
     
     def test_get_wardrobe_with_category_filter(self, client, auth_headers, wardrobe_item):
         """Test getting wardrobe items filtered by category"""
@@ -76,8 +82,10 @@ class TestWardrobeEndpoints:
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert isinstance(data, list)
-        assert all(item["category"] == "shirt" for item in data)
+        # Should return paginated response format
+        assert "items" in data
+        assert isinstance(data["items"], list)
+        assert all(item["category"] == "shirt" for item in data["items"])
     
     def test_get_wardrobe_item_unauthorized(self, client, wardrobe_item):
         """Test getting specific wardrobe item without authentication"""

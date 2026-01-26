@@ -61,6 +61,87 @@ class ApiService {
   }
 
   /**
+   * Log API request to console
+   * @param method - HTTP method
+   * @param url - Request URL
+   * @param data - Request data (optional)
+   */
+  private logRequest(method: string, url: string, data?: any): void {
+    console.log(`[API Request] ${method} ${url}`);
+    if (data) {
+      // Don't log FormData or large objects
+      if (data instanceof FormData) {
+        console.log(`[API Request] FormData with ${Array.from(data.keys()).length} fields`);
+        // Log FormData entries (excluding files)
+        Array.from(data.entries()).forEach(([key, value]) => {
+          if (value instanceof File) {
+            console.log(`[API Request]   ${key}: File (${value.name}, ${value.size} bytes)`);
+          } else {
+            console.log(`[API Request]   ${key}: ${value}`);
+          }
+        });
+      } else if (typeof data === 'string') {
+        console.log(`[API Request] Body: ${data.substring(0, 200)}${data.length > 200 ? '...' : ''}`);
+      } else {
+        console.log(`[API Request] Body:`, data);
+      }
+    }
+  }
+
+  /**
+   * Log API response to console
+   * @param method - HTTP method
+   * @param url - Request URL
+   * @param status - Response status
+   * @param data - Response data (optional)
+   */
+  private logResponse(method: string, url: string, status: number, data?: any): void {
+    const statusColor = status >= 200 && status < 300 ? 'green' : status >= 400 ? 'red' : 'orange';
+    console.log(`%c[API Response] ${method} ${url} - ${status}`, `color: ${statusColor}`);
+    if (data) {
+      // Truncate large responses
+      const dataStr = typeof data === 'string' ? data : JSON.stringify(data);
+      if (dataStr.length > 500) {
+        console.log(`[API Response] Data: ${dataStr.substring(0, 500)}... (truncated)`);
+      } else {
+        console.log(`[API Response] Data:`, data);
+      }
+    }
+  }
+
+  /**
+   * Wrapper for fetch with automatic logging
+   * @param url - Request URL
+   * @param options - Fetch options
+   * @returns Promise with response
+   */
+  private async fetchWithLogging(url: string, options: RequestInit = {}): Promise<Response> {
+    const method = options.method || 'GET';
+    this.logRequest(method, url, options.body);
+    
+    const response = await fetch(url, options);
+    
+    // Clone response to read body without consuming it
+    const clonedResponse = response.clone();
+    let responseData: any = null;
+    
+    try {
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        responseData = await clonedResponse.json();
+      } else if (contentType && contentType.includes('text/')) {
+        responseData = await clonedResponse.text();
+      }
+    } catch (e) {
+      // Ignore parsing errors
+    }
+    
+    this.logResponse(method, url, response.status, responseData);
+    
+    return response;
+  }
+
+  /**
    * Get outfit suggestion from backend API
    * @param image - Image file to analyze
    * @param textInput - Additional context or preferences
@@ -90,33 +171,27 @@ class ApiService {
         console.log('FormData - location: not provided');
       }
 
-      const response = await fetch(`${this.baseUrl}/api/suggest-outfit`, {
+      const url = `${this.baseUrl}/api/suggest-outfit`;
+      const response = await this.fetchWithLogging(url, {
         method: 'POST',
         headers: this.getHeaders(true, true), // isFormData = true
         body: formData,
       });
 
+      const responseData = await response.json().catch(() => null);
+
       if (!response.ok) {
         let errorMessage = 'Failed to get outfit suggestion';
-        try {
-          const error: ApiError = await response.json();
+        if (responseData) {
+          const error: ApiError = responseData;
           errorMessage = error.detail || errorMessage;
-        } catch (parseError) {
+        } else {
           errorMessage = `Server error: ${response.status} ${response.statusText}`;
         }
         throw new Error(errorMessage);
       }
 
-      const data: OutfitResponse = await response.json();
-      
-      // Debug: Log the response
-      console.log('API Response received:', {
-        hasModelImage: !!data.model_image,
-        modelImageLength: data.model_image?.length || 0,
-        modelImagePreview: data.model_image ? data.model_image.substring(0, 50) + '...' : null
-      });
-      
-      return data;
+      return responseData as OutfitResponse;
     } catch (error) {
       if (error instanceof Error) {
         throw error;
@@ -131,7 +206,8 @@ class ApiService {
    */
   async healthCheck(): Promise<{ status: string; version: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/health`);
+      const url = `${this.baseUrl}/health`;
+      const response = await this.fetchWithLogging(url);
       
       if (!response.ok) {
         throw new Error('Health check failed');
@@ -169,7 +245,8 @@ class ApiService {
    */
   async getOutfitHistory(limit: number = 20): Promise<OutfitHistoryEntry[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/outfit-history?limit=${limit}`, {
+      const url = `${this.baseUrl}/api/outfit-history?limit=${limit}`;
+      const response = await this.fetchWithLogging(url, {
         headers: this.getHeaders(),
       });
       
@@ -225,7 +302,8 @@ class ApiService {
         formData.append('location', location);
       }
 
-      const response = await fetch(`${this.baseUrl}/api/suggest-outfit-from-wardrobe-item/${wardrobeItemId}`, {
+      const url = `${this.baseUrl}/api/suggest-outfit-from-wardrobe-item/${wardrobeItemId}`;
+      const response = await this.fetchWithLogging(url, {
         method: 'POST',
         headers: this.getHeaders(true, true), // isFormData = true
         body: formData,
@@ -265,7 +343,8 @@ class ApiService {
    */
   async deleteOutfitHistory(entryId: number): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/outfit-history/${entryId}`, {
+      const url = `${this.baseUrl}/api/outfit-history/${entryId}`;
+      const response = await this.fetchWithLogging(url, {
         method: 'DELETE',
         headers: this.getHeaders(),
       });
@@ -297,7 +376,8 @@ class ApiService {
       const formData = new FormData();
       formData.append('image', image);
 
-      const response = await fetch(`${this.baseUrl}/api/check-duplicate`, {
+      const url = `${this.baseUrl}/api/check-duplicate`;
+      const response = await this.fetchWithLogging(url, {
         method: 'POST',
         headers: this.getHeaders(true, true), // isFormData = true
         body: formData,
@@ -324,7 +404,8 @@ class ApiService {
    */
   async register(registerData: RegisterRequest): Promise<TokenResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/auth/register`, {
+      const url = `${this.baseUrl}/api/auth/register`;
+      const response = await this.fetchWithLogging(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -360,7 +441,8 @@ class ApiService {
    */
   async activateAccount(token: string): Promise<{ message: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/auth/activate/${token}`, {
+      const url = `${this.baseUrl}/api/auth/activate/${token}`;
+      const response = await this.fetchWithLogging(url, {
         method: 'GET',
         headers: this.getHeaders(false),
       });
@@ -390,7 +472,8 @@ class ApiService {
       formData.append('username', loginData.username);
       formData.append('password', loginData.password);
 
-      const response = await fetch(`${this.baseUrl}/api/auth/login`, {
+      const url = `${this.baseUrl}/api/auth/login`;
+      const response = await this.fetchWithLogging(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -423,7 +506,8 @@ class ApiService {
    */
   async changePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/auth/change-password`, {
+      const url = `${this.baseUrl}/api/auth/change-password`;
+      const response = await this.fetchWithLogging(url, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify({
@@ -452,7 +536,8 @@ class ApiService {
    */
   async getCurrentUser(): Promise<User> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/auth/me`, {
+      const url = `${this.baseUrl}/api/auth/me`;
+      const response = await this.fetchWithLogging(url, {
         headers: this.getHeaders(),
       });
 
@@ -494,7 +579,8 @@ class ApiService {
       const formData = new FormData();
       formData.append('image', image);
 
-      const response = await fetch(`${this.baseUrl}/api/wardrobe/check-duplicate`, {
+      const url = `${this.baseUrl}/api/wardrobe/check-duplicate`;
+      const response = await this.fetchWithLogging(url, {
         method: 'POST',
         headers: this.getHeaders(true, true), // isFormData = true
         body: formData,
@@ -537,7 +623,8 @@ class ApiService {
       formData.append('description', itemData.description);
       if (image) formData.append('image', image);
 
-      const response = await fetch(`${this.baseUrl}/api/wardrobe`, {
+      const url = `${this.baseUrl}/api/wardrobe`;
+      const response = await this.fetchWithLogging(url, {
         method: 'POST',
         headers: this.getHeaders(true, true), // isFormData = true
         body: formData,
@@ -580,7 +667,7 @@ class ApiService {
       
       const url = `${this.baseUrl}/api/wardrobe${params.toString() ? '?' + params.toString() : ''}`;
       
-      const response = await fetch(url, {
+      const response = await this.fetchWithLogging(url, {
         headers: this.getHeaders(),
       });
 
@@ -604,7 +691,8 @@ class ApiService {
    */
   async getWardrobeSummary(): Promise<WardrobeSummary> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/wardrobe/summary`, {
+      const url = `${this.baseUrl}/api/wardrobe/summary`;
+      const response = await this.fetchWithLogging(url, {
         headers: this.getHeaders(),
       });
 
@@ -629,7 +717,8 @@ class ApiService {
    */
   async getWardrobeItem(itemId: number): Promise<WardrobeItem> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/wardrobe/${itemId}`, {
+      const url = `${this.baseUrl}/api/wardrobe/${itemId}`;
+      const response = await this.fetchWithLogging(url, {
         headers: this.getHeaders(),
       });
 
@@ -671,7 +760,8 @@ class ApiService {
       if (itemData.condition !== undefined) formData.append('condition', itemData.condition || '');
       if (image) formData.append('image', image);
 
-      const response = await fetch(`${this.baseUrl}/api/wardrobe/${itemId}`, {
+      const url = `${this.baseUrl}/api/wardrobe/${itemId}`;
+      const response = await this.fetchWithLogging(url, {
         method: 'PUT',
         headers: this.getHeaders(true, true), // isFormData = true
         body: formData,
@@ -716,13 +806,11 @@ class ApiService {
         method: 'POST'
       });
 
-      const response = await fetch(url, {
+      const response = await this.fetchWithLogging(url, {
         method: 'POST',
         headers: headers,
         body: formData,
       });
-
-      console.log('📡 Response status:', response.status, response.statusText);
 
       if (!response.ok) {
         let errorMessage = 'Failed to analyze image';
@@ -756,7 +844,8 @@ class ApiService {
    */
   async deleteWardrobeItem(itemId: number): Promise<{ message: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/wardrobe/${itemId}`, {
+      const url = `${this.baseUrl}/api/wardrobe/${itemId}`;
+      const response = await this.fetchWithLogging(url, {
         method: 'DELETE',
         headers: this.getHeaders(),
       });
