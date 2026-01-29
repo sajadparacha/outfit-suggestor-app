@@ -1,13 +1,20 @@
 """
-Pytest configuration and fixtures for API endpoint tests
+Pytest configuration and fixtures for API endpoint tests.
+
+Uses in-memory SQLite and mock AI services so all tests run locally without
+OPENAI_API_KEY, REPLICATE_API_TOKEN, or any external API calls.
 """
+import os
+
+# Ensure wardrobe controller uses injected mock AI (not HuggingFace) during tests
+os.environ.setdefault("WARDROBE_AI_MODEL", "openai")
+
 import pytest
 import logging
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-import os
 import tempfile
 import shutil
 from io import BytesIO
@@ -40,8 +47,61 @@ from models.database import Base, get_db
 from models.user import User
 from models.wardrobe import WardrobeItem
 from models.outfit_history import OutfitHistory
+from models.outfit import OutfitSuggestion
 from utils.auth import get_password_hash
 from dependencies import get_current_user, get_current_active_user, get_optional_user
+from config import get_outfit_controller, get_wardrobe_controller
+from controllers.outfit_controller import OutfitController
+from controllers.wardrobe_controller import WardrobeController
+from services.outfit_service import OutfitService
+from services.wardrobe_service import WardrobeService
+
+
+class _MockAIService:
+    """Mock AI service for tests. No OpenAI/Replicate calls."""
+
+    def get_outfit_suggestion(self, image_base64, text_input="", wardrobe_items=None):
+        return (
+            OutfitSuggestion(
+                shirt="Test shirt",
+                trouser="Test trouser",
+                blazer="Test blazer",
+                shoes="Test shoes",
+                belt="Test belt",
+                reasoning="Test reasoning",
+            ),
+            {"gpt4_cost": 0.0, "model_image_cost": 0.0, "total_cost": 0.0},
+        )
+
+    def generate_model_image(
+        self,
+        outfit_suggestion,
+        uploaded_image_base64=None,
+        location=None,
+        location_details=None,
+        model="dalle3",
+    ):
+        return (None, 0.0)
+
+
+class _MockWardrobeAIService:
+    """Mock wardrobe AI service for tests. No external API calls."""
+
+    def extract_item_properties(self, image_base64):
+        return {
+            "category": "shirt",
+            "color": "red",
+            "description": "Test item from mock",
+            "model_used": "mock",
+        }
+
+
+def _get_test_outfit_controller():
+    return OutfitController(_MockAIService(), OutfitService())
+
+
+def _get_test_wardrobe_controller():
+    return WardrobeController(WardrobeService(), _MockWardrobeAIService())
 
 
 # Create in-memory SQLite database for testing
@@ -69,18 +129,20 @@ def db():
 
 @pytest.fixture(scope="function")
 def client(db):
-    """Create a test client with database override"""
+    """Create a test client with database and mock AI overrides"""
     def override_get_db():
         try:
             yield db
         finally:
             pass
-    
+
     app.dependency_overrides[get_db] = override_get_db
-    
+    app.dependency_overrides[get_outfit_controller] = _get_test_outfit_controller
+    app.dependency_overrides[get_wardrobe_controller] = _get_test_wardrobe_controller
+
     with TestClient(app) as test_client:
         yield test_client
-    
+
     app.dependency_overrides.clear()
 
 
