@@ -85,9 +85,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
 
   // Load wardrobe and summary on mount or when initialCategory changes
   React.useEffect(() => {
-    // Load summary first to get counts
-    loadSummary();
-    
+    // Summary is loaded by the wardrobe controller hook on mount.
     if (initialCategory) {
       setSelectedCategory(initialCategory);
       loadWardrobe(initialCategory, undefined, 1);

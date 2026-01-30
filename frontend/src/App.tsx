@@ -15,6 +15,7 @@ import Toast from './views/components/Toast';
 import Footer from './views/components/Footer';
 import ConfirmationModal from './views/components/ConfirmationModal';
 import LoadingOverlay from './views/components/LoadingOverlay';
+import ErrorBoundary from './components/ErrorBoundary';
 import Login from './views/components/Login';
 import Register from './views/components/Register';
 import ChangePassword from './views/components/ChangePassword';
@@ -430,24 +431,26 @@ function App() {
 
         {currentView === 'wardrobe' && (
           isAuthenticated ? (
-            <Wardrobe 
-              initialCategory={wardrobeCategoryFilter}
-              onSuggestionReady={(suggestion) => {
-                // Suggestion is already set by the outfit controller's getSuggestion
-                setCurrentSuggestion(suggestion);
-              }}
-              onNavigateToMain={() => {
-                setCurrentView('main');
-              }}
-              outfitController={{
-                setImage,
-                getSuggestion,
-                loading,
-                error,
-                showDuplicateModal,
-                handleUseCachedSuggestion
-              }}
-            />
+            <ErrorBoundary label="Wardrobe" resetKey={currentView}>
+              <Wardrobe 
+                initialCategory={wardrobeCategoryFilter}
+                onSuggestionReady={(suggestion) => {
+                  // Suggestion is already set by the outfit controller's getSuggestion
+                  setCurrentSuggestion(suggestion);
+                }}
+                onNavigateToMain={() => {
+                  setCurrentView('main');
+                }}
+                outfitController={{
+                  setImage,
+                  getSuggestion,
+                  loading,
+                  error,
+                  showDuplicateModal,
+                  handleUseCachedSuggestion
+                }}
+              />
+            </ErrorBoundary>
           ) : (
             <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-8 text-center">
               <h2 className="text-2xl font-bold text-gray-800 mb-4">👔 Wardrobe Management</h2>
