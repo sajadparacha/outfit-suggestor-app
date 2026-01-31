@@ -134,7 +134,7 @@ export const useWardrobeController = (): UseWardrobeControllerReturn => {
     } finally {
       setLoading(false);
     }
-  }, [loadWardrobe, loadSummary, selectedCategory]);
+  }, [loadWardrobe, loadSummary, searchQuery, selectedCategory]);
 
   /**
    * Update a wardrobe item
@@ -159,7 +159,7 @@ export const useWardrobeController = (): UseWardrobeControllerReturn => {
     } finally {
       setLoading(false);
     }
-  }, [loadWardrobe, loadSummary, selectedCategory]);
+  }, [currentPage, loadWardrobe, loadSummary, searchQuery, selectedCategory]);
 
   /**
    * Delete a wardrobe item
@@ -181,7 +181,7 @@ export const useWardrobeController = (): UseWardrobeControllerReturn => {
     } finally {
       setLoading(false);
     }
-  }, [loadWardrobe, loadSummary, selectedCategory]);
+  }, [currentPage, loadWardrobe, loadSummary, searchQuery, selectedCategory, wardrobeItems.length]);
 
   /**
    * Clear error message
