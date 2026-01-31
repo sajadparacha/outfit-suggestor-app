@@ -1,0 +1,376 @@
+# Test Cases Catalog
+
+Total test cases: **114**
+
+## Backend — Access Logs API (13)
+
+- **TestAccessLogEndpoints.test_get_access_logs_exceeds_max_limit** (`backend/tests/test_access_log_endpoints.py`)
+  - Test getting access logs exceeding maximum limit
+  - Test suite for /api/access-logs/* endpoints
+- **TestAccessLogEndpoints.test_get_access_logs_filter_by_date_range** (`backend/tests/test_access_log_endpoints.py`)
+  - Test filtering access logs by date range
+  - Test suite for /api/access-logs/* endpoints
+- **TestAccessLogEndpoints.test_get_access_logs_filter_by_endpoint** (`backend/tests/test_access_log_endpoints.py`)
+  - Test filtering access logs by endpoint
+  - Test suite for /api/access-logs/* endpoints
+- **TestAccessLogEndpoints.test_get_access_logs_filter_by_operation_type** (`backend/tests/test_access_log_endpoints.py`)
+  - Test filtering access logs by operation type
+  - Test suite for /api/access-logs/* endpoints
+- **TestAccessLogEndpoints.test_get_access_logs_filter_by_user_id** (`backend/tests/test_access_log_endpoints.py`)
+  - Test filtering access logs by user ID
+  - Test suite for /api/access-logs/* endpoints
+- **TestAccessLogEndpoints.test_get_access_logs_invalid_date_format** (`backend/tests/test_access_log_endpoints.py`)
+  - Test filtering with invalid date format
+  - Test suite for /api/access-logs/* endpoints
+- **TestAccessLogEndpoints.test_get_access_logs_statistics** (`backend/tests/test_access_log_endpoints.py`)
+  - Test getting access log statistics
+  - Test suite for /api/access-logs/* endpoints
+- **TestAccessLogEndpoints.test_get_access_logs_statistics_unauthorized** (`backend/tests/test_access_log_endpoints.py`)
+  - Test getting statistics without authentication
+  - Test suite for /api/access-logs/* endpoints
+- **TestAccessLogEndpoints.test_get_access_logs_success** (`backend/tests/test_access_log_endpoints.py`)
+  - Test getting access logs with authentication
+  - Test suite for /api/access-logs/* endpoints
+- **TestAccessLogEndpoints.test_get_access_logs_unauthorized** (`backend/tests/test_access_log_endpoints.py`)
+  - Test getting access logs without authentication
+  - Test suite for /api/access-logs/* endpoints
+- **TestAccessLogEndpoints.test_get_access_logs_with_limit** (`backend/tests/test_access_log_endpoints.py`)
+  - Test getting access logs with limit parameter
+  - Test suite for /api/access-logs/* endpoints
+- **TestAccessLogEndpoints.test_get_access_logs_with_max_limit** (`backend/tests/test_access_log_endpoints.py`)
+  - Test getting access logs with maximum limit
+  - Test suite for /api/access-logs/* endpoints
+- **TestAccessLogEndpoints.test_get_access_logs_with_offset** (`backend/tests/test_access_log_endpoints.py`)
+  - Test getting access logs with offset parameter
+  - Test suite for /api/access-logs/* endpoints
+
+## Backend — Auth API (14)
+
+- **TestAuthEndpoints.test_activate_account_invalid_token** (`backend/tests/test_auth_endpoints.py`)
+  - Test account activation with invalid token
+  - Test suite for /api/auth/* endpoints
+- **TestAuthEndpoints.test_change_password_success** (`backend/tests/test_auth_endpoints.py`)
+  - Test successful password change
+  - Test suite for /api/auth/* endpoints
+- **TestAuthEndpoints.test_change_password_unauthorized** (`backend/tests/test_auth_endpoints.py`)
+  - Test password change without authentication
+  - Test suite for /api/auth/* endpoints
+- **TestAuthEndpoints.test_change_password_wrong_current** (`backend/tests/test_auth_endpoints.py`)
+  - Test password change with wrong current password
+  - Test suite for /api/auth/* endpoints
+- **TestAuthEndpoints.test_get_current_user_invalid_token** (`backend/tests/test_auth_endpoints.py`)
+  - Test getting current user with invalid token
+  - Test suite for /api/auth/* endpoints
+- **TestAuthEndpoints.test_get_current_user_success** (`backend/tests/test_auth_endpoints.py`)
+  - Test getting current user info with valid token
+  - Test suite for /api/auth/* endpoints
+- **TestAuthEndpoints.test_get_current_user_unauthorized** (`backend/tests/test_auth_endpoints.py`)
+  - Test getting current user without token
+  - Test suite for /api/auth/* endpoints
+- **TestAuthEndpoints.test_login_invalid_credentials** (`backend/tests/test_auth_endpoints.py`)
+  - Test login with invalid password
+  - Test suite for /api/auth/* endpoints
+- **TestAuthEndpoints.test_login_nonexistent_user** (`backend/tests/test_auth_endpoints.py`)
+  - Test login with non-existent user
+  - Test suite for /api/auth/* endpoints
+- **TestAuthEndpoints.test_login_success** (`backend/tests/test_auth_endpoints.py`)
+  - Test successful login
+  - Test suite for /api/auth/* endpoints
+- **TestAuthEndpoints.test_register_duplicate_email** (`backend/tests/test_auth_endpoints.py`)
+  - Test registration with duplicate email
+  - Test suite for /api/auth/* endpoints
+- **TestAuthEndpoints.test_register_invalid_email** (`backend/tests/test_auth_endpoints.py`)
+  - Test registration with invalid email format
+  - Test suite for /api/auth/* endpoints
+- **TestAuthEndpoints.test_register_missing_fields** (`backend/tests/test_auth_endpoints.py`)
+  - Test registration with missing required fields
+  - Test suite for /api/auth/* endpoints
+- **TestAuthEndpoints.test_register_success** (`backend/tests/test_auth_endpoints.py`)
+  - Test successful user registration
+  - Test suite for /api/auth/* endpoints
+
+## Backend — End-to-end Integration Flows (17)
+
+- **TestAuthenticationIntegration.test_authentication_required_flow** (`backend/tests/test_integration_auth_flow.py`)
+  - Integration test: Verify authentication required for protected endpoints
+  - Steps:
+- **TestAuthenticationIntegration.test_complete_registration_and_login_flow** (`backend/tests/test_integration_auth_flow.py`)
+  - Integration test: Complete registration and login flow
+  - Steps:
+- **TestAuthenticationIntegration.test_login_and_access_wardrobe_flow** (`backend/tests/test_integration_auth_flow.py`)
+  - Integration test: Login and access wardrobe flow
+  - Steps:
+- **TestCompleteUserJourney.test_complete_journey_search_pagination_and_suggestion** (`backend/tests/test_integration_complete_user_journey.py`)
+  - Integration test: Complete journey with search, pagination, and suggestion
+  - Steps:
+- **TestCompleteUserJourney.test_complete_journey_wardrobe_to_outfit_to_history** (`backend/tests/test_integration_complete_user_journey.py`)
+  - Integration test: Complete journey from wardrobe to outfit to history
+  - Steps:
+- **TestCompleteUserJourney.test_complete_journey_with_wardrobe_matching** (`backend/tests/test_integration_complete_user_journey.py`)
+  - Integration test: Complete journey with wardrobe matching
+  - Steps:
+- **TestOutfitSuggestionIntegration.test_complete_flow_cost_calculation** (`backend/tests/test_integration_outfit_flow.py`)
+  - Integration test: Verify cost calculation in complete flow
+  - Steps:
+- **TestOutfitSuggestionIntegration.test_complete_flow_duplicate_detection_workflow** (`backend/tests/test_integration_outfit_flow.py`)
+  - Integration test: Complete duplicate detection workflow
+  - Steps:
+- **TestOutfitSuggestionIntegration.test_complete_flow_from_wardrobe_item** (`backend/tests/test_integration_outfit_flow.py`)
+  - Integration test: Complete flow starting from wardrobe item
+  - Steps:
+- **TestOutfitSuggestionIntegration.test_complete_flow_with_duplicate_get_new_suggestion** (`backend/tests/test_integration_outfit_flow.py`)
+  - Integration test: Complete flow with duplicate detection but get new AI suggestion
+  - Steps:
+- **TestOutfitSuggestionIntegration.test_complete_flow_with_duplicate_use_existing** (`backend/tests/test_integration_outfit_flow.py`)
+  - Integration test: Complete flow with duplicate detection and using existing suggestion
+  - Steps:
+- **TestOutfitSuggestionIntegration.test_complete_flow_with_model_image_generation** (`backend/tests/test_integration_outfit_flow.py`)
+  - Integration test: Complete flow with model image generation enabled
+  - Steps:
+- **TestWardrobeManagementIntegration.test_complete_wardrobe_management_flow** (`backend/tests/test_integration_wardrobe_flow.py`)
+  - Integration test: Complete wardrobe management flow
+  - Steps:
+- **TestWardrobeManagementIntegration.test_wardrobe_duplicate_detection_flow** (`backend/tests/test_integration_wardrobe_flow.py`)
+  - Integration test: Wardrobe duplicate detection flow
+  - Steps:
+- **TestWardrobeManagementIntegration.test_wardrobe_pagination_integration** (`backend/tests/test_integration_wardrobe_flow.py`)
+  - Integration test: Wardrobe pagination integration
+  - Steps:
+- **TestWardrobeManagementIntegration.test_wardrobe_search_and_filter_integration** (`backend/tests/test_integration_wardrobe_flow.py`)
+  - Integration test: Wardrobe search and filter integration
+  - Steps:
+- **TestWardrobeManagementIntegration.test_wardrobe_summary_integration** (`backend/tests/test_integration_wardrobe_flow.py`)
+  - Integration test: Wardrobe summary integration
+  - Steps:
+
+## Backend — Outfit API (18)
+
+- **TestOutfitEndpoints.test_check_duplicate_authenticated** (`backend/tests/test_outfit_endpoints.py`)
+  - Test duplicate check with authentication
+  - Test suite for /api/suggest-outfit and related endpoints
+- **TestOutfitEndpoints.test_check_duplicate_missing_image** (`backend/tests/test_outfit_endpoints.py`)
+  - Test duplicate check without image
+  - Test suite for /api/suggest-outfit and related endpoints
+- **TestOutfitEndpoints.test_check_duplicate_no_auth** (`backend/tests/test_outfit_endpoints.py`)
+  - Test duplicate check without authentication (should work for anonymous)
+  - Test suite for /api/suggest-outfit and related endpoints
+- **TestOutfitEndpoints.test_delete_outfit_history_authenticated** (`backend/tests/test_outfit_endpoints.py`)
+  - Test deleting outfit history entry
+  - Test suite for /api/suggest-outfit and related endpoints
+- **TestOutfitEndpoints.test_delete_outfit_history_nonexistent** (`backend/tests/test_outfit_endpoints.py`)
+  - Test deleting non-existent outfit history entry
+  - Test suite for /api/suggest-outfit and related endpoints
+- **TestOutfitEndpoints.test_delete_outfit_history_unauthorized** (`backend/tests/test_outfit_endpoints.py`)
+  - Test deleting outfit history without authentication
+  - Test suite for /api/suggest-outfit and related endpoints
+- **TestOutfitEndpoints.test_get_outfit_history_authenticated** (`backend/tests/test_outfit_endpoints.py`)
+  - Test getting outfit history with authentication
+  - Test suite for /api/suggest-outfit and related endpoints
+- **TestOutfitEndpoints.test_get_outfit_history_unauthorized** (`backend/tests/test_outfit_endpoints.py`)
+  - Test getting outfit history without authentication
+  - Test suite for /api/suggest-outfit and related endpoints
+- **TestOutfitEndpoints.test_get_outfit_history_with_limit** (`backend/tests/test_outfit_endpoints.py`)
+  - Test getting outfit history with limit parameter
+  - Test suite for /api/suggest-outfit and related endpoints
+- **TestOutfitEndpoints.test_health_check** (`backend/tests/test_outfit_endpoints.py`)
+  - Test health check endpoint
+  - Test suite for /api/suggest-outfit and related endpoints
+- **TestOutfitEndpoints.test_root_endpoint** (`backend/tests/test_outfit_endpoints.py`)
+  - Test root endpoint
+  - Test suite for /api/suggest-outfit and related endpoints
+- **TestOutfitEndpoints.test_suggest_outfit_authenticated** (`backend/tests/test_outfit_endpoints.py`)
+  - Test outfit suggestion with authentication
+  - Test suite for /api/suggest-outfit and related endpoints
+- **TestOutfitEndpoints.test_suggest_outfit_from_wardrobe_item_authenticated** (`backend/tests/test_outfit_endpoints.py`)
+  - Test suggesting outfit from wardrobe item with authentication
+  - Test suite for /api/suggest-outfit and related endpoints
+- **TestOutfitEndpoints.test_suggest_outfit_from_wardrobe_item_nonexistent** (`backend/tests/test_outfit_endpoints.py`)
+  - Test suggesting outfit from non-existent wardrobe item
+  - Test suite for /api/suggest-outfit and related endpoints
+- **TestOutfitEndpoints.test_suggest_outfit_from_wardrobe_item_unauthorized** (`backend/tests/test_outfit_endpoints.py`)
+  - Test suggesting outfit from wardrobe item without authentication
+  - Test suite for /api/suggest-outfit and related endpoints
+- **TestOutfitEndpoints.test_suggest_outfit_missing_image** (`backend/tests/test_outfit_endpoints.py`)
+  - Test outfit suggestion without image
+  - Test suite for /api/suggest-outfit and related endpoints
+- **TestOutfitEndpoints.test_suggest_outfit_unauthorized** (`backend/tests/test_outfit_endpoints.py`)
+  - Test outfit suggestion without authentication (should work for anonymous)
+  - Test suite for /api/suggest-outfit and related endpoints
+- **TestOutfitEndpoints.test_suggest_outfit_with_model_image** (`backend/tests/test_outfit_endpoints.py`)
+  - Test outfit suggestion with model image generation
+  - Test suite for /api/suggest-outfit and related endpoints
+
+## Backend — Outfit ↔ Wardrobe Integration (4)
+
+- **TestOutfitWardrobeIntegration.test_suggest_outfit_from_wardrobe_item_with_matching** (`backend/tests/test_outfit_wardrobe_integration.py`)
+  - Test outfit suggestion from wardrobe item includes matching items
+  - Test suite for outfit suggestions with wardrobe matching
+- **TestOutfitWardrobeIntegration.test_suggest_outfit_handles_empty_wardrobe** (`backend/tests/test_outfit_wardrobe_integration.py`)
+  - Test outfit suggestion works with empty wardrobe
+  - Test suite for outfit suggestions with wardrobe matching
+- **TestOutfitWardrobeIntegration.test_suggest_outfit_response_format** (`backend/tests/test_outfit_wardrobe_integration.py`)
+  - Test that outfit suggestion response has correct format
+  - Test suite for outfit suggestions with wardrobe matching
+- **TestOutfitWardrobeIntegration.test_suggest_outfit_with_wardrobe_matching** (`backend/tests/test_outfit_wardrobe_integration.py`)
+  - Test outfit suggestion includes matching wardrobe items
+  - Test suite for outfit suggestions with wardrobe matching
+
+## Backend — Wardrobe API (24)
+
+- **TestWardrobeEndpoints.test_add_wardrobe_item_missing_fields** (`backend/tests/test_wardrobe_endpoints.py`)
+  - Test adding wardrobe item with missing required fields
+  - Test suite for /api/wardrobe/* endpoints
+- **TestWardrobeEndpoints.test_add_wardrobe_item_success** (`backend/tests/test_wardrobe_endpoints.py`)
+  - Test successfully adding a wardrobe item
+  - Test suite for /api/wardrobe/* endpoints
+- **TestWardrobeEndpoints.test_add_wardrobe_item_unauthorized** (`backend/tests/test_wardrobe_endpoints.py`)
+  - Test adding wardrobe item without authentication
+  - Test suite for /api/wardrobe/* endpoints
+- **TestWardrobeEndpoints.test_analyze_wardrobe_image_missing_image** (`backend/tests/test_wardrobe_endpoints.py`)
+  - Test analyzing wardrobe image without image file
+  - Test suite for /api/wardrobe/* endpoints
+- **TestWardrobeEndpoints.test_analyze_wardrobe_image_success** (`backend/tests/test_wardrobe_endpoints.py`)
+  - Test analyzing wardrobe image
+  - Test suite for /api/wardrobe/* endpoints
+- **TestWardrobeEndpoints.test_analyze_wardrobe_image_unauthorized** (`backend/tests/test_wardrobe_endpoints.py`)
+  - Test analyzing wardrobe image without authentication
+  - Test suite for /api/wardrobe/* endpoints
+- **TestWardrobeEndpoints.test_check_wardrobe_duplicate_success** (`backend/tests/test_wardrobe_endpoints.py`)
+  - Test checking wardrobe duplicate
+  - Test suite for /api/wardrobe/* endpoints
+- **TestWardrobeEndpoints.test_check_wardrobe_duplicate_unauthorized** (`backend/tests/test_wardrobe_endpoints.py`)
+  - Test checking wardrobe duplicate without authentication
+  - Test suite for /api/wardrobe/* endpoints
+- **TestWardrobeEndpoints.test_check_wardrobe_duplicate_with_existing** (`backend/tests/test_wardrobe_endpoints.py`)
+  - Test checking duplicate with existing wardrobe item
+  - Test suite for /api/wardrobe/* endpoints
+- **TestWardrobeEndpoints.test_delete_wardrobe_item_nonexistent** (`backend/tests/test_wardrobe_endpoints.py`)
+  - Test deleting non-existent wardrobe item
+  - Test suite for /api/wardrobe/* endpoints
+- **TestWardrobeEndpoints.test_delete_wardrobe_item_success** (`backend/tests/test_wardrobe_endpoints.py`)
+  - Test successfully deleting a wardrobe item
+  - Test suite for /api/wardrobe/* endpoints
+- **TestWardrobeEndpoints.test_delete_wardrobe_item_unauthorized** (`backend/tests/test_wardrobe_endpoints.py`)
+  - Test deleting wardrobe item without authentication
+  - Test suite for /api/wardrobe/* endpoints
+- **TestWardrobeEndpoints.test_get_wardrobe_item_nonexistent** (`backend/tests/test_wardrobe_endpoints.py`)
+  - Test getting non-existent wardrobe item
+  - Test suite for /api/wardrobe/* endpoints
+- **TestWardrobeEndpoints.test_get_wardrobe_item_other_user** (`backend/tests/test_wardrobe_endpoints.py`)
+  - Test getting wardrobe item belonging to another user
+  - Test suite for /api/wardrobe/* endpoints
+- **TestWardrobeEndpoints.test_get_wardrobe_item_success** (`backend/tests/test_wardrobe_endpoints.py`)
+  - Test getting specific wardrobe item
+  - Test suite for /api/wardrobe/* endpoints
+- **TestWardrobeEndpoints.test_get_wardrobe_item_unauthorized** (`backend/tests/test_wardrobe_endpoints.py`)
+  - Test getting specific wardrobe item without authentication
+  - Test suite for /api/wardrobe/* endpoints
+- **TestWardrobeEndpoints.test_get_wardrobe_success** (`backend/tests/test_wardrobe_endpoints.py`)
+  - Test getting wardrobe items with paginated response
+  - Test suite for /api/wardrobe/* endpoints
+- **TestWardrobeEndpoints.test_get_wardrobe_summary_success** (`backend/tests/test_wardrobe_endpoints.py`)
+  - Test getting wardrobe summary
+  - Test suite for /api/wardrobe/* endpoints
+- **TestWardrobeEndpoints.test_get_wardrobe_summary_unauthorized** (`backend/tests/test_wardrobe_endpoints.py`)
+  - Test getting wardrobe summary without authentication
+  - Test suite for /api/wardrobe/* endpoints
+- **TestWardrobeEndpoints.test_get_wardrobe_unauthorized** (`backend/tests/test_wardrobe_endpoints.py`)
+  - Test getting wardrobe without authentication
+  - Test suite for /api/wardrobe/* endpoints
+- **TestWardrobeEndpoints.test_get_wardrobe_with_category_filter** (`backend/tests/test_wardrobe_endpoints.py`)
+  - Test getting wardrobe items filtered by category
+  - Test suite for /api/wardrobe/* endpoints
+- **TestWardrobeEndpoints.test_update_wardrobe_item_nonexistent** (`backend/tests/test_wardrobe_endpoints.py`)
+  - Test updating non-existent wardrobe item
+  - Test suite for /api/wardrobe/* endpoints
+- **TestWardrobeEndpoints.test_update_wardrobe_item_success** (`backend/tests/test_wardrobe_endpoints.py`)
+  - Test successfully updating a wardrobe item
+  - Test suite for /api/wardrobe/* endpoints
+- **TestWardrobeEndpoints.test_update_wardrobe_item_unauthorized** (`backend/tests/test_wardrobe_endpoints.py`)
+  - Test updating wardrobe item without authentication
+  - Test suite for /api/wardrobe/* endpoints
+
+## Backend — Wardrobe Pagination & Search (18)
+
+- **TestWardrobePagination.test_get_wardrobe_default_limit** (`backend/tests/test_wardrobe_pagination_search.py`)
+  - Test that default limit is 10 items
+  - Test suite for wardrobe pagination
+- **TestWardrobePagination.test_get_wardrobe_limit_max** (`backend/tests/test_wardrobe_pagination_search.py`)
+  - Test that limit cannot exceed 100
+  - Test suite for wardrobe pagination
+- **TestWardrobePagination.test_get_wardrobe_offset_beyond_total** (`backend/tests/test_wardrobe_pagination_search.py`)
+  - Test offset beyond total items returns empty list
+  - Test suite for wardrobe pagination
+- **TestWardrobePagination.test_get_wardrobe_pagination_with_category** (`backend/tests/test_wardrobe_pagination_search.py`)
+  - Test pagination with category filter
+  - Test suite for wardrobe pagination
+- **TestWardrobePagination.test_get_wardrobe_with_custom_limit** (`backend/tests/test_wardrobe_pagination_search.py`)
+  - Test wardrobe with custom limit
+  - Test suite for wardrobe pagination
+- **TestWardrobePagination.test_get_wardrobe_with_offset** (`backend/tests/test_wardrobe_pagination_search.py`)
+  - Test wardrobe with offset
+  - Test suite for wardrobe pagination
+- **TestWardrobeSearch.test_search_by_category_keyword** (`backend/tests/test_wardrobe_pagination_search.py`)
+  - Test searching by category keyword (shirt, trouser, etc.)
+  - Test suite for wardrobe search functionality
+- **TestWardrobeSearch.test_search_by_color** (`backend/tests/test_wardrobe_pagination_search.py`)
+  - Test searching by color
+  - Test suite for wardrobe search functionality
+- **TestWardrobeSearch.test_search_by_description** (`backend/tests/test_wardrobe_pagination_search.py`)
+  - Test searching by description
+  - Test suite for wardrobe search functionality
+- **TestWardrobeSearch.test_search_case_insensitive** (`backend/tests/test_wardrobe_pagination_search.py`)
+  - Test that search is case insensitive
+  - Test suite for wardrobe search functionality
+- **TestWardrobeSearch.test_search_empty_results** (`backend/tests/test_wardrobe_pagination_search.py`)
+  - Test search that returns no results
+  - Test suite for wardrobe search functionality
+- **TestWardrobeSearch.test_search_multi_word_and_logic** (`backend/tests/test_wardrobe_pagination_search.py`)
+  - Test multi-word search with AND logic
+  - Test suite for wardrobe search functionality
+- **TestWardrobeSearch.test_search_with_category_filter** (`backend/tests/test_wardrobe_pagination_search.py`)
+  - Test search combined with category filter
+  - Test suite for wardrobe search functionality
+- **TestWardrobeSearch.test_search_with_pagination** (`backend/tests/test_wardrobe_pagination_search.py`)
+  - Test search with pagination
+  - Test suite for wardrobe search functionality
+- **TestWardrobeSummary.test_summary_by_color** (`backend/tests/test_wardrobe_pagination_search.py`)
+  - Test that summary includes color counts
+  - Test suite for wardrobe summary with category counts
+- **TestWardrobeSummary.test_summary_category_counts** (`backend/tests/test_wardrobe_pagination_search.py`)
+  - Test that summary returns correct category counts
+  - Test suite for wardrobe summary with category counts
+- **TestWardrobeSummary.test_summary_category_normalization** (`backend/tests/test_wardrobe_pagination_search.py`)
+  - Test that categories are normalized to lowercase in summary
+  - Test suite for wardrobe summary with category counts
+- **TestWardrobeSummary.test_summary_empty_wardrobe** (`backend/tests/test_wardrobe_pagination_search.py`)
+  - Test summary with empty wardrobe
+  - Test suite for wardrobe summary with category counts
+
+## Frontend — App (1)
+
+- **App.test#1** (`frontend/src/App.test.tsx`)
+  - Renders AI Outfit Suggestor app
+  - File: App.test.tsx
+
+## Frontend — Wardrobe (integration) (2)
+
+- **Wardrobe.integration.test#1** (`frontend/src/views/components/Wardrobe.integration.test.tsx`)
+  - Loads and renders items from the wardrobe API
+  - File: Wardrobe.integration.test.tsx
+- **Wardrobe.integration.test#2** (`frontend/src/views/components/Wardrobe.integration.test.tsx`)
+  - Shows a user-visible error (not a blank screen) when the wardrobe API fails
+  - File: Wardrobe.integration.test.tsx
+
+## Frontend — Wardrobe (unit) (3)
+
+- **Wardrobe.test#1** (`frontend/src/views/components/Wardrobe.test.tsx`)
+  - Loads the wardrobe page and shows the page header
+  - File: Wardrobe.test.tsx
+- **Wardrobe.test#2** (`frontend/src/views/components/Wardrobe.test.tsx`)
+  - Shows empty list state when there are no wardrobe items
+  - File: Wardrobe.test.tsx
+- **Wardrobe.test#3** (`frontend/src/views/components/Wardrobe.test.tsx`)
+  - Shows wardrobe item list when items exist
+  - File: Wardrobe.test.tsx
+
