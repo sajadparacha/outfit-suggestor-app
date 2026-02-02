@@ -7,7 +7,7 @@ from sqlalchemy import func, and_, or_
 
 from models.database import get_db
 from models.access_log import AccessLog
-from dependencies import get_current_user
+from dependencies import get_current_admin_user
 from models.user import User
 
 router = APIRouter(prefix="/api/access-logs", tags=["Access Logs"])
@@ -19,6 +19,7 @@ async def get_access_logs(
     city: Optional[str] = Query(None, description="Filter by city"),
     age_group: Optional[str] = Query(None, description="Filter by age group (e.g., '18-24', '25-34')"),
     ip_address: Optional[str] = Query(None, description="Filter by IP address"),
+    user: Optional[str] = Query(None, description="Filter by user name/email (case-insensitive contains)"),
     user_id: Optional[int] = Query(None, description="Filter by user ID"),
     operation_type: Optional[str] = Query(None, description="Filter by operation type (e.g., 'ai_outfit_suggestion', 'wardrobe_add', 'outfit_history_view')"),
     start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
@@ -27,7 +28,7 @@ async def get_access_logs(
     limit: int = Query(100, ge=1, le=1000, description="Number of records to return"),
     offset: int = Query(0, ge=0, description="Offset for pagination"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)  # Require authentication
+    current_user: User = Depends(get_current_admin_user)  # Admin-only
 ):
     """
     Get access logs with filtering options.
@@ -46,6 +47,17 @@ async def get_access_logs(
         query = query.filter(AccessLog.ip_address == ip_address)
     if user_id:
         query = query.filter(AccessLog.user_id == user_id)
+    if user:
+        user_like = f"%{user}%"
+        matched_user_ids = [
+            uid
+            for (uid,) in db.query(User.id)
+            .filter(or_(User.email.ilike(user_like), User.full_name.ilike(user_like)))
+            .all()
+        ]
+        if not matched_user_ids:
+            return {"total": 0, "limit": limit, "offset": offset, "logs": []}
+        query = query.filter(AccessLog.user_id.in_(matched_user_ids))
     if operation_type:
         query = query.filter(AccessLog.operation_type == operation_type)
     if endpoint:
@@ -119,7 +131,7 @@ async def get_access_stats(
     start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)  # Require authentication
+    current_user: User = Depends(get_current_admin_user)  # Admin-only
 ):
     """
     Get aggregated statistics about access logs.
@@ -250,7 +262,7 @@ async def get_usage_statistics(
     end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
     user_id: Optional[int] = Query(None, description="Filter by user ID"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)  # Require authentication
+    current_user: User = Depends(get_current_admin_user)  # Admin-only
 ):
     """
     Get usage statistics for AI calls, wardrobe operations, and outfit history.
@@ -371,7 +383,7 @@ async def get_access_timeline(
     end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
     group_by: str = Query("hour", regex="^(hour|day|week)$", description="Group by hour, day, or week"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)  # Require authentication
+    current_user: User = Depends(get_current_admin_user)  # Admin-only
 ):
     """
     Get access logs grouped by time period.

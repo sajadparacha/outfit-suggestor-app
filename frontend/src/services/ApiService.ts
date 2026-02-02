@@ -863,6 +863,93 @@ class ApiService {
       throw new Error('Failed to delete wardrobe item');
     }
   }
+
+  /**
+   * Get access logs (admin-only)
+   */
+  async getAccessLogs(params: {
+    country?: string;
+    city?: string;
+    age_group?: string;
+    ip_address?: string;
+    user?: string;
+    user_id?: number;
+    operation_type?: string;
+    start_date?: string;
+    end_date?: string;
+    endpoint?: string;
+    limit?: number;
+    offset?: number;
+  } = {}): Promise<any> {
+    const search = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v === undefined || v === null || v === '') return;
+      search.append(k, String(v));
+    });
+
+    const url = `${this.baseUrl}/api/access-logs/${search.toString() ? `?${search.toString()}` : ''}`;
+    const response = await this.fetchWithLogging(url, { headers: this.getHeaders() });
+
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const error: ApiError = await response.json();
+        errorMessage = error.detail || errorMessage;
+      } catch {
+        // ignore
+      }
+      throw new Error(errorMessage);
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Get aggregated access-log stats (admin-only)
+   */
+  async getAccessLogStats(params: { start_date?: string; end_date?: string } = {}): Promise<any> {
+    const search = new URLSearchParams();
+    if (params.start_date) search.append('start_date', params.start_date);
+    if (params.end_date) search.append('end_date', params.end_date);
+    const url = `${this.baseUrl}/api/access-logs/stats${search.toString() ? `?${search.toString()}` : ''}`;
+
+    const response = await this.fetchWithLogging(url, { headers: this.getHeaders() });
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const error: ApiError = await response.json();
+        errorMessage = error.detail || errorMessage;
+      } catch {
+        // ignore
+      }
+      throw new Error(errorMessage);
+    }
+    return await response.json();
+  }
+
+  /**
+   * Get usage breakdown stats (admin-only)
+   */
+  async getAccessLogUsage(params: { start_date?: string; end_date?: string; user_id?: number } = {}): Promise<any> {
+    const search = new URLSearchParams();
+    if (params.start_date) search.append('start_date', params.start_date);
+    if (params.end_date) search.append('end_date', params.end_date);
+    if (params.user_id !== undefined) search.append('user_id', String(params.user_id));
+    const url = `${this.baseUrl}/api/access-logs/usage${search.toString() ? `?${search.toString()}` : ''}`;
+
+    const response = await this.fetchWithLogging(url, { headers: this.getHeaders() });
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const error: ApiError = await response.json();
+        errorMessage = error.detail || errorMessage;
+      } catch {
+        // ignore
+      }
+      throw new Error(errorMessage);
+    }
+    return await response.json();
+  }
 }
 
 // Export singleton instance

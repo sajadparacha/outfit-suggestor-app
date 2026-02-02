@@ -12,9 +12,14 @@ class TestAccessLogEndpoints:
         """Test getting access logs without authentication"""
         response = client.get("/api/access-logs/")
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_get_access_logs_forbidden_non_admin(self, client, non_admin_auth_headers):
+        """Test access logs are admin-only"""
+        response = client.get("/api/access-logs/", headers=non_admin_auth_headers)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
     
     def test_get_access_logs_success(self, client, auth_headers):
-        """Test getting access logs with authentication"""
+        """Test getting access logs with admin authentication"""
         response = client.get("/api/access-logs/", headers=auth_headers)
         assert response.status_code == status.HTTP_200_OK
         data = response.json()

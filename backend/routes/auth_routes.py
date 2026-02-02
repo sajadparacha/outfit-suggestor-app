@@ -26,6 +26,7 @@ class UserResponse(BaseModel):
     email: str
     full_name: str | None
     is_active: bool
+    is_admin: bool = False
     email_verified: bool | None = None
     created_at: str
 

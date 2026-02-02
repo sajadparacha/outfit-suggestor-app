@@ -154,6 +154,7 @@ def test_user(db):
         hashed_password=get_password_hash("testpassword123"),
         full_name="Test User",
         is_active=True,
+        is_admin=True,
         email_verified=True
     )
     db.add(user)
@@ -170,6 +171,7 @@ def test_user2(db):
         hashed_password=get_password_hash("testpassword123"),
         full_name="Test User 2",
         is_active=True,
+        is_admin=False,
         email_verified=True
     )
     db.add(user)
@@ -195,6 +197,28 @@ def auth_headers(auth_token, test_user):
     from tests.test_helpers import setup_auth_override
     setup_auth_override(test_user)
     headers = {"Authorization": f"Bearer {auth_token}"}
+    yield headers
+    from tests.test_helpers import clear_auth_override
+    clear_auth_override()
+
+
+@pytest.fixture
+def non_admin_auth_token(client, test_user2):
+    """Get authentication token for non-admin test user"""
+    response = client.post(
+        "/api/auth/login",
+        data={"username": test_user2.email, "password": "testpassword123"}
+    )
+    assert response.status_code == 200
+    return response.json()["access_token"]
+
+
+@pytest.fixture
+def non_admin_auth_headers(non_admin_auth_token, test_user2):
+    """Auth headers for a non-admin user (used for admin-gated endpoints)"""
+    from tests.test_helpers import setup_auth_override
+    setup_auth_override(test_user2)
+    headers = {"Authorization": f"Bearer {non_admin_auth_token}"}
     yield headers
     from tests.test_helpers import clear_auth_override
     clear_auth_override()

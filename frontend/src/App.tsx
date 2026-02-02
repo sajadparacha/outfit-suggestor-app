@@ -11,6 +11,7 @@ import OutfitPreview from './views/components/OutfitPreview';
 import OutfitHistory from './views/components/OutfitHistory';
 import About from './views/components/About';
 import Wardrobe from './views/components/Wardrobe';
+import AdminReports from './views/components/AdminReports';
 import Toast from './views/components/Toast';
 import Footer from './views/components/Footer';
 import ConfirmationModal from './views/components/ConfirmationModal';
@@ -40,7 +41,7 @@ function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   // View state (UI-only state)
-  const [currentView, setCurrentView] = useState<'main' | 'history' | 'wardrobe' | 'about' | 'settings'>('main');
+  const [currentView, setCurrentView] = useState<'main' | 'history' | 'wardrobe' | 'reports' | 'about' | 'settings'>('main');
   const [wardrobeCategoryFilter, setWardrobeCategoryFilter] = useState<string | null>(null);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showModelImageConfirm, setShowModelImageConfirm] = useState(false);
@@ -230,6 +231,18 @@ function App() {
                   >
                     👔 Wardrobe
                   </button>
+                  {user?.is_admin && (
+                    <button
+                      onClick={() => setCurrentView('reports')}
+                      className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                        currentView === 'reports'
+                          ? 'border-indigo-600 text-indigo-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      📊 Reports
+                    </button>
+                  )}
                   <button
                     onClick={() => setCurrentView('settings')}
                     className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
@@ -466,6 +479,19 @@ function App() {
               >
                 Login to Continue
               </button>
+            </div>
+          )
+        )}
+
+        {currentView === 'reports' && (
+          isAuthenticated && user && user.is_admin ? (
+            <ErrorBoundary label="Reports" resetKey={currentView}>
+              <AdminReports user={user} />
+            </ErrorBoundary>
+          ) : (
+            <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-8 text-center">
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">📊 Reports</h2>
+              <p className="text-gray-600 mb-6">Admin privileges are required to view reports.</p>
             </div>
           )
         )}

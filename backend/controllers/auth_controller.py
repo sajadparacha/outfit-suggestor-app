@@ -247,6 +247,7 @@ class AuthController:
             "email": user.email,
             "full_name": user.full_name,
             "is_active": user.is_active,
+            "is_admin": getattr(user, "is_admin", False),
             "email_verified": user.email_verified,
             "created_at": user.created_at.isoformat() if user.created_at else ""
         }

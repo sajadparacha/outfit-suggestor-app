@@ -86,6 +86,23 @@ def get_current_active_user(
     return current_user
 
 
+def get_current_admin_user(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """
+    Dependency to restrict access to admin users only.
+
+    Raises:
+        HTTPException(403): if user is not an admin
+    """
+    if not getattr(current_user, "is_admin", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required",
+        )
+    return current_user
+
+
 def get_optional_user(
     request: Request,
     db: Session = Depends(get_db)
