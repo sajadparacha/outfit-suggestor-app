@@ -77,7 +77,11 @@ class AccessLoggingMiddleware(BaseHTTPMiddleware):
         
         # Determine operation type for usage tracking
         operation_type = self._determine_operation_type(endpoint, method)
-        
+
+        # Only persist logs for defined operation types
+        if operation_type is None:
+            return response
+
         # Log access asynchronously (don't block response)
         # Use a database session directly to avoid dependency injection issues
         try:
@@ -158,34 +162,39 @@ class AccessLoggingMiddleware(BaseHTTPMiddleware):
         Determine operation type based on endpoint and method.
         Used for usage tracking of AI calls, wardrobe operations, and outfit history.
         """
+        # Normalize path (strip trailing slash) for reliable matching
+        path = endpoint.rstrip("/")
+
         # AI Calls
-        if endpoint == "/api/suggest-outfit" and method == "POST":
+        if path == "/api/suggest-outfit" and method == "POST":
             return "ai_outfit_suggestion"
-        if endpoint == "/api/wardrobe/analyze-image" and method == "POST":
+        if path.startswith("/api/suggest-outfit-from-wardrobe-item/") and method == "POST":
+            return "ai_outfit_suggestion"
+        if path == "/api/wardrobe/analyze-image" and method == "POST":
             return "ai_wardrobe_analysis"
         
         # Wardrobe Operations
-        if endpoint.startswith("/api/wardrobe") and method == "POST" and endpoint != "/api/wardrobe/analyze-image":
-            if endpoint == "/api/wardrobe/check-duplicate":
+        if path.startswith("/api/wardrobe") and method == "POST" and path != "/api/wardrobe/analyze-image":
+            if path == "/api/wardrobe/check-duplicate":
                 return "wardrobe_check_duplicate"
             return "wardrobe_add"
-        if endpoint.startswith("/api/wardrobe") and method == "PUT":
+        if path.startswith("/api/wardrobe") and method == "PUT":
             return "wardrobe_update"
-        if endpoint.startswith("/api/wardrobe") and method == "DELETE":
+        if path.startswith("/api/wardrobe") and method == "DELETE":
             return "wardrobe_delete"
-        if endpoint == "/api/wardrobe" and method == "GET":
+        if path == "/api/wardrobe" and method == "GET":
             return "wardrobe_view"
-        if endpoint == "/api/wardrobe/summary" and method == "GET":
+        if path == "/api/wardrobe/summary" and method == "GET":
             return "wardrobe_summary"
-        
+
         # Outfit History
-        if endpoint == "/api/outfit-history" and method == "GET":
+        if path == "/api/outfit-history" and method == "GET":
             return "outfit_history_view"
-        
+
         # Authentication (optional - can track logins)
-        if endpoint == "/api/auth/login" and method == "POST":
+        if path == "/api/auth/login" and method == "POST":
             return "auth_login"
-        if endpoint == "/api/auth/register" and method == "POST":
+        if path == "/api/auth/register" and method == "POST":
             return "auth_register"
         
         # Default: return None for other endpoints

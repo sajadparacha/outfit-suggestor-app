@@ -3,6 +3,7 @@ Test cases for Access Log API endpoints
 """
 import pytest
 from fastapi import status
+from models.access_log import AccessLog
 
 
 class TestAccessLogEndpoints:
@@ -84,6 +85,35 @@ class TestAccessLogEndpoints:
         # All logs should have the specified user_id
         for log in data["logs"]:
             assert log["user_id"] == test_user.id
+
+    def test_get_access_logs_filter_by_user_name_case_insensitive(
+        self, client, auth_headers, db, test_user
+    ):
+        """Test filtering by user name/email (case-insensitive contains)."""
+        # Insert an access log for test_user
+        log_entry = AccessLog(
+            ip_address="127.0.0.1",
+            endpoint="/api/wardrobe",
+            method="GET",
+            operation_type="wardrobe_view",
+            user_id=test_user.id,
+            status_code=200,
+        )
+        db.add(log_entry)
+        db.commit()
+
+        # Query with lowercase partial match on email
+        response = client.get(
+            "/api/access-logs/?user=test",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["total"] >= 1
+        assert any(
+            log["user_id"] == test_user.id and "test" in (log.get("user_email") or "").lower()
+            for log in data["logs"]
+        )
     
     def test_get_access_logs_filter_by_date_range(self, client, auth_headers):
         """Test filtering access logs by date range"""
@@ -116,6 +146,20 @@ class TestAccessLogEndpoints:
         """Test getting statistics without authentication"""
         response = client.get("/api/access-logs/stats")
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_get_access_logs_usage_admin_only(self, client, auth_headers):
+        """Test /api/access-logs/usage returns usage stats for admin."""
+        response = client.get("/api/access-logs/usage", headers=auth_headers)
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert "ai_calls" in data
+        assert "wardrobe_operations" in data
+        assert "outfit_history" in data
+
+    def test_get_access_logs_usage_forbidden_non_admin(self, client, non_admin_auth_headers):
+        """Test /api/access-logs/usage is admin-only."""
+        response = client.get("/api/access-logs/usage", headers=non_admin_auth_headers)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
     
     def test_get_access_logs_with_max_limit(self, client, auth_headers):
         """Test getting access logs with maximum limit"""
