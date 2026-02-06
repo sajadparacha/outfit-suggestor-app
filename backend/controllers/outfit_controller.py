@@ -36,6 +36,7 @@ class OutfitController:
         location: Optional[str],
         generate_model_image: str,
         image_model: Optional[str] = None,
+        use_wardrobe_only: bool = False,
         db: Session = None,
         current_user: Optional[User] = None
     ) -> OutfitSuggestion:
@@ -63,12 +64,35 @@ class OutfitController:
             # Encode image to base64
             image_base64 = encode_image(image.file)
             
-            # Get outfit suggestion from AI service (INDEPENDENT of wardrobe)
-            # Suggestions are created without considering user's existing wardrobe
+            # Determine wardrobe mode: use_wardrobe_only + authenticated user
+            wardrobe_items_dict = None
+            wardrobe_only_mode = False
+            if use_wardrobe_only and current_user:
+                from services.wardrobe_service import WardrobeService
+                wardrobe_service = WardrobeService()
+                wardrobe_items_dict = wardrobe_service.get_wardrobe_items_by_categories(
+                    db=db,
+                    user_id=current_user.id,
+                    categories=["shirt", "trouser", "blazer", "shoes", "belt"]
+                )
+                # Only enable wardrobe_only if user has at least some items
+                has_items = any(items for items in wardrobe_items_dict.values())
+                if has_items:
+                    wardrobe_only_mode = True
+                else:
+                    # Empty wardrobe - fall back to free generation
+                    wardrobe_items_dict = None
+            elif use_wardrobe_only and not current_user:
+                raise HTTPException(
+                    status_code=401,
+                    detail="Please log in to use wardrobe-only mode"
+                )
+            
             suggestion, cost_info = self.ai_service.get_outfit_suggestion(
                 image_base64, 
                 text_input,
-                wardrobe_items=None  # Don't pass wardrobe items - create independent suggestions
+                wardrobe_items=wardrobe_items_dict,
+                wardrobe_only=wardrobe_only_mode
             )
             
             # Parse generate_model_image from string to boolean
@@ -388,6 +412,7 @@ class OutfitController:
         location: Optional[str],
         generate_model_image: str,
         image_model: Optional[str] = None,
+        use_wardrobe_only: bool = False,
         db: Session = None,
         current_user: Optional[User] = None
     ) -> OutfitSuggestion:
@@ -442,12 +467,30 @@ class OutfitController:
             # Use wardrobe item's image for outfit suggestion
             image_base64 = wardrobe_item.image_data
             
-            # Get outfit suggestion from AI service (INDEPENDENT of wardrobe)
-            # Suggestions are created without considering user's existing wardrobe
+            wardrobe_items_dict = None
+            wardrobe_only_mode = False
+            if use_wardrobe_only:
+                all_wardrobe_items, _ = wardrobe_service.get_user_wardrobe(
+                    db=db,
+                    user_id=current_user.id,
+                    category=None,
+                    search=None,
+                    limit=None,
+                    offset=None
+                )
+                if all_wardrobe_items:
+                    wardrobe_items_dict = wardrobe_service.get_wardrobe_items_by_categories(
+                        db=db,
+                        user_id=current_user.id,
+                        categories=["shirt", "trouser", "blazer", "shoes", "belt"]
+                    )
+                    wardrobe_only_mode = True
+            
             suggestion, cost_info = self.ai_service.get_outfit_suggestion(
                 image_base64,
                 text_input,
-                wardrobe_items=None  # Don't pass wardrobe items - create independent suggestions
+                wardrobe_items=wardrobe_items_dict,
+                wardrobe_only=wardrobe_only_mode
             )
             
             # Parse generate_model_image from string to boolean

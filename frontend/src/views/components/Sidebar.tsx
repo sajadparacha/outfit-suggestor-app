@@ -19,6 +19,8 @@ interface SidebarProps {
   setGenerateModelImage: (generate: boolean) => void;
   imageModel: string;
   setImageModel: (model: string) => void;
+  useWardrobeOnly?: boolean;
+  setUseWardrobeOnly?: (use: boolean) => void;
   modelGenerationEnabled?: boolean;
   isAuthenticated?: boolean;
   onAddToWardrobe?: () => void;
@@ -38,6 +40,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   setGenerateModelImage,
   imageModel,
   setImageModel,
+  useWardrobeOnly = false,
+  setUseWardrobeOnly,
   modelGenerationEnabled = false,
   isAuthenticated = false,
   onAddToWardrobe,
@@ -338,6 +342,48 @@ const Sidebar: React.FC<SidebarProps> = ({
               AI is analyzing your image...
             </p>
           )}
+        </div>
+      )}
+
+      {/* Wardrobe Mode Toggle - Only for logged-in users */}
+      {isAuthenticated && setUseWardrobeOnly && (
+        <div className="mb-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg border border-amber-200">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <label htmlFor="wardrobe-mode" className="flex items-center cursor-pointer">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2 mb-1">
+                    <span className="text-lg">👔</span>
+                    <span className="font-semibold text-gray-800">Use my wardrobe only</span>
+                  </div>
+                  <p className="text-xs text-gray-600">
+                    {useWardrobeOnly
+                      ? 'Suggestions will only include items from your wardrobe'
+                      : 'AI can suggest any outfit (freely generated)'}
+                  </p>
+                </div>
+              </label>
+            </div>
+            <div className="ml-4">
+              <button
+                type="button"
+                id="wardrobe-mode"
+                onClick={() => setUseWardrobeOnly(!useWardrobeOnly)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  useWardrobeOnly ? 'bg-amber-600' : 'bg-gray-300'
+                }`}
+                role="switch"
+                aria-checked={useWardrobeOnly}
+                aria-label="Use wardrobe only mode"
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    useWardrobeOnly ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

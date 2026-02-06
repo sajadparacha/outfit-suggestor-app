@@ -21,6 +21,7 @@ async def suggest_outfit(
     location: str = Form(None),
     generate_model_image: str = Form("false"),
     image_model: str = Form("dalle3"),
+    use_wardrobe_only: str = Form("false"),
     outfit_controller: OutfitController = Depends(get_outfit_controller),
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_optional_user)
@@ -43,12 +44,14 @@ async def suggest_outfit(
     Raises:
         HTTPException: If image validation fails or processing error occurs
     """
+    use_wardrobe_only_bool = use_wardrobe_only.lower() in ('true', '1', 'yes', 'on')
     return await outfit_controller.suggest_outfit(
         image=image,
         text_input=text_input,
         location=location,
         generate_model_image=generate_model_image,
         image_model=image_model,
+        use_wardrobe_only=use_wardrobe_only_bool,
         db=db,
         current_user=current_user
     )
@@ -113,6 +116,7 @@ async def suggest_outfit_from_wardrobe_item(
     location: str = Form(None),
     generate_model_image: str = Form("false"),
     image_model: str = Form("dalle3"),
+    use_wardrobe_only: str = Form("false"),
     outfit_controller: OutfitController = Depends(get_outfit_controller),
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_optional_user)
@@ -136,12 +140,14 @@ async def suggest_outfit_from_wardrobe_item(
     Raises:
         HTTPException: If wardrobe item not found or processing error occurs
     """
+    use_wardrobe_only_bool = use_wardrobe_only.lower() in ('true', '1', 'yes', 'on')
     return await outfit_controller.suggest_outfit_from_wardrobe_item(
         wardrobe_item_id=wardrobe_item_id,
         text_input=text_input,
         location=location,
         generate_model_image=generate_model_image,
         image_model=image_model,
+        use_wardrobe_only=use_wardrobe_only_bool,
         db=db,
         current_user=current_user
     )

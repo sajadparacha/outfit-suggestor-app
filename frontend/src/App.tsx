@@ -62,6 +62,7 @@ function App() {
     error,
     generateModelImage,
     imageModel,
+    useWardrobeOnly,
     showDuplicateModal,
     setImage,
     setFilters,
@@ -69,6 +70,7 @@ function App() {
     setCurrentSuggestion,
     setGenerateModelImage,
     setImageModel,
+    setUseWardrobeOnly,
     getSuggestion,
     handleUseCachedSuggestion,
     handleGetNewSuggestion,
@@ -325,6 +327,8 @@ function App() {
                 setGenerateModelImage={setGenerateModelImage}
                 imageModel={imageModel}
                 setImageModel={setImageModel}
+                useWardrobeOnly={useWardrobeOnly}
+                setUseWardrobeOnly={setUseWardrobeOnly}
                 modelGenerationEnabled={modelGenerationEnabled}
                 isAuthenticated={isAuthenticated}
                 onAddToWardrobe={async () => {
@@ -460,7 +464,8 @@ function App() {
                   loading,
                   error,
                   showDuplicateModal,
-                  handleUseCachedSuggestion
+                  handleUseCachedSuggestion,
+                  useWardrobeOnly
                 }}
               />
             </ErrorBoundary>

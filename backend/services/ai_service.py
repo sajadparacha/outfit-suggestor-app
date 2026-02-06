@@ -53,7 +53,8 @@ class AIService:
         self, 
         image_base64: str, 
         text_input: str = "",
-        wardrobe_items: Optional[dict] = None
+        wardrobe_items: Optional[dict] = None,
+        wardrobe_only: bool = False
     ) -> Tuple[OutfitSuggestion, Dict[str, any]]:
         """
         Get outfit suggestion from OpenAI based on image analysis
@@ -62,6 +63,7 @@ class AIService:
             image_base64: Base64 encoded image
             text_input: Additional context or preferences
             wardrobe_items: Optional dict of wardrobe items by category (e.g., {"shirt": [...], "trouser": [...]})
+            wardrobe_only: If True, AI must ONLY suggest items from wardrobe (no external suggestions)
             
         Returns:
             Tuple of (OutfitSuggestion object, cost information dict)
@@ -69,7 +71,7 @@ class AIService:
         Raises:
             HTTPException: If API call fails
         """
-        prompt = self._build_prompt(text_input, wardrobe_items)
+        prompt = self._build_prompt(text_input, wardrobe_items, wardrobe_only)
         
         try:
             response = self.client.chat.completions.create(
@@ -128,22 +130,29 @@ class AIService:
                 detail=f"Error calling OpenAI API: {str(e)}"
             )
     
-    def _build_prompt(self, text_input: str = "", wardrobe_items: Optional[dict] = None) -> str:
+    def _build_prompt(self, text_input: str = "", wardrobe_items: Optional[dict] = None, wardrobe_only: bool = False) -> str:
         """
         Build the prompt for OpenAI API
         
         Args:
             text_input: Additional context from user
             wardrobe_items: Optional dict of wardrobe items by category
+            wardrobe_only: If True, ONLY suggest items from wardrobe; do not suggest items they don't have
             
         Returns:
             Formatted prompt string
         """
         wardrobe_context = ""
         if wardrobe_items:
-            wardrobe_context = "\n\n⚠️ IMPORTANT: The user has the following items in their wardrobe. "
-            wardrobe_context += "PRIORITIZE using items from their wardrobe when possible. "
-            wardrobe_context += "Only suggest items they don't have if necessary for a complete outfit.\n\n"
+            if wardrobe_only:
+                wardrobe_context = "\n\n🚫 CRITICAL CONSTRAINT: The user wants suggestions ONLY from their wardrobe. "
+                wardrobe_context += "You MUST NOT suggest any item that is not listed below. "
+                wardrobe_context += "Only recommend combinations using their existing items. "
+                wardrobe_context += "If they don't have a suitable item in a category, say 'Consider adding a [type] to your wardrobe' for that slot.\n\n"
+            else:
+                wardrobe_context = "\n\n⚠️ IMPORTANT: The user has the following items in their wardrobe. "
+                wardrobe_context += "PRIORITIZE using items from their wardrobe when possible. "
+                wardrobe_context += "Only suggest items they don't have if necessary for a complete outfit.\n\n"
             wardrobe_context += "USER'S WARDROBE:\n"
             
             for category, items in wardrobe_items.items():
@@ -165,11 +174,18 @@ class AIService:
                         else:
                             wardrobe_context += f"  - {category} item\n"
             
-            wardrobe_context += "\nWhen making recommendations:\n"
-            wardrobe_context += "1. FIRST check if the user has suitable items in their wardrobe\n"
-            wardrobe_context += "2. If they have matching items, recommend using those (mention 'you already have...')\n"
-            wardrobe_context += "3. Only suggest new items if their wardrobe doesn't have suitable options\n"
-            wardrobe_context += "4. For items from their wardrobe, reference the description/color/brand you listed above\n"
+            if wardrobe_only:
+                wardrobe_context += "\nWhen making recommendations:\n"
+                wardrobe_context += "1. ONLY use items from the wardrobe list above\n"
+                wardrobe_context += "2. Do NOT invent or suggest any item not listed\n"
+                wardrobe_context += "3. Build the outfit by combining their existing items\n"
+                wardrobe_context += "4. For categories with no suitable item, suggest they add one to their wardrobe\n"
+            else:
+                wardrobe_context += "\nWhen making recommendations:\n"
+                wardrobe_context += "1. FIRST check if the user has suitable items in their wardrobe\n"
+                wardrobe_context += "2. If they have matching items, recommend using those (mention 'you already have...')\n"
+                wardrobe_context += "3. Only suggest new items if their wardrobe doesn't have suitable options\n"
+                wardrobe_context += "4. For items from their wardrobe, reference the description/color/brand you listed above\n"
         
         prompt = """
 You are a professional fashion stylist. Analyze the uploaded image of a shirt or blazer and provide a complete outfit suggestion.

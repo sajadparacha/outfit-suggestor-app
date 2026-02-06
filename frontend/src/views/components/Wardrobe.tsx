@@ -15,6 +15,7 @@ interface WardrobeProps {
     error: string | null;
     showDuplicateModal: boolean;
     handleUseCachedSuggestion: () => void;
+    useWardrobeOnly?: boolean; // Used in fallback getSuggestionFromWardrobeItem
   }; // Outfit controller to use same logic as main view
 }
 
@@ -388,7 +389,8 @@ const Wardrobe: React.FC<WardrobeProps> = ({
           '', // text_input - can be enhanced later
           false, // generate_model_image - default to false
           null,
-          'dalle3'
+          'dalle3',
+          false // useWardrobeOnly: fallback path has no outfitController, default to free generation
         );
 
         const suggestion = {

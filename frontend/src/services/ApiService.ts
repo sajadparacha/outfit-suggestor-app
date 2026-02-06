@@ -147,6 +147,8 @@ class ApiService {
    * @param textInput - Additional context or preferences
    * @param generateModelImage - Whether to generate AI model image
    * @param location - User's location for model customization
+   * @param imageModel - Image generation model
+   * @param useWardrobeOnly - If true, only suggest items from user's wardrobe (requires auth)
    * @returns Promise with outfit suggestion
    */
   async getSuggestion(
@@ -154,7 +156,8 @@ class ApiService {
     textInput: string = '',
     generateModelImage: boolean = false,
     location: string | null = null,
-    imageModel: string = 'dalle3'
+    imageModel: string = 'dalle3',
+    useWardrobeOnly: boolean = false
   ): Promise<OutfitResponse> {
     try {
       const formData = new FormData();
@@ -162,6 +165,7 @@ class ApiService {
       formData.append('text_input', textInput);
       formData.append('generate_model_image', generateModelImage.toString());
       formData.append('image_model', imageModel);
+      formData.append('use_wardrobe_only', useWardrobeOnly.toString());
       console.log('FormData - generate_model_image:', generateModelImage.toString());
       console.log('FormData - image_model:', imageModel);
       if (location) {
@@ -291,13 +295,15 @@ class ApiService {
     textInput: string = '',
     generateModelImage: boolean = false,
     location: string | null = null,
-    imageModel: string = 'dalle3'
+    imageModel: string = 'dalle3',
+    useWardrobeOnly: boolean = false
   ): Promise<OutfitResponse> {
     try {
       const formData = new FormData();
       formData.append('text_input', textInput);
       formData.append('generate_model_image', generateModelImage.toString());
       formData.append('image_model', imageModel);
+      formData.append('use_wardrobe_only', useWardrobeOnly.toString());
       if (location) {
         formData.append('location', location);
       }

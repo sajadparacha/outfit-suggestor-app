@@ -20,6 +20,7 @@ interface UseOutfitControllerReturn {
   error: string | null;
   generateModelImage: boolean;
   imageModel: string;
+  useWardrobeOnly: boolean;
   existingSuggestion: OutfitSuggestion | null;
   showDuplicateModal: boolean;
   
@@ -30,6 +31,7 @@ interface UseOutfitControllerReturn {
   setCurrentSuggestion: (suggestion: OutfitSuggestion | null) => void;
   setGenerateModelImage: (generate: boolean) => void;
   setImageModel: (model: string) => void;
+  setUseWardrobeOnly: (use: boolean) => void;
   getSuggestion: (skipDuplicateCheck?: boolean, sourceImage?: File | null) => Promise<void>;
   clearError: () => void;
   handleUseCachedSuggestion: () => void;
@@ -51,6 +53,7 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
   const [error, setError] = useState<string | null>(null);
   const [generateModelImage, setGenerateModelImage] = useState<boolean>(false);
   const [imageModel, setImageModel] = useState<string>("dalle3");
+  const [useWardrobeOnly, setUseWardrobeOnly] = useState<boolean>(false);
   const [existingSuggestion, setExistingSuggestion] = useState<OutfitSuggestion | null>(null);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
 
@@ -121,7 +124,8 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
         prompt, 
         generateModelImage, 
         location || null,
-        imageModel
+        imageModel,
+        useWardrobeOnly
       );
 
       // Debug: Log the response to see if model_image is present
@@ -160,7 +164,7 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
       setError(errorMessage);
       setLoading(false);
     }
-  }, [image, filters, preferenceText, generateModelImage, imageModel, options]);
+  }, [image, filters, preferenceText, generateModelImage, imageModel, useWardrobeOnly, options]);
 
   /**
    * Handle using cached/duplicate suggestion
@@ -209,6 +213,7 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
     error,
     generateModelImage,
     imageModel,
+    useWardrobeOnly,
     existingSuggestion,
     showDuplicateModal,
     
@@ -219,6 +224,7 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
     setCurrentSuggestion,
     setGenerateModelImage,
     setImageModel,
+    setUseWardrobeOnly,
     getSuggestion,
     clearError,
     handleUseCachedSuggestion,
