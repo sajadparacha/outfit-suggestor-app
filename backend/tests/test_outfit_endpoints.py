@@ -63,6 +63,21 @@ class TestOutfitEndpoints:
             headers=auth_headers
         )
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    def test_suggest_outfit_oversized_image_rejected(self, client, auth_headers, oversized_image):
+        """Test outfit suggestion with oversized image returns 400"""
+        files = {"image": oversized_image}
+        data = {"text_input": "casual", "generate_model_image": "false"}
+        response = client.post(
+            "/api/suggest-outfit",
+            files=files,
+            data=data,
+            headers=auth_headers
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        data_res = response.json()
+        assert "detail" in data_res
+        assert "too large" in data_res["detail"].lower()
     
     def test_check_duplicate_no_auth(self, client, sample_image):
         """Test duplicate check without authentication (should work for anonymous)"""

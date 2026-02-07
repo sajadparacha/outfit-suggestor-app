@@ -7,12 +7,13 @@
 import { useState, useCallback } from 'react';
 import { OutfitSuggestion, Filters } from '../models/OutfitModels';
 import ApiService from '../services/ApiService';
-import { compressImage } from '../utils/imageUtils';
+import { compressImageForOutfit } from '../utils/imageUtils';
 import { getLocationString } from '../utils/geolocation';
 
 interface UseOutfitControllerReturn {
   // State
   image: File | null;
+  loadingMessage: string | null;
   filters: Filters;
   preferenceText: string;
   currentSuggestion: OutfitSuggestion | null;
@@ -54,6 +55,7 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
   const [generateModelImage, setGenerateModelImage] = useState<boolean>(false);
   const [imageModel, setImageModel] = useState<string>("dalle3");
   const [useWardrobeOnly, setUseWardrobeOnly] = useState<boolean>(false);
+  const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
   const [existingSuggestion, setExistingSuggestion] = useState<OutfitSuggestion | null>(null);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
 
@@ -74,8 +76,10 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
     setError(null);
 
     try {
-      // Compress image before sending to reduce size
-      const compressedImage = await compressImage(effectiveImage);
+      // Compress image before sending (stricter params for outfit: faster, cheaper AI)
+      setLoadingMessage('Compressing image...');
+      const compressedImage = await compressImageForOutfit(effectiveImage);
+      setLoadingMessage('Generating AI suggestion...');
       
       // Check for duplicate image (unless skipped)
       if (!skipDuplicateCheck) {
@@ -90,9 +94,10 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
               imageUrl: URL.createObjectURL(effectiveImage),
             };
             setExistingSuggestion(suggestion);
-            setShowDuplicateModal(true);
-            setLoading(false);
-            return;
+          setShowDuplicateModal(true);
+          setLoading(false);
+          setLoadingMessage(null);
+          return;
           }
         } catch (duplicateErr) {
           // If duplicate check fails, proceed with AI call anyway
@@ -153,6 +158,7 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
 
       setCurrentSuggestion(suggestion);
       setLoading(false);
+      setLoadingMessage(null);
       
       // Call success callback if provided
       if (options?.onSuggestionSuccess) {
@@ -163,6 +169,7 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
       console.error('Error getting outfit suggestion:', err);
       setError(errorMessage);
       setLoading(false);
+      setLoadingMessage(null);
     }
   }, [image, filters, preferenceText, generateModelImage, imageModel, useWardrobeOnly, options]);
 
@@ -206,6 +213,7 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
   return {
     // State
     image,
+    loadingMessage,
     filters,
     preferenceText,
     currentSuggestion,

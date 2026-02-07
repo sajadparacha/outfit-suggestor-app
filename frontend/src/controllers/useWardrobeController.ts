@@ -6,6 +6,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { WardrobeItem, WardrobeItemCreate, WardrobeItemUpdate, WardrobeSummary } from '../models/WardrobeModels';
 import ApiService from '../services/ApiService';
+import { compressImageForWardrobe } from '../utils/imageUtils';
 
 interface UseWardrobeControllerReturn {
   // State
@@ -123,7 +124,9 @@ export const useWardrobeController = (): UseWardrobeControllerReturn => {
     setError(null);
     
     try {
-      await ApiService.addWardrobeItem(itemData, image);
+      // Compress image before sending (wardrobe params: higher quality for storage)
+      const imageToSend = image ? await compressImageForWardrobe(image) : undefined;
+      await ApiService.addWardrobeItem(itemData, imageToSend);
       // Reload wardrobe after adding (reset to page 1)
       await loadWardrobe(selectedCategory || undefined, searchQuery || undefined, 1);
       await loadSummary();
@@ -148,7 +151,8 @@ export const useWardrobeController = (): UseWardrobeControllerReturn => {
     setError(null);
     
     try {
-      await ApiService.updateWardrobeItem(itemId, itemData, image);
+      const imageToSend = image ? await compressImageForWardrobe(image) : undefined;
+      await ApiService.updateWardrobeItem(itemId, itemData, imageToSend);
       // Reload wardrobe after updating
       await loadWardrobe(selectedCategory || undefined, searchQuery || undefined, currentPage);
       await loadSummary();

@@ -46,7 +46,7 @@ class WardrobeController:
         """
         try:
             # Validate image
-            validate_image(image, max_size_mb=20)
+            validate_image(image)
             
             # Encode image to base64
             image_base64 = encode_image(image.file)
@@ -100,7 +100,7 @@ class WardrobeController:
             # Encode image if provided
             image_data = None
             if image:
-                validate_image(image, max_size_mb=20)
+                validate_image(image)
                 image_data = encode_image(image.file)
             
             # Add wardrobe item (simplified - only category, color, description)
@@ -241,7 +241,7 @@ class WardrobeController:
             # Encode new image if provided
             update_data = item_data.model_dump(exclude_unset=True)
             if image:
-                validate_image(image, max_size_mb=20)
+                validate_image(image)
                 update_data['image_data'] = encode_image(image.file)
             
             # Update item
@@ -361,7 +361,7 @@ class WardrobeController:
         """
         try:
             # Validate and encode image
-            validate_image(image, max_size_mb=20)
+            validate_image(image)
             image_data = encode_image(image.file)
             
             # Check for duplicate

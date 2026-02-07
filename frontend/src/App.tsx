@@ -55,6 +55,7 @@ function App() {
   // Controllers (Business Logic)
   const {
     image,
+    loadingMessage,
     filters,
     preferenceText,
     currentSuggestion,
@@ -331,6 +332,7 @@ function App() {
                 setUseWardrobeOnly={setUseWardrobeOnly}
                 modelGenerationEnabled={modelGenerationEnabled}
                 isAuthenticated={isAuthenticated}
+                onFileReject={(msg) => showToast(msg, 'error')}
                 onAddToWardrobe={async () => {
                   if (!image) {
                     showToast('Please upload an image first to add it to your wardrobe', 'error');
@@ -881,7 +883,7 @@ function App() {
       />
 
       {/* Loading Overlay - Disables entire app when generating suggestion */}
-      <LoadingOverlay isLoading={loading} />
+      <LoadingOverlay isLoading={loading} message={loadingMessage || 'Generating AI suggestion...'} />
 
       {/* Footer */}
       <Footer />

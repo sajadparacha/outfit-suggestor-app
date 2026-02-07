@@ -1,4 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { isValidImageSize, formatFileSize } from '../../utils/imageUtils';
+import { CLIENT_MAX_SIZE_MB } from '../../constants/imageLimits';
 
 interface Filters {
   occasion: string;
@@ -25,6 +27,7 @@ interface SidebarProps {
   isAuthenticated?: boolean;
   onAddToWardrobe?: () => void;
   addingToWardrobe?: boolean;
+  onFileReject?: (message: string) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -45,7 +48,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   modelGenerationEnabled = false,
   isAuthenticated = false,
   onAddToWardrobe,
-  addingToWardrobe = false
+  addingToWardrobe = false,
+  onFileReject
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -81,6 +85,11 @@ const Sidebar: React.FC<SidebarProps> = ({
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      if (!isValidImageSize(file, CLIENT_MAX_SIZE_MB)) {
+        onFileReject?.(`Image must be under ${CLIENT_MAX_SIZE_MB}MB (current: ${formatFileSize(file.size)})`);
+        event.target.value = '';
+        return;
+      }
       setImage(file);
     }
   };
@@ -115,6 +124,10 @@ const Sidebar: React.FC<SidebarProps> = ({
     if (files && files.length > 0) {
       const file = files[0];
       if (file.type.startsWith('image/')) {
+        if (!isValidImageSize(file, CLIENT_MAX_SIZE_MB)) {
+          onFileReject?.(`Image must be under ${CLIENT_MAX_SIZE_MB}MB (current: ${formatFileSize(file.size)})`);
+          return;
+        }
         setImage(file);
       }
     }
@@ -226,14 +239,14 @@ const Sidebar: React.FC<SidebarProps> = ({
               <p className="text-sm text-gray-600 font-medium">
                 {isDragging ? 'Drop your photo here!' : 'Drag & Drop or Click'}
               </p>
-              <p className="text-xs text-gray-400">JPG, PNG up to 10MB</p>
+              <p className="text-xs text-gray-400">JPG, PNG, WebP up to {CLIENT_MAX_SIZE_MB}MB</p>
             </div>
           )}
         </div>
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/jpg,image/png,image/webp"
           onChange={handleFileSelect}
           className="hidden"
           aria-label="File input for clothing photo"

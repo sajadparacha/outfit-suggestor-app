@@ -3,6 +3,8 @@
  * Helper functions for image processing and validation
  */
 
+import { OUTFIT_MAX_WIDTH, OUTFIT_MAX_HEIGHT, OUTFIT_QUALITY, OUTFIT_MAX_SIZE_MB, WARDROBE_MAX_WIDTH, WARDROBE_MAX_HEIGHT, WARDROBE_QUALITY, WARDROBE_MAX_SIZE_MB } from '../constants/imageLimits';
+
 /**
  * Validate image file type
  * @param file - File to validate
@@ -155,4 +157,18 @@ export const compressImage = async (
     
     reader.readAsDataURL(file);
   });
+};
+
+/**
+ * Compress image for outfit suggestion (stricter: smaller payload, cheaper AI)
+ */
+export const compressImageForOutfit = (file: File): Promise<File> => {
+  return compressImage(file, OUTFIT_MAX_WIDTH, OUTFIT_MAX_HEIGHT, OUTFIT_QUALITY, OUTFIT_MAX_SIZE_MB);
+};
+
+/**
+ * Compress image for wardrobe add (higher quality for storage)
+ */
+export const compressImageForWardrobe = (file: File): Promise<File> => {
+  return compressImage(file, WARDROBE_MAX_WIDTH, WARDROBE_MAX_HEIGHT, WARDROBE_QUALITY, WARDROBE_MAX_SIZE_MB);
 };

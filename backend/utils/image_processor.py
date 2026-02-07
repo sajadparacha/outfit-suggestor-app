@@ -5,17 +5,23 @@ from PIL import Image
 from fastapi import UploadFile, HTTPException
 
 
-def validate_image(image: UploadFile, max_size_mb: int = 20) -> None:
+def validate_image(image: UploadFile, max_size_mb: int | None = None) -> None:
     """
     Validate uploaded image file
     
     Args:
         image: Uploaded image file
-        max_size_mb: Maximum allowed file size in MB
+        max_size_mb: Maximum allowed file size in MB (default: from Config.MAX_IMAGE_SIZE_MB)
         
     Raises:
         HTTPException: If validation fails
     """
+    if max_size_mb is None:
+        try:
+            from config import Config
+            max_size_mb = Config.MAX_IMAGE_SIZE_MB
+        except ImportError:
+            max_size_mb = 10
     # Validate content type
     if not image.content_type or not image.content_type.startswith('image/'):
         raise HTTPException(status_code=400, detail="File must be an image")

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import Wardrobe from './Wardrobe';
 import type { WardrobeItem } from '../../models/WardrobeModels';
 
@@ -85,5 +85,15 @@ describe('Wardrobe page', () => {
     expect(screen.getByText('Test shirt')).toBeInTheDocument();
     expect(screen.getByText('Blue')).toBeInTheDocument();
     expect(screen.getByText(/Color:/)).toBeInTheDocument();
+  });
+
+  it('Add modal displays image size limit and accept attribute', () => {
+    render(<Wardrobe />);
+    fireEvent.click(screen.getByRole('button', { name: 'Add Your First Item' }));
+    expect(screen.getByText(/JPG, PNG, WebP up to 10MB/i)).toBeInTheDocument();
+    const inputs = document.querySelectorAll('input[type="file"]');
+    expect(inputs.length).toBeGreaterThan(0);
+    const firstInput = inputs[0] as HTMLInputElement;
+    expect(firstInput.accept).toBe('image/jpeg,image/jpg,image/png,image/webp');
   });
 });

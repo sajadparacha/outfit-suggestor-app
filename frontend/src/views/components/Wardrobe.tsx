@@ -2,6 +2,8 @@ import React, { useState, useRef } from 'react';
 import { useWardrobeController } from '../../controllers/useWardrobeController';
 import { WardrobeItem, WardrobeItemCreate, WardrobeItemUpdate } from '../../models/WardrobeModels';
 import ApiService from '../../services/ApiService';
+import { isValidImageSize, formatFileSize } from '../../utils/imageUtils';
+import { WARDROBE_MAX_SIZE_MB } from '../../constants/imageLimits';
 import ConfirmationModal from './ConfirmationModal';
 
 interface WardrobeProps {
@@ -164,6 +166,10 @@ const Wardrobe: React.FC<WardrobeProps> = ({
   };
 
   const handleImageUpload = async (file: File) => {
+    if (!isValidImageSize(file, WARDROBE_MAX_SIZE_MB)) {
+      setAnalysisError(`Image must be under ${WARDROBE_MAX_SIZE_MB}MB (current: ${formatFileSize(file.size)})`);
+      return;
+    }
     setImageFile(file);
     setAnalyzing(true);
     setAnalysisError(null);
@@ -740,17 +746,18 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                       >
                         <div className="text-4xl mb-2">📸</div>
                         <p className="text-gray-600 font-medium">Click to upload</p>
-                        <p className="text-sm text-gray-500 mt-1">JPG, PNG up to 20MB</p>
+                        <p className="text-sm text-gray-500 mt-1">JPG, PNG, WebP up to {WARDROBE_MAX_SIZE_MB}MB</p>
                       </div>
                       <input
                         ref={fileInputRef}
                         type="file"
-                        accept="image/*"
+                        accept="image/jpeg,image/jpg,image/png,image/webp"
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (file) {
                             handleImageUpload(file);
                           }
+                          e.target.value = '';
                         }}
                         className="hidden"
                       />
@@ -934,12 +941,12 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                         >
                           <div className="text-6xl mb-4">📸</div>
                           <p className="text-gray-600 font-medium">Click to upload or drag and drop</p>
-                          <p className="text-sm text-gray-500 mt-2">JPG, PNG up to 20MB</p>
+                          <p className="text-sm text-gray-500 mt-2">JPG, PNG, WebP up to {WARDROBE_MAX_SIZE_MB}MB</p>
                         </div>
                         <input
                           ref={fileInputRef}
                           type="file"
-                          accept="image/*"
+                          accept="image/jpeg,image/jpg,image/png,image/webp"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) {
@@ -1060,7 +1067,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                             <input
                               ref={editFileInputRef}
                               type="file"
-                              accept="image/*"
+                              accept="image/jpeg,image/jpg,image/png,image/webp"
                               onChange={(e) => {
                                 const file = e.target.files?.[0];
                                 if (file) {
@@ -1151,7 +1158,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                           <input
                             ref={editFileInputRef}
                             type="file"
-                            accept="image/*"
+                            accept="image/jpeg,image/jpg,image/png,image/webp"
                             onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (file) {

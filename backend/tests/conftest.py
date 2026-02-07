@@ -236,6 +236,17 @@ def sample_image():
 
 
 @pytest.fixture
+def oversized_image():
+    """Create an image file larger than MAX_IMAGE_SIZE_MB (default 10MB) for rejection tests"""
+    # Create 11 MB of content (exceeds 10 MB limit)
+    size = 11 * 1024 * 1024
+    content = b'\xff' * size  # Use JPEG-like bytes for content-type consistency
+    img_bytes = BytesIO(content)
+    img_bytes.seek(0)
+    return ("oversized_image.jpg", img_bytes, "image/jpeg")
+
+
+@pytest.fixture
 def sample_image_file(sample_image):
     """Create a file-like object for image upload"""
     return sample_image[1]

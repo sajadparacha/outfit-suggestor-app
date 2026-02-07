@@ -53,6 +53,21 @@ class TestWardrobeEndpoints:
             headers=auth_headers
         )
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    def test_add_wardrobe_item_oversized_image_rejected(self, client, auth_headers, oversized_image):
+        """Test adding wardrobe item with oversized image returns 400"""
+        files = {"image": oversized_image}
+        data = {"category": "shirt", "color": "Blue", "description": "Test"}
+        response = client.post(
+            "/api/wardrobe",
+            files=files,
+            data=data,
+            headers=auth_headers
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        data_res = response.json()
+        assert "detail" in data_res
+        assert "too large" in data_res["detail"].lower()
     
     def test_get_wardrobe_unauthorized(self, client):
         """Test getting wardrobe without authentication"""

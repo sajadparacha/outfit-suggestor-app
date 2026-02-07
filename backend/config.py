@@ -54,6 +54,10 @@ class Config:
     # Lower values = stricter matching (0 = identical, 5 = very similar, 10 = similar)
     IMAGE_SIMILARITY_THRESHOLD = int(os.getenv("IMAGE_SIMILARITY_THRESHOLD", 5))
     
+    # Max uploaded image size in MB (enforced by backend validate_image)
+    # Use MAX_IMAGE_SIZE_MB=10 to match frontend; can tune per environment
+    MAX_IMAGE_SIZE_MB = int(os.getenv("MAX_IMAGE_SIZE_MB", 10))
+    
     # JWT Authentication settings
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
     JWT_ALGORITHM = "HS256"

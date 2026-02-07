@@ -59,7 +59,7 @@ class OutfitController:
         """
         try:
             # Validate image
-            validate_image(image, max_size_mb=20)
+            validate_image(image)
             
             # Encode image to base64
             image_base64 = encode_image(image.file)
@@ -257,7 +257,7 @@ class OutfitController:
         """
         try:
             # Validate and encode image
-            validate_image(image, max_size_mb=20)
+            validate_image(image)
             image_base64 = encode_image(image.file)
             
             # For anonymous users, don't check duplicates
