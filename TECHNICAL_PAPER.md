@@ -8,13 +8,13 @@
 
 ## Abstract
 
-This paper presents the design, implementation, and evaluation of an AI-powered outfit suggestion system that leverages multiple machine learning models to provide personalized fashion recommendations. The system integrates OpenAI GPT-4 Vision for sophisticated outfit analysis and recommendation generation, DALL-E 3 and Stable Diffusion for high-fidelity visual generation, and Hugging Face BLIP/ViT-GPT2 models for cost-effective wardrobe item recognition. A key innovation is the implementation of perceptual hashing algorithms for intelligent duplicate detection, reducing API costs by up to 40% while maintaining user experience quality.
+This paper presents the design, implementation, and evaluation of an AI-powered outfit suggestion system that leverages multiple machine learning models to provide personalized fashion recommendations. The system integrates OpenAI GPT-4 Vision for sophisticated outfit analysis and recommendation generation, DALL-E 3, Stable Diffusion, and Nano Banana for high-fidelity visual generation, and Hugging Face BLIP/ViT-GPT2 models for cost-effective wardrobe item recognition. Users can toggle between wardrobe-only mode (suggestions from their wardrobe) and free generation. Images are validated (max 10MB, configurable via MAX_IMAGE_SIZE_MB) and compressed client-side before upload for efficient AI processing. A key innovation is the implementation of perceptual hashing algorithms for intelligent duplicate detection, reducing API costs by up to 40% while maintaining user experience quality.
 
 The architecture employs a service-oriented design with strict separation of concerns, implementing MVC (Model-View-Controller) patterns on both backend and frontend. The system supports multiple client platforms (Web, iOS, Android) through a unified RESTful API, enabling seamless cross-platform synchronization of wardrobe data and outfit history.
 
 Our evaluation demonstrates that the multi-model approach achieves a balance between cost efficiency and recommendation quality. The system successfully processes clothing images of varying quality, handles partial outfit combinations, and provides contextually appropriate recommendations based on user preferences and geographical location. The perceptual hashing implementation achieves 92% accuracy in duplicate detection with a similarity threshold of 5, effectively preventing redundant API calls while maintaining a false positive rate below 3%.
 
-The system has been deployed in production, serving web clients through GitHub Pages and backend services through Railway cloud infrastructure. Performance metrics show average API response times of 2-5 seconds for outfit recommendations and 10-30 seconds for AI-generated model images, with overall system availability exceeding 99.5%.
+The system has been deployed in production, serving web clients through GitHub Pages and backend services through Railway cloud infrastructure. Admin users can view access logs and usage reports. Performance metrics show average API response times of 2-5 seconds for outfit recommendations and 10-30 seconds for AI-generated model images, with overall system availability exceeding 99.5%.
 
 **Keywords**: Fashion AI, Outfit Recommendation, Computer Vision, Multi-Model Architecture, Perceptual Hashing, Service-Oriented Architecture, Personalized Styling, Cross-Platform Application
 
@@ -98,6 +98,7 @@ The system follows a service-oriented architecture with clear separation between
 - API Design (RESTful)
 - Database Schema Design
 - Authentication and Security
+- Access logging for Admin Reports (filter by date, user, endpoint, operation)
 
 ### 3.3 Frontend Architecture
 - MVC Pattern Implementation
@@ -209,6 +210,9 @@ Duplicate detection runs synchronously before AI processing, adding minimal late
 - Alternative image generation model
 - Comparison with DALL-E 3
 
+### 5.5 Nano Banana
+- Additional model image generation option
+
 ---
 
 ## 6. Key Features and Innovations
@@ -222,13 +226,20 @@ Duplicate detection runs synchronously before AI processing, adding minimal late
 - AI-powered item recognition
 - Automatic categorization
 - Intelligent duplicate prevention
+- **Wardrobe mode toggle**: Users can choose "Use my wardrobe only" (suggestions exclusively from wardrobe items) or "Free generation" (AI suggests any outfit). API parameter `use_wardrobe_only` controls this behavior.
 
 ### 6.3 Multi-Model Strategy
 - Cost optimization through model selection
 - Free alternatives for wardrobe analysis
 - Quality vs. cost trade-offs
 
-### 6.4 Perceptual Hashing for Duplicates
+### 6.4 Image Size Limits and Optimization
+- Maximum upload size: 10MB (configurable via MAX_IMAGE_SIZE_MB in backend config)
+- Client-side validation before upload (JPG, PNG, WebP supported)
+- Smart compression: outfit suggestions use stricter limits (5MB, 1280×1280px) for faster AI processing; wardrobe items use higher quality (10MB, 1920×1920px) for better storage
+- Loading overlay indicates "Compressing image…" during client-side compression
+
+### 6.5 Perceptual Hashing for Duplicates
 - Algorithm explanation
 - Threshold configuration
 - Performance metrics
@@ -274,7 +285,7 @@ PostgreSQL queries on the production database:
 
 #### 7.1.3 Image Processing Performance
 
-- Image compression (max 20MB → optimized): 200-500ms
+- Image validation (max 10MB, JPG/PNG/WebP) and compression (outfit: 5MB/1280px; wardrobe: 10MB/1920px): 200-500ms
 - Base64 encoding/decoding: 50-150ms
 - Perceptual hash computation: 50-100ms
 
@@ -487,7 +498,7 @@ This paper presents novel technical contributions in multi-model AI architecture
 
 - OpenAI GPT-4 Vision API for outfit analysis
 - Hugging Face BLIP and ViT-GPT2 models for image understanding
-- DALL-E 3 and Stable Diffusion for image generation
+- DALL-E 3, Stable Diffusion, and Nano Banana for image generation
 - Perceptual hashing algorithms for duplicate detection
 - FastAPI and PostgreSQL for backend architecture
 - React and TypeScript for frontend implementation

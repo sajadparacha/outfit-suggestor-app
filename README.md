@@ -1,6 +1,6 @@
 # AI Outfit Suggestor App
 
-**Version 4.0.0** - Multi-Model AI Application
+**Version 5.0.0** - Multi-Model AI Application
 
 An AI-powered outfit suggestion application that analyzes clothing images and provides complete outfit recommendations. Built with a **modular, multi-platform architecture** that separates the backend API from client applications. Supports web, iOS, and Android clients.
 
@@ -22,7 +22,8 @@ An AI-powered outfit suggestion application that analyzes clothing images and pr
 - 👔 **Digital Wardrobe**: Build and manage your digital wardrobe with AI-powered item recognition
 - 🤖 **AI-Powered Item Analysis**: Automatic categorization using Hugging Face BLIP or ViT-GPT2 models (free alternatives to OpenAI)
 - 🔍 **Intelligent Duplicate Detection**: Perceptual hashing prevents duplicate wardrobe items and outfit suggestions, saving API costs
-- 🎨 **Category Filtering**: Filter wardrobe by categories (Shirts, Trousers, Blazers, Shoes, Belts, Other)
+- 🎨 **Wardrobe Mode Toggle**: Choose &quot;Use my wardrobe only&quot; (suggestions from your wardrobe) or &quot;Free generation&quot; (AI suggests any outfit). Toggle in sidebar when logged in.
+- 🗂️ **Category Filtering**: Filter wardrobe by categories (Shirts, Trousers, Blazers, Shoes, Belts, Other)
 - ➕ **One-Step Addition**: Upload image → AI analyzes → Review and save
 
 ### User Experience
@@ -31,6 +32,8 @@ An AI-powered outfit suggestion application that analyzes clothing images and pr
 - 📱 **Modern UI**: Clean, responsive React interface with MVC architecture
 - 🔌 **Multi-Platform Ready**: RESTful API supports Web, iOS, and Android clients
 - 🔄 **Real-time Updates**: Auto-refresh history and wardrobe updates
+- 📷 **Smart Image Optimization**: Client-side validation (max 10MB), compression before upload. JPG, PNG, WebP supported.
+- 📊 **Admin Reports**: Admin users can view access logs, usage statistics, and API activity
 
 ---
 
@@ -81,6 +84,7 @@ ios-client/OutfitSuggestor/
 - **OpenAI GPT-4 Vision** - AI-powered outfit analysis and recommendations
 - **OpenAI DALL-E 3** - AI-powered model image generation
 - **Stable Diffusion (Replicate)** - Alternative model image generation
+- **Nano Banana** - Additional model image generation option
 - **Hugging Face BLIP** - Free wardrobe item analysis (alternative to OpenAI)
 - **Hugging Face ViT-GPT2** - Alternative wardrobe item analysis model
 - **PostgreSQL** - Database for outfit history, wardrobe, and user data
@@ -148,6 +152,7 @@ ios-client/OutfitSuggestor/
    DATABASE_URL=postgresql://user:password@localhost:5432/outfit_suggestor
    PORT=8001
    IMAGE_SIMILARITY_THRESHOLD=5
+   MAX_IMAGE_SIZE_MB=10   # Max upload size (configurable, default 10)
    
    # Optional - for free wardrobe analysis
    HUGGINGFACE_API_TOKEN=your_hf_token_here  # Optional
@@ -202,6 +207,8 @@ ios-client/OutfitSuggestor/
 - **[API_DOCUMENTATION.md](./API_DOCUMENTATION.md)** - REST API reference for developers
 - **[SETUP_GUIDE.md](./SETUP_GUIDE.md)** - Detailed setup instructions
 - **[DEPLOYMENT_INSTRUCTIONS.md](./DEPLOYMENT_INSTRUCTIONS.md)** - Railway and GitHub Pages deployment
+- **[TEST_CASE_EXECUTION_GUIDE.md](./TEST_CASE_EXECUTION_GUIDE.md)** - Test case execution and manual testing guide
+- **[DB_SCHEMA_COMPARISON.md](./DB_SCHEMA_COMPARISON.md)** - Database schema comparison and migrations
 - **[ios-client/README.md](./ios-client/README.md)** - iOS client setup guide
 - **[ios-client/SETUP_GUIDE.md](./ios-client/SETUP_GUIDE.md)** - iOS Xcode configuration
 
@@ -224,11 +231,12 @@ ios-client/OutfitSuggestor/
 - `POST /api/suggest-outfit` - Analyze image and get outfit recommendations
   - **Body**: `multipart/form-data`
   - **Fields**: 
-    - `image` (required): Image file
+    - `image` (required): Image file (max 10MB, JPG/PNG/WebP)
     - `text_input` (optional): Additional context or preferences
     - `generate_model_image` (optional): Boolean to generate AI model image
     - `image_model` (optional): "dalle3", "stable-diffusion", or "nano-banana"
     - `location` (optional): User location for personalized model appearance
+    - `use_wardrobe_only` (optional): Boolean; if true, suggestions use only items from user's wardrobe (requires auth)
   - **Response**: Complete outfit suggestion with optional model image
 - `POST /api/check-duplicate` - Check if image already exists in history
 - `GET /api/outfit-history` - Get outfit suggestion history (requires auth)
@@ -366,11 +374,14 @@ outfit-suggestor-app/
 - **OpenAI GPT-4 Vision**: Outfit analysis and recommendations
 - **OpenAI DALL-E 3**: Model image generation (default)
 - **Stable Diffusion (Replicate)**: Alternative image generation
+- **Nano Banana**: Additional image generation option
 - **Hugging Face BLIP**: Free wardrobe item analysis
 - **Hugging Face ViT-GPT2**: Alternative wardrobe analysis
 
 ### Smart Features
+- **Wardrobe Mode Toggle**: Use wardrobe-only or free generation for outfit suggestions
 - **Perceptual Hashing**: Detects similar images to prevent duplicates
+- **Image Optimization**: Max 10MB validation, client-side compression (outfit: 5MB/1280px; wardrobe: 10MB/1920px)
 - **Category Filtering**: Filter wardrobe by clothing categories
 - **AI Auto-Analysis**: Automatically extracts item details from photos
 - **Search & Filter**: Search outfit history with filters
@@ -414,8 +425,8 @@ We welcome contributions! Here's how:
 - Check Railway database connection if using Railway
 
 ### Image upload fails
-- Ensure image is under 20MB (automatically compressed on frontend)
-- Check file format (JPEG, PNG, GIF, BMP, WebP supported)
+- Ensure image is under 10MB (configurable via MAX_IMAGE_SIZE_MB). Client validates and compresses before upload.
+- Check file format (JPEG, PNG, WebP supported)
 - Verify internet connection for AI API calls
 
 ### Model image not generating
@@ -461,7 +472,7 @@ For questions or support:
 
 ## 📊 Project Status
 
-- ✅ **Version**: 4.0.0
+- ✅ **Version**: 5.0.0
 - ✅ **Backend**: Fully functional
 - ✅ **Frontend**: Fully functional
 - ✅ **iOS Client**: Available

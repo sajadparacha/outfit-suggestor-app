@@ -1,14 +1,14 @@
 # Technical Abstract: AI-Powered Intelligent Outfit Suggestion System with Multi-Model Image Generation
 
 **Author:** Sajjad Ahmed Paracha  
-**Date:** December 2024  
+**Date:** January 2026  
 **Category:** Artificial Intelligence, Computer Vision, Fashion Technology, Full-Stack Web Application
 
 ---
 
 ## 1. Abstract
 
-This document presents a comprehensive technical overview of an AI-powered outfit suggestion system that leverages advanced computer vision and multi-model generative AI to provide personalized fashion recommendations. The system integrates OpenAI's GPT-4 Vision for clothing analysis, DALL-E 3 and Stable Diffusion for model image generation, and employs perceptual hashing for intelligent duplicate detection. The architecture implements a clean MVC (Model-View-Controller) pattern with a RESTful API backend supporting multiple client platforms including web and iOS applications.
+This document presents a comprehensive technical overview of an AI-powered outfit suggestion system that leverages advanced computer vision and multi-model generative AI to provide personalized fashion recommendations. The system integrates OpenAI's GPT-4 Vision for clothing analysis, DALL-E 3, Stable Diffusion, and Nano Banana for model image generation, and employs perceptual hashing for intelligent duplicate detection. Users can toggle between wardrobe-only mode (suggestions from their wardrobe) and free generation (AI suggests any outfit). Images are validated (max 10MB) and compressed client-side before upload for efficient AI processing. The architecture implements a clean MVC (Model-View-Controller) pattern with a RESTful API backend supporting multiple client platforms including web and iOS applications.
 
 ---
 
@@ -25,15 +25,17 @@ The system processes user-uploaded clothing images using GPT-4 Vision to extract
 ### 2.2 Context-Aware Outfit Recommendations
 The AI generates personalized outfit suggestions that:
 - Complete partial outfits by identifying existing items and suggesting missing components
+- Support wardrobe mode toggle: "Use my wardrobe only" (suggestions exclusively from user's wardrobe) or "Free generation" (AI suggests any outfit)
 - Respect user-specified wardrobe limitations (available colors, style preferences)
 - Consider contextual factors (occasion, season, location)
 - Provide reasoning for each recommendation to enhance user understanding
 
 ### 2.3 Multi-Model Image Generation
-The system supports dual AI image generation pipelines:
+The system supports multiple AI image generation pipelines:
 - **DALL-E 3 Integration**: High-quality text-to-image generation with detailed prompt engineering using GPT-4 Vision analysis
 - **Stable Diffusion Integration**: Image-to-image generation capabilities for enhanced color and pattern preservation from uploaded clothing
-- **Model Selection Toggle**: Users can choose between generation models (DALL-E 3 or Stable Diffusion) based on their needs
+- **Nano Banana Integration**: Additional model image generation option
+- **Model Selection Toggle**: Users can choose between generation models (DALL-E 3, Stable Diffusion, or Nano Banana) based on their needs
 - **Feature Flag Control**: Model generation toggle controlled via URL parameter (`?modelGeneration=true`) for controlled feature rollout and A/B testing
 - **Location-Based Customization**: Model appearance adapts to geographical context for culturally appropriate styling
 
@@ -90,7 +92,7 @@ The application follows a strict MVC (Model-View-Controller) architecture:
 ## 4. Key Technical Features
 
 ### 4.1 Image Processing Pipeline
-1. **Upload Processing**: Client-side image compression and base64 encoding
+1. **Upload Processing**: Client-side validation (max 10MB, JPG/PNG/WebP), smart compression (outfit mode: 5MB/1280px; wardrobe mode: 10MB/1920px), and base64 encoding
 2. **Analysis Stage**: GPT-4 Vision analysis for detailed clothing extraction
 3. **Prompt Engineering**: Dynamic prompt construction combining:
    - Analyzed clothing details
@@ -149,6 +151,7 @@ The system uniquely combines:
 - **GPT-4 Vision** for semantic understanding and recommendation generation
 - **DALL-E 3** for high-quality, prompt-controlled image generation
 - **Stable Diffusion** for reference-preserving image-to-image generation
+- **Nano Banana** for additional image generation capability
 - Seamless fallback mechanisms between models
 
 ### 5.2 Reference-Preserving Generation
@@ -183,9 +186,9 @@ Innovative approach to maintain exact clothing details:
 
 ### 6.1 API Endpoints
 - `POST /api/suggest-outfit`: Core outfit suggestion endpoint
-  - Accepts: Image (base64), text preferences, filters, location, image_model (dalle3/stable-diffusion)
+  - Accepts: Image (base64, max 10MB), text preferences, filters, location, image_model (dalle3/stable-diffusion/nano-banana), use_wardrobe_only (boolean; when true, suggestions use only items from user's wardrobe)
   - Returns: Structured outfit recommendation with reasoning
-  - Optional: Model image generation with model selection toggle (DALL-E 3 or Stable Diffusion)
+  - Optional: Model image generation with model selection toggle (DALL-E 3, Stable Diffusion, or Nano Banana)
   - Feature flag: Model generation option controlled via frontend URL parameter `?modelGeneration=true`
 
 - `POST /api/check-duplicate`: Duplicate detection endpoint
@@ -202,7 +205,7 @@ Innovative approach to maintain exact clothing details:
 - **User**: Authentication and profile management
 
 ### 6.3 Image Format Specifications
-- Input: JPEG, PNG (auto-converted to JPEG)
+- Input: JPEG, PNG, WebP (max 10MB; client-side validation and compression before upload)
 - Processing: Base64 encoding for API transmission
 - Storage: Base64 encoded strings in PostgreSQL
 - Generation: 1024x1792 (DALL-E 3 portrait) or 1024x1024 (Stable Diffusion)
@@ -264,5 +267,5 @@ This technical abstract describes a proprietary system developed by Sajjad Ahmed
 
 ---
 
-*This document was generated on December 2024 to document the technical architecture and innovations of the AI Outfit Suggestor application.*
+*This document was generated on January 2026 to document the technical architecture and innovations of the AI Outfit Suggestor application.*
 

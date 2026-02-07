@@ -48,18 +48,20 @@ const About: React.FC = () => {
             <p className="text-gray-700 leading-relaxed mb-4">
               The AI intelligently understands what you're wearing and suggests complementary pieces 
               to complete your look. If you upload a combination, it identifies what's already there 
-              and suggests the missing elements. The app now features a <strong>smart wardrobe management system</strong> 
-              that learns your collection and prioritizes suggestions based on items you already own, 
-              making outfit recommendations more practical and personalized.
+              and suggests the missing elements. Choose your suggestion mode: <strong>use wardrobe only</strong> 
+              (AI suggests outfits only from items in your wardrobe) or <strong>free generation</strong> 
+              (AI can suggest any outfit). The app features a <strong>smart wardrobe management system</strong> 
+              that learns your collection and makes recommendations practical and personalized.
             </p>
             <p className="text-gray-700 leading-relaxed">
               Built with cutting-edge technologies including OpenAI's GPT-4 Vision, DALL-E 3, Stable Diffusion, 
-              Hugging Face BLIP and ViT-GPT2 models, React, FastAPI, and PostgreSQL, this app combines the 
-              power of artificial intelligence with modern web development to deliver a seamless fashion 
-              experience. Generate stunning AI-powered model images to visualize complete outfits, manage 
-              and edit your wardrobe with intelligent duplicate detection, get outfit suggestions directly from 
-              wardrobe items, and track costs transparently. All suggestions are saved to your searchable history 
-              with full-screen image viewing capabilities for easy reference.
+              Nano Banana, Hugging Face BLIP and ViT-GPT2 models, React, FastAPI, and PostgreSQL, this app 
+              combines the power of artificial intelligence with modern web development to deliver a seamless 
+              fashion experience. Generate stunning AI-powered model images to visualize complete outfits, 
+              manage and edit your wardrobe with intelligent duplicate detection, get outfit suggestions directly 
+              from wardrobe items, and track costs transparently. Images are optimized with smart compression 
+              (max 10MB, JPG/PNG/WebP) for fast uploads and efficient AI processing. All suggestions are saved 
+              to your searchable history with full-screen image viewing. Admins can view access logs and usage reports.
             </p>
           </div>
 
@@ -137,8 +139,8 @@ const About: React.FC = () => {
                 <div className="flex items-start space-x-3">
                   <span className="text-2xl">🎨</span>
                   <div>
-                    <h4 className="font-semibold text-gray-800">Wardrobe-Aware Suggestions</h4>
-                    <p className="text-sm text-gray-600">The AI analyzes your wardrobe and prioritizes outfit suggestions using items you already own, making recommendations practical and personalized to your collection.</p>
+                    <h4 className="font-semibold text-gray-800">Wardrobe Mode Toggle</h4>
+                    <p className="text-sm text-gray-600">Choose &quot;Use my wardrobe only&quot; to get suggestions exclusively from items in your wardrobe, or &quot;Free generation&quot; to let AI suggest any outfit. Toggle in the sidebar when logged in.</p>
                   </div>
                 </div>
               </div>
@@ -174,6 +176,27 @@ const About: React.FC = () => {
                   <div>
                     <h4 className="font-semibold text-gray-800">Multiple AI Models</h4>
                     <p className="text-sm text-gray-600">Choose between DALL-E 3 and Stable Diffusion for model image generation, and BLIP or ViT-GPT2 for wardrobe item analysis - each optimized for different use cases.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Image & Admin Section */}
+            <div className="mb-8">
+              <h4 className="text-lg font-semibold text-gray-700 mb-4 pb-2 border-b border-gray-200">📷 Image & Admin</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-start space-x-3">
+                  <span className="text-2xl">📷</span>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Smart Image Optimization</h4>
+                    <p className="text-sm text-gray-600">Automatic client-side validation (max 10MB) and compression. Outfit suggestions use stricter limits (5MB, 1280px) for faster AI processing; wardrobe items use higher quality (10MB, 1920px) for better storage.</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <span className="text-2xl">📊</span>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Admin Reports</h4>
+                    <p className="text-sm text-gray-600">Admin users can view access logs, usage statistics, and recent API activity. Filter by date range, user, endpoint, and operation type. Client-side table filtering for quick searches.</p>
                   </div>
                 </div>
               </div>
@@ -307,6 +330,9 @@ const About: React.FC = () => {
                 Stable Diffusion
               </span>
               <span className="px-4 py-2 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium">
+                Nano Banana
+              </span>
+              <span className="px-4 py-2 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium">
                 Hugging Face BLIP
               </span>
               <span className="px-4 py-2 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium">
@@ -330,7 +356,7 @@ const About: React.FC = () => {
           {/* Version Info */}
           <div className="border-t border-gray-200 pt-6 mt-8 text-center">
             <p className="text-sm text-gray-500">
-              Version 4.0.0 • © 2024 Sajjad Ahmed Paracha • All Rights Reserved
+              Version 5.0.0 • © 2025 Sajjad Ahmed Paracha • All Rights Reserved
             </p>
           </div>
         </div>
@@ -352,7 +378,7 @@ const About: React.FC = () => {
           <div className="text-3xl mb-3">🎨</div>
           <h4 className="font-semibold text-gray-800 mb-2">AI Fashion Expert</h4>
           <p className="text-sm text-gray-600">
-            Powered by OpenAI's GPT-4 Vision for styling advice, BLIP/ViT-GPT2 for wardrobe analysis, and DALL-E 3 & Stable Diffusion for stunning outfit visualizations
+            Powered by OpenAI GPT-4 Vision for styling, BLIP/ViT-GPT2 for wardrobe analysis, and DALL-E 3, Stable Diffusion & Nano Banana for outfit visualizations. Wardrobe mode toggle for personalized vs free suggestions.
           </p>
         </div>
 
