@@ -1,9 +1,9 @@
 """Outfit suggestion API routes - Thin HTTP layer using controllers"""
-from fastapi import APIRouter, File, UploadFile, Form, Depends
+from fastapi import APIRouter, File, UploadFile, Form, Depends, Body
 from typing import Optional, List
 from sqlalchemy.orm import Session
 
-from models.outfit import OutfitSuggestion
+from models.outfit import OutfitSuggestion, WardrobeOnlyOutfitRequest
 from models.user import User
 from models.database import get_db
 from controllers.outfit_controller import OutfitController
@@ -148,6 +148,39 @@ async def suggest_outfit_from_wardrobe_item(
         generate_model_image=generate_model_image,
         image_model=image_model,
         use_wardrobe_only=use_wardrobe_only_bool,
+        db=db,
+        current_user=current_user
+    )
+
+
+@router.post("/suggest-outfit-from-wardrobe", response_model=OutfitSuggestion)
+async def suggest_outfit_from_wardrobe_only(
+    body: WardrobeOnlyOutfitRequest = Body(...),
+    outfit_controller: OutfitController = Depends(get_outfit_controller),
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_optional_user)
+):
+    """
+    Suggest an outfit using ONLY the user's wardrobe items (no uploaded image).
+    
+    Args:
+        body: WardrobeOnlyOutfitRequest with occasion, season, style, text_input
+        outfit_controller: Outfit controller dependency injection
+        db: Database session dependency injection
+        current_user: Current authenticated user (required)
+        
+    Returns:
+        OutfitSuggestion object with recommendation built from wardrobe items only
+    """
+    if not current_user:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    return await outfit_controller.suggest_outfit_from_wardrobe_only(
+        text_input=body.text_input or "",
+        occasion=body.occasion,
+        season=body.season,
+        style=body.style,
         db=db,
         current_user=current_user
     )

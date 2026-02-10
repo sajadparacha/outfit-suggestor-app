@@ -73,6 +73,7 @@ function App() {
     setImageModel,
     setUseWardrobeOnly,
     getSuggestion,
+    getRandomSuggestion,
     handleUseCachedSuggestion,
     handleGetNewSuggestion,
   } = useOutfitController({
@@ -323,6 +324,7 @@ function App() {
                 image={image}
                 setImage={setImage}
                 onGetSuggestion={handleGetSuggestion}
+                onGetRandomSuggestion={isAuthenticated ? getRandomSuggestion : undefined}
                 loading={loading}
                 generateModelImage={generateModelImage}
                 setGenerateModelImage={setGenerateModelImage}
@@ -392,6 +394,7 @@ function App() {
                 suggestion={currentSuggestion}
                 loading={loading}
                 error={error}
+                hasImage={!!image}
                 onLike={handleLike}
                 onDislike={handleDislike}
                 onNext={handleGetSuggestion}

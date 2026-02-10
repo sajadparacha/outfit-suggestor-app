@@ -74,6 +74,36 @@ class WardrobeController:
                 detail=f"Error analyzing wardrobe item: {str(e)}"
             )
     
+    async def get_random_outfit(
+        self,
+        occasion: str,
+        season: str,
+        style: str,
+        db: Session,
+        current_user: User
+    ) -> dict:
+        """
+        Get a random outfit from user's wardrobe based on occasion, season, and style.
+        
+        Args:
+            occasion: Occasion filter (casual, business, formal, etc.)
+            season: Season filter (all, spring, summer, fall, winter)
+            style: Style filter (modern, classic, etc.)
+            db: Database session
+            current_user: Current authenticated user
+            
+        Returns:
+            Dict with shirt, trouser, blazer, shoes, belt, reasoning, matching_wardrobe_items
+        """
+        outfit = self.wardrobe_service.get_random_outfit(
+            db=db,
+            user_id=current_user.id,
+            occasion=occasion,
+            season=season,
+            style=style
+        )
+        return outfit
+    
     async def add_wardrobe_item(
         self,
         image: Optional[UploadFile],

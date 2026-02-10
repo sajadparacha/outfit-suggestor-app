@@ -169,6 +169,110 @@ class OutfitController:
                 status_code=500,
                 detail=f"Internal server error: {str(e)}"
             )
+
+    async def suggest_outfit_from_wardrobe_only(
+        self,
+        text_input: str,
+        occasion: str,
+        season: str,
+        style: str,
+        db: Session,
+        current_user: Optional[User]
+    ) -> OutfitSuggestion:
+        """
+        Suggest an outfit using ONLY the user's wardrobe items (no uploaded image).
+        
+        Args:
+            text_input: Extra free-text preferences from user
+            occasion: Occasion (casual, business, formal, etc.)
+            season: Season (all, spring, summer, fall, winter)
+            style: Style preference (modern, classic, etc.)
+            db: Database session
+            current_user: Current authenticated user (required)
+        
+        Returns:
+            OutfitSuggestion object
+        """
+        from services.wardrobe_service import WardrobeService
+
+        try:
+            if not current_user:
+                raise HTTPException(
+                    status_code=401,
+                    detail="Authentication required to use wardrobe-only suggestions"
+                )
+
+            wardrobe_service = WardrobeService()
+
+            # Load wardrobe items grouped by main outfit categories
+            wardrobe_items_dict = wardrobe_service.get_wardrobe_items_by_categories(
+                db=db,
+                user_id=current_user.id,
+                categories=["shirt", "trouser", "blazer", "shoes", "belt"]
+            )
+
+            # Build combined context for the AI prompt
+            filters_context = f"Occasion: {occasion}, Season: {season}, Style: {style}"
+            combined_text_input = filters_context
+            extra = text_input.strip()
+            if extra:
+                combined_text_input += f". Additional preferences: {extra}"
+
+            # Call AI service in text-only, wardrobe-only mode
+            suggestion, cost_info = self.ai_service.get_outfit_suggestion_text_only(
+                text_input=combined_text_input,
+                wardrobe_items=wardrobe_items_dict,
+                wardrobe_only=True
+            )
+
+            # Match wardrobe items to outfit suggestion (for UI purposes)
+            all_wardrobe_items, _ = wardrobe_service.get_user_wardrobe(
+                db=db,
+                user_id=current_user.id,
+                category=None,
+                search=None,
+                limit=None,
+                offset=None
+            )
+            matching_items = self.wardrobe_matcher.match_wardrobe_to_outfit(
+                suggestion,
+                all_wardrobe_items
+            )
+            suggestion.matching_wardrobe_items = matching_items
+
+            # Save to history (no image_data/model_image)
+            self.outfit_service.save_outfit_history(
+                db=db,
+                user_id=current_user.id,
+                text_input=combined_text_input,
+                image_data=None,
+                model_image=None,
+                suggestion=suggestion
+            )
+
+            # Ensure cost info fields
+            if "model_image_cost" not in cost_info:
+                cost_info["model_image_cost"] = 0.0
+            if "total_cost" not in cost_info or cost_info["total_cost"] == cost_info.get("gpt4_cost", 0):
+                cost_info["total_cost"] = cost_info.get("gpt4_cost", 0) + cost_info.get("model_image_cost", 0)
+
+            # Attach cost to suggestion
+            if hasattr(suggestion, 'model_dump'):
+                suggestion_dict = suggestion.model_dump()
+                suggestion_dict["cost"] = cost_info
+                return OutfitSuggestion(**suggestion_dict)
+            else:
+                suggestion.cost = cost_info
+                return suggestion
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(
+                status_code=500,
+                detail=f"Internal server error: {str(e)}"
+            )
     
     async def _generate_model_image(
         self,

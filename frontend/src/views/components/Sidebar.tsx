@@ -16,6 +16,7 @@ interface SidebarProps {
   image: File | null;
   setImage: (file: File | null) => void;
   onGetSuggestion: () => void;
+  onGetRandomSuggestion?: () => void;
   loading: boolean;
   generateModelImage: boolean;
   setGenerateModelImage: (generate: boolean) => void;
@@ -38,6 +39,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   preferenceText,
   setPreferenceText,
   onGetSuggestion,
+  onGetRandomSuggestion,
   loading,
   generateModelImage,
   setGenerateModelImage,
@@ -555,6 +557,22 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         )}
       </div>
+      )}
+
+      {/* Random Outfit from Wardrobe Button - Only for logged-in users */}
+      {isAuthenticated && onGetRandomSuggestion && (
+        <button
+          onClick={onGetRandomSuggestion}
+          disabled={loading}
+          className={`w-full py-3 px-4 mb-4 rounded-lg font-semibold transition-all ${
+            loading
+              ? 'bg-gray-300 cursor-not-allowed text-gray-500'
+              : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
+          }`}
+          aria-label="Get random outfit from wardrobe"
+        >
+          🎲 Random Outfit from Wardrobe
+        </button>
       )}
 
       {/* Get Suggestion Button */}

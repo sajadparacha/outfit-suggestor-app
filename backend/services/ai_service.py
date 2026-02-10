@@ -129,6 +129,71 @@ class AIService:
                 status_code=500, 
                 detail=f"Error calling OpenAI API: {str(e)}"
             )
+
+    def get_outfit_suggestion_text_only(
+        self,
+        text_input: str = "",
+        wardrobe_items: Optional[dict] = None,
+        wardrobe_only: bool = True
+    ) -> Tuple[OutfitSuggestion, Dict[str, any]]:
+        """
+        Get outfit suggestion from OpenAI using ONLY text (no uploaded image).
+        Typically used for wardrobe-only suggestions based on the user's saved items.
+        
+        Args:
+            text_input: Context/preferences including occasion/season/style
+            wardrobe_items: Dict of wardrobe items by category
+            wardrobe_only: If True, MUST ONLY use wardrobe items (no external items)
+        
+        Returns:
+            Tuple of (OutfitSuggestion, cost_info)
+        """
+        prompt = self._build_prompt(text_input, wardrobe_items, wardrobe_only)
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": prompt
+                            }
+                        ]
+                    }
+                ],
+                max_tokens=self.max_tokens,
+                temperature=self.temperature
+            )
+
+            usage = response.usage
+            input_tokens = usage.prompt_tokens if usage else 0
+            output_tokens = usage.completion_tokens if usage else 0
+
+            gpt4_cost = CostCalculator.calculate_gpt4_cost(
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                has_image=False
+            )
+
+            content = response.choices[0].message.content
+            suggestion = self._parse_response(content)
+
+            cost_info = {
+                "gpt4_cost": gpt4_cost,
+                "total_cost": gpt4_cost,
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "model_image_cost": 0.0
+            }
+
+            return suggestion, cost_info
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error calling OpenAI API (text-only): {str(e)}"
+            )
     
     def _build_prompt(self, text_input: str = "", wardrobe_items: Optional[dict] = None, wardrobe_only: bool = False) -> str:
         """

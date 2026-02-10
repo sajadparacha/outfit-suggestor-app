@@ -1,5 +1,6 @@
 """Wardrobe Service - Business logic for wardrobe operations"""
-from typing import Optional, List
+import random
+from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
 from datetime import datetime
@@ -343,6 +344,89 @@ class WardrobeService:
         
         return summary
     
+    def get_random_outfit(
+        self,
+        db: Session,
+        user_id: int,
+        occasion: str = "casual",
+        season: str = "all",
+        style: str = "modern"
+    ) -> Dict[str, Any]:
+        """
+        Get a random outfit from user's wardrobe based on occasion, season, and style filters.
+        Randomly selects one item per category (shirt, trouser, blazer, shoes, belt).
+        
+        Args:
+            db: Database session
+            user_id: User ID
+            occasion: Occasion filter (casual, business, formal, etc.)
+            season: Season filter (all, spring, summer, fall, winter)
+            style: Style filter (modern, classic, etc.)
+            
+        Returns:
+            Dict with shirt, trouser, blazer, shoes, belt, reasoning, matching_wardrobe_items
+        """
+        categories = ["shirt", "trouser", "blazer", "shoes", "belt"]
+        
+        # Build search string from filters
+        search_parts = [occasion] if occasion else []
+        if season and season.lower() != "all":
+            search_parts.append(season)
+        if style:
+            search_parts.append(style)
+        search_query = " ".join(search_parts) if search_parts else None
+        
+        result = {}
+        matching_items = {cat: [] for cat in categories}
+        
+        for category in categories:
+            # First try with search filter
+            items, _ = self.get_user_wardrobe(
+                db=db,
+                user_id=user_id,
+                category=category,
+                search=search_query,
+                limit=None,
+                offset=None
+            )
+            # If no items match search, get all items in category
+            if not items:
+                items, _ = self.get_user_wardrobe(
+                    db=db,
+                    user_id=user_id,
+                    category=category,
+                    search=None,
+                    limit=None,
+                    offset=None
+                )
+            if items:
+                chosen = random.choice(items)
+                desc = chosen.description or ""
+                color = chosen.color or ""
+                text = f"{color} {category}".strip() + (f" - {desc}" if desc else "")
+                result[category] = text
+                matching_items[category] = [{
+                    "id": chosen.id,
+                    "category": chosen.category,
+                    "color": chosen.color,
+                    "description": chosen.description,
+                    "image_data": chosen.image_data
+                }]
+            else:
+                result[category] = f"No {category} in wardrobe"
+        
+        occasion_label = occasion or "casual"
+        season_label = season if season and season.lower() != "all" else "all seasons"
+        style_label = style or "modern"
+        result["reasoning"] = (
+            f"Random outfit from your wardrobe based on your preferences: "
+            f"{occasion_label}, {season_label}, {style_label}. "
+            "Each item was randomly selected from your collection."
+        )
+        result["matching_wardrobe_items"] = matching_items
+        
+        return result
+
     def get_wardrobe_items_by_categories(
         self,
         db: Session,

@@ -85,4 +85,27 @@ describe('Sidebar file validation', () => {
     render(<Sidebar {...defaultProps} />);
     expect(screen.getByText(/JPG, PNG, WebP up to 10MB/i)).toBeInTheDocument();
   });
+
+  it('does not show random outfit button when not authenticated', () => {
+    render(<Sidebar {...defaultProps} />);
+    expect(
+      screen.queryByText(/Random Outfit from Wardrobe/i)
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows random outfit button when authenticated and handler provided', () => {
+    const onGetRandomSuggestion = jest.fn();
+    render(
+      <Sidebar
+        {...defaultProps}
+        isAuthenticated={true}
+        onGetRandomSuggestion={onGetRandomSuggestion}
+      />
+    );
+
+    const button = screen.getByText(/Random Outfit from Wardrobe/i);
+    expect(button).toBeInTheDocument();
+    fireEvent.click(button);
+    expect(onGetRandomSuggestion).toHaveBeenCalledTimes(1);
+  });
 });

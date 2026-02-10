@@ -102,6 +102,67 @@ class TestOutfitSuggestionIntegration:
         
         logger.info("=" * 70 + "\n")
     
+    def test_wardrobe_only_suggestion_flow(
+        self,
+        client,
+        test_user,
+        auth_headers,
+        wardrobe_item,
+        db
+    ):
+        """
+        Integration test: Wardrobe-only outfit suggestion (no uploaded image)
+        
+        Steps:
+        1. User is authenticated
+        2. User already has at least one wardrobe item (via fixture)
+        3. Call /api/suggest-outfit-from-wardrobe with occasion/season/style
+        4. Verify we don't get auth errors and, on success, basic fields are present
+        """
+        logger.info("\n" + "=" * 70)
+        logger.info("TEST: Wardrobe-only outfit suggestion flow")
+        logger.info("=" * 70)
+
+        payload = {
+            "occasion": "casual",
+            "season": "all",
+            "style": "modern",
+            "text_input": "Prefer something comfortable from my wardrobe"
+        }
+
+        response = client.post(
+            "/api/suggest-outfit-from-wardrobe",
+            json=payload,
+            headers=auth_headers
+        )
+
+        # Must not be blocked by auth
+        assert response.status_code != status.HTTP_401_UNAUTHORIZED
+        assert response.status_code != status.HTTP_403_FORBIDDEN
+
+        if response.status_code == status.HTTP_200_OK:
+            data = response.json()
+            logger.info(f"  ✓ Wardrobe-only suggestion received: {data.get('shirt', 'N/A')[:40]}...")
+            # Basic shape checks
+            assert "shirt" in data
+            assert "trouser" in data
+            assert "blazer" in data
+            assert "shoes" in data
+            assert "belt" in data
+            assert "reasoning" in data
+
+            # History should contain at least one entry for this user
+            history_resp = client.get("/api/outfit-history", headers=auth_headers)
+            assert history_resp.status_code == status.HTTP_200_OK
+            history = history_resp.json()
+            assert isinstance(history, list)
+            assert len(history) >= 1
+
+        else:
+            logger.warning(f"  ⚠ Wardrobe-only suggestion failed (status: {response.status_code})")
+
+        logger.info("=" * 70 + "\n")
+    
     def test_complete_flow_with_duplicate_get_new_suggestion(
         self,
         client,

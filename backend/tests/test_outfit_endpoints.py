@@ -204,3 +204,53 @@ class TestOutfitEndpoints:
         )
         # May fail if OpenAI API key not set, but should not be validation error
         assert response.status_code != status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    def test_suggest_outfit_from_wardrobe_only_unauthorized(self, client):
+        """Wardrobe-only suggestion should require authentication"""
+        payload = {
+            "occasion": "casual",
+            "season": "all",
+            "style": "modern",
+            "text_input": "test wardrobe-only suggestion"
+        }
+        response = client.post("/api/suggest-outfit-from-wardrobe", json=payload)
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_suggest_outfit_from_wardrobe_only_authenticated(self, client, auth_headers, wardrobe_item):
+        """
+        Wardrobe-only suggestion with authentication.
+        May fail due to OpenAI issues, but must not be a 401/403 auth failure.
+        """
+        payload = {
+            "occasion": "casual",
+            "season": "all",
+            "style": "modern",
+            "text_input": "Prefer something comfortable and modern"
+        }
+        response = client.post(
+            "/api/suggest-outfit-from-wardrobe",
+            json=payload,
+            headers=auth_headers
+        )
+        assert response.status_code != status.HTTP_401_UNAUTHORIZED
+        assert response.status_code != status.HTTP_403_FORBIDDEN
+
+    def test_suggest_outfit_from_wardrobe_only_no_items(self, client, auth_headers):
+        """
+        Wardrobe-only suggestion when user has an empty wardrobe.
+        May return 500 due to AI issues, but must not be 401/403 and must not crash validation.
+        """
+        payload = {
+            "occasion": "casual",
+            "season": "all",
+            "style": "modern",
+            "text_input": "Trying wardrobe-only with no items"
+        }
+        response = client.post(
+            "/api/suggest-outfit-from-wardrobe",
+            json=payload,
+            headers=auth_headers
+        )
+        # Auth must still succeed
+        assert response.status_code != status.HTTP_401_UNAUTHORIZED
+        assert response.status_code != status.HTTP_403_FORBIDDEN

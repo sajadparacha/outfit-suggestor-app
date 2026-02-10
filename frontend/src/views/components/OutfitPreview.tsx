@@ -11,6 +11,7 @@ interface OutfitPreviewProps {
   onNavigateToWardrobe?: (category?: string) => void; // Optional callback to navigate to wardrobe
   isAuthenticated?: boolean; // Whether user is logged in
   onAddToWardrobe?: () => void; // Callback to add uploaded item to wardrobe
+  hasImage?: boolean; // Whether an image was uploaded for this suggestion
 }
 
 const OutfitPreview: React.FC<OutfitPreviewProps> = ({
@@ -22,7 +23,8 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
   onNext,
   onNavigateToWardrobe,
   isAuthenticated = false,
-  onAddToWardrobe
+  onAddToWardrobe,
+  hasImage = false
 }) => {
   // Hook must be first
   const [showDetails, setShowDetails] = React.useState(false);
@@ -275,7 +277,12 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
           <button
             onClick={onNext}
-            className="px-4 py-3 bg-teal-500 text-white rounded-lg font-medium hover:bg-teal-600 transition-all transform hover:scale-105 shadow-md"
+            disabled={!hasImage}
+            className={`px-4 py-3 rounded-lg font-medium transition-all shadow-md ${
+              hasImage
+                ? 'bg-teal-500 text-white hover:bg-teal-600 transform hover:scale-105'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
             aria-label="Get next suggestion"
           >
             🔄 Next
@@ -283,7 +290,12 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
           
           <button
             onClick={onLike}
-            className="px-4 py-3 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-all transform hover:scale-105 shadow-md"
+            disabled={!hasImage}
+            className={`px-4 py-3 rounded-lg font-medium transition-all shadow-md ${
+              hasImage
+                ? 'bg-green-500 text-white hover:bg-green-600 transform hover:scale-105'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
             aria-label="Like this outfit"
           >
             👍 Like
@@ -291,7 +303,12 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
           
           <button
             onClick={onDislike}
-            className="px-4 py-3 bg-gray-500 text-white rounded-lg font-medium hover:bg-gray-600 transition-all transform hover:scale-105 shadow-md"
+            disabled={!hasImage}
+            className={`px-4 py-3 rounded-lg font-medium transition-all shadow-md ${
+              hasImage
+                ? 'bg-gray-500 text-white hover:bg-gray-600 transform hover:scale-105'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
             aria-label="Dislike this outfit"
           >
             👎 Dislike
@@ -303,7 +320,12 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
           <div className="flex flex-col items-center gap-2">
             <button
               onClick={onAddToWardrobe}
-              className="px-6 py-3 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600 transition-all transform hover:scale-105 shadow-md flex items-center gap-2"
+              disabled={!hasImage}
+              className={`px-6 py-3 rounded-lg font-medium transition-all transform shadow-md flex items-center gap-2 ${
+                hasImage
+                  ? 'bg-indigo-500 text-white hover:bg-indigo-600 hover:scale-105'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
               aria-label="Add new item to your wardrobe"
             >
               <span>👔</span>

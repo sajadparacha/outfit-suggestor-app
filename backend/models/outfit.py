@@ -19,3 +19,11 @@ class OutfitRequest(BaseModel):
     """Model for outfit suggestion request"""
     text_input: str = Field(default="", description="Additional context or preferences")
 
+
+class WardrobeOnlyOutfitRequest(BaseModel):
+    """Request body for wardrobe-only outfit suggestion (no uploaded image)."""
+    occasion: str = Field(default="casual", description="Occasion (casual, business, formal, etc.)")
+    season: str = Field(default="all", description="Season (all, spring, summer, fall, winter)")
+    style: str = Field(default="modern", description="Style preference (modern, classic, etc.)")
+    text_input: str = Field(default="", description="Optional extra preferences or notes from user")
+

@@ -114,6 +114,28 @@ async def add_wardrobe_item(
     )
 
 
+@router.get("/random-outfit")
+async def get_random_outfit(
+    occasion: str = Query("casual", description="Occasion filter"),
+    season: str = Query("all", description="Season filter"),
+    style: str = Query("modern", description="Style filter"),
+    wardrobe_controller: WardrobeController = Depends(get_wardrobe_controller),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Get a random outfit from your wardrobe based on occasion, season, and style.
+    Requires authentication.
+    """
+    return await wardrobe_controller.get_random_outfit(
+        occasion=occasion,
+        season=season,
+        style=style,
+        db=db,
+        current_user=current_user
+    )
+
+
 @router.get("")
 async def get_wardrobe(
     category: Optional[str] = None,

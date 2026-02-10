@@ -34,6 +34,7 @@ interface UseOutfitControllerReturn {
   setImageModel: (model: string) => void;
   setUseWardrobeOnly: (use: boolean) => void;
   getSuggestion: (skipDuplicateCheck?: boolean, sourceImage?: File | null) => Promise<void>;
+  getRandomSuggestion: () => Promise<void>;
   clearError: () => void;
   handleUseCachedSuggestion: () => void;
   handleGetNewSuggestion: () => Promise<void>;
@@ -195,6 +196,44 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
   }, [existingSuggestion, image, options]);
 
   /**
+   * Get wardrobe-only outfit suggestion (no image needed)
+   * Uses occasion, season, style filters and optional free-text preferences
+   */
+  const getRandomSuggestion = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const trimmed = preferenceText.trim();
+      const data = await ApiService.getWardrobeOnlySuggestion(
+        filters.occasion,
+        filters.season,
+        filters.style,
+        trimmed
+      );
+      const suggestion: OutfitSuggestion = {
+        ...data,
+        id: Date.now().toString(),
+        model_image: null,
+        raw: data,
+        meta: {
+          usedPrompt: `Wardrobe-only: Occasion=${filters.occasion}, Season=${filters.season}, Style=${filters.style}${
+            trimmed ? `, Notes=${trimmed}` : ''
+          }`
+        }
+      };
+      setCurrentSuggestion(suggestion);
+      if (options?.onSuggestionSuccess) {
+        options.onSuggestionSuccess();
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters.occasion, filters.season, filters.style, preferenceText, options]);
+
+  /**
    * Handle getting new AI suggestion (user chose to ignore duplicate)
    */
   const handleGetNewSuggestion = useCallback(async () => {
@@ -234,6 +273,7 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
     setImageModel,
     setUseWardrobeOnly,
     getSuggestion,
+    getRandomSuggestion,
     clearError,
     handleUseCachedSuggestion,
     handleGetNewSuggestion,

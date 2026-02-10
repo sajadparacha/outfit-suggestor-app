@@ -205,6 +205,53 @@ class ApiService {
   }
 
   /**
+   * Get wardrobe-only outfit suggestion (no uploaded image)
+   * Uses occasion, season, style, and optional free-text preferences
+   */
+  async getWardrobeOnlySuggestion(
+    occasion: string,
+    season: string,
+    style: string,
+    textInput: string = ''
+  ): Promise<OutfitResponse> {
+    try {
+      const url = `${this.baseUrl}/api/suggest-outfit-from-wardrobe`;
+      const body = {
+        occasion,
+        season,
+        style,
+        text_input: textInput,
+      };
+
+      const response = await this.fetchWithLogging(url, {
+        method: 'POST',
+        headers: this.getHeaders(true, false), // include auth token for wardrobe-only endpoint
+        body: JSON.stringify(body),
+      });
+
+      const responseData = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to get wardrobe-only suggestion';
+        if (responseData) {
+          const error: ApiError = responseData;
+          errorMessage = error.detail || errorMessage;
+        } else {
+          errorMessage = `Server error: ${response.status} ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      return responseData as OutfitResponse;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('An unexpected error occurred');
+    }
+  }
+
+  /**
    * Health check endpoint
    * @returns Promise with health status
    */
@@ -695,6 +742,31 @@ class ApiService {
    * Get wardrobe summary/statistics
    * @returns Promise with wardrobe summary
    */
+  /**
+   * Get a random outfit from wardrobe based on occasion, season, and style
+   */
+  async getRandomOutfit(
+    occasion: string = 'casual',
+    season: string = 'all',
+    style: string = 'modern'
+  ): Promise<OutfitResponse> {
+    try {
+      const params = new URLSearchParams({ occasion, season, style });
+      const url = `${this.baseUrl}/api/wardrobe/random-outfit?${params}`;
+      const response = await this.fetchWithLogging(url, {
+        headers: this.getHeaders(),
+      });
+      if (!response.ok) {
+        const error: ApiError = await response.json();
+        throw new Error(error.detail || 'Failed to get random outfit');
+      }
+      return await response.json();
+    } catch (error) {
+      if (error instanceof Error) throw error;
+      throw new Error('Failed to get random outfit');
+    }
+  }
+
   async getWardrobeSummary(): Promise<WardrobeSummary> {
     try {
       const url = `${this.baseUrl}/api/wardrobe/summary`;
