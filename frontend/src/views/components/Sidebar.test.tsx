@@ -89,7 +89,7 @@ describe('Sidebar file validation', () => {
   it('does not show random outfit button when not authenticated', () => {
     render(<Sidebar {...defaultProps} />);
     expect(
-      screen.queryByText(/Random Outfit from Wardrobe/i)
+      screen.queryByText(/Random from Wardrobe/i)
     ).not.toBeInTheDocument();
   });
 
@@ -103,9 +103,32 @@ describe('Sidebar file validation', () => {
       />
     );
 
-    const button = screen.getByText(/Random Outfit from Wardrobe/i);
+    const button = screen.getByRole('button', { name: /get random outfit from wardrobe/i });
     expect(button).toBeInTheDocument();
     fireEvent.click(button);
     expect(onGetRandomSuggestion).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows random from history button when authenticated and handler provided', () => {
+    const onGetRandomFromHistory = jest.fn();
+    render(
+      <Sidebar
+        {...defaultProps}
+        isAuthenticated={true}
+        onGetRandomFromHistory={onGetRandomFromHistory}
+      />
+    );
+
+    const button = screen.getByRole('button', { name: /show random outfit from your history/i });
+    expect(button).toBeInTheDocument();
+    fireEvent.click(button);
+    expect(onGetRandomFromHistory).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not show random from history button when not authenticated', () => {
+    render(<Sidebar {...defaultProps} />);
+    expect(
+      screen.queryByText(/Random from History/i)
+    ).not.toBeInTheDocument();
   });
 });
