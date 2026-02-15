@@ -103,6 +103,67 @@ describe('OutfitPreview', () => {
       expect(screen.getByText(/Classic business casual combination/)).toBeInTheDocument();
     });
 
+    it('uses uploaded image as shirt thumbnail when imageUrl and matching_wardrobe_items.shirt exist', () => {
+      const uploadedImageUrl = 'blob:http://localhost/fake-uploaded-shirt';
+      const suggestionWithWardrobe = {
+        ...baseSuggestion,
+        imageUrl: uploadedImageUrl,
+        matching_wardrobe_items: {
+          shirt: [
+            { id: 1, category: 'shirt', color: 'navy', description: 'Other navy shirt', image_data: 'base64_wardrobe_A' },
+          ],
+          trouser: [],
+          blazer: [],
+          shoes: [],
+          belt: [],
+        },
+      };
+      render(
+        <OutfitPreview
+          suggestion={suggestionWithWardrobe}
+          loading={false}
+          error={null}
+          onLike={mockOnLike}
+          onDislike={mockOnDislike}
+          onNext={mockOnNext}
+          hasImage={true}
+        />
+      );
+      const imgs = screen.getAllByRole('img', { hidden: true });
+      const shirtImg = imgs.find((img) => img.getAttribute('alt') === 'Shirt');
+      expect(shirtImg).toBeDefined();
+      expect(shirtImg?.getAttribute('src')).toBe(uploadedImageUrl);
+    });
+
+    it('uses wardrobe match thumbnail for shirt when no imageUrl', () => {
+      const suggestionWithWardrobe = {
+        ...baseSuggestion,
+        imageUrl: undefined,
+        matching_wardrobe_items: {
+          shirt: [
+            { id: 1, category: 'shirt', color: 'navy', description: 'Navy shirt', image_data: 'base64_wardrobe_shirt' },
+          ],
+          trouser: [],
+          blazer: [],
+          shoes: [],
+          belt: [],
+        },
+      };
+      render(
+        <OutfitPreview
+          suggestion={suggestionWithWardrobe}
+          loading={false}
+          error={null}
+          onLike={mockOnLike}
+          onDislike={mockOnDislike}
+          onNext={mockOnNext}
+        />
+      );
+      const shirtImg = screen.getAllByRole('img').find((img) => img.getAttribute('alt') === 'Shirt');
+      expect(shirtImg).toBeDefined();
+      expect(shirtImg?.getAttribute('src')).toBe('data:image/jpeg;base64,base64_wardrobe_shirt');
+    });
+
     it('displays cost when present', () => {
       const suggestionWithCost = {
         ...baseSuggestion,
