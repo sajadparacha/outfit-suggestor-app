@@ -1,5 +1,5 @@
 import React from 'react';
-import { OutfitSuggestion } from '../../models/OutfitModels';
+import { OutfitSuggestion, MatchingWardrobeItem } from '../../models/OutfitModels';
 
 interface OutfitPreviewProps {
   suggestion: OutfitSuggestion | null;
@@ -29,6 +29,7 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
   // Hook must be first
   const [showDetails, setShowDetails] = React.useState(false);
   const [showFullImage, setShowFullImage] = React.useState(false);
+  const [fullWardrobeImage, setFullWardrobeImage] = React.useState<{ src: string; label: string } | null>(null);
 
   // Format cost for display
   const formatCost = (cost: number): string => {
@@ -56,7 +57,7 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
 
   if (loading) {
     return (
-      <div className="bg-white rounded-2xl shadow-lg p-8">
+      <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:p-8">
         {/* Skeleton Loader */}
         <div className="animate-pulse space-y-6">
           <div className="bg-gray-200 h-96 rounded-xl"></div>
@@ -84,7 +85,7 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
 
   if (error) {
     return (
-      <div className="bg-white rounded-2xl shadow-lg p-8">
+      <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:p-8">
         <div className="text-center">
           <div className="text-6xl mb-4">😞</div>
           <h3 className="text-xl font-semibold text-gray-800 mb-2">Oops! Something went wrong</h3>
@@ -102,14 +103,14 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
 
   if (!suggestion) {
     return (
-      <div className="bg-white rounded-2xl shadow-lg p-12">
+      <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 lg:p-12">
         <div className="text-center">
-          <div className="text-8xl mb-6">👔</div>
-          <h3 className="text-2xl font-semibold text-gray-800 mb-3">Ready for Style Magic?</h3>
-          <p className="text-gray-600 mb-8 max-w-md mx-auto">
+          <div className="text-6xl sm:text-8xl mb-4 sm:mb-6">👔</div>
+          <h3 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-3">Ready for Style Magic?</h3>
+          <p className="text-gray-600 mb-6 sm:mb-8 max-w-md mx-auto text-sm sm:text-base">
             Upload a photo of your clothing and let our AI create the perfect outfit combination for you!
           </p>
-          <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
+          <div className="flex items-center justify-center flex-wrap gap-x-2 gap-y-1 text-sm text-gray-500 px-2">
             <span>👈</span>
             <span>Start by uploading a photo on the left</span>
           </div>
@@ -209,34 +210,56 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
       </div>
 
       {/* Outfit Details */}
-      <div className="p-8">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">Your Perfect Outfit</h2>
+      <div className="p-4 sm:p-6 lg:p-8">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Your Perfect Outfit</h2>
         
-        <div className="grid md:grid-cols-2 gap-4 mb-6">
-          <div className="bg-teal-50 rounded-lg p-4">
-            <div className="text-sm font-medium text-teal-700 mb-1">👕 Shirt</div>
-            <p className="text-gray-800">{suggestion.shirt}</p>
-          </div>
-          
-          <div className="bg-purple-50 rounded-lg p-4">
-            <div className="text-sm font-medium text-purple-700 mb-1">👖 Trousers</div>
-            <p className="text-gray-800">{suggestion.trouser}</p>
-          </div>
-          
-          <div className="bg-blue-50 rounded-lg p-4">
-            <div className="text-sm font-medium text-blue-700 mb-1">🧥 Blazer</div>
-            <p className="text-gray-800">{suggestion.blazer}</p>
-          </div>
-          
-          <div className="bg-amber-50 rounded-lg p-4">
-            <div className="text-sm font-medium text-amber-700 mb-1">👞 Shoes</div>
-            <p className="text-gray-800">{suggestion.shoes}</p>
-          </div>
-          
-          <div className="bg-rose-50 rounded-lg p-4 md:col-span-2">
-            <div className="text-sm font-medium text-rose-700 mb-1">🎀 Belt</div>
-            <p className="text-gray-800">{suggestion.belt}</p>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
+          {(
+            [
+              { key: 'shirt', label: 'Shirt', icon: '👕', value: suggestion.shirt, bg: 'bg-teal-50', text: 'text-teal-700' },
+              { key: 'trouser', label: 'Trousers', icon: '👖', value: suggestion.trouser, bg: 'bg-purple-50', text: 'text-purple-700' },
+              { key: 'blazer', label: 'Blazer', icon: '🧥', value: suggestion.blazer, bg: 'bg-blue-50', text: 'text-blue-700' },
+              { key: 'shoes', label: 'Shoes', icon: '👞', value: suggestion.shoes, bg: 'bg-amber-50', text: 'text-amber-700' },
+              { key: 'belt', label: 'Belt', icon: '🎀', value: suggestion.belt, bg: 'bg-rose-50', text: 'text-rose-700' },
+            ] as const
+          ).map(({ key, label, icon, value, bg, text }) => {
+            const match = suggestion.matching_wardrobe_items?.[key]?.[0] as MatchingWardrobeItem | undefined;
+            // For shirt: prefer the uploaded image as thumbnail (user showed us that shirt)
+            const thumbSrc = key === 'shirt' && suggestion.imageUrl
+              ? suggestion.imageUrl
+              : match?.image_data
+                ? `data:image/jpeg;base64,${match.image_data}`
+                : null;
+            return (
+              <div
+                key={key}
+                className={`${bg} rounded-lg p-4 ${key === 'belt' ? 'md:col-span-2' : ''} flex gap-4 items-start`}
+              >
+                {thumbSrc && (
+                  <button
+                    type="button"
+                    onClick={() => setFullWardrobeImage({ src: thumbSrc, label })}
+                    className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border-2 border-white shadow cursor-pointer hover:ring-2 ring-teal-500 ring-offset-1 transition-all focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    aria-label={`View ${label} full size`}
+                    title="Click to view full size"
+                  >
+                    <img
+                      src={thumbSrc}
+                      alt={label}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className={`text-sm font-medium ${text} mb-1`}>
+                    {icon} {label}
+                    {thumbSrc && <span className="ml-1 text-xs">(from wardrobe)</span>}
+                  </div>
+                  <p className="text-gray-800">{value}</p>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {/* Reasoning */}
@@ -273,14 +296,14 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+        {/* Action Buttons - touch-friendly on mobile */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
           <button
             onClick={onNext}
             disabled={!hasImage}
-            className={`px-4 py-3 rounded-lg font-medium transition-all shadow-md ${
+            className={`min-h-[48px] px-4 py-3 rounded-lg font-medium transition-all shadow-md touch-manipulation ${
               hasImage
-                ? 'bg-teal-500 text-white hover:bg-teal-600 transform hover:scale-105'
+                ? 'bg-teal-500 text-white hover:bg-teal-600 active:scale-[0.98]'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
             aria-label="Get next suggestion"
@@ -291,9 +314,9 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
           <button
             onClick={onLike}
             disabled={!hasImage}
-            className={`px-4 py-3 rounded-lg font-medium transition-all shadow-md ${
+            className={`min-h-[48px] px-4 py-3 rounded-lg font-medium transition-all shadow-md touch-manipulation ${
               hasImage
-                ? 'bg-green-500 text-white hover:bg-green-600 transform hover:scale-105'
+                ? 'bg-green-500 text-white hover:bg-green-600 active:scale-[0.98]'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
             aria-label="Like this outfit"
@@ -304,9 +327,9 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
           <button
             onClick={onDislike}
             disabled={!hasImage}
-            className={`px-4 py-3 rounded-lg font-medium transition-all shadow-md ${
+            className={`min-h-[48px] px-4 py-3 rounded-lg font-medium transition-all shadow-md touch-manipulation ${
               hasImage
-                ? 'bg-gray-500 text-white hover:bg-gray-600 transform hover:scale-105'
+                ? 'bg-gray-500 text-white hover:bg-gray-600 active:scale-[0.98]'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
             aria-label="Dislike this outfit"
@@ -321,9 +344,9 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
             <button
               onClick={onAddToWardrobe}
               disabled={!hasImage}
-              className={`px-6 py-3 rounded-lg font-medium transition-all transform shadow-md flex items-center gap-2 ${
+              className={`min-h-[48px] px-6 py-3 rounded-lg font-medium transition-all shadow-md flex items-center justify-center gap-2 touch-manipulation ${
                 hasImage
-                  ? 'bg-indigo-500 text-white hover:bg-indigo-600 hover:scale-105'
+                  ? 'bg-indigo-500 text-white hover:bg-indigo-600 active:scale-[0.98]'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
               aria-label="Add new item to your wardrobe"
@@ -387,6 +410,33 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Full Wardrobe Item Image */}
+      {fullWardrobeImage && (
+        <div
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 cursor-pointer"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setFullWardrobeImage(null)}
+        >
+          <button
+            onClick={() => setFullWardrobeImage(null)}
+            aria-label="Close full image"
+            className="absolute top-4 right-4 p-3 bg-white/20 hover:bg-white/30 rounded-full text-white text-xl transition-colors z-10"
+          >
+            ✕
+          </button>
+          <img
+            src={fullWardrobeImage.src}
+            alt={`${fullWardrobeImage.label} from wardrobe - Full view`}
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/50 text-white px-4 py-2 rounded-full text-sm">
+            {fullWardrobeImage.label} — Click anywhere to close
           </div>
         </div>
       )}

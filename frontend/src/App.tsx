@@ -27,6 +27,7 @@ import { useToastController } from './controllers/useToastController';
 import { useAuthController } from './controllers/useAuthController';
 import { useWardrobeController } from './controllers/useWardrobeController';
 import ApiService from './services/ApiService';
+import { historyEntryToSuggestion } from './utils/historyUtils';
 
 function App() {
   // Check URL parameter for model generation feature flag
@@ -143,6 +144,24 @@ function App() {
     showToast('Loaded suggestion from history! 📋', 'success');
   };
 
+  const handleGetRandomFromHistory = async () => {
+    try {
+      const fullHistory = await ensureFullHistory();
+      if (fullHistory.length === 0) {
+        showToast('No history yet. Get some outfit suggestions first! 📋', 'error');
+        return;
+      }
+      const randomEntry = fullHistory[Math.floor(Math.random() * fullHistory.length)];
+      const suggestion = historyEntryToSuggestion(randomEntry);
+      setCurrentSuggestion(suggestion);
+      setCurrentView('main');
+      showToast('Random outfit from your history! 📋', 'success');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load history';
+      showToast(errorMessage, 'error');
+    }
+  };
+
   const handleLike = () => {
     showToast('Thanks for the feedback! 👍', 'success');
   };
@@ -198,96 +217,98 @@ function App() {
       {/* Hero Section */}
       <Hero />
 
-      {/* Navigation Tabs */}
+      {/* Navigation Tabs - scrollable on mobile, touch-friendly */}
       <div className="bg-white border-b border-gray-200">
-        <div className="container mx-auto px-4">
-          <div className="flex justify-between items-center">
-            <div className="flex space-x-8">
-              <button
-                onClick={() => setCurrentView('main')}
-                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                  currentView === 'main'
-                    ? 'border-indigo-600 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                🎨 Get Suggestion
-              </button>
-              {isAuthenticated && (
-                <>
-                  <button
-                    onClick={() => setCurrentView('history')}
-                    className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                      currentView === 'history'
-                        ? 'border-indigo-600 text-indigo-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    📋 Outfit History
-                  </button>
-                  <button
-                    onClick={() => setCurrentView('wardrobe')}
-                    className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                      currentView === 'wardrobe'
-                        ? 'border-indigo-600 text-indigo-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    👔 Wardrobe
-                  </button>
-                  {user?.is_admin && (
+        <div className="container mx-auto px-3 sm:px-4">
+          <div className="flex justify-between items-stretch gap-2 min-h-[48px]">
+            <div className="flex flex-1 min-w-0 overflow-x-auto overflow-y-hidden scrollbar-none -mx-3 px-3 sm:mx-0 sm:px-0">
+              <div className="flex items-stretch gap-1 sm:gap-2 flex-nowrap">
+                <button
+                  onClick={() => setCurrentView('main')}
+                  className={`min-h-[44px] py-3 px-2 sm:py-4 sm:px-2 border-b-2 font-medium text-sm whitespace-nowrap transition-colors touch-manipulation ${
+                    currentView === 'main'
+                      ? 'border-indigo-600 text-indigo-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  🎨 Get Suggestion
+                </button>
+                {isAuthenticated && (
+                  <>
                     <button
-                      onClick={() => setCurrentView('reports')}
-                      className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                        currentView === 'reports'
+                      onClick={() => setCurrentView('history')}
+                      className={`min-h-[44px] py-3 px-2 sm:py-4 sm:px-2 border-b-2 font-medium text-sm whitespace-nowrap transition-colors touch-manipulation ${
+                        currentView === 'history'
                           ? 'border-indigo-600 text-indigo-600'
                           : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                       }`}
                     >
-                      📊 Reports
+                      📋 History
                     </button>
-                  )}
-                  <button
-                    onClick={() => setCurrentView('settings')}
-                    className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                      currentView === 'settings'
-                        ? 'border-indigo-600 text-indigo-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    ⚙️ Settings
-                  </button>
-                </>
-              )}
-              <button
-                onClick={() => setCurrentView('about')}
-                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                  currentView === 'about'
-                    ? 'border-indigo-600 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                ℹ️ About
-              </button>
+                    <button
+                      onClick={() => setCurrentView('wardrobe')}
+                      className={`min-h-[44px] py-3 px-2 sm:py-4 sm:px-2 border-b-2 font-medium text-sm whitespace-nowrap transition-colors touch-manipulation ${
+                        currentView === 'wardrobe'
+                          ? 'border-indigo-600 text-indigo-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      👔 Wardrobe
+                    </button>
+                    {user?.is_admin && (
+                      <button
+                        onClick={() => setCurrentView('reports')}
+                        className={`min-h-[44px] py-3 px-2 sm:py-4 sm:px-2 border-b-2 font-medium text-sm whitespace-nowrap transition-colors touch-manipulation ${
+                          currentView === 'reports'
+                            ? 'border-indigo-600 text-indigo-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        📊 Reports
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setCurrentView('settings')}
+                      className={`min-h-[44px] py-3 px-2 sm:py-4 sm:px-2 border-b-2 font-medium text-sm whitespace-nowrap transition-colors touch-manipulation ${
+                        currentView === 'settings'
+                          ? 'border-indigo-600 text-indigo-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      ⚙️ Settings
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={() => setCurrentView('about')}
+                  className={`min-h-[44px] py-3 px-2 sm:py-4 sm:px-2 border-b-2 font-medium text-sm whitespace-nowrap transition-colors touch-manipulation ${
+                    currentView === 'about'
+                      ? 'border-indigo-600 text-indigo-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  ℹ️ About
+                </button>
+              </div>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center gap-2 flex-shrink-0">
               {isAuthenticated ? (
                 <>
-                  <span className="text-sm text-gray-600">
+                  <span className="text-xs sm:text-sm text-gray-600 truncate max-w-[80px] sm:max-w-none">
                     {user?.full_name || user?.email}
                   </span>
                   <button
                     onClick={handleLogout}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                    className="min-h-[44px] px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors touch-manipulation"
                   >
                     Logout
                   </button>
                 </>
               ) : (
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-1 sm:gap-2">
                   <button
                     onClick={() => setShowRegister(true)}
-                    className="px-4 py-2 text-sm font-medium text-indigo-600 bg-white border border-indigo-600 rounded-md hover:bg-indigo-50 transition-colors"
+                    className="min-h-[44px] px-3 py-2 text-sm font-medium text-indigo-600 bg-white border border-indigo-600 rounded-md hover:bg-indigo-50 transition-colors touch-manipulation"
                   >
                     Sign Up
                   </button>
@@ -296,7 +317,7 @@ function App() {
                       setShowRegister(false);
                       setShowLoginModal(true);
                     }}
-                    className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors"
+                    className="min-h-[44px] px-3 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors touch-manipulation"
                   >
                     Login
                   </button>
@@ -309,11 +330,11 @@ function App() {
 
       {/* Main Content */}
       <div 
-        className="container mx-auto px-4 py-8"
+        className="container mx-auto px-3 sm:px-4 py-4 sm:py-8"
         style={{ pointerEvents: loading ? 'none' : 'auto' }}
       >
         {currentView === 'main' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8">
             {/* Left Sidebar */}
             <div className="lg:col-span-3">
               <Sidebar
@@ -325,6 +346,7 @@ function App() {
                 setImage={setImage}
                 onGetSuggestion={handleGetSuggestion}
                 onGetRandomSuggestion={isAuthenticated ? getRandomSuggestion : undefined}
+                onGetRandomFromHistory={isAuthenticated ? handleGetRandomFromHistory : undefined}
                 loading={loading}
                 generateModelImage={generateModelImage}
                 setGenerateModelImage={setGenerateModelImage}

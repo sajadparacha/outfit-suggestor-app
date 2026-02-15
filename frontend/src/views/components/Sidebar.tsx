@@ -17,6 +17,7 @@ interface SidebarProps {
   setImage: (file: File | null) => void;
   onGetSuggestion: () => void;
   onGetRandomSuggestion?: () => void;
+  onGetRandomFromHistory?: () => void;
   loading: boolean;
   generateModelImage: boolean;
   setGenerateModelImage: (generate: boolean) => void;
@@ -40,6 +41,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   setPreferenceText,
   onGetSuggestion,
   onGetRandomSuggestion,
+  onGetRandomFromHistory,
   loading,
   generateModelImage,
   setGenerateModelImage,
@@ -190,7 +192,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-6">
+    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:sticky lg:top-6">
       {/* User Profile */}
       <div className="text-center mb-6 pb-6 border-b border-gray-200">
         <div className="w-20 h-20 bg-gradient-to-br from-teal-400 to-purple-500 rounded-full mx-auto mb-3 flex items-center justify-center text-white text-3xl font-bold">
@@ -200,10 +202,11 @@ const Sidebar: React.FC<SidebarProps> = ({
         <p className="text-sm text-gray-500">Personalized for you</p>
       </div>
 
-      {/* Upload Photo */}
-      <div className="mb-6">
+      {/* Upload Photo - always visible */}
+      <div className="mb-4">
+        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Photo</p>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Upload Clothing Photo
+          Upload or take a photo
         </label>
         <div
           onDragEnter={handleDragEnter}
@@ -318,286 +321,315 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
       )}
 
-      {/* Add to Wardrobe Button - Quick Access */}
-      {isAuthenticated && onAddToWardrobe && (
-        <div className="mb-6">
-          <button
-            onClick={onAddToWardrobe}
-            disabled={!image || loading || addingToWardrobe}
-            className={`w-full px-4 py-3 rounded-lg font-medium transition-all shadow-md flex items-center justify-center space-x-2 ${
-              !image || loading || addingToWardrobe
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-indigo-600 text-white hover:bg-indigo-700'
-            }`}
-            aria-label="Add current image to wardrobe"
-            title={!image ? 'Upload an image first' : addingToWardrobe ? 'Adding to wardrobe...' : 'Add this item to your wardrobe'}
-          >
-            {addingToWardrobe ? (
-              <>
-                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                <span>Adding...</span>
-              </>
-            ) : (
-              <>
-                <span>👔</span>
-                <span>Add to Wardrobe</span>
-              </>
-            )}
-          </button>
-          {!image && (
-            <p className="text-xs text-gray-500 text-center mt-2">
-              Upload an image first to add it to your wardrobe
-            </p>
-          )}
-          {addingToWardrobe && (
-            <p className="text-xs text-indigo-600 text-center mt-2">
-              AI is analyzing your image...
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Wardrobe Mode Toggle - Only for logged-in users */}
-      {isAuthenticated && setUseWardrobeOnly && (
-        <div className="mb-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg border border-amber-200">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <label htmlFor="wardrobe-mode" className="flex items-center cursor-pointer">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-1">
-                    <span className="text-lg">👔</span>
-                    <span className="font-semibold text-gray-800">Use my wardrobe only</span>
-                  </div>
-                  <p className="text-xs text-gray-600">
-                    {useWardrobeOnly
-                      ? 'Suggestions will only include items from your wardrobe'
-                      : 'AI can suggest any outfit (freely generated)'}
-                  </p>
-                </div>
-              </label>
-            </div>
-            <div className="ml-4">
-              <button
-                type="button"
-                id="wardrobe-mode"
-                onClick={() => setUseWardrobeOnly(!useWardrobeOnly)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  useWardrobeOnly ? 'bg-amber-600' : 'bg-gray-300'
-                }`}
-                role="switch"
-                aria-checked={useWardrobeOnly}
-                aria-label="Use wardrobe only mode"
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    useWardrobeOnly ? 'translate-x-6' : 'translate-x-1'
+      {/* Wardrobe section - collapsible for logged-in users */}
+      {isAuthenticated && (onAddToWardrobe || setUseWardrobeOnly) && (
+        <details className="mb-4 group border border-gray-200 rounded-xl overflow-hidden" open>
+          <summary className="flex items-center justify-between px-4 py-3 bg-gray-50 cursor-pointer list-none font-medium text-gray-800 hover:bg-gray-100 transition-colors [&::-webkit-details-marker]:hidden">
+            <span className="flex items-center gap-2">
+              <span>👔</span>
+              <span>Wardrobe</span>
+            </span>
+            <span className="text-gray-400 transition-transform group-open:rotate-180">▼</span>
+          </summary>
+          <div className="p-4 pt-0 space-y-4">
+            {onAddToWardrobe && (
+              <div>
+                <button
+                  onClick={onAddToWardrobe}
+                  disabled={!image || loading || addingToWardrobe}
+                  className={`w-full px-4 py-3 rounded-lg font-medium transition-all shadow-md flex items-center justify-center space-x-2 ${
+                    !image || loading || addingToWardrobe
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-indigo-600 text-white hover:bg-indigo-700'
                   }`}
-                />
-              </button>
+                  aria-label="Add current image to wardrobe"
+                  title={!image ? 'Upload an image first' : addingToWardrobe ? 'Adding to wardrobe...' : 'Add this item to your wardrobe'}
+                >
+                  {addingToWardrobe ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      <span>Adding...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>👔</span>
+                      <span>Add to Wardrobe</span>
+                    </>
+                  )}
+                </button>
+                {!image && (
+                  <p className="text-xs text-gray-500 text-center mt-2">
+                    Upload an image first to add it to your wardrobe
+                  </p>
+                )}
+                {addingToWardrobe && (
+                  <p className="text-xs text-indigo-600 text-center mt-2">
+                    AI is analyzing your image...
+                  </p>
+                )}
+              </div>
+            )}
+            {setUseWardrobeOnly && (
+              <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg border border-amber-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <label htmlFor="wardrobe-mode" className="flex items-center cursor-pointer">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <span className="font-semibold text-gray-800">Use my wardrobe only</span>
+                        </div>
+                        <p className="text-xs text-gray-600">
+                          {useWardrobeOnly
+                            ? 'Suggestions only from your wardrobe'
+                            : 'AI can suggest any outfit'}
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                  <div className="ml-4">
+                    <button
+                      type="button"
+                      id="wardrobe-mode"
+                      onClick={() => setUseWardrobeOnly(!useWardrobeOnly)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        useWardrobeOnly ? 'bg-amber-600' : 'bg-gray-300'
+                      }`}
+                      role="switch"
+                      aria-checked={useWardrobeOnly}
+                      aria-label="Use wardrobe only mode"
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          useWardrobeOnly ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </details>
+      )}
+
+      {/* Preferences - collapsible, default closed to reduce clutter */}
+      <details className="mb-4 group border border-gray-200 rounded-xl overflow-hidden">
+        <summary className="flex items-center justify-between px-4 py-3 bg-gray-50 cursor-pointer list-none font-medium text-gray-800 hover:bg-gray-100 transition-colors [&::-webkit-details-marker]:hidden">
+          <span className="flex items-center gap-2">
+            <span>⚙️</span>
+            <span>Preferences</span>
+          </span>
+          <span className="text-gray-400 transition-transform group-open:rotate-180">▼</span>
+        </summary>
+        <div className="p-4 pt-0 space-y-4">
+          {/* Occasion */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Occasion</label>
+            <select
+              value={filters.occasion}
+              onChange={(e) => handleFilterChange('occasion', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
+              aria-label="Select occasion"
+            >
+              <option value="casual">Casual</option>
+              <option value="business">Business</option>
+              <option value="formal">Formal</option>
+              <option value="party">Party</option>
+              <option value="date">Date Night</option>
+              <option value="sports">Sports/Active</option>
+            </select>
+          </div>
+          {/* Season */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Season</label>
+            <select
+              value={filters.season}
+              onChange={(e) => handleFilterChange('season', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
+              aria-label="Select season"
+            >
+              <option value="all">All Seasons</option>
+              <option value="spring">Spring</option>
+              <option value="summer">Summer</option>
+              <option value="fall">Fall</option>
+              <option value="winter">Winter</option>
+            </select>
+          </div>
+          {/* Style */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Style</label>
+            <select
+              value={filters.style}
+              onChange={(e) => handleFilterChange('style', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
+              aria-label="Select style preference"
+            >
+              <option value="Businees Casual">Businees Casual</option>
+              <option value="Casual">Casual</option>
+              <option value="modern">Modern</option>
+              <option value="classic">Classic</option>
+              <option value="trendy">Trendy</option>
+              <option value="minimalist">Minimalist</option>
+              <option value="bold">Bold</option>
+              <option value="vintage">Vintage</option>
+            </select>
+          </div>
+          {/* Free-text preference */}
+          <div>
+            <div className="flex items-center mb-2">
+              <span className="text-xs uppercase tracking-wide text-gray-500">Or describe</span>
+              <span className="mx-2 text-gray-300">•</span>
+              <span className="text-xs text-gray-500">Only one required</span>
+            </div>
+            <label htmlFor="free-text-pref" className="sr-only">Preference text</label>
+            <textarea
+              id="free-text-pref"
+              value={preferenceText}
+              onChange={(e) => setPreferenceText(e.target.value)}
+              placeholder="e.g., Smart casual, navy and brown, no sneakers."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all resize-none"
+              rows={2}
+            />
+          </div>
+        </div>
+      </details>
+
+      {/* Display options - collapsible, only when model generation enabled */}
+      {modelGenerationEnabled && (
+        <details className="mb-4 group border border-gray-200 rounded-xl overflow-hidden">
+          <summary className="flex items-center justify-between px-4 py-3 bg-gray-50 cursor-pointer list-none font-medium text-gray-800 hover:bg-gray-100 transition-colors [&::-webkit-details-marker]:hidden">
+            <span className="flex items-center gap-2">
+              <span>🤖</span>
+              <span>Display options</span>
+            </span>
+            <span className="text-gray-400 transition-transform group-open:rotate-180">▼</span>
+          </summary>
+          <div className="p-4 pt-0">
+            <div className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <label htmlFor="generate-model" className="flex items-center cursor-pointer">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <span className="font-semibold text-gray-800">Generate Model Image</span>
+                      </div>
+                      <p className="text-xs text-gray-600">
+                        AI image of a model wearing your outfit. {generateModelImage ? '📍 Location-based.' : 'Enable to see on model.'}
+                      </p>
+                    </div>
+                  </label>
+                </div>
+                <div className="ml-4">
+                  <button
+                    type="button"
+                    id="generate-model"
+                    onClick={() => setGenerateModelImage(!generateModelImage)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      generateModelImage ? 'bg-purple-600' : 'bg-gray-300'
+                    }`}
+                    role="switch"
+                    aria-checked={generateModelImage}
+                    aria-label="Toggle model image generation"
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        generateModelImage ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+              {generateModelImage && (
+                <div className="mt-4 pt-4 border-t border-purple-200">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Image model</label>
+                  <select
+                    value={imageModel}
+                    onChange={(e) => setImageModel(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all bg-white"
+                    aria-label="Select image generation model"
+                  >
+                    <option value="dalle3">DALL-E 3 (OpenAI)</option>
+                    <option value="stable-diffusion">Stable Diffusion</option>
+                    <option value="nano-banana">Nano Banana</option>
+                  </select>
+                </div>
+              )}
             </div>
           </div>
-        </div>
+        </details>
       )}
 
-      {/* Filters */}
-      <div className="space-y-4 mb-6">
-        <h3 className="font-semibold text-gray-800 mb-3">Preferences</h3>
-        
-        {/* Occasion */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Occasion
-          </label>
-          <select
-            value={filters.occasion}
-            onChange={(e) => handleFilterChange('occasion', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
-            aria-label="Select occasion"
-          >
-            <option value="casual">Casual</option>
-            <option value="business">Business</option>
-            <option value="formal">Formal</option>
-            <option value="party">Party</option>
-            <option value="date">Date Night</option>
-            <option value="sports">Sports/Active</option>
-          </select>
-        </div>
-
-        {/* Season */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Season
-          </label>
-          <select
-            value={filters.season}
-            onChange={(e) => handleFilterChange('season', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
-            aria-label="Select season"
-          >
-            <option value="all">All Seasons</option>
-            <option value="spring">Spring</option>
-            <option value="summer">Summer</option>
-            <option value="fall">Fall</option>
-            <option value="winter">Winter</option>
-          </select>
-        </div>
-
-        {/* Style */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Style
-          </label>
-          <select
-            value={filters.style}
-            onChange={(e) => handleFilterChange('style', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
-            aria-label="Select style preference"
-          >
-            <option value="Businees Casual">Businees Casual</option>
-            <option value="Casual">Casual</option>
-            <option value="modern">Modern</option>
-            <option value="classic">Classic</option>
-            <option value="trendy">Trendy</option>
-            <option value="minimalist">Minimalist</option>
-            <option value="bold">Bold</option>
-            <option value="vintage">Vintage</option>
-          </select>
-        </div>
-      </div>
-
-      {/* OR free-text preference */}
-      <div className="mb-6">
-        <div className="flex items-center mb-2">
-          <span className="text-xs uppercase tracking-wide text-gray-500">Or describe your preferences</span>
-          <span className="mx-2 text-gray-300">•</span>
-          <span className="text-xs text-gray-500">Only one is required</span>
-        </div>
-        <label htmlFor="free-text-pref" className="sr-only">Preference text</label>
-        <textarea
-          id="free-text-pref"
-          value={preferenceText}
-          onChange={(e) => setPreferenceText(e.target.value)}
-          placeholder="e.g., Smart casual for a client meeting, prefer navy and brown tones, no sneakers."
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all resize-none"
-          rows={3}
-        />
-        <p className="text-xs text-gray-500 mt-1">Tip: Leave this blank to use the dropdown preferences above.</p>
-      </div>
-
-      {/* AI Model Image Generation Toggle - Only show if modelGeneration=true in URL */}
-      {modelGenerationEnabled && (
-      <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <label htmlFor="generate-model" className="flex items-center cursor-pointer">
-              <div className="flex-1">
-                <div className="flex items-center space-x-2 mb-1">
-                  <span className="text-lg">🤖</span>
-                  <span className="font-semibold text-gray-800">Generate Model Image</span>
-                </div>
-                <p className="text-xs text-gray-600">
-                  Create an AI-generated image of a model wearing your recommended outfit
-                </p>
-                <p className="text-xs text-green-600 mt-1 font-medium">
-                  ✨ Your uploaded clothing will be preserved exactly as shown
-                </p>
-                <p className="text-xs text-purple-600 mt-1">
-                  {generateModelImage ? '📍 Location-based customization enabled' : 'Enable to see outfit on a model'}
-                </p>
-              </div>
-            </label>
-          </div>
-          <div className="ml-4">
-            <button
-              type="button"
-              id="generate-model"
-              onClick={() => setGenerateModelImage(!generateModelImage)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                generateModelImage ? 'bg-purple-600' : 'bg-gray-300'
-              }`}
-              role="switch"
-              aria-checked={generateModelImage}
-              aria-label="Toggle model image generation"
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  generateModelImage ? 'translate-x-6' : 'translate-x-1'
+      {/* Random picks - not AI; in Wardrobe section or separate area */}
+      {(isAuthenticated && (onGetRandomSuggestion || onGetRandomFromHistory)) && (
+        <details className="mb-4 group border border-gray-200 rounded-xl overflow-hidden">
+          <summary className="flex items-center justify-between px-4 py-3 bg-gray-50 cursor-pointer list-none font-medium text-gray-800 hover:bg-gray-100 transition-colors [&::-webkit-details-marker]:hidden">
+            <span className="flex items-center gap-2">
+              <span>🎲</span>
+              <span>Random picks</span>
+            </span>
+            <span className="text-gray-400 transition-transform group-open:rotate-180">▼</span>
+          </summary>
+          <div className="p-4 pt-0 space-y-2">
+            {onGetRandomSuggestion && (
+              <button
+                onClick={onGetRandomSuggestion}
+                disabled={loading}
+                className={`w-full py-2.5 px-4 rounded-lg font-medium transition-all text-sm ${
+                  loading
+                    ? 'bg-gray-300 cursor-not-allowed text-gray-500'
+                    : 'bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-200'
                 }`}
-              />
-            </button>
+                aria-label="Get random outfit from wardrobe"
+              >
+                🎲 Random from Wardrobe
+              </button>
+            )}
+            {onGetRandomFromHistory && (
+              <button
+                onClick={onGetRandomFromHistory}
+                disabled={loading}
+                className={`w-full py-2.5 px-4 rounded-lg font-medium transition-all text-sm ${
+                  loading
+                    ? 'bg-gray-300 cursor-not-allowed text-gray-500'
+                    : 'bg-indigo-100 text-indigo-800 hover:bg-indigo-200 border border-indigo-200'
+                }`}
+                aria-label="Show random outfit from your history"
+              >
+                📋 Random from History
+              </button>
+            )}
           </div>
-        </div>
-        
-        {/* Model Selection Dropdown - Only show when generateModelImage is enabled */}
-        {generateModelImage && (
-          <div className="mt-4 pt-4 border-t border-purple-200">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Image Generation Model
-            </label>
-            <select
-              value={imageModel}
-              onChange={(e) => setImageModel(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all bg-white"
-              aria-label="Select image generation model"
-            >
-              <option value="dalle3">DALL-E 3 (OpenAI)</option>
-              <option value="stable-diffusion">Stable Diffusion (Better Color Accuracy)</option>
-              <option value="nano-banana">Nano Banana (Advanced Image-to-Image)</option>
-            </select>
-            <p className="text-xs text-gray-500 mt-2">
-              {imageModel === "dalle3" 
-                ? "⚡ Fast generation, good quality" 
-                : imageModel === "stable-diffusion"
-                ? "🎨 Better color matching with your uploaded image"
-                : "🚀 Advanced image-to-image generation with superior detail preservation"}
-            </p>
-          </div>
-        )}
-      </div>
+        </details>
       )}
 
-      {/* Random Outfit from Wardrobe Button - Only for logged-in users */}
-      {isAuthenticated && onGetRandomSuggestion && (
+      {/* AI Suggestion - primary action */}
+      <div className="border-t border-gray-200 pt-4 mt-2">
         <button
-          onClick={onGetRandomSuggestion}
-          disabled={loading}
-          className={`w-full py-3 px-4 mb-4 rounded-lg font-semibold transition-all ${
-            loading
-              ? 'bg-gray-300 cursor-not-allowed text-gray-500'
-              : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
+          onClick={onGetSuggestion}
+          disabled={!image || loading}
+          className={`w-full min-h-[48px] py-3 px-4 rounded-lg font-semibold text-white transition-all touch-manipulation ${
+            !image || loading
+              ? 'bg-gray-300 cursor-not-allowed'
+              : 'bg-gradient-to-r from-teal-500 to-purple-600 hover:from-teal-600 hover:to-purple-700 shadow-lg hover:shadow-xl'
           }`}
-          aria-label="Get random outfit from wardrobe"
+          aria-label="Get AI outfit suggestion"
         >
-          🎲 Random Outfit from Wardrobe
+          {loading ? (
+            <span className="flex items-center justify-center">
+              <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              Generating...
+            </span>
+          ) : (
+            '✨ Get AI Suggestion'
+          )}
         </button>
-      )}
-
-      {/* Get Suggestion Button */}
-      <button
-        onClick={onGetSuggestion}
-        disabled={!image || loading}
-        className={`w-full py-3 px-4 rounded-lg font-semibold text-white transition-all ${
-          !image || loading
-            ? 'bg-gray-300 cursor-not-allowed'
-            : 'bg-gradient-to-r from-teal-500 to-purple-600 hover:from-teal-600 hover:to-purple-700 shadow-lg hover:shadow-xl transform hover:scale-105'
-        }`}
-        aria-label="Get AI outfit suggestion"
-      >
-        {loading ? (
-          <span className="flex items-center justify-center">
-            <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
-            Generating...
-          </span>
-        ) : (
-          '✨ Get AI Suggestion'
-        )}
-      </button>
+      </div>
     </div>
   );
 };
