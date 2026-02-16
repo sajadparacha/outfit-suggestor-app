@@ -17,6 +17,7 @@ An AI-powered outfit suggestion application that analyzes clothing images and pr
 - 🖼️ **AI Model Visualization**: Generate stunning AI-powered model images wearing your recommended outfit using DALL-E 3, Stable Diffusion, or Nano Banana, customized based on your location.
 - 💡 **Style Reasoning**: Understand why each outfit works together with detailed explanations.
 - 📋 **Complete Outfit History**: Track all your past suggestions with searchable history, including generated model images.
+- 🎲 **Random Picks**: When logged in, use **Random from Wardrobe** (AI picks items from your wardrobe) or **Random from History** (show a random past suggestion) for quick inspiration.
 
 ### Smart Wardrobe Management
 - 👔 **Digital Wardrobe**: Build and manage your digital wardrobe with AI-powered item recognition
@@ -30,6 +31,7 @@ An AI-powered outfit suggestion application that analyzes clothing images and pr
 - 🔐 **User Authentication**: Secure accounts with email activation, JWT tokens, and password management
 - 🌍 **Location-Based Customization**: Model images customized based on geographical location for culturally appropriate appearances
 - 📱 **Modern UI**: Clean, responsive React interface with MVC architecture
+- 📱 **Mobile-Friendly**: Responsive layout, scrollable navigation on small screens, touch-friendly buttons (48px targets), and optimized padding for phones and tablets
 - 🔌 **Multi-Platform Ready**: RESTful API supports Web, iOS, and Android clients
 - 🔄 **Real-time Updates**: Auto-refresh history and wardrobe updates
 - 📷 **Smart Image Optimization**: Client-side validation (max 10MB), compression before upload. JPG, PNG, WebP supported.
@@ -203,11 +205,13 @@ ios-client/OutfitSuggestor/
 
 ## 📚 Documentation
 
+- **[USER_GUIDE.md](./USER_GUIDE.md)** - End-user guide: how to use the app (suggestions, wardrobe, history, random picks, mobile)
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Complete architecture overview and design patterns
 - **[API_DOCUMENTATION.md](./API_DOCUMENTATION.md)** - REST API reference for developers
 - **[SETUP_GUIDE.md](./SETUP_GUIDE.md)** - Detailed setup instructions
 - **[DEPLOYMENT_INSTRUCTIONS.md](./DEPLOYMENT_INSTRUCTIONS.md)** - Railway and GitHub Pages deployment
 - **[TEST_CASE_EXECUTION_GUIDE.md](./TEST_CASE_EXECUTION_GUIDE.md)** - Test case execution and manual testing guide
+- **[TECHNICAL_PAPER.md](./TECHNICAL_PAPER.md)** - Technical paper on system design and evaluation
 - **[DB_SCHEMA_COMPARISON.md](./DB_SCHEMA_COMPARISON.md)** - Database schema comparison and migrations
 - **[ios-client/README.md](./ios-client/README.md)** - iOS client setup guide
 - **[ios-client/SETUP_GUIDE.md](./ios-client/SETUP_GUIDE.md)** - iOS Xcode configuration
@@ -238,8 +242,9 @@ ios-client/OutfitSuggestor/
     - `location` (optional): User location for personalized model appearance
     - `use_wardrobe_only` (optional): Boolean; if true, suggestions use only items from user's wardrobe (requires auth)
   - **Response**: Complete outfit suggestion with optional model image
+- `POST /api/suggest-outfit-from-wardrobe-item/{item_id}` - Get outfit suggestion starting from a wardrobe item (requires auth)
 - `POST /api/check-duplicate` - Check if image already exists in history
-- `GET /api/outfit-history` - Get outfit suggestion history (requires auth)
+- `GET /api/outfit-history` - Get outfit suggestion history (requires auth). Used by the app for **Random from History** (client picks a random entry).
 
 ### Wardrobe Management
 - `GET /api/wardrobe` - Get user's wardrobe items (requires auth)
@@ -283,12 +288,12 @@ val requestBody = MultipartBody.Builder()
 ## 🚢 Deployment
 
 ### Frontend (GitHub Pages)
-The frontend is configured to deploy automatically:
+The frontend is configured to deploy to GitHub Pages via the `gh-pages` package:
 ```bash
 cd frontend
-npm run build
 npm run deploy
 ```
+This runs `npm run build` (predeploy) then publishes the `build` folder to the `gh-pages` branch. Enable GitHub Pages in the repo (Settings → Pages → branch: gh-pages, / (root)).
 
 **Live at**: https://sajadparacha.github.io/outfit-suggestor-app
 
@@ -380,11 +385,13 @@ outfit-suggestor-app/
 
 ### Smart Features
 - **Wardrobe Mode Toggle**: Use wardrobe-only or free generation for outfit suggestions
+- **Random Picks**: Random from Wardrobe (backend builds outfit from your items) and Random from History (client shows a random past suggestion)
 - **Perceptual Hashing**: Detects similar images to prevent duplicates
 - **Image Optimization**: Max 10MB validation, client-side compression (outfit: 5MB/1280px; wardrobe: 10MB/1920px)
 - **Category Filtering**: Filter wardrobe by clothing categories
 - **AI Auto-Analysis**: Automatically extracts item details from photos
 - **Search & Filter**: Search outfit history with filters
+- **Mobile-Friendly**: Responsive layout, touch targets, scrollable nav, viewport-fit for notched devices
 
 ---
 

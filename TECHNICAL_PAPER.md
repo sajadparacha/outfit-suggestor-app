@@ -1,8 +1,8 @@
 # AI-Powered Outfit Suggestion System: A Multi-Model Approach to Personalized Fashion Recommendations
 
 **Author**: Sajjad Ahmed Paracha  
-**Version**: 1.0  
-**Date**: January 2026
+**Version**: 1.1  
+**Date**: February 2026
 
 ---
 
@@ -244,6 +244,16 @@ Duplicate detection runs synchronously before AI processing, adding minimal late
 - Threshold configuration
 - Performance metrics
 
+### 6.6 Random Picks (History and Wardrobe)
+- **Random from History**: The client fetches the user’s outfit history (e.g. via `GET /api/outfit-history`) and selects a random entry to display. No dedicated backend endpoint; provides quick inspiration from past suggestions.
+- **Random from Wardrobe**: The backend service builds a complete outfit by randomly selecting one item per category (shirt, trouser, blazer, shoes, belt) from the user’s wardrobe, respecting occasion/season/style filters. Exposed via the outfit suggestion flow with wardrobe-only mode, giving users an instant outfit from existing items without uploading a new image.
+
+### 6.7 Mobile-Responsive Design
+- **Viewport and layout**: Viewport meta with `viewport-fit=cover` for notched devices; responsive padding and grid (e.g. single column on small screens).
+- **Navigation**: Horizontal tab bar is scrollable on small screens (`overflow-x-auto`, hidden scrollbar) so all sections (Get Suggestion, History, Wardrobe, Settings, About) remain accessible.
+- **Touch targets**: Buttons and nav tabs use minimum height (44–48px) and `touch-manipulation` CSS for reliable tap targets on touch devices.
+- **Sidebar**: Responsive padding; sticky positioning only on large breakpoints so mobile users are not stuck with a fixed sidebar.
+
 ---
 
 ## 7. Evaluation and Results
@@ -333,7 +343,7 @@ The React-based web interface provides:
 - Intuitive drag-and-drop image upload
 - Real-time feedback during processing
 - Clear visual presentation of outfit recommendations
-- Responsive design supporting mobile and desktop
+- Responsive design supporting mobile and desktop, with scrollable navigation, touch-friendly buttons (48px min height), and viewport-fit for notched devices
 
 #### 7.3.2 Multi-Platform Usability
 
@@ -527,5 +537,5 @@ A comprehensive bibliography with academic citations and related work will be ad
 
 ---
 
-**Last Updated**: January 2026
+**Last Updated**: February 2026
 

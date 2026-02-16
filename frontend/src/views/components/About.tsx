@@ -143,6 +143,13 @@ const About: React.FC = () => {
                     <p className="text-sm text-gray-600">Choose &quot;Use my wardrobe only&quot; to get suggestions exclusively from items in your wardrobe, or &quot;Free generation&quot; to let AI suggest any outfit. Toggle in the sidebar when logged in.</p>
                   </div>
                 </div>
+                <div className="flex items-start space-x-3">
+                  <span className="text-2xl">🎲</span>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Random Picks</h4>
+                    <p className="text-sm text-gray-600">When logged in, use <strong>Random from Wardrobe</strong> to get an AI-built outfit from your wardrobe, or <strong>Random from History</strong> to see a random past suggestion for quick inspiration.</p>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -246,6 +253,13 @@ const About: React.FC = () => {
                   <div>
                     <h4 className="font-semibold text-gray-800">Multi-Platform Support</h4>
                     <p className="text-sm text-gray-600">Web and iOS apps available, with seamless synchronization of your wardrobe and outfit history across devices.</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <span className="text-2xl">📱</span>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Mobile-Friendly</h4>
+                    <p className="text-sm text-gray-600">Responsive layout with scrollable navigation on small screens, touch-friendly buttons (48px targets), and optimized padding. Use the app comfortably on phones and tablets.</p>
                   </div>
                 </div>
               </div>
@@ -356,7 +370,7 @@ const About: React.FC = () => {
           {/* Version Info */}
           <div className="border-t border-gray-200 pt-6 mt-8 text-center">
             <p className="text-sm text-gray-500">
-              Version 5.0.0 • © 2025 Sajjad Ahmed Paracha • All Rights Reserved
+              Version 5.0.0 • © 2025–2026 Sajjad Ahmed Paracha • All Rights Reserved
             </p>
           </div>
         </div>
