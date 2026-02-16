@@ -540,3 +540,67 @@ class WardrobeService:
             print(f"⚠️ Perceptual hashing failed: {e}, falling back to exact match")
             return image1 == image2
 
+    def _phash_distance(self, image1: str, image2: str) -> int:
+        """
+        Return perceptual hash distance (0 = identical, higher = more different).
+        Returns 999 on error.
+        """
+        try:
+            img1_bytes = base64.b64decode(image1)
+            img2_bytes = base64.b64decode(image2)
+            img1 = Image.open(io.BytesIO(img1_bytes))
+            img2 = Image.open(io.BytesIO(img2_bytes))
+            if img1.mode != "RGB":
+                img1 = img1.convert("RGB")
+            if img2.mode != "RGB":
+                img2 = img2.convert("RGB")
+            return int(imagehash.phash(img1) - imagehash.phash(img2))
+        except Exception:
+            return 999
+
+    def find_most_similar_wardrobe_item(
+        self,
+        image_base64: str,
+        wardrobe_items: List[WardrobeItem],
+        max_distance: int = 15
+    ) -> Optional[WardrobeItem]:
+        """
+        Find the wardrobe item most similar to the uploaded image.
+        Uses relaxed threshold (default 15) to handle different compression pipelines.
+        Returns None if no item is within max_distance.
+        """
+        best_item = None
+        best_dist = max_distance + 1
+        for item in wardrobe_items:
+            if not item.image_data:
+                continue
+            dist = self._phash_distance(image_base64, item.image_data)
+            if dist < best_dist:
+                best_dist = dist
+                best_item = item
+        return best_item
+
+    def reorder_matches_by_upload_similarity(
+        self,
+        matching_items: Dict[str, List[Dict]],
+        image_base64: str
+    ) -> None:
+        """
+        For each category with multiple matches that have images, put the item
+        most similar to the uploaded image first. Works when perceptual hash
+        distance exceeds duplicate threshold (different compression pipelines).
+        """
+        for category, items in matching_items.items():
+            # Only reorder if we have 2+ items with image_data to compare
+            with_images = [(i, m) for i, m in enumerate(items) if m.get("image_data")]
+            if len(with_images) < 2:
+                continue
+            best_idx = None
+            best_dist = 999
+            for i, m in with_images:
+                dist = self._phash_distance(image_base64, m["image_data"])
+                if dist < best_dist:
+                    best_dist = dist
+                    best_idx = i
+            if best_idx is not None and best_idx > 0:
+                items.insert(0, items.pop(best_idx))

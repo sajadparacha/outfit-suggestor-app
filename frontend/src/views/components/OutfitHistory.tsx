@@ -13,7 +13,7 @@ interface OutfitHistoryProps {
   error: string | null;
   isFullView: boolean;
   onRefresh: () => void;
-  onEnsureFullHistory: () => Promise<void>;
+  onEnsureFullHistory: () => Promise<unknown>;
   onDelete: (entryId: number) => Promise<void>;
   searchController?: ReturnType<typeof useHistorySearchController>;
 }

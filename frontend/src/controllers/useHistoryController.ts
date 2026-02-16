@@ -20,18 +20,21 @@ export const useHistoryController = (options?: UseHistoryControllerOptions) => {
 
   /**
    * Fetch outfit history from the API
+   * @returns Fetched history entries
    */
-  const fetchHistory = async (limit: number = 2) => {
+  const fetchHistory = async (limit: number = 2): Promise<OutfitHistoryEntry[]> => {
     setLoading(true);
     setError(null);
 
     try {
       const data = await apiService.getOutfitHistory(limit);
       setHistory(data);
+      return data;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load history';
       setError(errorMessage);
       console.error('Error fetching history:', err);
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -47,19 +50,23 @@ export const useHistoryController = (options?: UseHistoryControllerOptions) => {
 
   /**
    * Refresh and load all history data
+   * @returns Fetched history entries
    */
-  const refreshHistory = async () => {
-    await fetchHistory(50); // Fetch more entries on refresh
+  const refreshHistory = async (): Promise<OutfitHistoryEntry[]> => {
+    const data = await fetchHistory(50); // Fetch more entries on refresh
     setIsFullView(true);
+    return data;
   };
 
   /**
    * Ensure all history is loaded (for searching)
+   * @returns Current history entries (fetched if not already in full view)
    */
-  const ensureFullHistory = async () => {
+  const ensureFullHistory = async (): Promise<OutfitHistoryEntry[]> => {
     if (!isFullView) {
-      await refreshHistory();
+      return await refreshHistory();
     }
+    return history;
   };
 
   /**

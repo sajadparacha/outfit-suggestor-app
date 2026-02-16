@@ -25,7 +25,7 @@ interface UseHistorySearchControllerReturn {
 
 export const useHistorySearchController = (
   history: OutfitHistoryEntry[],
-  onEnsureFullHistory?: () => Promise<void>,
+  onEnsureFullHistory?: () => Promise<unknown>,
   isFullView?: boolean
 ): UseHistorySearchControllerReturn => {
   const [searchInput, setSearchInput] = useState('');

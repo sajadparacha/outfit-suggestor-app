@@ -8,6 +8,7 @@ import base64
 from models.outfit import OutfitSuggestion
 from models.outfit_history import OutfitHistory
 from models.user import User
+from models.wardrobe import WardrobeItem
 from services.ai_service import AIService
 from services.outfit_service import OutfitService
 from services.wardrobe_matcher import WardrobeMatcher
@@ -28,6 +29,22 @@ class OutfitController:
         self.ai_service = ai_service
         self.outfit_service = outfit_service
         self.wardrobe_matcher = WardrobeMatcher()
+    
+    def _prioritize_item_in_matches(
+        self,
+        matching_items: Dict[str, List[Dict]],
+        item: WardrobeItem
+    ) -> None:
+        """Put the given wardrobe item first in its category if present."""
+        category = (item.category or "").lower()
+        if category == "jacket":
+            category = "blazer"
+        if category not in matching_items:
+            return
+        items_list = matching_items[category]
+        idx = next((i for i, m in enumerate(items_list) if m.get("id") == item.id), None)
+        if idx is not None and idx > 0:
+            items_list.insert(0, items_list.pop(idx))
     
     async def suggest_outfit(
         self,
@@ -131,6 +148,22 @@ class OutfitController:
                     suggestion,
                     all_wardrobe_items
                 )
+                
+                # Find which wardrobe item the uploaded image looks most like (relaxed threshold
+                # for different compression pipelines). Put that item first so the thumbnail
+                # shows the SAME shirt the user uploaded, not a different similar one.
+                similar_item = wardrobe_service.find_most_similar_wardrobe_item(
+                    image_base64,
+                    all_wardrobe_items,
+                    max_distance=25
+                )
+                if similar_item:
+                    self._prioritize_item_in_matches(matching_items, similar_item)
+                else:
+                    wardrobe_service.reorder_matches_by_upload_similarity(
+                        matching_items,
+                        image_base64
+                    )
                 
                 # Add matching items to suggestion (Pydantic will handle serialization)
                 suggestion.matching_wardrobe_items = matching_items

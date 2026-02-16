@@ -7,7 +7,7 @@
 import { useState, useCallback } from 'react';
 import { OutfitSuggestion, Filters } from '../models/OutfitModels';
 import ApiService from '../services/ApiService';
-import { compressImageForOutfit } from '../utils/imageUtils';
+import { compressImageForOutfit, compressImageForWardrobe } from '../utils/imageUtils';
 import { getLocationString } from '../utils/geolocation';
 
 interface UseOutfitControllerReturn {
@@ -77,9 +77,12 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
     setError(null);
 
     try {
-      // Compress image before sending (stricter params for outfit: faster, cheaper AI)
+      // Compress image before sending. When use_wardrobe_only, use same params as wardrobe
+      // so perceptual hash can match the uploaded item to the correct wardrobe item.
       setLoadingMessage('Compressing image...');
-      const compressedImage = await compressImageForOutfit(effectiveImage);
+      const compressedImage = useWardrobeOnly
+        ? await compressImageForWardrobe(effectiveImage)
+        : await compressImageForOutfit(effectiveImage);
       setLoadingMessage('Generating AI suggestion...');
       
       // Check for duplicate image (unless skipped)

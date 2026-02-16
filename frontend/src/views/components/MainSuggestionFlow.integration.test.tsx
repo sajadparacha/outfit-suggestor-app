@@ -50,9 +50,9 @@ describe('Main suggestion flow integration', () => {
     const file = new File(['x'.repeat(1024)], 'shirt.jpg', { type: 'image/jpeg' });
 
     // Find file input and upload
-    const fileInput = document.querySelector('input[type="file"]');
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
     expect(fileInput).toBeInTheDocument();
-    await userEvent.upload(fileInput!, file);
+    await userEvent.upload(fileInput, file);
 
     // Click Get Suggestion button
     const getSuggestionBtn = screen.getByRole('button', { name: /Get Suggestion/i });

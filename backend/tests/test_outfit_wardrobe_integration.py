@@ -6,6 +6,82 @@ import pytest
 from fastapi import status
 from models.wardrobe import WardrobeItem
 
+from controllers.outfit_controller import OutfitController
+from services.ai_service import AIService
+from services.outfit_service import OutfitService
+
+
+class TestOutfitControllerPrioritizeItem:
+    """Unit tests for _prioritize_item_in_matches"""
+
+    def test_prioritize_item_moves_matching_item_to_front(self):
+        """When uploaded item is in matches, it is moved to first position."""
+        controller = OutfitController(
+            type("MockAI", (), {"get_outfit_suggestion": lambda *a, **k: None})(),
+            OutfitService(),
+        )
+        matching_items = {
+            "shirt": [
+                {"id": 1, "color": "navy", "image_data": "img1"},
+                {"id": 2, "color": "navy", "image_data": "img2"},
+            ],
+            "trouser": [],
+        }
+        item = WardrobeItem(
+            id=2,
+            user_id=1,
+            category="shirt",
+            color="navy",
+            description="Navy shirt",
+            image_data="img2",
+        )
+        controller._prioritize_item_in_matches(matching_items, item)
+        assert matching_items["shirt"][0]["id"] == 2
+        assert matching_items["shirt"][1]["id"] == 1
+
+    def test_prioritize_item_does_nothing_when_already_first(self):
+        """When item is already first, list is unchanged."""
+        controller = OutfitController(
+            type("MockAI", (), {"get_outfit_suggestion": lambda *a, **k: None})(),
+            OutfitService(),
+        )
+        matching_items = {
+            "shirt": [
+                {"id": 2, "color": "navy"},
+                {"id": 1, "color": "navy"},
+            ],
+        }
+        item = WardrobeItem(id=2, user_id=1, category="shirt", color="navy")
+        controller._prioritize_item_in_matches(matching_items, item)
+        assert matching_items["shirt"][0]["id"] == 2
+
+    def test_prioritize_item_does_nothing_when_category_missing(self):
+        """When category not in matches, no change."""
+        controller = OutfitController(
+            type("MockAI", (), {"get_outfit_suggestion": lambda *a, **k: None})(),
+            OutfitService(),
+        )
+        matching_items = {"shirt": [{"id": 1}]}
+        item = WardrobeItem(id=2, user_id=1, category="blazer", color="navy")
+        controller._prioritize_item_in_matches(matching_items, item)
+        assert matching_items["shirt"][0]["id"] == 1
+
+    def test_prioritize_item_maps_jacket_to_blazer(self):
+        """Jacket category is treated as blazer."""
+        controller = OutfitController(
+            type("MockAI", (), {"get_outfit_suggestion": lambda *a, **k: None})(),
+            OutfitService(),
+        )
+        matching_items = {
+            "blazer": [
+                {"id": 1},
+                {"id": 2},
+            ],
+        }
+        item = WardrobeItem(id=2, user_id=1, category="jacket", color="navy")
+        controller._prioritize_item_in_matches(matching_items, item)
+        assert matching_items["blazer"][0]["id"] == 2
+
 
 class TestOutfitWardrobeIntegration:
     """Test suite for outfit suggestions with wardrobe matching"""
