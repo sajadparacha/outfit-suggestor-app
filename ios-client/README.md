@@ -349,9 +349,14 @@ class OutfitSuggestorUITests: XCTestCase {
 ✅ **Maintainable**: Clear file organization  
 ✅ **Testable**: ViewModels can be unit tested  
 
+## iOS–Web Feature Parity
+
+To align the iOS app with the web app (same functionality), see **[IOS_WEB_FEATURE_PARITY.md](../IOS_WEB_FEATURE_PARITY.md)**. It lists what the web app has, what iOS has, and a checklist for auth, wardrobe, history, random picks, settings, and more. Use branch `feature/ios-web-sync` when implementing.
+
 ## Related Documentation
 
 - [Main README](../README.md) - Project overview
+- [IOS_WEB_FEATURE_PARITY.md](../IOS_WEB_FEATURE_PARITY.md) - iOS vs web feature checklist
 - [ARCHITECTURE.md](../ARCHITECTURE.md) - Complete architecture
 - [API_DOCUMENTATION.md](../API_DOCUMENTATION.md) - API reference
 

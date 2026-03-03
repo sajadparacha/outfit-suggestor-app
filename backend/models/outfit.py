@@ -13,6 +13,10 @@ class OutfitSuggestion(BaseModel):
     model_image: str | None = Field(None, description="Base64 encoded image of model wearing the outfit")
     matching_wardrobe_items: dict | None = Field(None, description="Matching items from user's wardrobe organized by category")
     cost: dict | None = Field(None, description="Cost breakdown for the AI suggestion in USD")
+    upload_matched_category: str | None = Field(
+        None,
+        description="Category of the wardrobe item that matched the uploaded image (e.g. shirt, trouser). Use so the UI shows the upload thumbnail only for that category."
+    )
 
 
 class OutfitRequest(BaseModel):

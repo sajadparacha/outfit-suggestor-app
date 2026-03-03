@@ -52,6 +52,8 @@
 	<string>We need access to your photo library to select images for outfit suggestions.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>We need access to your camera to take photos for outfit suggestions.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Your location is used to customize AI-generated model images for culturally appropriate appearance.</string>
 </dict>
 </plist>
 

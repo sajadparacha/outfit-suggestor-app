@@ -213,6 +213,7 @@ ios-client/OutfitSuggestor/
 - **[TEST_CASE_EXECUTION_GUIDE.md](./TEST_CASE_EXECUTION_GUIDE.md)** - Test case execution and manual testing guide
 - **[TECHNICAL_PAPER.md](./TECHNICAL_PAPER.md)** - Technical paper on system design and evaluation
 - **[DB_SCHEMA_COMPARISON.md](./DB_SCHEMA_COMPARISON.md)** - Database schema comparison and migrations
+- **[IOS_WEB_FEATURE_PARITY.md](./IOS_WEB_FEATURE_PARITY.md)** - iOS vs web feature parity checklist (sync both apps)
 - **[ios-client/README.md](./ios-client/README.md)** - iOS client setup guide
 - **[ios-client/SETUP_GUIDE.md](./ios-client/SETUP_GUIDE.md)** - iOS Xcode configuration
 
