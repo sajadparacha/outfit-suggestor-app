@@ -39,6 +39,8 @@ export interface OutfitSuggestion {
   model_image?: string | null; // Base64 encoded image of model wearing the outfit
   matching_wardrobe_items?: MatchingWardrobeItems; // Items from user's wardrobe that match the suggestion
   cost?: OutfitCost; // Cost breakdown for the AI suggestion in USD
+  /** Category of the wardrobe item that matched the upload (e.g. 'shirt', 'trouser'). Use upload image for that category only. */
+  upload_matched_category?: string | null;
   raw?: unknown;
   meta?: {
     usedPrompt: string;

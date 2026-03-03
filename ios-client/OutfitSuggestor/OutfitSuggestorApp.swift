@@ -2,7 +2,8 @@
 //  OutfitSuggestorApp.swift
 //  OutfitSuggestor
 //
-//  Main app entry point
+//  Main app entry point. RootView shows Login/Register when not authenticated,
+//  then MainTabView (Suggest, History, Wardrobe, Settings, About) when logged in.
 //
 
 import SwiftUI
@@ -11,7 +12,7 @@ import SwiftUI
 struct OutfitSuggestorApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()  // Login/Register first, then main app when authenticated
         }
     }
 }

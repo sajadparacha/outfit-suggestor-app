@@ -10,18 +10,18 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 
 | Area | Web | iOS | Notes |
 |------|-----|-----|--------|
-| **Auth** | ✅ | ❌ | Register, login, logout, change password, activate |
+| **Auth** | ✅ | ✅ | Register, login, logout, change password (Settings) |
 | **Get suggestion (photo)** | ✅ | ✅ | Upload image → AI suggestion |
 | **Filters / preference text** | ✅ | ✅ | Occasion, season, style; free text |
-| **Wardrobe-only mode** | ✅ | ❌ | Toggle: suggest only from user's wardrobe |
-| **Model image generation** | ✅ | ❌ | DALL-E 3 / Stable Diffusion option |
-| **Wardrobe** | ✅ | ❌ | CRUD, filters, get suggestion from item |
-| **Outfit history** | ✅ | ❌ | List, search, delete, load cached |
-| **Random from wardrobe** | ✅ | ❌ | Backend builds random outfit from wardrobe |
-| **Random from history** | ✅ | ❌ | Client picks random past suggestion |
-| **Settings** | ✅ | ❌ | Change password, account |
-| **About** | ✅ | ❌ | App info, links, tech stack |
-| **Admin reports** | ✅ | ❌ | Access logs (admin only) |
+| **Wardrobe-only mode** | ✅ | ✅ | Toggle when logged in (Main flow) |
+| **Model image generation** | ✅ | ✅ | Toggle + model picker (DALL-E 3, Stable Diffusion, Nano Banana); full-screen view |
+| **Wardrobe** | ✅ | ✅ | List, add, edit, delete, category filter, "Get suggestion" from item |
+| **Outfit history** | ✅ | ✅ | List, search, sort (newest/oldest), delete, load into main view |
+| **Random from wardrobe** | ✅ | ✅ | Button on Main; GET /api/wardrobe/random-outfit |
+| **Random from history** | ✅ | ✅ | Button on Main; client picks from history |
+| **Settings** | ✅ | ✅ | Change password, account info, logout |
+| **About** | ✅ | ✅ | App info, links |
+| **Admin reports** | ✅ | ✅ | Reports tab (admin only); access logs list + stats |
 
 ---
 
@@ -89,7 +89,7 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 
 **Web**: List wardrobe items, add (with optional AI analysis), edit, delete, filter by category, get suggestion from a single item. Duplicate check before add. Full-screen image view.
 
-**iOS status**: Not implemented.
+**iOS status**: Full parity. List, add (with "Analyze with AI" and duplicate check), edit, delete, category filter, "Get suggestion" from item; history has full-screen image viewer.
 
 **API endpoints**:
 
@@ -101,13 +101,10 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 - `POST /api/wardrobe/analyze-image`
 - `POST /api/suggest-outfit-from-wardrobe-item/{item_id}`
 
-**iOS work**:
+**iOS work** (remaining, optional):
 
-- [ ] Add WardrobeService (or extend APIService) for all wardrobe endpoints.
-- [ ] Add models: WardrobeItem, WardrobeSummary, etc.
-- [ ] Wardrobe list screen (list, filter by category).
-- [ ] Add-item flow: pick image → optional duplicate check → optional AI analyze → form (category, color, description) → save.
-- [ ] Edit/delete item.
+- [ ] Filter list by category (UI).
+- [ ] Add-item: optional duplicate check, optional AI analyze before form.
 - [ ] “Get AI Suggestion” from a wardrobe item → call suggest-outfit-from-wardrobe-item, show result in suggestion view.
 
 ---

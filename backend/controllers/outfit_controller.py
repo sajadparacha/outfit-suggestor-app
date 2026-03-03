@@ -159,6 +159,8 @@ class OutfitController:
                 )
                 if similar_item:
                     self._prioritize_item_in_matches(matching_items, similar_item)
+                    cat = (similar_item.category or "").lower()
+                    suggestion.upload_matched_category = "blazer" if cat == "jacket" else cat
                 else:
                     wardrobe_service.reorder_matches_by_upload_similarity(
                         matching_items,

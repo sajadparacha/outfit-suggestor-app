@@ -224,9 +224,10 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
             ] as const
           ).map(({ key, label, icon, value, bg, text }) => {
             const match = suggestion.matching_wardrobe_items?.[key]?.[0] as MatchingWardrobeItem | undefined;
-            // For shirt: prefer the uploaded image as thumbnail (user showed us that shirt)
-            const thumbSrc = key === 'shirt' && suggestion.imageUrl
-              ? suggestion.imageUrl
+            // Use uploaded image only for the category that matched the upload (e.g. shirt card only when upload was a shirt)
+            const useUploadForThisCard = suggestion.imageUrl && key === (suggestion.upload_matched_category ?? '');
+            const thumbSrc = useUploadForThisCard
+              ? suggestion.imageUrl!
               : match?.image_data
                 ? `data:image/jpeg;base64,${match.image_data}`
                 : null;

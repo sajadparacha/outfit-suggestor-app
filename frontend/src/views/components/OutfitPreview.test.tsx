@@ -103,11 +103,12 @@ describe('OutfitPreview', () => {
       expect(screen.getByText(/Classic business casual combination/)).toBeInTheDocument();
     });
 
-    it('uses uploaded image as shirt thumbnail when imageUrl and matching_wardrobe_items.shirt exist', () => {
+    it('uses uploaded image as shirt thumbnail when upload matched shirt (upload_matched_category)', () => {
       const uploadedImageUrl = 'blob:http://localhost/fake-uploaded-shirt';
       const suggestionWithWardrobe = {
         ...baseSuggestion,
         imageUrl: uploadedImageUrl,
+        upload_matched_category: 'shirt',
         matching_wardrobe_items: {
           shirt: [
             { id: 1, category: 'shirt', color: 'navy', description: 'Other navy shirt', image_data: 'base64_wardrobe_A' },
@@ -162,6 +163,43 @@ describe('OutfitPreview', () => {
       const shirtImg = screen.getAllByRole('img').find((img) => img.getAttribute('alt') === 'Shirt');
       expect(shirtImg).toBeDefined();
       expect(shirtImg?.getAttribute('src')).toBe('data:image/jpeg;base64,base64_wardrobe_shirt');
+    });
+
+    it('shows shirt match (not upload) when upload was trousers (upload_matched_category trouser)', () => {
+      const uploadedImageUrl = 'blob:http://localhost/fake-uploaded-trousers';
+      const suggestionWithWardrobe = {
+        ...baseSuggestion,
+        imageUrl: uploadedImageUrl,
+        upload_matched_category: 'trouser',
+        matching_wardrobe_items: {
+          shirt: [
+            { id: 1, category: 'shirt', color: 'sky blue', description: 'Dress shirt', image_data: 'base64_shirt_match' },
+          ],
+          trouser: [
+            { id: 2, category: 'trouser', color: 'charcoal', description: 'Slim trousers', image_data: 'base64_trouser_match' },
+          ],
+          blazer: [],
+          shoes: [],
+          belt: [],
+        },
+      };
+      render(
+        <OutfitPreview
+          suggestion={suggestionWithWardrobe}
+          loading={false}
+          error={null}
+          onLike={mockOnLike}
+          onDislike={mockOnDislike}
+          onNext={mockOnNext}
+          hasImage={true}
+        />
+      );
+      const shirtImg = screen.getAllByRole('img').find((img) => img.getAttribute('alt') === 'Shirt');
+      const trouserImg = screen.getAllByRole('img').find((img) => img.getAttribute('alt') === 'Trousers');
+      // Shirt card uses wardrobe match (not upload) because upload was trousers
+      expect(shirtImg?.getAttribute('src')).toBe('data:image/jpeg;base64,base64_shirt_match');
+      // Trousers card uses upload because upload matched trousers
+      expect(trouserImg?.getAttribute('src')).toBe(uploadedImageUrl);
     });
 
     it('displays cost when present', () => {
