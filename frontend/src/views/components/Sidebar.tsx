@@ -192,20 +192,24 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:sticky lg:top-6">
+    <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-4 sm:p-6 lg:sticky lg:top-6">
       {/* User Profile */}
-      <div className="text-center mb-6 pb-6 border-b border-gray-200">
-        <div className="w-20 h-20 bg-gradient-to-br from-teal-400 to-purple-500 rounded-full mx-auto mb-3 flex items-center justify-center text-white text-3xl font-bold">
+      <div className="text-center mb-6 pb-6 border-b border-white/10">
+        <div className="w-20 h-20 bg-gradient-to-br from-teal-400 to-indigo-500 rounded-3xl mx-auto mb-3 flex items-center justify-center text-white text-3xl font-bold shadow-sm">
           S
         </div>
-        <h3 className="font-semibold text-gray-800">Stylist Mode</h3>
-        <p className="text-sm text-gray-500">Personalized for you</p>
+        <h3 className="font-semibold text-white">Stylist Mode</h3>
+        <p className="text-xs text-slate-300">
+          Upload a piece and we&apos;ll do the matching.
+        </p>
       </div>
 
       {/* Upload Photo - always visible */}
       <div className="mb-4">
-        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Photo</p>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">
+          Photo
+        </p>
+        <label className="block text-sm font-medium text-slate-200 mb-2">
           Upload or take a photo
         </label>
         <div
@@ -214,10 +218,10 @@ const Sidebar: React.FC<SidebarProps> = ({
           onDragOver={handleDragOver}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className={`w-full border-2 border-dashed rounded-lg p-4 transition-all text-center cursor-pointer group ${
+          className={`w-full border-2 border-dashed rounded-xl p-4 transition-all text-center cursor-pointer group ${
             isDragging
-              ? 'border-teal-500 bg-teal-100 scale-105'
-              : 'border-teal-300 hover:border-teal-500 hover:bg-teal-50'
+              ? 'border-teal-400 bg-teal-500/20 scale-[1.02]'
+              : 'border-white/20 hover:border-teal-400 hover:bg-white/5'
           }`}
           role="button"
           tabIndex={0}
@@ -231,8 +235,8 @@ const Sidebar: React.FC<SidebarProps> = ({
           {image ? (
             <div className="space-y-2">
               <div className="text-3xl">📸</div>
-              <p className="text-sm text-gray-600 truncate">{image.name}</p>
-              <p className="text-xs text-teal-600">Click or drag to change</p>
+              <p className="text-sm text-slate-200 truncate">{image.name}</p>
+              <p className="text-xs text-teal-300">Click or drag to change</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -241,10 +245,12 @@ const Sidebar: React.FC<SidebarProps> = ({
               }`}>
                 {isDragging ? '🎯' : '📤'}
               </div>
-              <p className="text-sm text-gray-600 font-medium">
+              <p className="text-sm text-slate-200 font-medium">
                 {isDragging ? 'Drop your photo here!' : 'Drag & Drop or Click'}
               </p>
-              <p className="text-xs text-gray-400">JPG, PNG, WebP up to {CLIENT_MAX_SIZE_MB}MB</p>
+              <p className="text-xs text-slate-400">
+                JPG, PNG, WebP up to {CLIENT_MAX_SIZE_MB}MB
+              </p>
             </div>
           )}
         </div>
@@ -262,7 +268,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <div className="mt-3">
             <button
               onClick={openCamera}
-              className="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-medium hover:from-blue-600 hover:to-blue-700 transition-all shadow-md flex items-center justify-center space-x-2"
+              className="w-full px-4 py-3 bg-gradient-to-r from-teal-500 to-indigo-500 text-white rounded-xl font-medium hover:from-teal-600 hover:to-indigo-600 transition-all shadow-md flex items-center justify-center space-x-2"
               aria-label="Take photo with camera"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -278,13 +284,13 @@ const Sidebar: React.FC<SidebarProps> = ({
       {/* Camera Modal */}
       {showCamera && (
         <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
-          <div className="bg-white rounded-xl max-w-2xl w-full shadow-2xl">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800">📷 Take Photo</h3>
+          <div className="rounded-2xl bg-slate-900 border border-white/10 max-w-2xl w-full shadow-2xl backdrop-blur">
+            <div className="flex items-center justify-between p-4 border-b border-white/10">
+              <h3 className="text-lg font-semibold text-white">📷 Take Photo</h3>
               <button
                 onClick={closeCamera}
                 aria-label="Close camera"
-                className="p-2 rounded hover:bg-gray-100 text-gray-600"
+                className="p-2 rounded hover:bg-white/10 text-slate-300"
               >
                 ✖
               </button>
@@ -302,17 +308,17 @@ const Sidebar: React.FC<SidebarProps> = ({
               </div>
             </div>
 
-            <div className="p-4 border-t border-gray-200 flex gap-3">
+            <div className="p-4 border-t border-white/10 flex gap-3">
               <button
                 onClick={capturePhoto}
-                className="flex-1 px-6 py-3 bg-teal-500 text-white rounded-lg font-medium hover:bg-teal-600 transition-colors flex items-center justify-center space-x-2"
+                className="flex-1 px-6 py-3 bg-teal-500 text-white rounded-full font-medium hover:bg-teal-600 transition-colors flex items-center justify-center space-x-2"
               >
                 <span>📸</span>
                 <span>Capture Photo</span>
               </button>
               <button
                 onClick={closeCamera}
-                className="px-6 py-3 bg-gray-500 text-white rounded-lg font-medium hover:bg-gray-600 transition-colors"
+                className="px-6 py-3 bg-white/10 text-slate-200 rounded-full font-medium hover:bg-white/20 transition-colors border border-white/15"
               >
                 Cancel
               </button>
@@ -323,13 +329,13 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Wardrobe section - collapsible for logged-in users */}
       {isAuthenticated && (onAddToWardrobe || setUseWardrobeOnly) && (
-        <details className="mb-4 group border border-gray-200 rounded-xl overflow-hidden" open>
-          <summary className="flex items-center justify-between px-4 py-3 bg-gray-50 cursor-pointer list-none font-medium text-gray-800 hover:bg-gray-100 transition-colors [&::-webkit-details-marker]:hidden">
+        <details className="mb-4 group border border-white/10 rounded-xl overflow-hidden" open>
+          <summary className="flex items-center justify-between px-4 py-3 bg-white/5 cursor-pointer list-none font-medium text-slate-200 hover:bg-white/10 transition-colors [&::-webkit-details-marker]:hidden">
             <span className="flex items-center gap-2">
               <span>👔</span>
               <span>Wardrobe</span>
             </span>
-            <span className="text-gray-400 transition-transform group-open:rotate-180">▼</span>
+            <span className="text-slate-400 transition-transform group-open:rotate-180">▼</span>
           </summary>
           <div className="p-4 pt-0 space-y-4">
             {onAddToWardrobe && (
@@ -337,10 +343,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <button
                   onClick={onAddToWardrobe}
                   disabled={!image || loading || addingToWardrobe}
-                  className={`w-full px-4 py-3 rounded-lg font-medium transition-all shadow-md flex items-center justify-center space-x-2 ${
+                  className={`w-full px-4 py-3 rounded-xl font-medium transition-all shadow-md flex items-center justify-center space-x-2 ${
                     !image || loading || addingToWardrobe
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                      ? 'bg-white/10 text-slate-500 cursor-not-allowed border border-white/10'
+                      : 'bg-teal-500 text-white hover:bg-teal-600 border border-transparent'
                   }`}
                   aria-label="Add current image to wardrobe"
                   title={!image ? 'Upload an image first' : addingToWardrobe ? 'Adding to wardrobe...' : 'Add this item to your wardrobe'}
@@ -361,27 +367,27 @@ const Sidebar: React.FC<SidebarProps> = ({
                   )}
                 </button>
                 {!image && (
-                  <p className="text-xs text-gray-500 text-center mt-2">
+                  <p className="text-xs text-slate-400 text-center mt-2">
                     Upload an image first to add it to your wardrobe
                   </p>
                 )}
                 {addingToWardrobe && (
-                  <p className="text-xs text-indigo-600 text-center mt-2">
+                  <p className="text-xs text-teal-300 text-center mt-2">
                     AI is analyzing your image...
                   </p>
                 )}
               </div>
             )}
             {setUseWardrobeOnly && (
-              <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg border border-amber-200">
+              <div className="p-4 bg-white/5 rounded-xl border border-white/10">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <label htmlFor="wardrobe-mode" className="flex items-center cursor-pointer">
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-1">
-                          <span className="font-semibold text-gray-800">Use my wardrobe only</span>
+                          <span className="font-semibold text-slate-200">Use my wardrobe only</span>
                         </div>
-                        <p className="text-xs text-gray-600">
+                        <p className="text-xs text-slate-400">
                           {useWardrobeOnly
                             ? 'Suggestions only from your wardrobe'
                             : 'AI can suggest any outfit'}
@@ -395,7 +401,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                       id="wardrobe-mode"
                       onClick={() => setUseWardrobeOnly(!useWardrobeOnly)}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        useWardrobeOnly ? 'bg-amber-600' : 'bg-gray-300'
+                        useWardrobeOnly ? 'bg-teal-500' : 'bg-white/20'
                       }`}
                       role="switch"
                       aria-checked={useWardrobeOnly}
@@ -416,22 +422,22 @@ const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       {/* Preferences - collapsible, default closed to reduce clutter */}
-      <details className="mb-4 group border border-gray-200 rounded-xl overflow-hidden">
-        <summary className="flex items-center justify-between px-4 py-3 bg-gray-50 cursor-pointer list-none font-medium text-gray-800 hover:bg-gray-100 transition-colors [&::-webkit-details-marker]:hidden">
+      <details className="mb-4 group border border-white/10 rounded-xl overflow-hidden">
+        <summary className="flex items-center justify-between px-4 py-3 bg-white/5 cursor-pointer list-none font-medium text-slate-200 hover:bg-white/10 transition-colors [&::-webkit-details-marker]:hidden">
           <span className="flex items-center gap-2">
             <span>⚙️</span>
             <span>Preferences</span>
           </span>
-          <span className="text-gray-400 transition-transform group-open:rotate-180">▼</span>
+          <span className="text-slate-400 transition-transform group-open:rotate-180">▼</span>
         </summary>
         <div className="p-4 pt-0 space-y-4">
           {/* Occasion */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Occasion</label>
+            <label className="block text-sm font-medium text-slate-200 mb-2">Occasion</label>
             <select
               value={filters.occasion}
               onChange={(e) => handleFilterChange('occasion', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
+              className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
               aria-label="Select occasion"
             >
               <option value="casual">Casual</option>
@@ -444,11 +450,11 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
           {/* Season */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Season</label>
+            <label className="block text-sm font-medium text-slate-200 mb-2">Season</label>
             <select
               value={filters.season}
               onChange={(e) => handleFilterChange('season', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
+              className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
               aria-label="Select season"
             >
               <option value="all">All Seasons</option>
@@ -460,11 +466,11 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
           {/* Style */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Style</label>
+            <label className="block text-sm font-medium text-slate-200 mb-2">Style</label>
             <select
               value={filters.style}
               onChange={(e) => handleFilterChange('style', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
+              className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
               aria-label="Select style preference"
             >
               <option value="Businees Casual">Businees Casual</option>
@@ -480,9 +486,9 @@ const Sidebar: React.FC<SidebarProps> = ({
           {/* Free-text preference */}
           <div>
             <div className="flex items-center mb-2">
-              <span className="text-xs uppercase tracking-wide text-gray-500">Or describe</span>
-              <span className="mx-2 text-gray-300">•</span>
-              <span className="text-xs text-gray-500">Only one required</span>
+              <span className="text-xs uppercase tracking-wide text-slate-400">Or describe</span>
+              <span className="mx-2 text-slate-500">•</span>
+              <span className="text-xs text-slate-400">Only one required</span>
             </div>
             <label htmlFor="free-text-pref" className="sr-only">Preference text</label>
             <textarea
@@ -490,7 +496,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               value={preferenceText}
               onChange={(e) => setPreferenceText(e.target.value)}
               placeholder="e.g., Smart casual, navy and brown, no sneakers."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all resize-none"
+              className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all resize-none"
               rows={2}
             />
           </div>
@@ -499,24 +505,24 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Display options - collapsible, only when model generation enabled */}
       {modelGenerationEnabled && (
-        <details className="mb-4 group border border-gray-200 rounded-xl overflow-hidden">
-          <summary className="flex items-center justify-between px-4 py-3 bg-gray-50 cursor-pointer list-none font-medium text-gray-800 hover:bg-gray-100 transition-colors [&::-webkit-details-marker]:hidden">
+        <details className="mb-4 group border border-white/10 rounded-xl overflow-hidden">
+          <summary className="flex items-center justify-between px-4 py-3 bg-white/5 cursor-pointer list-none font-medium text-slate-200 hover:bg-white/10 transition-colors [&::-webkit-details-marker]:hidden">
             <span className="flex items-center gap-2">
               <span>🤖</span>
               <span>Display options</span>
             </span>
-            <span className="text-gray-400 transition-transform group-open:rotate-180">▼</span>
+            <span className="text-slate-400 transition-transform group-open:rotate-180">▼</span>
           </summary>
           <div className="p-4 pt-0">
-            <div className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
+            <div className="p-4 bg-white/5 rounded-xl border border-white/10">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <label htmlFor="generate-model" className="flex items-center cursor-pointer">
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-1">
-                        <span className="font-semibold text-gray-800">Generate Model Image</span>
+                        <span className="font-semibold text-slate-200">Generate Model Image</span>
                       </div>
-                      <p className="text-xs text-gray-600">
+                      <p className="text-xs text-slate-400">
                         AI image of a model wearing your outfit. {generateModelImage ? '📍 Location-based.' : 'Enable to see on model.'}
                       </p>
                     </div>
@@ -528,7 +534,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     id="generate-model"
                     onClick={() => setGenerateModelImage(!generateModelImage)}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      generateModelImage ? 'bg-purple-600' : 'bg-gray-300'
+                      generateModelImage ? 'bg-indigo-500' : 'bg-white/20'
                     }`}
                     role="switch"
                     aria-checked={generateModelImage}
@@ -543,12 +549,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </div>
               </div>
               {generateModelImage && (
-                <div className="mt-4 pt-4 border-t border-purple-200">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Image model</label>
+                <div className="mt-4 pt-4 border-t border-white/10">
+                  <label className="block text-sm font-medium text-slate-200 mb-2">Image model</label>
                   <select
                     value={imageModel}
                     onChange={(e) => setImageModel(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all bg-white"
+                    className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                     aria-label="Select image generation model"
                   >
                     <option value="dalle3">DALL-E 3 (OpenAI)</option>
@@ -564,23 +570,23 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Random picks - not AI; in Wardrobe section or separate area */}
       {(isAuthenticated && (onGetRandomSuggestion || onGetRandomFromHistory)) && (
-        <details className="mb-4 group border border-gray-200 rounded-xl overflow-hidden">
-          <summary className="flex items-center justify-between px-4 py-3 bg-gray-50 cursor-pointer list-none font-medium text-gray-800 hover:bg-gray-100 transition-colors [&::-webkit-details-marker]:hidden">
+        <details className="mb-4 group border border-white/10 rounded-xl overflow-hidden">
+          <summary className="flex items-center justify-between px-4 py-3 bg-white/5 cursor-pointer list-none font-medium text-slate-200 hover:bg-white/10 transition-colors [&::-webkit-details-marker]:hidden">
             <span className="flex items-center gap-2">
               <span>🎲</span>
               <span>Random picks</span>
             </span>
-            <span className="text-gray-400 transition-transform group-open:rotate-180">▼</span>
+            <span className="text-slate-400 transition-transform group-open:rotate-180">▼</span>
           </summary>
           <div className="p-4 pt-0 space-y-2">
             {onGetRandomSuggestion && (
               <button
                 onClick={onGetRandomSuggestion}
                 disabled={loading}
-                className={`w-full py-2.5 px-4 rounded-lg font-medium transition-all text-sm ${
+                className={`w-full py-2.5 px-4 rounded-xl font-medium transition-all text-sm ${
                   loading
-                    ? 'bg-gray-300 cursor-not-allowed text-gray-500'
-                    : 'bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-200'
+                    ? 'bg-white/10 cursor-not-allowed text-slate-500 border border-white/10'
+                    : 'bg-amber-500/20 text-amber-200 hover:bg-amber-500/30 border border-amber-400/30'
                 }`}
                 aria-label="Get random outfit from wardrobe"
               >
@@ -591,10 +597,10 @@ const Sidebar: React.FC<SidebarProps> = ({
               <button
                 onClick={onGetRandomFromHistory}
                 disabled={loading}
-                className={`w-full py-2.5 px-4 rounded-lg font-medium transition-all text-sm ${
+                className={`w-full py-2.5 px-4 rounded-xl font-medium transition-all text-sm ${
                   loading
-                    ? 'bg-gray-300 cursor-not-allowed text-gray-500'
-                    : 'bg-indigo-100 text-indigo-800 hover:bg-indigo-200 border border-indigo-200'
+                    ? 'bg-white/10 cursor-not-allowed text-slate-500 border border-white/10'
+                    : 'bg-indigo-500/20 text-indigo-200 hover:bg-indigo-500/30 border border-indigo-400/30'
                 }`}
                 aria-label="Show random outfit from your history"
               >
@@ -606,14 +612,14 @@ const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       {/* AI Suggestion - primary action */}
-      <div className="border-t border-gray-200 pt-4 mt-2">
+      <div className="border-t border-white/10 pt-4 mt-2">
         <button
           onClick={onGetSuggestion}
           disabled={!image || loading}
-          className={`w-full min-h-[48px] py-3 px-4 rounded-lg font-semibold text-white transition-all touch-manipulation ${
+          className={`w-full min-h-[48px] py-3 px-4 rounded-xl font-semibold text-white transition-all touch-manipulation ${
             !image || loading
-              ? 'bg-gray-300 cursor-not-allowed'
-              : 'bg-gradient-to-r from-teal-500 to-purple-600 hover:from-teal-600 hover:to-purple-700 shadow-lg hover:shadow-xl'
+              ? 'bg-white/10 cursor-not-allowed text-slate-500 border border-white/10'
+              : 'bg-gradient-to-r from-teal-500 to-indigo-500 hover:from-teal-600 hover:to-indigo-600 shadow-lg hover:shadow-xl'
           }`}
           aria-label="Get AI outfit suggestion"
         >

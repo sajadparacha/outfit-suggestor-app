@@ -94,10 +94,10 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-8">
+      <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-8">
         <div className="flex flex-col items-center justify-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-          <p className="text-gray-600">Loading history...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-400"></div>
+          <p className="text-slate-200">Loading history...</p>
         </div>
       </div>
     );
@@ -105,14 +105,14 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
 
   if (error) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-8">
+      <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-8">
         <div className="text-center">
-          <div className="text-red-500 text-5xl mb-4">⚠️</div>
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">Error Loading History</h3>
-          <p className="text-gray-600 mb-4">{error}</p>
+          <div className="text-red-400 text-5xl mb-4">⚠️</div>
+          <h3 className="text-xl font-semibold text-white mb-2">Error Loading History</h3>
+          <p className="text-slate-200 mb-4">{error}</p>
           <button
             onClick={onRefresh}
-            className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            className="px-6 py-2 bg-teal-500 text-white rounded-full hover:bg-teal-600 transition-colors"
           >
             Try Again
           </button>
@@ -126,16 +126,16 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
       {/* Header with title and refresh button */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">
+          <h2 className="text-2xl font-bold text-white">
             Outfit History
           </h2>
           {!isFullView && history.length > 0 && (
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-slate-400 mt-1">
               Showing last {history.length} {history.length === 1 ? 'entry' : 'entries'}. Click load all to see more.
             </p>
           )}
           {isFullView && history.length > 0 && (
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-slate-400 mt-1">
               Showing all {history.length} {history.length === 1 ? 'entry' : 'entries'}
             </p>
           )}
@@ -143,7 +143,7 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
         {history.length > 0 && (
           <button
             onClick={onRefresh}
-            className="px-4 py-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center space-x-2"
+            className="px-4 py-2 text-teal-300 hover:bg-white/10 rounded-xl transition-colors flex items-center space-x-2 border border-white/10"
           >
             <span>🔄</span>
             <span>{isFullView ? 'Refresh' : 'Load All'}</span>
@@ -152,7 +152,7 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
       </div>
 
       {/* Search and Filter Bar */}
-      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+      <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-4 mb-6">
         <div className="flex flex-col md:flex-row gap-4">
           {/* Search Input with Button */}
           <div className="flex-1 flex gap-2">
@@ -163,13 +163,13 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyPress={handleKeyPress}
-                className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-4 py-2 pl-10 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
               />
-              <span className="absolute left-3 top-2.5 text-gray-400">🔍</span>
+              <span className="absolute left-3 top-2.5 text-slate-400">🔍</span>
             </div>
             <button
               onClick={handleSearch}
-              className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+              className="px-6 py-2 bg-teal-500 text-white rounded-xl hover:bg-teal-600 transition-colors font-medium"
             >
               Search
             </button>
@@ -180,7 +180,7 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as 'newest' | 'oldest')}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-white/20 rounded-xl bg-white/5 text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
             >
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
@@ -191,7 +191,7 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
           {searchQuery && (
             <button
               onClick={handleClearSearch}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              className="px-4 py-2 bg-white/10 text-slate-200 rounded-xl hover:bg-white/20 transition-colors border border-white/15"
             >
               Clear
             </button>
@@ -200,19 +200,19 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
 
         {/* Results Count */}
         {searchQuery && (
-          <div className="mt-3 text-sm text-gray-600">
-            Found {filteredHistory.length} {filteredHistory.length === 1 ? 'result' : 'results'} for "{searchQuery}"
+          <div className="mt-3 text-sm text-slate-300">
+            Found {filteredHistory.length} {filteredHistory.length === 1 ? 'result' : 'results'} for &quot;{searchQuery}&quot;
           </div>
         )}
       </div>
 
       {/* No History Message */}
       {history.length === 0 && !searchQuery && (
-        <div className="bg-white rounded-lg shadow-md p-8">
+        <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-8">
           <div className="text-center">
-            <div className="text-gray-400 text-6xl mb-4">📋</div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">No History Yet</h3>
-            <p className="text-gray-600 mb-4">
+            <div className="text-slate-400 text-6xl mb-4">📋</div>
+            <h3 className="text-xl font-semibold text-white mb-2">No History Yet</h3>
+            <p className="text-slate-200 mb-4">
               Your outfit suggestions will appear here once you start using the app.
             </p>
           </div>
@@ -221,16 +221,16 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
 
       {/* No Results Message */}
       {filteredHistory.length === 0 && searchQuery && history.length > 0 && (
-        <div className="bg-white rounded-lg shadow-md p-8">
+        <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-8">
           <div className="text-center">
-            <div className="text-gray-400 text-5xl mb-4">🔍</div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">No Results Found</h3>
-            <p className="text-gray-600 mb-4">
-              No outfit suggestions match your search "{searchQuery}"
+            <div className="text-slate-400 text-5xl mb-4">🔍</div>
+            <h3 className="text-xl font-semibold text-white mb-2">No Results Found</h3>
+            <p className="text-slate-200 mb-4">
+              No outfit suggestions match your search &quot;{searchQuery}&quot;
             </p>
             <button
               onClick={handleClearSearch}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              className="px-4 py-2 bg-teal-500 text-white rounded-full hover:bg-teal-600 transition-colors"
             >
               Clear Search
             </button>
@@ -252,19 +252,19 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
             return (
             <div
               key={entry.id}
-              className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden"
+              className="rounded-2xl bg-white/5 border border-white/10 shadow-xl hover:shadow-2xl transition-all overflow-hidden backdrop-blur"
             >
               {/* Model Image (preferred) or Uploaded Image */}
               {entry.model_image ? (
                 <div 
-                  className="w-full bg-gray-100 overflow-hidden relative cursor-pointer hover:opacity-90 transition-opacity"
+                  className="w-full bg-slate-800/80 overflow-hidden relative cursor-pointer hover:opacity-90 transition-opacity"
                   onClick={() => handleViewImage(entry.model_image!, 'model')}
                   title="Click to view full size"
                 >
                   <img
                     src={`data:image/png;base64,${entry.model_image}`}
                     alt="AI generated model wearing recommended outfit"
-                    className="w-full h-auto max-h-96 object-contain bg-white"
+                    className="w-full h-auto max-h-96 object-contain bg-slate-900/80"
                     onError={(e) => {
                       console.error(`Error loading model image for entry ${entry.id}:`, e);
                     }}
@@ -283,7 +283,7 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
                 </div>
               ) : entry.image_data ? (
                 <div 
-                  className="w-full h-48 bg-gray-100 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity relative"
+                  className="w-full h-48 bg-slate-800/80 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity relative"
                   onClick={() => handleViewImage(entry.image_data!, 'upload')}
                   title="Click to view full size"
                 >
@@ -303,12 +303,12 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
               <div className="p-6">
               {/* Header with date and delete button */}
               <div className="flex justify-between items-start mb-4">
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-slate-400">
                   {formatDate(entry.created_at)}
                 </span>
                 <div className="flex items-center gap-2">
                   {entry.text_input && (
-                    <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded">
+                    <span className="text-xs bg-white/10 text-teal-200 px-2 py-1 rounded-full border border-white/15">
                       Custom
                     </span>
                   )}
@@ -317,7 +317,7 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
                       e.stopPropagation();
                       handleDeleteEntry(entry.id);
                     }}
-                    className="text-red-500 hover:text-red-700 text-xl transition-colors"
+                    className="text-red-400 hover:text-red-300 text-xl transition-colors"
                     title="Delete this entry"
                     disabled={loading}
                   >
@@ -328,9 +328,9 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
 
               {/* Context if provided */}
               {entry.text_input && (
-                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-700 italic">
-                    "{highlightText(entry.text_input, searchQuery)}"
+                <div className="mb-4 p-3 bg-white/5 rounded-xl border border-white/10">
+                  <p className="text-sm text-slate-200 italic">
+                    &quot;{highlightText(entry.text_input, searchQuery)}&quot;
                   </p>
                 </div>
               )}
@@ -340,8 +340,8 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
                 <div className="flex items-start space-x-2">
                   <span className="text-lg">👔</span>
                   <div>
-                    <p className="text-xs text-gray-500 uppercase">Shirt</p>
-                    <p className="text-sm text-gray-800">
+                    <p className="text-xs text-slate-400 uppercase">Shirt</p>
+                    <p className="text-sm text-slate-200">
                       {highlightText(entry.shirt, searchQuery)}
                     </p>
                   </div>
@@ -350,8 +350,8 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
                 <div className="flex items-start space-x-2">
                   <span className="text-lg">👖</span>
                   <div>
-                    <p className="text-xs text-gray-500 uppercase">Trouser</p>
-                    <p className="text-sm text-gray-800">
+                    <p className="text-xs text-slate-400 uppercase">Trouser</p>
+                    <p className="text-sm text-slate-200">
                       {highlightText(entry.trouser, searchQuery)}
                     </p>
                   </div>
@@ -360,8 +360,8 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
                 <div className="flex items-start space-x-2">
                   <span className="text-lg">🧥</span>
                   <div>
-                    <p className="text-xs text-gray-500 uppercase">Blazer</p>
-                    <p className="text-sm text-gray-800">
+                    <p className="text-xs text-slate-400 uppercase">Blazer</p>
+                    <p className="text-sm text-slate-200">
                       {highlightText(entry.blazer, searchQuery)}
                     </p>
                   </div>
@@ -370,8 +370,8 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
                 <div className="flex items-start space-x-2">
                   <span className="text-lg">👞</span>
                   <div>
-                    <p className="text-xs text-gray-500 uppercase">Shoes</p>
-                    <p className="text-sm text-gray-800">
+                    <p className="text-xs text-slate-400 uppercase">Shoes</p>
+                    <p className="text-sm text-slate-200">
                       {highlightText(entry.shoes, searchQuery)}
                     </p>
                   </div>
@@ -380,8 +380,8 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
                 <div className="flex items-start space-x-2">
                   <span className="text-lg">🎀</span>
                   <div>
-                    <p className="text-xs text-gray-500 uppercase">Belt</p>
-                    <p className="text-sm text-gray-800">
+                    <p className="text-xs text-slate-400 uppercase">Belt</p>
+                    <p className="text-sm text-slate-200">
                       {highlightText(entry.belt, searchQuery)}
                     </p>
                   </div>
@@ -389,9 +389,9 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
               </div>
 
               {/* Reasoning */}
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <p className="text-xs text-gray-500 uppercase mb-1">Why this works</p>
-                <p className="text-sm text-gray-700">
+              <div className="mt-4 pt-4 border-t border-white/10">
+                <p className="text-xs text-slate-400 uppercase mb-1">Why this works</p>
+                <p className="text-sm text-slate-200">
                   {highlightText(entry.reasoning, searchQuery)}
                 </p>
               </div>

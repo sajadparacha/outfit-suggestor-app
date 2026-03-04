@@ -99,73 +99,73 @@ export default function AdminReports({ user }: AdminReportsProps) {
 
   if (!user?.is_admin) {
     return (
-      <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-8 text-center">
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">📊 Reports</h2>
-        <p className="text-gray-600">Admin privileges are required to view reports.</p>
+      <div className="max-w-2xl mx-auto rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-8 text-center">
+        <h2 className="text-2xl font-bold text-white mb-2">📊 Reports</h2>
+        <p className="text-slate-200">Admin privileges are required to view reports.</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">
+    <div className="py-8 px-4">
       <div className="max-w-6xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+        <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-6 mb-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-800 mb-1">📊 Admin Reports</h1>
-              <p className="text-gray-600">Access logs and usage analytics (admin-only)</p>
+              <h1 className="text-3xl font-bold text-white mb-1">📊 Admin Reports</h1>
+              <p className="text-slate-300">Access logs and usage analytics (admin-only)</p>
             </div>
           </div>
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center justify-between">
-            <span className="text-red-800">{error}</span>
-            <button onClick={() => setError(null)} className="text-red-600 hover:text-red-800">
+          <div className="bg-red-500/20 border border-red-400/30 rounded-xl p-4 mb-6 flex items-center justify-between">
+            <span className="text-red-200">{error}</span>
+            <button onClick={() => setError(null)} className="text-red-300 hover:text-red-100">
               ✕
             </button>
           </div>
         )}
 
         {/* Filters */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+        <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-6 mb-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
-            <h2 className="text-xl font-semibold text-gray-800">Filters</h2>
-            <p className="text-sm text-gray-500">Edit filters, then press “Search” to fetch.</p>
+            <h2 className="text-xl font-semibold text-white">Filters</h2>
+            <p className="text-sm text-slate-400">Edit filters, then press “Search” to fetch.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             <input
-              className="px-4 py-3 border border-gray-300 rounded-lg"
+              className="px-4 py-3 border border-white/20 rounded-xl bg-white/5 text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
               type="date"
               value={draftFilters.start_date}
               onChange={(e) => setDraftFilters((p) => ({ ...p, start_date: e.target.value }))}
             />
             <input
-              className="px-4 py-3 border border-gray-300 rounded-lg"
+              className="px-4 py-3 border border-white/20 rounded-xl bg-white/5 text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
               type="date"
               value={draftFilters.end_date}
               onChange={(e) => setDraftFilters((p) => ({ ...p, end_date: e.target.value }))}
             />
             <input
-              className="px-4 py-3 border border-gray-300 rounded-lg"
+              className="px-4 py-3 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
               placeholder="User name/email contains"
               value={draftFilters.user}
               onChange={(e) => setDraftFilters((p) => ({ ...p, user: e.target.value }))}
             />
             <input
-              className="px-4 py-3 border border-gray-300 rounded-lg"
+              className="px-4 py-3 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
               placeholder="Country"
               value={draftFilters.country}
               onChange={(e) => setDraftFilters((p) => ({ ...p, country: e.target.value }))}
             />
             <input
-              className="px-4 py-3 border border-gray-300 rounded-lg"
+              className="px-4 py-3 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
               placeholder="Operation type"
               value={draftFilters.operation_type}
               onChange={(e) => setDraftFilters((p) => ({ ...p, operation_type: e.target.value }))}
             />
             <input
-              className="px-4 py-3 border border-gray-300 rounded-lg"
+              className="px-4 py-3 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
               placeholder="Endpoint contains"
               value={draftFilters.endpoint}
               onChange={(e) => setDraftFilters((p) => ({ ...p, endpoint: e.target.value }))}
@@ -184,7 +184,7 @@ export default function AdminReports({ user }: AdminReportsProps) {
                 setTableFilter('');
               }}
               disabled={loading}
-              className="px-5 py-2.5 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 disabled:opacity-50"
+              className="px-5 py-2.5 bg-white/10 text-slate-200 rounded-xl font-medium hover:bg-white/20 border border-white/15 disabled:opacity-50"
             >
               Clear
             </button>
@@ -192,7 +192,7 @@ export default function AdminReports({ user }: AdminReportsProps) {
               type="button"
               onClick={handleRefresh}
               disabled={loading}
-              className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50"
+              className="px-5 py-2.5 bg-teal-500 text-white rounded-xl font-semibold hover:bg-teal-600 transition-colors disabled:opacity-50"
             >
               {loading ? 'Searching…' : 'Search'}
             </button>
@@ -200,56 +200,56 @@ export default function AdminReports({ user }: AdminReportsProps) {
         </div>
 
         {!loading && !error && stats === null && usage === null && logs.length === 0 && (
-          <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-            <p className="text-gray-700">
-              Ready when you are. Set your filters above, then click <b>Search</b> to load reports.
+          <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-6 mb-6">
+            <p className="text-slate-200">
+              Ready when you are. Set your filters above, then click <b className="text-white">Search</b> to load reports.
             </p>
           </div>
         )}
 
         {/* Stats cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <p className="text-sm text-gray-500">Total requests</p>
-            <p className="text-3xl font-bold text-gray-900">{stats?.total_requests ?? '—'}</p>
+          <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-6">
+            <p className="text-sm text-slate-400">Total requests</p>
+            <p className="text-3xl font-bold text-white">{stats?.total_requests ?? '—'}</p>
           </div>
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <p className="text-sm text-gray-500">Unique IPs</p>
-            <p className="text-3xl font-bold text-gray-900">{stats?.unique_ip_addresses ?? '—'}</p>
+          <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-6">
+            <p className="text-sm text-slate-400">Unique IPs</p>
+            <p className="text-3xl font-bold text-white">{stats?.unique_ip_addresses ?? '—'}</p>
           </div>
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <p className="text-sm text-gray-500">Avg response (ms)</p>
-            <p className="text-3xl font-bold text-gray-900">{stats?.average_response_time_ms ?? '—'}</p>
+          <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-6">
+            <p className="text-sm text-slate-400">Avg response (ms)</p>
+            <p className="text-3xl font-bold text-white">{stats?.average_response_time_ms ?? '—'}</p>
           </div>
         </div>
 
         {/* Usage quick view */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Usage overview</h2>
+        <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-6 mb-6">
+          <h2 className="text-xl font-semibold text-white mb-4">Usage overview</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-              <p className="text-sm text-gray-500">AI calls (total)</p>
-              <p className="text-2xl font-bold text-gray-900">{usage?.ai_calls?.total ?? '—'}</p>
-              <p className="text-sm text-gray-600 mt-1">Outfit: {usage?.ai_calls?.outfit_suggestions ?? '—'} • Wardrobe: {usage?.ai_calls?.wardrobe_analysis ?? '—'}</p>
+            <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+              <p className="text-sm text-slate-400">AI calls (total)</p>
+              <p className="text-2xl font-bold text-white">{usage?.ai_calls?.total ?? '—'}</p>
+              <p className="text-sm text-slate-300 mt-1">Outfit: {usage?.ai_calls?.outfit_suggestions ?? '—'} • Wardrobe: {usage?.ai_calls?.wardrobe_analysis ?? '—'}</p>
             </div>
-            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-              <p className="text-sm text-gray-500">Wardrobe ops (total)</p>
-              <p className="text-2xl font-bold text-gray-900">{usage?.wardrobe_operations?.total ?? '—'}</p>
-              <p className="text-sm text-gray-600 mt-1">Add: {usage?.wardrobe_operations?.add ?? '—'} • View: {usage?.wardrobe_operations?.view ?? '—'}</p>
+            <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+              <p className="text-sm text-slate-400">Wardrobe ops (total)</p>
+              <p className="text-2xl font-bold text-white">{usage?.wardrobe_operations?.total ?? '—'}</p>
+              <p className="text-sm text-slate-300 mt-1">Add: {usage?.wardrobe_operations?.add ?? '—'} • View: {usage?.wardrobe_operations?.view ?? '—'}</p>
             </div>
-            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-              <p className="text-sm text-gray-500">History views</p>
-              <p className="text-2xl font-bold text-gray-900">{usage?.outfit_history?.views ?? '—'}</p>
-              <p className="text-sm text-gray-600 mt-1">Unique users: {usage?.outfit_history?.unique_users ?? '—'}</p>
+            <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+              <p className="text-sm text-slate-400">History views</p>
+              <p className="text-2xl font-bold text-white">{usage?.outfit_history?.views ?? '—'}</p>
+              <p className="text-sm text-slate-300 mt-1">Unique users: {usage?.outfit_history?.unique_users ?? '—'}</p>
             </div>
           </div>
         </div>
 
         {/* Logs table */}
-        <div className="bg-white rounded-2xl shadow-lg p-6">
+        <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-800">Recent access logs</h2>
-            <p className="text-sm text-gray-600">
+            <h2 className="text-xl font-semibold text-white">Recent access logs</h2>
+            <p className="text-sm text-slate-300">
               Showing {filteredLogs.length} (filtered) of {logs.length} loaded • Total matching server query: {total}
             </p>
           </div>
@@ -257,7 +257,7 @@ export default function AdminReports({ user }: AdminReportsProps) {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
             <div className="flex-1">
               <input
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg"
+                className="w-full px-4 py-2.5 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                 placeholder="Filter table rows (user, endpoint, op, status, country, city…)"
                 value={tableFilter}
                 onChange={(e) => setTableFilter(e.target.value)}
@@ -267,7 +267,7 @@ export default function AdminReports({ user }: AdminReportsProps) {
               type="button"
               onClick={() => setTableFilter('')}
               disabled={!tableFilter}
-              className="px-4 py-2.5 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 disabled:opacity-50"
+              className="px-4 py-2.5 bg-white/10 text-slate-200 rounded-xl font-medium hover:bg-white/20 border border-white/15 disabled:opacity-50"
             >
               Clear table filter
             </button>
@@ -275,34 +275,34 @@ export default function AdminReports({ user }: AdminReportsProps) {
 
           <div className="overflow-auto">
             <table className="min-w-full text-sm">
-              <thead className="sticky top-0 bg-white">
-                <tr className="text-left border-b">
-                  <th className="py-2 pr-4">Time</th>
-                  <th className="py-2 pr-4">User</th>
-                  <th className="py-2 pr-4">Op</th>
-                  <th className="py-2 pr-4">Endpoint</th>
-                  <th className="py-2 pr-4">Status</th>
-                  <th className="py-2 pr-4">ms</th>
-                  <th className="py-2 pr-4">Country</th>
-                  <th className="py-2 pr-4">City</th>
+              <thead className="sticky top-0 bg-slate-900/95 backdrop-blur border-b border-white/10">
+                <tr className="text-left">
+                  <th className="py-2 pr-4 text-slate-300">Time</th>
+                  <th className="py-2 pr-4 text-slate-300">User</th>
+                  <th className="py-2 pr-4 text-slate-300">Op</th>
+                  <th className="py-2 pr-4 text-slate-300">Endpoint</th>
+                  <th className="py-2 pr-4 text-slate-300">Status</th>
+                  <th className="py-2 pr-4 text-slate-300">ms</th>
+                  <th className="py-2 pr-4 text-slate-300">Country</th>
+                  <th className="py-2 pr-4 text-slate-300">City</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredLogs.map((log) => (
-                  <tr key={log.id} className="border-b last:border-b-0">
-                    <td className="py-2 pr-4 whitespace-nowrap">{log.timestamp ? new Date(log.timestamp).toLocaleString() : ''}</td>
-                    <td className="py-2 pr-4 whitespace-nowrap">{log.user_email || log.user_id || '-'}</td>
-                    <td className="py-2 pr-4 whitespace-nowrap">{log.operation_type || '-'}</td>
-                    <td className="py-2 pr-4">{log.method} {log.endpoint}</td>
-                    <td className="py-2 pr-4 whitespace-nowrap">{log.status_code}</td>
-                    <td className="py-2 pr-4 whitespace-nowrap">{log.response_time_ms ?? '-'}</td>
-                    <td className="py-2 pr-4 whitespace-nowrap">{log.country || '-'}</td>
-                    <td className="py-2 pr-4 whitespace-nowrap">{log.city || '-'}</td>
+                  <tr key={log.id} className="border-b border-white/5 last:border-b-0">
+                    <td className="py-2 pr-4 whitespace-nowrap text-slate-200">{log.timestamp ? new Date(log.timestamp).toLocaleString() : ''}</td>
+                    <td className="py-2 pr-4 whitespace-nowrap text-slate-200">{log.user_email || log.user_id || '-'}</td>
+                    <td className="py-2 pr-4 whitespace-nowrap text-slate-200">{log.operation_type || '-'}</td>
+                    <td className="py-2 pr-4 text-slate-200">{log.method} {log.endpoint}</td>
+                    <td className="py-2 pr-4 whitespace-nowrap text-slate-200">{log.status_code}</td>
+                    <td className="py-2 pr-4 whitespace-nowrap text-slate-200">{log.response_time_ms ?? '-'}</td>
+                    <td className="py-2 pr-4 whitespace-nowrap text-slate-200">{log.country || '-'}</td>
+                    <td className="py-2 pr-4 whitespace-nowrap text-slate-200">{log.city || '-'}</td>
                   </tr>
                 ))}
                 {!loading && filteredLogs.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="py-6 text-center text-gray-500">
+                    <td colSpan={8} className="py-6 text-center text-slate-400">
                       No logs match the current table filter.
                     </td>
                   </tr>

@@ -52,6 +52,7 @@ function App() {
   const [wardrobeImageToAdd, setWardrobeImageToAdd] = useState<File | null>(null);
   const [showWardrobeDuplicateModal, setShowWardrobeDuplicateModal] = useState(false);
   const [duplicateWardrobeItem, setDuplicateWardrobeItem] = useState<any>(null);
+  const [showIntroOverlay, setShowIntroOverlay] = useState(false);
 
   // Controllers (Business Logic)
   const {
@@ -175,6 +176,10 @@ function App() {
     try {
       await login(credentials);
       showToast('Welcome back! 👋', 'success');
+      if (!localStorage.getItem('intro_hero_seen')) {
+        localStorage.setItem('intro_hero_seen', 'true');
+        setShowIntroOverlay(true);
+      }
     } catch (err) {
       // Error is handled by auth controller
     }
@@ -185,6 +190,10 @@ function App() {
       await register(data);
       // Auto-login happens in the controller
       showToast('Registration successful! Welcome! 👋', 'success');
+      if (!localStorage.getItem('intro_hero_seen')) {
+        localStorage.setItem('intro_hero_seen', 'true');
+        setShowIntroOverlay(true);
+      }
     } catch (err) {
       // Error is handled by auth controller
     }
@@ -198,10 +207,10 @@ function App() {
   // Show loading state while checking authentication
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-slate-900 md:bg-slate-950">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-400 mx-auto"></div>
+          <p className="mt-4 text-slate-200">Loading...</p>
         </div>
       </div>
     );
@@ -211,95 +220,125 @@ function App() {
 
   return (
     <div 
-      className="min-h-screen bg-gray-50"
+      className="min-h-screen bg-slate-900 md:bg-slate-950 text-white relative"
       style={{ pointerEvents: loading ? 'none' : 'auto' }}
     >
-      {/* Hero Section */}
-      <Hero />
-
+      {/* Subtle gradient orbs – lighter on mobile for daytime use */}
+      <div className="fixed inset-0 opacity-20 md:opacity-30 pointer-events-none overflow-hidden">
+        <div className="absolute -top-32 -left-24 h-72 w-72 rounded-full bg-indigo-500 blur-3xl" />
+        <div className="absolute -bottom-24 right-0 h-72 w-72 rounded-full bg-teal-400 blur-3xl" />
+      </div>
       {/* Navigation Tabs - scrollable on mobile, touch-friendly */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="container mx-auto px-3 sm:px-4">
-          <div className="flex justify-between items-stretch gap-2 min-h-[48px]">
-            <div className="flex flex-1 min-w-0 overflow-x-auto overflow-y-hidden scrollbar-none -mx-3 px-3 sm:mx-0 sm:px-0">
-              <div className="flex items-stretch gap-1 sm:gap-2 flex-nowrap">
+      <div className="bg-slate-900/95 md:bg-slate-950/95 border-b border-slate-700 md:border-slate-800">
+        <div className="container mx-auto px-3 sm:px-4 py-2">
+          <div className="flex justify-between items-center gap-2">
+            <div className="flex flex-1 min-w-0 overflow-x-auto overflow-y-hidden scrollbar-none -mx-1 px-1 sm:mx-0 sm:px-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-nowrap mx-auto sm:mx-0">
                 <button
                   onClick={() => setCurrentView('main')}
-                  className={`min-h-[44px] py-3 px-2 sm:py-4 sm:px-2 border-b-2 font-medium text-sm whitespace-nowrap transition-colors touch-manipulation ${
+                  className={`inline-flex items-center rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
                     currentView === 'main'
-                      ? 'border-indigo-600 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'bg-slate-800/60 text-slate-200 hover:bg-slate-700'
                   }`}
                 >
-                  🎨 Get Suggestion
+                  <span className="mr-1.5" aria-hidden="true">
+                    🎨
+                  </span>
+                  <span>Get Suggestion</span>
                 </button>
                 {isAuthenticated && (
                   <>
                     <button
                       onClick={() => setCurrentView('history')}
-                      className={`min-h-[44px] py-3 px-2 sm:py-4 sm:px-2 border-b-2 font-medium text-sm whitespace-nowrap transition-colors touch-manipulation ${
+                      className={`inline-flex items-center rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
                         currentView === 'history'
-                          ? 'border-indigo-600 text-indigo-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                          ? 'bg-white text-slate-900 shadow-sm'
+                          : 'bg-slate-800/60 text-slate-200 hover:bg-slate-700'
                       }`}
                     >
-                      📋 History
+                      <span className="mr-1.5" aria-hidden="true">
+                        📋
+                      </span>
+                      <span>History</span>
                     </button>
                     <button
                       onClick={() => setCurrentView('wardrobe')}
-                      className={`min-h-[44px] py-3 px-2 sm:py-4 sm:px-2 border-b-2 font-medium text-sm whitespace-nowrap transition-colors touch-manipulation ${
+                      className={`inline-flex items-center rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
                         currentView === 'wardrobe'
-                          ? 'border-indigo-600 text-indigo-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                          ? 'bg-white text-slate-900 shadow-sm'
+                          : 'bg-slate-800/60 text-slate-200 hover:bg-slate-700'
                       }`}
                     >
-                      👔 Wardrobe
+                      <span className="mr-1.5" aria-hidden="true">
+                        👔
+                      </span>
+                      <span>Wardrobe</span>
                     </button>
                     {user?.is_admin && (
                       <button
                         onClick={() => setCurrentView('reports')}
-                        className={`min-h-[44px] py-3 px-2 sm:py-4 sm:px-2 border-b-2 font-medium text-sm whitespace-nowrap transition-colors touch-manipulation ${
+                        className={`inline-flex items-center rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
                           currentView === 'reports'
-                            ? 'border-indigo-600 text-indigo-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            ? 'bg-white text-slate-900 shadow-sm'
+                            : 'bg-slate-800/60 text-slate-200 hover:bg-slate-700'
                         }`}
                       >
-                        📊 Reports
+                        <span className="mr-1.5" aria-hidden="true">
+                          📊
+                        </span>
+                        <span>Reports</span>
                       </button>
                     )}
                     <button
                       onClick={() => setCurrentView('settings')}
-                      className={`min-h-[44px] py-3 px-2 sm:py-4 sm:px-2 border-b-2 font-medium text-sm whitespace-nowrap transition-colors touch-manipulation ${
+                      className={`inline-flex items-center rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
                         currentView === 'settings'
-                          ? 'border-indigo-600 text-indigo-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                          ? 'bg-white text-slate-900 shadow-sm'
+                          : 'bg-slate-800/60 text-slate-200 hover:bg-slate-700'
                       }`}
                     >
-                      ⚙️ Settings
+                      <span className="mr-1.5" aria-hidden="true">
+                        ⚙️
+                      </span>
+                      <span>Settings</span>
                     </button>
                   </>
                 )}
                 <button
+                  onClick={() => setShowIntroOverlay(true)}
+                  className="inline-flex items-center rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation bg-slate-800/60 text-slate-200 hover:bg-slate-700"
+                  aria-label="Open intro"
+                >
+                  <span className="mr-1.5" aria-hidden="true">
+                    ✨
+                  </span>
+                  <span>Intro</span>
+                </button>
+                <button
                   onClick={() => setCurrentView('about')}
-                  className={`min-h-[44px] py-3 px-2 sm:py-4 sm:px-2 border-b-2 font-medium text-sm whitespace-nowrap transition-colors touch-manipulation ${
+                  className={`inline-flex items-center rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
                     currentView === 'about'
-                      ? 'border-indigo-600 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'bg-slate-800/60 text-slate-200 hover:bg-slate-700'
                   }`}
                 >
-                  ℹ️ About
+                  <span className="mr-1.5" aria-hidden="true">
+                    ℹ️
+                  </span>
+                  <span>About</span>
                 </button>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               {isAuthenticated ? (
                 <>
-                  <span className="text-xs sm:text-sm text-gray-600 truncate max-w-[80px] sm:max-w-none">
+                  <span className="text-xs sm:text-sm text-slate-100 truncate max-w-[80px] sm:max-w-none">
                     {user?.full_name || user?.email}
                   </span>
                   <button
                     onClick={handleLogout}
-                    className="min-h-[44px] px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors touch-manipulation"
+                    className="min-h-[36px] px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-900 bg-white border border-slate-200 rounded-full hover:bg-slate-50 transition-colors touch-manipulation"
                   >
                     Logout
                   </button>
@@ -308,7 +347,7 @@ function App() {
                 <div className="flex items-center gap-1 sm:gap-2">
                   <button
                     onClick={() => setShowRegister(true)}
-                    className="min-h-[44px] px-3 py-2 text-sm font-medium text-indigo-600 bg-white border border-indigo-600 rounded-md hover:bg-indigo-50 transition-colors touch-manipulation"
+                    className="min-h-[36px] px-3 py-1.5 text-xs sm:text-sm font-medium text-indigo-200 bg-transparent border border-indigo-400/70 rounded-full hover:bg-indigo-500/20 transition-colors touch-manipulation"
                   >
                     Sign Up
                   </button>
@@ -317,7 +356,7 @@ function App() {
                       setShowRegister(false);
                       setShowLoginModal(true);
                     }}
-                    className="min-h-[44px] px-3 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors touch-manipulation"
+                    className="min-h-[36px] px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-900 bg-white rounded-full hover:bg-slate-100 transition-colors touch-manipulation"
                   >
                     Login
                   </button>
@@ -330,7 +369,7 @@ function App() {
 
       {/* Main Content */}
       <div 
-        className="container mx-auto px-3 sm:px-4 py-4 sm:py-8"
+        className="relative container mx-auto px-3 sm:px-4 py-4 sm:py-8"
         style={{ pointerEvents: loading ? 'none' : 'auto' }}
       >
         {currentView === 'main' && (
@@ -497,9 +536,9 @@ function App() {
               />
             </ErrorBoundary>
           ) : (
-            <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-8 text-center">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">👔 Wardrobe Management</h2>
-              <p className="text-gray-600 mb-6">
+            <div className="max-w-2xl mx-auto rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-8 text-center">
+              <h2 className="text-2xl font-bold text-white mb-4">👔 Wardrobe Management</h2>
+              <p className="text-slate-200 mb-6">
                 Please log in to manage your wardrobe and get personalized outfit suggestions based on your existing clothes.
               </p>
               <button
@@ -507,7 +546,7 @@ function App() {
                   setShowRegister(false);
                   setShowLoginModal(true);
                 }}
-                className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
+                className="px-6 py-3 bg-teal-500 text-white rounded-full font-semibold hover:bg-teal-600 transition-colors"
               >
                 Login to Continue
               </button>
@@ -521,9 +560,9 @@ function App() {
               <AdminReports user={user} />
             </ErrorBoundary>
           ) : (
-            <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-8 text-center">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">📊 Reports</h2>
-              <p className="text-gray-600 mb-6">Admin privileges are required to view reports.</p>
+            <div className="max-w-2xl mx-auto rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-8 text-center">
+              <h2 className="text-2xl font-bold text-white mb-4">📊 Reports</h2>
+              <p className="text-slate-200 mb-6">Admin privileges are required to view reports.</p>
             </div>
           )
         )}
@@ -541,12 +580,12 @@ function App() {
               searchController={historySearchController}
             />
           ) : (
-            <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-8 text-center">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Outfit History</h2>
-              <p className="text-gray-600 mb-6">Please log in to view your outfit history.</p>
+            <div className="max-w-2xl mx-auto rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-8 text-center">
+              <h2 className="text-2xl font-bold text-white mb-4">Outfit History</h2>
+              <p className="text-slate-200 mb-6">Please log in to view your outfit history.</p>
               <button
                 onClick={() => setShowLoginModal(true)}
-                className="px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                className="px-6 py-2 bg-teal-500 text-white rounded-full hover:bg-teal-600 transition-colors"
               >
                 Login
               </button>
@@ -559,22 +598,22 @@ function App() {
         {currentView === 'settings' && (
           isAuthenticated ? (
           <div className="max-w-2xl mx-auto">
-            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Account Settings</h2>
+            <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-6 mb-6">
+              <h2 className="text-2xl font-bold text-white mb-4">Account Settings</h2>
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-700 mb-2">User Information</h3>
-                  <p className="text-gray-600">
-                    <strong>Email:</strong> {user?.email}
+                  <h3 className="text-lg font-semibold text-slate-200 mb-2">User Information</h3>
+                  <p className="text-slate-200">
+                    <strong className="text-white">Email:</strong> {user?.email}
                   </p>
                   {user?.full_name && (
-                    <p className="text-gray-600">
-                      <strong>Name:</strong> {user.full_name}
+                    <p className="text-slate-200">
+                      <strong className="text-white">Name:</strong> {user.full_name}
                     </p>
                   )}
                 </div>
-                <div className="border-t pt-4">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-4">Change Password</h3>
+                <div className="border-t border-white/10 pt-4">
+                  <h3 className="text-lg font-semibold text-slate-200 mb-4">Change Password</h3>
                   {showChangePassword ? (
                     <ChangePassword
                       onSuccess={() => {
@@ -586,20 +625,20 @@ function App() {
                   ) : (
                     <button
                       onClick={() => setShowChangePassword(true)}
-                      className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                      className="px-4 py-2 bg-teal-500 text-white rounded-full hover:bg-teal-600"
                     >
                       Change Password
                     </button>
                   )}
                 </div>
-                <div className="border-t pt-4">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-4">Wardrobe Management</h3>
-                  <p className="text-sm text-gray-600 mb-4">
+                <div className="border-t border-white/10 pt-4">
+                  <h3 className="text-lg font-semibold text-slate-200 mb-4">Wardrobe Management</h3>
+                  <p className="text-sm text-slate-300 mb-4">
                     Manage your wardrobe items to get personalized outfit suggestions based on what you own.
                   </p>
                   <button
                     onClick={() => setCurrentView('wardrobe')}
-                    className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                    className="px-4 py-2 bg-slate-600 text-white rounded-full hover:bg-slate-500 transition-colors"
                   >
                     👔 Manage Wardrobe
                   </button>
@@ -608,12 +647,12 @@ function App() {
             </div>
           </div>
           ) : (
-            <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-8 text-center">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Settings</h2>
-              <p className="text-gray-600 mb-6">Please log in to access your account settings.</p>
+            <div className="max-w-2xl mx-auto rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-8 text-center">
+              <h2 className="text-2xl font-bold text-white mb-4">Settings</h2>
+              <p className="text-slate-200 mb-6">Please log in to access your account settings.</p>
               <button
                 onClick={() => setShowLoginModal(true)}
-                className="px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                className="px-6 py-2 bg-teal-500 text-white rounded-full hover:bg-teal-600 transition-colors"
               >
                 Login
               </button>
@@ -621,6 +660,23 @@ function App() {
           )
         )}
       </div>
+
+      {/* Intro overlay - shown once after first successful login/register */}
+      {showIntroOverlay && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+          <div className="relative max-w-3xl w-full mx-4 rounded-3xl overflow-hidden shadow-2xl">
+            <button
+              type="button"
+              onClick={() => setShowIntroOverlay(false)}
+              className="absolute top-3 right-3 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white text-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+              aria-label="Close intro"
+            >
+              ✕
+            </button>
+            <Hero />
+          </div>
+        </div>
+      )}
 
       {/* Login/Register Modal - Only show when explicitly requested */}
       {(showRegister || showLoginModal) && !isAuthenticated && (
@@ -633,13 +689,13 @@ function App() {
             }}
           ></div>
           <div className="flex min-h-full items-center justify-center p-4">
-            <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full transform transition-all">
+            <div className="relative rounded-2xl bg-slate-900 border border-white/10 shadow-2xl max-w-md w-full transform transition-all backdrop-blur">
               <button
                 onClick={() => {
                   setShowRegister(false);
                   setShowLoginModal(false);
                 }}
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10"
+                className="absolute top-4 right-4 text-slate-400 hover:text-white z-10"
               >
                 ✕
               </button>
@@ -719,18 +775,18 @@ function App() {
 
       {/* Add to Wardrobe Modal with Editable Form */}
       {showAddWardrobeModal && wardrobeFormData && wardrobeImageToAdd && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="rounded-2xl bg-slate-900 border border-white/10 shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto backdrop-blur">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">✏️ Review & Add to Wardrobe</h2>
+                <h2 className="text-2xl font-bold text-white">✏️ Review & Add to Wardrobe</h2>
                 <button
                   onClick={() => {
                     setShowAddWardrobeModal(false);
                     setWardrobeFormData(null);
                     setWardrobeImageToAdd(null);
                   }}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                  className="text-slate-400 hover:text-white text-2xl"
                 >
                   ✕
                 </button>
@@ -763,19 +819,19 @@ function App() {
                   <img
                     src={URL.createObjectURL(wardrobeImageToAdd)}
                     alt="Item preview"
-                    className="w-full max-h-48 object-contain rounded-lg border border-gray-200"
+                    className="w-full max-h-48 object-contain rounded-lg border border-white/20 bg-white/5"
                   />
                 </div>
 
                 {/* Category */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-slate-200 mb-2">
                     Category *
                   </label>
                   <select
                     value={wardrobeFormData.category}
                     onChange={(e) => setWardrobeFormData({ ...wardrobeFormData, category: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                     required
                   >
                     <option value="shirt">Shirt</option>
@@ -789,14 +845,14 @@ function App() {
 
                 {/* Color */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-slate-200 mb-2">
                     Color *
                   </label>
                   <input
                     type="text"
                     value={wardrobeFormData.color}
                     onChange={(e) => setWardrobeFormData({ ...wardrobeFormData, color: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                     placeholder="e.g., Navy blue, Black"
                     required
                   />
@@ -804,21 +860,21 @@ function App() {
 
                 {/* Description */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-slate-200 mb-2">
                     Description *
                   </label>
                   <textarea
                     value={wardrobeFormData.description}
                     onChange={(e) => setWardrobeFormData({ ...wardrobeFormData, description: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                     rows={3}
                     placeholder="e.g., Classic fit, casual style"
                     required
                   />
                 </div>
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                  <p className="text-sm text-blue-800">
+                <div className="bg-teal-500/20 border border-teal-400/30 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-teal-100">
                     ✨ <strong>AI Analysis Complete!</strong> Review and edit the extracted details above before saving.
                   </p>
                 </div>
@@ -831,14 +887,14 @@ function App() {
                       setWardrobeFormData(null);
                       setWardrobeImageToAdd(null);
                     }}
-                    className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-all"
+                    className="px-6 py-3 bg-white/10 text-slate-200 rounded-full font-semibold hover:bg-white/20 transition-all border border-white/15"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={addingToWardrobe || wardrobeLoading}
-                    className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-all disabled:opacity-50"
+                    className="flex-1 px-6 py-3 bg-teal-500 text-white rounded-full font-semibold hover:bg-teal-600 transition-all disabled:opacity-50"
                   >
                     {addingToWardrobe || wardrobeLoading ? 'Adding...' : '✅ Save to Wardrobe'}
                   </button>
@@ -856,8 +912,8 @@ function App() {
         message={
           duplicateWardrobeItem ? (
             <div className="space-y-4">
-              <p>We found a similar item already in your wardrobe:</p>
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <p className="text-slate-200">We found a similar item already in your wardrobe:</p>
+              <div className="bg-white/5 rounded-lg p-4 border border-white/10">
                 {duplicateWardrobeItem.image_data && (
                   <img
                     src={`data:image/jpeg;base64,${duplicateWardrobeItem.image_data}`}
@@ -865,15 +921,15 @@ function App() {
                     className="w-full max-h-32 object-contain mb-3 rounded"
                   />
                 )}
-                <p className="font-semibold text-gray-800 capitalize">{duplicateWardrobeItem.category}</p>
+                <p className="font-semibold text-white capitalize">{duplicateWardrobeItem.category}</p>
                 {duplicateWardrobeItem.color && (
-                  <p className="text-sm text-gray-600">Color: {duplicateWardrobeItem.color}</p>
+                  <p className="text-sm text-slate-300">Color: {duplicateWardrobeItem.color}</p>
                 )}
                 {duplicateWardrobeItem.description && (
-                  <p className="text-sm text-gray-600 mt-1">{duplicateWardrobeItem.description}</p>
+                  <p className="text-sm text-slate-300 mt-1">{duplicateWardrobeItem.description}</p>
                 )}
               </div>
-              <p className="text-sm text-gray-600">Do you still want to add this item anyway?</p>
+              <p className="text-sm text-slate-300">Do you still want to add this item anyway?</p>
             </div>
           ) : (
             "A similar item already exists in your wardrobe. Do you still want to add it?"

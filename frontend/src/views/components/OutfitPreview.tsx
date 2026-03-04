@@ -57,21 +57,21 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
 
   if (loading) {
     return (
-      <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:p-8">
+      <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-4 sm:p-6 lg:p-8">
         {/* Skeleton Loader */}
         <div className="animate-pulse space-y-6">
-          <div className="bg-gray-200 h-96 rounded-xl"></div>
-          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          <div className="bg-white/10 h-96 rounded-xl"></div>
+          <div className="h-4 bg-white/10 rounded w-3/4"></div>
+          <div className="h-4 bg-white/10 rounded w-1/2"></div>
           <div className="grid grid-cols-4 gap-4">
-            <div className="h-12 bg-gray-200 rounded"></div>
-            <div className="h-12 bg-gray-200 rounded"></div>
-            <div className="h-12 bg-gray-200 rounded"></div>
-            <div className="h-12 bg-gray-200 rounded"></div>
+            <div className="h-12 bg-white/10 rounded"></div>
+            <div className="h-12 bg-white/10 rounded"></div>
+            <div className="h-12 bg-white/10 rounded"></div>
+            <div className="h-12 bg-white/10 rounded"></div>
           </div>
         </div>
         <div className="mt-6 text-center">
-          <div className="inline-flex items-center text-teal-600">
+          <div className="inline-flex items-center text-teal-300">
             <svg className="animate-spin h-6 w-6 mr-3" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
@@ -85,14 +85,14 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
 
   if (error) {
     return (
-      <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:p-8">
+      <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-4 sm:p-6 lg:p-8">
         <div className="text-center">
           <div className="text-6xl mb-4">😞</div>
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">Oops! Something went wrong</h3>
-          <p className="text-gray-600 mb-6">{error}</p>
+          <h3 className="text-xl font-semibold text-white mb-2">Oops! Something went wrong</h3>
+          <p className="text-slate-200 mb-6">{error}</p>
           <button
             onClick={onNext}
-            className="px-6 py-3 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors"
+            className="px-6 py-3 bg-teal-500 text-white rounded-full hover:bg-teal-600 transition-colors"
           >
             Try Again
           </button>
@@ -103,14 +103,14 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
 
   if (!suggestion) {
     return (
-      <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 lg:p-12">
+      <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-6 sm:p-8 lg:p-12">
         <div className="text-center">
           <div className="text-6xl sm:text-8xl mb-4 sm:mb-6">👔</div>
-          <h3 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-3">Ready for Style Magic?</h3>
-          <p className="text-gray-600 mb-6 sm:mb-8 max-w-md mx-auto text-sm sm:text-base">
+          <h3 className="text-xl sm:text-2xl font-semibold text-white mb-3">Ready for Style Magic?</h3>
+          <p className="text-slate-200 mb-6 sm:mb-8 max-w-md mx-auto text-sm sm:text-base">
             Upload a photo of your clothing and let our AI create the perfect outfit combination for you!
           </p>
-          <div className="flex items-center justify-center flex-wrap gap-x-2 gap-y-1 text-sm text-gray-500 px-2">
+          <div className="flex items-center justify-center flex-wrap gap-x-2 gap-y-1 text-sm text-slate-400 px-2">
             <span>👈</span>
             <span>Start by uploading a photo on the left</span>
           </div>
@@ -120,14 +120,14 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all hover:shadow-xl">
+    <div className="rounded-2xl bg-white/5 border border-white/10 overflow-hidden transition-all shadow-xl backdrop-blur hover:shadow-2xl">
       {/* Side by Side: Uploaded Image and Generated Model Image */}
-      <div className="relative bg-gradient-to-br from-gray-100 to-gray-200">
+      <div className="relative bg-gradient-to-br from-slate-800/80 to-slate-900/80">
         {suggestion.model_image && suggestion.imageUrl ? (
           // Show both images side by side
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
             {/* Uploaded Image - Left Side */}
-            <div className="relative bg-white rounded-lg overflow-hidden shadow-md">
+            <div className="relative bg-white/5 rounded-xl overflow-hidden border border-white/10">
               <div className="absolute top-2 left-2 bg-teal-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-lg z-10">
                 📤 Your Upload
               </div>
@@ -139,7 +139,7 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
             </div>
             
             {/* Generated Model Image - Right Side */}
-            <div className="relative bg-white rounded-lg overflow-hidden shadow-md">
+            <div className="relative bg-white/5 rounded-xl overflow-hidden border border-white/10">
               <div className="absolute top-2 left-2 bg-purple-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-lg z-10">
                 🤖 AI Model
               </div>
@@ -166,7 +166,7 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
           </div>
         ) : suggestion.model_image ? (
           // Only model image available
-          <div className="relative min-h-[400px] bg-white flex items-center justify-center">
+          <div className="relative min-h-[400px] bg-slate-900/80 flex items-center justify-center">
             <img
               src={`data:image/png;base64,${suggestion.model_image}`}
               alt="AI generated model wearing recommended outfit"
@@ -211,16 +211,16 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
 
       {/* Outfit Details */}
       <div className="p-4 sm:p-6 lg:p-8">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Your Perfect Outfit</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">Your Perfect Outfit</h2>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
           {(
             [
-              { key: 'shirt', label: 'Shirt', icon: '👕', value: suggestion.shirt, bg: 'bg-teal-50', text: 'text-teal-700' },
-              { key: 'trouser', label: 'Trousers', icon: '👖', value: suggestion.trouser, bg: 'bg-purple-50', text: 'text-purple-700' },
-              { key: 'blazer', label: 'Blazer', icon: '🧥', value: suggestion.blazer, bg: 'bg-blue-50', text: 'text-blue-700' },
-              { key: 'shoes', label: 'Shoes', icon: '👞', value: suggestion.shoes, bg: 'bg-amber-50', text: 'text-amber-700' },
-              { key: 'belt', label: 'Belt', icon: '🎀', value: suggestion.belt, bg: 'bg-rose-50', text: 'text-rose-700' },
+              { key: 'shirt', label: 'Shirt', icon: '👕', value: suggestion.shirt, bg: 'bg-teal-500/10', text: 'text-teal-300' },
+              { key: 'trouser', label: 'Trousers', icon: '👖', value: suggestion.trouser, bg: 'bg-purple-500/10', text: 'text-purple-300' },
+              { key: 'blazer', label: 'Blazer', icon: '🧥', value: suggestion.blazer, bg: 'bg-blue-500/10', text: 'text-blue-300' },
+              { key: 'shoes', label: 'Shoes', icon: '👞', value: suggestion.shoes, bg: 'bg-amber-500/10', text: 'text-amber-300' },
+              { key: 'belt', label: 'Belt', icon: '🎀', value: suggestion.belt, bg: 'bg-rose-500/10', text: 'text-rose-300' },
             ] as const
           ).map(({ key, label, icon, value, bg, text }) => {
             const match = suggestion.matching_wardrobe_items?.[key]?.[0] as MatchingWardrobeItem | undefined;
@@ -234,7 +234,7 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
             return (
               <div
                 key={key}
-                className={`${bg} rounded-lg p-4 ${key === 'belt' ? 'md:col-span-2' : ''} flex gap-4 items-start`}
+                className={`${bg} rounded-xl p-4 border border-white/10 ${key === 'belt' ? 'md:col-span-2' : ''} flex gap-4 items-start`}
               >
                 {thumbSrc && (
                   <button
@@ -256,7 +256,7 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
                     {icon} {label}
                     {thumbSrc && <span className="ml-1 text-xs">(from wardrobe)</span>}
                   </div>
-                  <p className="text-gray-800">{value}</p>
+                  <p className="text-slate-200">{value}</p>
                 </div>
               </div>
             );
@@ -264,23 +264,23 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
         </div>
 
         {/* Reasoning */}
-        <div className="bg-gradient-to-r from-teal-50 to-purple-50 rounded-lg p-6 mb-6">
+        <div className="bg-white/5 border border-white/10 rounded-xl p-6 mb-6">
           <div className="flex items-start space-x-3">
             <div className="text-2xl">💡</div>
             <div className="flex-1">
-              <h3 className="font-semibold text-gray-800 mb-2">Why This Works</h3>
-              <p className="text-gray-700 leading-relaxed">{suggestion.reasoning}</p>
+              <h3 className="font-semibold text-white mb-2">Why This Works</h3>
+              <p className="text-slate-200 leading-relaxed">{suggestion.reasoning}</p>
             </div>
           </div>
         </div>
 
         {/* Cost Display */}
         {suggestion.cost && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <div className="bg-teal-500/10 border border-teal-400/20 rounded-xl p-4 mb-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-blue-900 mb-1">💰 AI Suggestion Cost</h3>
-                <div className="text-sm text-blue-700 space-y-1">
+                <h3 className="font-semibold text-teal-200 mb-1">💰 AI Suggestion Cost</h3>
+                <div className="text-sm text-slate-200 space-y-1">
                   <div>GPT-4 Vision: {formatCost(suggestion.cost.gpt4_cost)}</div>
                   {suggestion.cost.model_image_cost !== undefined && suggestion.cost.model_image_cost > 0 && (
                     <div>Model Image ({suggestion.model_image?.length ? 'DALL-E 3' : 'Other'}): {formatCost(suggestion.cost.model_image_cost)}</div>
@@ -288,10 +288,10 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-bold text-blue-900">
+                <div className="text-2xl font-bold text-white">
                   {formatCost(suggestion.cost.total_cost)}
                 </div>
-                <div className="text-xs text-blue-600">Total</div>
+                <div className="text-xs text-teal-300">Total</div>
               </div>
             </div>
           </div>
@@ -302,10 +302,10 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
           <button
             onClick={onNext}
             disabled={!hasImage}
-            className={`min-h-[48px] px-4 py-3 rounded-lg font-medium transition-all shadow-md touch-manipulation ${
+            className={`min-h-[48px] px-4 py-3 rounded-xl font-medium transition-all shadow-md touch-manipulation ${
               hasImage
                 ? 'bg-teal-500 text-white hover:bg-teal-600 active:scale-[0.98]'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-white/10 text-slate-500 cursor-not-allowed border border-white/10'
             }`}
             aria-label="Get next suggestion"
           >
@@ -315,10 +315,10 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
           <button
             onClick={onLike}
             disabled={!hasImage}
-            className={`min-h-[48px] px-4 py-3 rounded-lg font-medium transition-all shadow-md touch-manipulation ${
+            className={`min-h-[48px] px-4 py-3 rounded-xl font-medium transition-all shadow-md touch-manipulation ${
               hasImage
-                ? 'bg-green-500 text-white hover:bg-green-600 active:scale-[0.98]'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                ? 'bg-emerald-500 text-white hover:bg-emerald-600 active:scale-[0.98]'
+                : 'bg-white/10 text-slate-500 cursor-not-allowed border border-white/10'
             }`}
             aria-label="Like this outfit"
           >
@@ -328,10 +328,10 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
           <button
             onClick={onDislike}
             disabled={!hasImage}
-            className={`min-h-[48px] px-4 py-3 rounded-lg font-medium transition-all shadow-md touch-manipulation ${
+            className={`min-h-[48px] px-4 py-3 rounded-xl font-medium transition-all shadow-md touch-manipulation ${
               hasImage
-                ? 'bg-gray-500 text-white hover:bg-gray-600 active:scale-[0.98]'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                ? 'bg-slate-600 text-white hover:bg-slate-500 active:scale-[0.98]'
+                : 'bg-white/10 text-slate-500 cursor-not-allowed border border-white/10'
             }`}
             aria-label="Dislike this outfit"
           >
@@ -345,17 +345,17 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
             <button
               onClick={onAddToWardrobe}
               disabled={!hasImage}
-              className={`min-h-[48px] px-6 py-3 rounded-lg font-medium transition-all shadow-md flex items-center justify-center gap-2 touch-manipulation ${
+              className={`min-h-[48px] px-6 py-3 rounded-xl font-medium transition-all shadow-md flex items-center justify-center gap-2 touch-manipulation ${
                 hasImage
                   ? 'bg-indigo-500 text-white hover:bg-indigo-600 active:scale-[0.98]'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-white/10 text-slate-500 cursor-not-allowed border border-white/10'
               }`}
               aria-label="Add new item to your wardrobe"
             >
               <span>👔</span>
               <span>Add to Wardrobe</span>
             </button>
-            <p className="text-sm text-gray-500 text-center">
+            <p className="text-sm text-slate-400 text-center">
               If you want to add a new item to your wardrobe, press this button.
             </p>
           </div>
@@ -364,14 +364,14 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
 
       {/* Modal: AI Details */}
       {showDetails && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
-          <div className="bg-white rounded-xl max-w-2xl w-full shadow-2xl">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800">AI Recommendation Details</h3>
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+          <div className="rounded-2xl bg-slate-900 border border-white/10 max-w-2xl w-full shadow-2xl backdrop-blur">
+            <div className="flex items-center justify-between p-4 border-b border-white/10">
+              <h3 className="text-lg font-semibold text-white">AI Recommendation Details</h3>
               <button
                 onClick={() => setShowDetails(false)}
                 aria-label="Close details"
-                className="p-2 rounded hover:bg-gray-100"
+                className="p-2 rounded hover:bg-white/10 text-slate-300"
               >
                 ✖
               </button>
@@ -379,14 +379,14 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
             <div className="p-4 space-y-4 max-h-[70vh] overflow-auto">
               <>
                 {suggestion.meta?.usedPrompt && (
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">Prompt Sent</div>
-                    <pre className="text-sm text-gray-800 whitespace-pre-wrap">{suggestion.meta.usedPrompt}</pre>
+                  <div className="bg-white/5 rounded-xl p-3 border border-white/10">
+                    <div className="text-xs uppercase tracking-wide text-slate-400 mb-1">Prompt Sent</div>
+                    <pre className="text-sm text-slate-200 whitespace-pre-wrap">{suggestion.meta.usedPrompt}</pre>
                   </div>
                 )}
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">Parsed Recommendation</div>
-                  <pre className="text-sm text-gray-800 whitespace-pre-wrap">{JSON.stringify({
+                <div className="bg-white/5 rounded-xl p-3 border border-white/10">
+                  <div className="text-xs uppercase tracking-wide text-slate-400 mb-1">Parsed Recommendation</div>
+                  <pre className="text-sm text-slate-200 whitespace-pre-wrap">{JSON.stringify({
                     shirt: suggestion.shirt,
                     trouser: suggestion.trouser,
                     blazer: suggestion.blazer,
@@ -396,17 +396,17 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
                   }, null, 2)}</pre>
                 </div>
                 {suggestion.raw && (
-                  <details className="bg-gray-50 rounded-lg p-3">
-                    <summary className="cursor-pointer text-sm font-medium text-gray-700">Raw AI Response JSON</summary>
-                    <pre className="mt-2 text-xs text-gray-700 whitespace-pre-wrap">{JSON.stringify(suggestion.raw, null, 2)}</pre>
+                  <details className="bg-white/5 rounded-xl p-3 border border-white/10">
+                    <summary className="cursor-pointer text-sm font-medium text-slate-200">Raw AI Response JSON</summary>
+                    <pre className="mt-2 text-xs text-slate-300 whitespace-pre-wrap">{JSON.stringify(suggestion.raw, null, 2)}</pre>
                   </details>
                 )}
               </>
             </div>
-            <div className="p-4 border-t border-gray-200 flex justify-end">
+            <div className="p-4 border-t border-white/10 flex justify-end">
               <button
                 onClick={() => setShowDetails(false)}
-                className="px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600"
+                className="px-4 py-2 bg-teal-500 text-white rounded-full hover:bg-teal-600"
               >
                 Close
               </button>
