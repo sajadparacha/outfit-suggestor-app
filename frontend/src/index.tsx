@@ -13,7 +13,19 @@ root.render(
   </React.StrictMode>
 );
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
+// Register PWA service worker in production
+if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
+  const publicUrl = process.env.PUBLIC_URL || '';
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register(`${publicUrl}/sw.js`, { scope: publicUrl || '/' })
+      .then((registration) => {
+        console.log('PWA: Service worker registered', registration.scope);
+      })
+      .catch((err) => {
+        console.warn('PWA: Service worker registration failed', err);
+      });
+  });
+}
+
 reportWebVitals();
