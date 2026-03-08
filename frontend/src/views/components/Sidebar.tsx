@@ -1,5 +1,5 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { isValidImageSize, formatFileSize } from '../../utils/imageUtils';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
+import { isValidImageSize, formatFileSize, createImagePreviewUrl, revokeImagePreviewUrl } from '../../utils/imageUtils';
 import { CLIENT_MAX_SIZE_MB } from '../../constants/imageLimits';
 
 interface Filters {
@@ -62,6 +62,15 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [hasCamera, setHasCamera] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [showEnlargeImage, setShowEnlargeImage] = useState(false);
+
+  // Object URL for uploaded image thumbnail (revoke on cleanup)
+  const imagePreviewUrl = useMemo(() => (image ? createImagePreviewUrl(image) : null), [image]);
+  useEffect(() => {
+    return () => {
+      if (imagePreviewUrl) revokeImagePreviewUrl(imagePreviewUrl);
+    };
+  }, [imagePreviewUrl]);
 
   // Check if device has camera on mount
   useEffect(() => {
@@ -232,7 +241,27 @@ const Sidebar: React.FC<SidebarProps> = ({
             }
           }}
         >
-          {image ? (
+          {image && imagePreviewUrl ? (
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowEnlargeImage(true);
+                }}
+                className="block w-full rounded-lg overflow-hidden border border-white/20 hover:border-teal-400 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-400 focus:ring-offset-2 focus:ring-offset-slate-900"
+                aria-label="View full size image"
+              >
+                <img
+                  src={imagePreviewUrl}
+                  alt="Uploaded clothing"
+                  className="w-full h-32 object-contain bg-slate-800/50"
+                />
+              </button>
+              <p className="text-sm text-slate-200 truncate">{image.name}</p>
+              <p className="text-xs text-teal-300">Click thumbnail to enlarge · or drag to change</p>
+            </div>
+          ) : image ? (
             <div className="space-y-2">
               <div className="text-3xl">📸</div>
               <p className="text-sm text-slate-200 truncate">{image.name}</p>
@@ -323,6 +352,35 @@ const Sidebar: React.FC<SidebarProps> = ({
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Enlarge uploaded image modal */}
+      {showEnlargeImage && imagePreviewUrl && (
+        <div
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 cursor-pointer"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Uploaded image full size"
+          onClick={() => setShowEnlargeImage(false)}
+        >
+          <button
+            type="button"
+            onClick={() => setShowEnlargeImage(false)}
+            aria-label="Close full image"
+            className="absolute top-4 right-4 p-3 bg-white/20 hover:bg-white/30 rounded-full text-white text-xl transition-colors z-10"
+          >
+            ✕
+          </button>
+          <img
+            src={imagePreviewUrl}
+            alt="Uploaded clothing - full size"
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-4 py-2 rounded-full text-sm">
+            Click anywhere to close
           </div>
         </div>
       )}

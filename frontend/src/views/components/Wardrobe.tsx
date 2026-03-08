@@ -343,46 +343,35 @@ const Wardrobe: React.FC<WardrobeProps> = ({
 
   const handleGetAISuggestion = async (item: WardrobeItem) => {
     if (!item.image_data) {
-      setSuggestionError('This item doesn\'t have an image. Please add an image first.');
+      setSuggestionError("This item doesn't have an image. Please add an image first.");
       return;
     }
 
-    // If outfit controller is provided, use the same logic as main view
+    // If outfit controller is provided, prepare the main view with this image
+    // and let the user tune options (occasion, style, etc.) before requesting AI.
     if (outfitController) {
-      setSuggestionLoading(item.id);
       setSuggestionError(null);
+      setSuggestionLoading(item.id);
 
       try {
-        // Convert base64 image to File object
         const base64Image = item.image_data;
         const response = await fetch(`data:image/jpeg;base64,${base64Image}`);
         const blob = await response.blob();
         const file = new File([blob], `wardrobe-item-${item.id}.jpg`, { type: 'image/jpeg' });
 
-        // Set the image in the outfit controller (same as main view)
+        // Preload the image into the main suggestion flow
         outfitController.setImage(file);
-
-        // Navigate to main view BEFORE getting suggestion
-        // This ensures duplicate modal (if shown) appears on main view
-        // and the suggestion will be displayed correctly
-        if (onNavigateToMain) {
-          onNavigateToMain();
-        }
-
-        // Get suggestion using the same logic as main view
-        // This will handle duplicate checking, compression, filters, etc.
-        // IMPORTANT: pass the same File we just created so duplicate
-        // detection and the final suggestion both use this wardrobe item's
-        // image, avoiding any stale state from previous uploads.
-        // If duplicate is found, the confirmation modal on the main view
-        // will allow you to "Use Existing" or "Get New".
-        await outfitController.getSuggestion(false, file); // Enable duplicate check with explicit image
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to get outfit suggestion';
+        const errorMessage = err instanceof Error ? err.message : 'Failed to prepare outfit suggestion';
         setSuggestionError(errorMessage);
-        console.error('Error getting outfit suggestion:', err);
+        console.error('Error preparing outfit suggestion from wardrobe item:', err);
       } finally {
         setSuggestionLoading(null);
+      }
+
+      // Navigate to main view so the user can adjust filters and trigger AI
+      if (onNavigateToMain) {
+        onNavigateToMain();
       }
     } else {
       // Fallback to old behavior if controller not provided
