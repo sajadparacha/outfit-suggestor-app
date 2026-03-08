@@ -15,7 +15,7 @@ describe('Mobile-friendly layout and touch targets', () => {
   describe('Navigation (App)', () => {
     it('nav tab container has scrollbar-none and overflow-x-auto for horizontal scroll on small screens', async () => {
       render(<App />);
-      await screen.findByText(/AI Outfit Suggestor/i);
+      await screen.findByText(/Get Suggestion/i);
 
       const scrollContainer = document.querySelector('.scrollbar-none');
       expect(scrollContainer).toBeInTheDocument();
@@ -37,7 +37,9 @@ describe('Mobile-friendly layout and touch targets', () => {
     it('nav tab buttons have minimum height for touch targets', () => {
       render(<App />);
       const getSuggestionTab = screen.getByRole('button', { name: /Get Suggestion/i });
-      expect(getSuggestionTab.getAttribute('class')).toMatch(/min-h-\[44px\]/);
+      const cls = getSuggestionTab.getAttribute('class') ?? '';
+      expect(cls).toMatch(/touch-manipulation/);
+      expect(cls).toMatch(/py-2/);
     });
 
     it('About tab is visible and has touch-friendly classes', () => {

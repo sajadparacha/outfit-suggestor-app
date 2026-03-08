@@ -53,7 +53,7 @@ describe('Random from History integration', () => {
 
     // Wait for app to load and Random from History button to appear
     await waitFor(() => {
-      expect(screen.getByText(/AI Outfit Suggestor/i)).toBeInTheDocument();
+      expect(screen.getByText(/Get Suggestion/i)).toBeInTheDocument();
       expect(screen.getByText(/Random from History/i)).toBeInTheDocument();
     });
 
