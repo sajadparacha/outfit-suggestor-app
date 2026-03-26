@@ -42,6 +42,22 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
     }
   };
 
+  const aiPrompt = suggestion?.meta?.usedPrompt || 'Prompt details are not available for this suggestion.';
+  const aiResponse = suggestion?.raw
+    ? JSON.stringify(suggestion.raw, null, 2)
+    : JSON.stringify(
+        {
+          shirt: suggestion?.shirt ?? '',
+          trouser: suggestion?.trouser ?? '',
+          blazer: suggestion?.blazer ?? '',
+          shoes: suggestion?.shoes ?? '',
+          belt: suggestion?.belt ?? '',
+          reasoning: suggestion?.reasoning ?? '',
+        },
+        null,
+        2
+      );
+
   // Debug: Log suggestion data
   React.useEffect(() => {
     if (suggestion) {
@@ -226,11 +242,26 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
             const match = suggestion.matching_wardrobe_items?.[key]?.[0] as MatchingWardrobeItem | undefined;
             // Use uploaded image only for the category that matched the upload (e.g. shirt card only when upload was a shirt)
             const useUploadForThisCard = suggestion.imageUrl && key === (suggestion.upload_matched_category ?? '');
+            const wardrobeImageSrc = !useUploadForThisCard && match?.image_data
+              ? `data:image/jpeg;base64,${match.image_data}`
+              : null;
             const thumbSrc = useUploadForThisCard
               ? suggestion.imageUrl!
-              : match?.image_data
-                ? `data:image/jpeg;base64,${match.image_data}`
+              : wardrobeImageSrc;
+
+            // If this card is using a wardrobe thumbnail, prefer the wardrobe item's own description
+            // so the text matches the image the user sees.
+            const displayValue =
+              wardrobeImageSrc && (match?.description || match?.color)
+                ? (match?.description || match?.color || value)
+                : value;
+
+            const sourceLabel = useUploadForThisCard
+              ? '(your upload)'
+              : wardrobeImageSrc
+                ? '(from wardrobe)'
                 : null;
+
             return (
               <div
                 key={key}
@@ -254,9 +285,9 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
                 <div className="flex-1 min-w-0">
                   <div className={`text-sm font-medium ${text} mb-1`}>
                     {icon} {label}
-                    {thumbSrc && <span className="ml-1 text-xs">(from wardrobe)</span>}
+                    {sourceLabel && <span className="ml-1 text-xs">{sourceLabel}</span>}
                   </div>
-                  <p className="text-slate-200">{value}</p>
+                  <p className="text-slate-200">{displayValue}</p>
                 </div>
               </div>
             );
@@ -296,6 +327,21 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
             </div>
           </div>
         )}
+
+        {/* AI Prompt & Response */}
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 sm:p-5 mb-6">
+          <h3 className="font-semibold text-white mb-4">AI Prompt & Response</h3>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <div className="rounded-lg border border-white/10 bg-slate-900/40 p-3">
+              <div className="text-xs uppercase tracking-wide text-slate-400 mb-2">Input Prompt</div>
+              <pre className="text-sm text-slate-200 whitespace-pre-wrap break-words max-h-56 overflow-auto">{aiPrompt}</pre>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-slate-900/40 p-3">
+              <div className="text-xs uppercase tracking-wide text-slate-400 mb-2">AI Response</div>
+              <pre className="text-sm text-slate-200 whitespace-pre-wrap break-words max-h-56 overflow-auto">{aiResponse}</pre>
+            </div>
+          </div>
+        </div>
 
         {/* Action Buttons - touch-friendly on mobile */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">

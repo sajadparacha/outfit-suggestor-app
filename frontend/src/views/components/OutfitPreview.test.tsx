@@ -100,7 +100,8 @@ describe('OutfitPreview', () => {
       expect(screen.getByText('Brown loafers')).toBeInTheDocument();
       expect(screen.getByText('Brown leather belt')).toBeInTheDocument();
       expect(screen.getByText(/Why This Works/i)).toBeInTheDocument();
-      expect(screen.getByText(/Classic business casual combination/)).toBeInTheDocument();
+      expect(screen.getAllByText(/Classic business casual combination/).length).toBeGreaterThan(0);
+      expect(screen.getByText(/AI Prompt & Response/i)).toBeInTheDocument();
     });
 
     it('uses uploaded image as shirt thumbnail when upload matched shirt (upload_matched_category)', () => {
