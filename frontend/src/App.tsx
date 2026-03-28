@@ -53,6 +53,11 @@ function App() {
   const [showWardrobeDuplicateModal, setShowWardrobeDuplicateModal] = useState(false);
   const [duplicateWardrobeItem, setDuplicateWardrobeItem] = useState<any>(null);
   const [showIntroOverlay, setShowIntroOverlay] = useState(false);
+  const [showAiPromptResponse, setShowAiPromptResponse] = useState<boolean>(() => {
+    const saved = localStorage.getItem('show_ai_prompt_response');
+    if (saved === null) return true;
+    return saved === 'true';
+  });
 
   // Controllers (Business Logic)
   const {
@@ -117,6 +122,11 @@ function App() {
       setGenerateModelImage(false);
     }
   }, [modelGenerationEnabled, generateModelImage, setGenerateModelImage]);
+
+  // Persist AI Prompt & Response visibility preference
+  React.useEffect(() => {
+    localStorage.setItem('show_ai_prompt_response', String(showAiPromptResponse));
+  }, [showAiPromptResponse]);
 
   // Event Handlers (UI orchestration only)
   const handleGetSuggestion = async (skipModelImageConfirm: boolean = false) => {
@@ -395,7 +405,10 @@ function App() {
                 setUseWardrobeOnly={setUseWardrobeOnly}
                 modelGenerationEnabled={modelGenerationEnabled}
                 isAuthenticated={isAuthenticated}
+                isAdmin={!!user?.is_admin}
                 onFileReject={(msg) => showToast(msg, 'error')}
+                showAiPromptResponse={showAiPromptResponse}
+                setShowAiPromptResponse={setShowAiPromptResponse}
                 onAddToWardrobe={async () => {
                   if (!image) {
                     showToast('Please upload an image first to add it to your wardrobe', 'error');
@@ -456,6 +469,7 @@ function App() {
                 loading={loading}
                 error={error}
                 hasImage={!!image}
+                isAdmin={!!user?.is_admin}
                 onLike={handleLike}
                 onDislike={handleDislike}
                 onNext={handleGetSuggestion}
@@ -463,6 +477,7 @@ function App() {
                   setWardrobeCategoryFilter(category || null);
                   setCurrentView('wardrobe');
                 }}
+                showAiPromptResponse={!!user?.is_admin && showAiPromptResponse}
                 isAuthenticated={isAuthenticated}
                 onAddToWardrobe={async () => {
                   if (!image) {

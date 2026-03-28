@@ -45,6 +45,59 @@ class OutfitController:
         idx = next((i for i, m in enumerate(items_list) if m.get("id") == item.id), None)
         if idx is not None and idx > 0:
             items_list.insert(0, items_list.pop(idx))
+
+    def _normalize_item_category_for_outfit(self, category: str) -> str:
+        """Map wardrobe category variants to outfit categories."""
+        normalized = (category or "").lower()
+        if normalized == "jacket":
+            return "blazer"
+        if normalized in {"jeans", "pants"}:
+            return "trouser"
+        return normalized
+
+    def _apply_selected_ids_to_matches(
+        self,
+        suggestion: OutfitSuggestion,
+        matching_items: Dict[str, List[Dict]],
+        all_wardrobe_items: Optional[List[WardrobeItem]] = None
+    ) -> None:
+        """Ensure and prioritize AI-selected wardrobe PKs in match lists."""
+        selected_by_category = {
+            "shirt": suggestion.shirt_id,
+            "trouser": suggestion.trouser_id,
+            "blazer": suggestion.blazer_id,
+            "shoes": suggestion.shoes_id,
+            "belt": suggestion.belt_id,
+        }
+
+        for category, selected_id in selected_by_category.items():
+            if not selected_id or category not in matching_items:
+                continue
+            items = matching_items[category]
+            idx = next((i for i, item in enumerate(items) if item.get("id") == selected_id), None)
+            if idx is not None:
+                if idx > 0:
+                    items.insert(0, items.pop(idx))
+                continue
+
+            # If strict matcher didn't include the AI-selected item, inject it by ID.
+            if not all_wardrobe_items:
+                continue
+            selected_item = next((w for w in all_wardrobe_items if w.id == selected_id), None)
+            if not selected_item:
+                continue
+
+            selected_category = self._normalize_item_category_for_outfit(selected_item.category or "")
+            if selected_category != category:
+                continue
+
+            matching_items[category].insert(0, {
+                "id": selected_item.id,
+                "category": selected_item.category,
+                "color": selected_item.color,
+                "description": selected_item.description,
+                "image_data": selected_item.image_data
+            })
     
     async def suggest_outfit(
         self,
@@ -148,6 +201,7 @@ class OutfitController:
                     suggestion,
                     all_wardrobe_items
                 )
+                self._apply_selected_ids_to_matches(suggestion, matching_items, all_wardrobe_items)
                 
                 # Find which wardrobe item the uploaded image looks most like (relaxed threshold
                 # for different compression pipelines). Put that item first so the thumbnail
@@ -273,6 +327,7 @@ class OutfitController:
                 suggestion,
                 all_wardrobe_items
             )
+            self._apply_selected_ids_to_matches(suggestion, matching_items, all_wardrobe_items)
             suggestion.matching_wardrobe_items = matching_items
 
             # Save to history (no image_data/model_image)
@@ -662,6 +717,7 @@ class OutfitController:
                 suggestion,
                 all_wardrobe_items
             )
+            self._apply_selected_ids_to_matches(suggestion, matching_items, all_wardrobe_items)
             suggestion.matching_wardrobe_items = matching_items
             
             # Save to database using outfit service

@@ -17,6 +17,34 @@ class OutfitSuggestion(BaseModel):
         None,
         description="Category of the wardrobe item that matched the uploaded image (e.g. shirt, trouser). Use so the UI shows the upload thumbnail only for that category."
     )
+    shirt_id: int | None = Field(
+        None,
+        description="Primary key of the selected shirt from user's wardrobe when available."
+    )
+    trouser_id: int | None = Field(
+        None,
+        description="Primary key of the selected trouser from user's wardrobe when available."
+    )
+    blazer_id: int | None = Field(
+        None,
+        description="Primary key of the selected blazer from user's wardrobe when available."
+    )
+    shoes_id: int | None = Field(
+        None,
+        description="Primary key of the selected shoes from user's wardrobe when available."
+    )
+    belt_id: int | None = Field(
+        None,
+        description="Primary key of the selected belt from user's wardrobe when available."
+    )
+    ai_prompt: str | None = Field(
+        None,
+        description="Complete prompt sent to the AI model for this suggestion."
+    )
+    ai_raw_response: str | None = Field(
+        None,
+        description="Raw text response returned by the AI model before parsing."
+    )
 
 
 class OutfitRequest(BaseModel):

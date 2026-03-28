@@ -141,6 +141,7 @@ describe('OutfitPreview', () => {
       const suggestionWithWardrobe = {
         ...baseSuggestion,
         imageUrl: undefined,
+        shirt_id: 1,
         matching_wardrobe_items: {
           shirt: [
             { id: 1, category: 'shirt', color: 'navy', description: 'Navy shirt', image_data: 'base64_wardrobe_shirt' },
@@ -172,6 +173,8 @@ describe('OutfitPreview', () => {
         ...baseSuggestion,
         imageUrl: uploadedImageUrl,
         upload_matched_category: 'trouser',
+        shirt_id: 1,
+        trouser_id: 2,
         matching_wardrobe_items: {
           shirt: [
             { id: 1, category: 'shirt', color: 'sky blue', description: 'Dress shirt', image_data: 'base64_shirt_match' },
@@ -221,6 +224,7 @@ describe('OutfitPreview', () => {
           onDislike={mockOnDislike}
           onNext={mockOnNext}
           hasImage={true}
+          isAdmin={true}
         />
       );
       expect(screen.getByText(/AI Suggestion Cost/i)).toBeInTheDocument();

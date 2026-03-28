@@ -152,7 +152,7 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
         imageUrl: URL.createObjectURL(effectiveImage), // Use the effective image for display
         model_image: data.model_image || null,
         raw: data,
-        meta: { usedPrompt: prompt }
+        meta: { usedPrompt: data.ai_prompt || prompt }
       };
 
       console.log('Created suggestion:', {
@@ -219,7 +219,7 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
         model_image: null,
         raw: data,
         meta: {
-          usedPrompt: `Wardrobe-only: Occasion=${filters.occasion}, Season=${filters.season}, Style=${filters.style}${
+          usedPrompt: data.ai_prompt || `Wardrobe-only: Occasion=${filters.occasion}, Season=${filters.season}, Style=${filters.style}${
             trimmed ? `, Notes=${trimmed}` : ''
           }`
         }

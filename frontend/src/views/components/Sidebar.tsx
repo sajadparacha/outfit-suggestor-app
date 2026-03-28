@@ -27,9 +27,12 @@ interface SidebarProps {
   setUseWardrobeOnly?: (use: boolean) => void;
   modelGenerationEnabled?: boolean;
   isAuthenticated?: boolean;
+  isAdmin?: boolean;
   onAddToWardrobe?: () => void;
   addingToWardrobe?: boolean;
   onFileReject?: (message: string) => void;
+  showAiPromptResponse?: boolean;
+  setShowAiPromptResponse?: (show: boolean) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -51,9 +54,12 @@ const Sidebar: React.FC<SidebarProps> = ({
   setUseWardrobeOnly,
   modelGenerationEnabled = false,
   isAuthenticated = false,
+  isAdmin = false,
   onAddToWardrobe,
   addingToWardrobe = false,
-  onFileReject
+  onFileReject,
+  showAiPromptResponse = true,
+  setShowAiPromptResponse
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -109,6 +115,15 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const handleFilterChange = (key: keyof Filters, value: string) => {
     setFilters({ ...filters, [key]: value });
+  };
+
+  const handleClearPreferences = () => {
+    setFilters({
+      occasion: '',
+      season: '',
+      style: '',
+    });
+    setPreferenceText('');
   };
 
   const handleDragEnter = (e: React.DragEvent) => {
@@ -498,6 +513,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
               aria-label="Select occasion"
             >
+              <option value="">Select occasion</option>
               <option value="casual">Casual</option>
               <option value="business">Business</option>
               <option value="formal">Formal</option>
@@ -515,6 +531,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
               aria-label="Select season"
             >
+              <option value="">Select season</option>
               <option value="all">All Seasons</option>
               <option value="spring">Spring</option>
               <option value="summer">Summer</option>
@@ -531,6 +548,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
               aria-label="Select style preference"
             >
+              <option value="">Select style</option>
               <option value="Businees Casual">Businees Casual</option>
               <option value="Casual">Casual</option>
               <option value="modern">Modern</option>
@@ -558,6 +576,53 @@ const Sidebar: React.FC<SidebarProps> = ({
               rows={2}
             />
           </div>
+          <div>
+            <button
+              type="button"
+              onClick={handleClearPreferences}
+              className="w-full py-2.5 px-4 rounded-xl font-medium transition-all text-sm bg-white/10 text-slate-200 hover:bg-white/20 border border-white/15"
+              aria-label="Clear preferences"
+            >
+              Clear Preferences
+            </button>
+          </div>
+          {isAdmin && setShowAiPromptResponse && (
+            <div className="p-4 bg-white/5 rounded-xl border border-white/10">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <label htmlFor="ai-prompt-response-toggle" className="flex items-center cursor-pointer">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <span className="font-semibold text-slate-200">Show AI Prompt & Response</span>
+                      </div>
+                      <p className="text-xs text-slate-400">
+                        Toggle the panel that shows full AI input and output.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+                <div className="ml-4">
+                  <button
+                    type="button"
+                    id="ai-prompt-response-toggle"
+                    onClick={() => setShowAiPromptResponse(!showAiPromptResponse)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      showAiPromptResponse ? 'bg-teal-500' : 'bg-white/20'
+                    }`}
+                    role="switch"
+                    aria-checked={showAiPromptResponse}
+                    aria-label="Toggle AI prompt and response visibility"
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        showAiPromptResponse ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </details>
 
@@ -641,7 +706,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <button
                 onClick={onGetRandomSuggestion}
                 disabled={loading}
-                className={`w-full py-2.5 px-4 rounded-xl font-medium transition-all text-sm ${
+                className={`w-full min-h-[48px] py-3 px-4 rounded-xl font-medium transition-all text-sm touch-manipulation ${
                   loading
                     ? 'bg-white/10 cursor-not-allowed text-slate-500 border border-white/10'
                     : 'bg-amber-500/20 text-amber-200 hover:bg-amber-500/30 border border-amber-400/30'
@@ -655,7 +720,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <button
                 onClick={onGetRandomFromHistory}
                 disabled={loading}
-                className={`w-full py-2.5 px-4 rounded-xl font-medium transition-all text-sm ${
+                className={`w-full min-h-[48px] py-3 px-4 rounded-xl font-medium transition-all text-sm touch-manipulation ${
                   loading
                     ? 'bg-white/10 cursor-not-allowed text-slate-500 border border-white/10'
                     : 'bg-indigo-500/20 text-indigo-200 hover:bg-indigo-500/30 border border-indigo-400/30'

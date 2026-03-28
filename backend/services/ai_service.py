@@ -112,6 +112,8 @@ class AIService:
             # Extract and parse the response
             content = response.choices[0].message.content
             suggestion = self._parse_response(content)
+            suggestion.ai_prompt = prompt
+            suggestion.ai_raw_response = content
             
             # Cost information
             cost_info = {
@@ -179,6 +181,8 @@ class AIService:
 
             content = response.choices[0].message.content
             suggestion = self._parse_response(content)
+            suggestion.ai_prompt = prompt
+            suggestion.ai_raw_response = content
 
             cost_info = {
                 "gpt4_cost": gpt4_cost,
@@ -218,6 +222,10 @@ class AIService:
                 wardrobe_context = "\n\n⚠️ IMPORTANT: The user has the following items in their wardrobe. "
                 wardrobe_context += "PRIORITIZE using items from their wardrobe when possible. "
                 wardrobe_context += "Only suggest items they don't have if necessary for a complete outfit.\n\n"
+            wardrobe_context += (
+                "PRIVACY AND DATA RULE: Wardrobe images are intentionally excluded. "
+                "Do NOT request or infer any missing image bytes. Use only the textual wardrobe fields below.\n"
+            )
             wardrobe_context += "USER'S WARDROBE:\n"
             
             for category, items in wardrobe_items.items():
@@ -225,6 +233,10 @@ class AIService:
                     wardrobe_context += f"\n{category.upper()} ({len(items)} item(s)):\n"
                     for item in items:
                         item_desc = []
+                        if hasattr(item, 'id') and item.id is not None:
+                            item_desc.append(f"ID: {item.id}")
+                        if hasattr(item, 'category') and item.category:
+                            item_desc.append(f"Category: {item.category}")
                         if hasattr(item, 'name') and item.name:
                             item_desc.append(f"Name: {item.name}")
                         if hasattr(item, 'color') and item.color:
@@ -233,6 +245,16 @@ class AIService:
                             item_desc.append(f"Description: {item.description}")
                         if hasattr(item, 'brand') and item.brand:
                             item_desc.append(f"Brand: {item.brand}")
+                        if hasattr(item, 'size') and item.size:
+                            item_desc.append(f"Size: {item.size}")
+                        if hasattr(item, 'tags') and item.tags:
+                            item_desc.append(f"Tags: {item.tags}")
+                        if hasattr(item, 'condition') and item.condition:
+                            item_desc.append(f"Condition: {item.condition}")
+                        if hasattr(item, 'purchase_date') and item.purchase_date:
+                            item_desc.append(f"Purchase date: {item.purchase_date}")
+                        if hasattr(item, 'last_worn') and item.last_worn:
+                            item_desc.append(f"Last worn: {item.last_worn}")
                         
                         if item_desc:
                             wardrobe_context += f"  - {' | '.join(item_desc)}\n"
@@ -245,12 +267,14 @@ class AIService:
                 wardrobe_context += "2. Do NOT invent or suggest any item not listed\n"
                 wardrobe_context += "3. Build the outfit by combining their existing items\n"
                 wardrobe_context += "4. For categories with no suitable item, suggest they add one to their wardrobe\n"
+                wardrobe_context += "5. Preserve item IDs exactly as provided (these are primary keys)\n"
             else:
                 wardrobe_context += "\nWhen making recommendations:\n"
                 wardrobe_context += "1. FIRST check if the user has suitable items in their wardrobe\n"
                 wardrobe_context += "2. If they have matching items, recommend using those (mention 'you already have...')\n"
                 wardrobe_context += "3. Only suggest new items if their wardrobe doesn't have suitable options\n"
                 wardrobe_context += "4. For items from their wardrobe, reference the description/color/brand you listed above\n"
+                wardrobe_context += "5. If you choose an item from wardrobe, return its exact ID unchanged\n"
         
         prompt = """
 You are a professional fashion stylist. Analyze the uploaded image of a shirt or blazer and provide a complete outfit suggestion.
@@ -280,6 +304,11 @@ Respond in JSON format with the following structure:
     "blazer": "detailed description of the blazer/jacket (mention if from user's wardrobe)",
     "shoes": "detailed description of the shoes (mention if from user's wardrobe)",
     "belt": "detailed description of the belt (mention if from user's wardrobe)",
+    "shirt_id": integer or null,
+    "trouser_id": integer or null,
+    "blazer_id": integer or null,
+    "shoes_id": integer or null,
+    "belt_id": integer or null,
     "reasoning": "brief explanation of why this outfit works well together"
 }}
 """.format(
@@ -307,12 +336,28 @@ Respond in JSON format with the following structure:
             
             outfit_data = json.loads(json_str)
             
+            def _parse_optional_int(value):
+                if value is None:
+                    return None
+                if isinstance(value, int):
+                    return value
+                if isinstance(value, str):
+                    stripped = value.strip()
+                    if stripped.isdigit():
+                        return int(stripped)
+                return None
+
             return OutfitSuggestion(
                 shirt=outfit_data.get("shirt", "Classic white dress shirt"),
                 trouser=outfit_data.get("trouser", "Dark navy dress trousers"),
                 blazer=outfit_data.get("blazer", "Charcoal gray blazer"),
                 shoes=outfit_data.get("shoes", "Black leather dress shoes"),
                 belt=outfit_data.get("belt", "Black leather belt"),
+                shirt_id=_parse_optional_int(outfit_data.get("shirt_id")),
+                trouser_id=_parse_optional_int(outfit_data.get("trouser_id")),
+                blazer_id=_parse_optional_int(outfit_data.get("blazer_id")),
+                shoes_id=_parse_optional_int(outfit_data.get("shoes_id")),
+                belt_id=_parse_optional_int(outfit_data.get("belt_id")),
                 reasoning=outfit_data.get(
                     "reasoning", 
                     "A classic professional look that works for most business occasions."

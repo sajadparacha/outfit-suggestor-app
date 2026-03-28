@@ -12,6 +12,8 @@ interface OutfitPreviewProps {
   isAuthenticated?: boolean; // Whether user is logged in
   onAddToWardrobe?: () => void; // Callback to add uploaded item to wardrobe
   hasImage?: boolean; // Whether an image was uploaded for this suggestion
+  showAiPromptResponse?: boolean;
+  isAdmin?: boolean;
 }
 
 const OutfitPreview: React.FC<OutfitPreviewProps> = ({
@@ -24,7 +26,9 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
   onNavigateToWardrobe,
   isAuthenticated = false,
   onAddToWardrobe,
-  hasImage = false
+  hasImage = false,
+  showAiPromptResponse = true,
+  isAdmin = false
 }) => {
   // Hook must be first
   const [showDetails, setShowDetails] = React.useState(false);
@@ -42,21 +46,28 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
     }
   };
 
-  const aiPrompt = suggestion?.meta?.usedPrompt || 'Prompt details are not available for this suggestion.';
-  const aiResponse = suggestion?.raw
-    ? JSON.stringify(suggestion.raw, null, 2)
-    : JSON.stringify(
-        {
-          shirt: suggestion?.shirt ?? '',
-          trouser: suggestion?.trouser ?? '',
-          blazer: suggestion?.blazer ?? '',
-          shoes: suggestion?.shoes ?? '',
-          belt: suggestion?.belt ?? '',
-          reasoning: suggestion?.reasoning ?? '',
-        },
-        null,
-        2
-      );
+  const rawWithPrompt = suggestion?.raw as { ai_prompt?: string } | undefined;
+  const aiPrompt =
+    suggestion?.ai_prompt ||
+    rawWithPrompt?.ai_prompt ||
+    suggestion?.meta?.usedPrompt ||
+    'Prompt details are not available for this suggestion.';
+  const aiResponse = suggestion?.ai_raw_response
+    ? suggestion.ai_raw_response
+    : suggestion?.raw
+      ? JSON.stringify(suggestion.raw, null, 2)
+      : JSON.stringify(
+          {
+            shirt: suggestion?.shirt ?? '',
+            trouser: suggestion?.trouser ?? '',
+            blazer: suggestion?.blazer ?? '',
+            shoes: suggestion?.shoes ?? '',
+            belt: suggestion?.belt ?? '',
+            reasoning: suggestion?.reasoning ?? '',
+          },
+          null,
+          2
+        );
 
   // Debug: Log suggestion data
   React.useEffect(() => {
@@ -69,6 +80,36 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
         modelImagePreview: suggestion.model_image ? suggestion.model_image.substring(0, 50) + '...' : null
       });
     }
+  }, [suggestion]);
+
+  // Warn when AI-selected wardrobe IDs are not present in matched items for a category.
+  React.useEffect(() => {
+    if (!suggestion) return;
+
+    const selectedIdsByCategory: Partial<Record<'shirt' | 'trouser' | 'blazer' | 'shoes' | 'belt', number | null | undefined>> = {
+      shirt: suggestion.shirt_id,
+      trouser: suggestion.trouser_id,
+      blazer: suggestion.blazer_id,
+      shoes: suggestion.shoes_id,
+      belt: suggestion.belt_id,
+    };
+
+    (Object.keys(selectedIdsByCategory) as Array<keyof typeof selectedIdsByCategory>).forEach((category) => {
+      const selectedId = selectedIdsByCategory[category];
+      if (!selectedId) return;
+      const categoryMatches = suggestion.matching_wardrobe_items?.[category] || [];
+      const exists = categoryMatches.some((item) => item.id === selectedId);
+      if (!exists) {
+        console.warn(
+          `[OutfitPreview] AI-selected wardrobe ID not found in matched items`,
+          {
+            category,
+            selectedId,
+            matchedItemIds: categoryMatches.map((item) => item.id),
+          }
+        );
+      }
+    });
   }, [suggestion]);
 
   if (loading) {
@@ -239,7 +280,20 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
               { key: 'belt', label: 'Belt', icon: '🎀', value: suggestion.belt, bg: 'bg-rose-500/10', text: 'text-rose-300' },
             ] as const
           ).map(({ key, label, icon, value, bg, text }) => {
-            const match = suggestion.matching_wardrobe_items?.[key]?.[0] as MatchingWardrobeItem | undefined;
+            const selectedIdsByCategory: Partial<Record<'shirt' | 'trouser' | 'blazer' | 'shoes' | 'belt', number | null | undefined>> = {
+              shirt: suggestion.shirt_id,
+              trouser: suggestion.trouser_id,
+              blazer: suggestion.blazer_id,
+              shoes: suggestion.shoes_id,
+              belt: suggestion.belt_id,
+            };
+            const categoryMatches = suggestion.matching_wardrobe_items?.[key] || [];
+            const selectedId = selectedIdsByCategory[key];
+            // Only use wardrobe match when the AI returned a primary key for this slot.
+            // If the AI didn't provide an ID (null/undefined), treat it as "suggested by AI".
+            const match = (selectedId
+              ? categoryMatches.find((item) => item.id === selectedId)
+              : undefined) as MatchingWardrobeItem | undefined;
             // Use uploaded image only for the category that matched the upload (e.g. shirt card only when upload was a shirt)
             const useUploadForThisCard = suggestion.imageUrl && key === (suggestion.upload_matched_category ?? '');
             const wardrobeImageSrc = !useUploadForThisCard && match?.image_data
@@ -260,7 +314,9 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
               ? '(your upload)'
               : wardrobeImageSrc
                 ? '(from wardrobe)'
-                : null;
+                : !match
+                  ? '(suggested by AI)'
+                  : null;
 
             return (
               <div
@@ -305,8 +361,8 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
           </div>
         </div>
 
-        {/* Cost Display */}
-        {suggestion.cost && (
+        {/* Cost Display (admin only) */}
+        {isAdmin && suggestion.cost && (
           <div className="bg-teal-500/10 border border-teal-400/20 rounded-xl p-4 mb-6">
             <div className="flex items-center justify-between">
               <div>
@@ -328,20 +384,21 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
           </div>
         )}
 
-        {/* AI Prompt & Response */}
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4 sm:p-5 mb-6">
-          <h3 className="font-semibold text-white mb-4">AI Prompt & Response</h3>
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <div className="rounded-lg border border-white/10 bg-slate-900/40 p-3">
-              <div className="text-xs uppercase tracking-wide text-slate-400 mb-2">Input Prompt</div>
-              <pre className="text-sm text-slate-200 whitespace-pre-wrap break-words max-h-56 overflow-auto">{aiPrompt}</pre>
-            </div>
-            <div className="rounded-lg border border-white/10 bg-slate-900/40 p-3">
-              <div className="text-xs uppercase tracking-wide text-slate-400 mb-2">AI Response</div>
-              <pre className="text-sm text-slate-200 whitespace-pre-wrap break-words max-h-56 overflow-auto">{aiResponse}</pre>
+        {showAiPromptResponse && (
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4 sm:p-5 mb-6">
+            <h3 className="font-semibold text-white mb-4">AI Prompt & Response (only available to Admin)</h3>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              <div className="rounded-lg border border-white/10 bg-slate-900/40 p-3">
+                <div className="text-xs uppercase tracking-wide text-slate-400 mb-2">Input Prompt</div>
+                <pre className="text-sm text-slate-200 whitespace-pre-wrap break-words max-h-56 overflow-auto">{aiPrompt}</pre>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-slate-900/40 p-3">
+                <div className="text-xs uppercase tracking-wide text-slate-400 mb-2">AI Response</div>
+                <pre className="text-sm text-slate-200 whitespace-pre-wrap break-words max-h-56 overflow-auto">{aiResponse}</pre>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Action Buttons - touch-friendly on mobile */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
