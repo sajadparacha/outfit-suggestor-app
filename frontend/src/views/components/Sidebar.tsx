@@ -55,6 +55,40 @@ function preferenceSelectionSummary(filters: Filters, preferenceText: string): s
   return lines.join('\n');
 }
 
+/**
+ * Native `title` on `<summary>` is often ignored by browsers; use a visible hover panel.
+ * Tooltip is a child of summary so the pointer stays “inside” the summary while reading.
+ */
+function SectionHintSummary({
+  icon,
+  label,
+  hintText,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  hintText: string;
+}) {
+  return (
+    <summary className="relative list-none group/sum [&::-webkit-details-marker]:hidden">
+      <div className="flex items-center justify-between rounded-t-xl px-4 py-3 bg-white/5 cursor-pointer font-medium text-slate-200 transition-colors hover:bg-white/10">
+        <span className="flex items-center gap-2 min-w-0">
+          <span className="flex-shrink-0" aria-hidden>
+            {icon}
+          </span>
+          <span>{label}</span>
+        </span>
+        <span className="text-slate-400 transition-transform group-open:rotate-180 flex-shrink-0">▼</span>
+      </div>
+      <div
+        role="tooltip"
+        className="pointer-events-none absolute left-2 right-2 top-full z-[100] mt-1 max-h-56 overflow-y-auto rounded-lg border border-white/20 bg-slate-900 p-3 text-left text-xs leading-relaxed text-slate-200 shadow-xl opacity-0 transition-opacity duration-150 invisible group-hover/sum:pointer-events-auto group-hover/sum:opacity-100 group-hover/sum:visible"
+      >
+        <pre className="whitespace-pre-wrap font-sans">{hintText}</pre>
+      </div>
+    </summary>
+  );
+}
+
 interface SidebarProps {
   filters: Filters;
   setFilters: (filters: Filters) => void;
@@ -486,18 +520,9 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Wardrobe section - collapsible for logged-in users */}
       {isAuthenticated && (onAddToWardrobe || setUseWardrobeOnly) && (
-        <details className="mb-4 group border border-white/10 rounded-xl overflow-hidden" open>
-          <summary
-            className="flex items-center justify-between px-4 py-3 bg-white/5 cursor-pointer list-none font-medium text-slate-200 hover:bg-white/10 transition-colors [&::-webkit-details-marker]:hidden"
-            title={wardrobeHoverTitle}
-          >
-            <span className="flex items-center gap-2">
-              <span>👔</span>
-              <span>Wardrobe</span>
-            </span>
-            <span className="text-slate-400 transition-transform group-open:rotate-180">▼</span>
-          </summary>
-          <div className="p-4 pt-0 space-y-4">
+        <details className="group mb-4 rounded-xl border border-white/10" open>
+          <SectionHintSummary icon="👔" label="Wardrobe" hintText={wardrobeHoverTitle} />
+          <div className="space-y-4 overflow-hidden rounded-b-xl border-t border-white/10 p-4 pt-0">
             {onAddToWardrobe && (
               <div>
                 <button
@@ -582,18 +607,9 @@ const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       {/* Preferences - collapsible, default closed to reduce clutter */}
-      <details className="mb-4 group border border-white/10 rounded-xl overflow-hidden">
-        <summary
-          className="flex items-center justify-between px-4 py-3 bg-white/5 cursor-pointer list-none font-medium text-slate-200 hover:bg-white/10 transition-colors [&::-webkit-details-marker]:hidden"
-          title={preferencesHoverTitle}
-        >
-          <span className="flex items-center gap-2">
-            <span>⚙️</span>
-            <span>Preferences</span>
-          </span>
-          <span className="text-slate-400 transition-transform group-open:rotate-180">▼</span>
-        </summary>
-        <div className="p-4 pt-0 space-y-4">
+      <details className="group mb-4 rounded-xl border border-white/10">
+        <SectionHintSummary icon="⚙️" label="Preferences" hintText={preferencesHoverTitle} />
+        <div className="space-y-4 overflow-hidden rounded-b-xl border-t border-white/10 p-4 pt-0">
           {/* Occasion */}
           <div>
             <label className="block text-sm font-medium text-slate-200 mb-2">Occasion</label>
@@ -783,18 +799,9 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Random picks - not AI; in Wardrobe section or separate area */}
       {(isAuthenticated && (onGetRandomSuggestion || onGetRandomFromHistory)) && (
-        <details className="mb-4 group border border-white/10 rounded-xl overflow-hidden">
-          <summary
-            className="flex items-center justify-between px-4 py-3 bg-white/5 cursor-pointer list-none font-medium text-slate-200 hover:bg-white/10 transition-colors [&::-webkit-details-marker]:hidden"
-            title={randomPicksHoverTitle}
-          >
-            <span className="flex items-center gap-2">
-              <span>🎲</span>
-              <span>Random picks</span>
-            </span>
-            <span className="text-slate-400 transition-transform group-open:rotate-180">▼</span>
-          </summary>
-          <div className="p-4 pt-0 space-y-2">
+        <details className="group mb-4 rounded-xl border border-white/10">
+          <SectionHintSummary icon="🎲" label="Random picks" hintText={randomPicksHoverTitle} />
+          <div className="space-y-2 overflow-hidden rounded-b-xl border-t border-white/10 p-4 pt-0">
             {onGetRandomSuggestion && (
               <button
                 onClick={onGetRandomSuggestion}
