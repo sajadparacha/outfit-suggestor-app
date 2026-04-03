@@ -46,6 +46,7 @@ export interface OutfitSuggestion {
   blazer_id?: number | null;
   shoes_id?: number | null;
   belt_id?: number | null;
+  source_wardrobe_item_id?: number | null;
   ai_prompt?: string | null;
   ai_raw_response?: string | null;
   raw?: unknown;
@@ -81,6 +82,7 @@ export interface OutfitResponse {
   blazer_id?: number | null;
   shoes_id?: number | null;
   belt_id?: number | null;
+  source_wardrobe_item_id?: number | null;
   ai_prompt?: string | null;
   ai_raw_response?: string | null;
 }

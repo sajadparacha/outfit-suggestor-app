@@ -107,6 +107,7 @@ class OutfitController:
         generate_model_image: str,
         image_model: Optional[str] = None,
         use_wardrobe_only: bool = False,
+        source_wardrobe_item_id: Optional[int] = None,
         db: Session = None,
         current_user: Optional[User] = None
     ) -> OutfitSuggestion:
@@ -164,6 +165,7 @@ class OutfitController:
                 wardrobe_items=wardrobe_items_dict,
                 wardrobe_only=wardrobe_only_mode
             )
+            suggestion.source_wardrobe_item_id = source_wardrobe_item_id
             
             # Parse generate_model_image from string to boolean
             should_generate_model_image = generate_model_image.lower() in ('true', '1', 'yes', 'on')
@@ -607,6 +609,7 @@ class OutfitController:
         generate_model_image: str,
         image_model: Optional[str] = None,
         use_wardrobe_only: bool = False,
+        source_wardrobe_item_id: Optional[int] = None,
         db: Session = None,
         current_user: Optional[User] = None
     ) -> OutfitSuggestion:
@@ -686,6 +689,7 @@ class OutfitController:
                 wardrobe_items=wardrobe_items_dict,
                 wardrobe_only=wardrobe_only_mode
             )
+            suggestion.source_wardrobe_item_id = source_wardrobe_item_id or wardrobe_item_id
             
             # Parse generate_model_image from string to boolean
             should_generate_model_image = generate_model_image.lower() in ('true', '1', 'yes', 'on')

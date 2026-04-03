@@ -22,6 +22,7 @@ async def suggest_outfit(
     generate_model_image: str = Form("false"),
     image_model: str = Form("dalle3"),
     use_wardrobe_only: str = Form("false"),
+    source_wardrobe_item_id: int | None = Form(None),
     outfit_controller: OutfitController = Depends(get_outfit_controller),
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_optional_user)
@@ -52,6 +53,7 @@ async def suggest_outfit(
         generate_model_image=generate_model_image,
         image_model=image_model,
         use_wardrobe_only=use_wardrobe_only_bool,
+        source_wardrobe_item_id=source_wardrobe_item_id,
         db=db,
         current_user=current_user
     )
@@ -117,6 +119,7 @@ async def suggest_outfit_from_wardrobe_item(
     generate_model_image: str = Form("false"),
     image_model: str = Form("dalle3"),
     use_wardrobe_only: str = Form("false"),
+    source_wardrobe_item_id: int | None = Form(None),
     outfit_controller: OutfitController = Depends(get_outfit_controller),
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_optional_user)
@@ -148,6 +151,7 @@ async def suggest_outfit_from_wardrobe_item(
         generate_model_image=generate_model_image,
         image_model=image_model,
         use_wardrobe_only=use_wardrobe_only_bool,
+        source_wardrobe_item_id=source_wardrobe_item_id,
         db=db,
         current_user=current_user
     )

@@ -157,7 +157,8 @@ class ApiService {
     generateModelImage: boolean = false,
     location: string | null = null,
     imageModel: string = 'dalle3',
-    useWardrobeOnly: boolean = false
+    useWardrobeOnly: boolean = false,
+    sourceWardrobeItemId: number | null = null
   ): Promise<OutfitResponse> {
     try {
       const formData = new FormData();
@@ -166,6 +167,9 @@ class ApiService {
       formData.append('generate_model_image', generateModelImage.toString());
       formData.append('image_model', imageModel);
       formData.append('use_wardrobe_only', useWardrobeOnly.toString());
+      if (sourceWardrobeItemId !== null) {
+        formData.append('source_wardrobe_item_id', sourceWardrobeItemId.toString());
+      }
       console.log('FormData - generate_model_image:', generateModelImage.toString());
       console.log('FormData - image_model:', imageModel);
       if (location) {

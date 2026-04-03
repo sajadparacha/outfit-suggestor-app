@@ -10,8 +10,10 @@ interface WardrobeProps {
   initialCategory?: string | null;
   onSuggestionReady?: (suggestion: any) => void; // Callback when outfit suggestion is ready
   onNavigateToMain?: () => void; // Callback to navigate to main view
+  onSourceImageLoaded?: () => void; // Callback after source wardrobe image is preloaded in main flow
   outfitController?: {
     setImage: (image: File | null) => void;
+    setSourceWardrobeItemId?: (id: number | null) => void;
     getSuggestion: (skipDuplicateCheck?: boolean, sourceImage?: File | null) => Promise<void>;
     loading: boolean;
     error: string | null;
@@ -25,6 +27,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
   initialCategory = null,
   onSuggestionReady,
   onNavigateToMain,
+  onSourceImageLoaded,
   outfitController
 }) => {
   const {
@@ -360,7 +363,11 @@ const Wardrobe: React.FC<WardrobeProps> = ({
         const file = new File([blob], `wardrobe-item-${item.id}.jpg`, { type: 'image/jpeg' });
 
         // Preload the image into the main suggestion flow
+        if (outfitController.setSourceWardrobeItemId) {
+          outfitController.setSourceWardrobeItemId(item.id);
+        }
         outfitController.setImage(file);
+        onSourceImageLoaded?.();
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to prepare outfit suggestion';
         setSuggestionError(errorMessage);

@@ -8,6 +8,53 @@ interface Filters {
   style: string;
 }
 
+function occasionDisplay(v: string): string {
+  const m: Record<string, string> = {
+    casual: 'Casual',
+    business: 'Business',
+    formal: 'Formal',
+    party: 'Party',
+    date: 'Date Night',
+    sports: 'Sports/Active',
+  };
+  return v ? m[v] || v : 'Not set';
+}
+
+function seasonDisplay(v: string): string {
+  const m: Record<string, string> = {
+    all: 'All Seasons',
+    spring: 'Spring',
+    summer: 'Summer',
+    fall: 'Fall',
+    winter: 'Winter',
+  };
+  return v ? m[v] || v : 'Not set';
+}
+
+function styleDisplay(v: string): string {
+  const m: Record<string, string> = {
+    modern: 'Modern',
+    classic: 'Classic',
+    trendy: 'Trendy',
+    minimalist: 'Minimalist',
+    bold: 'Bold',
+    vintage: 'Vintage',
+    Casual: 'Casual',
+    'Businees Casual': 'Business Casual',
+  };
+  return v ? m[v] || v : 'Not set';
+}
+
+function preferenceSelectionSummary(filters: Filters, preferenceText: string): string {
+  const lines = [
+    `Occasion: ${occasionDisplay(filters.occasion)}`,
+    `Season: ${seasonDisplay(filters.season)}`,
+    `Style: ${styleDisplay(filters.style)}`,
+    `Notes: ${preferenceText.trim() || '(none)'}`,
+  ];
+  return lines.join('\n');
+}
+
 interface SidebarProps {
   filters: Filters;
   setFilters: (filters: Filters) => void;
@@ -215,6 +262,43 @@ const Sidebar: React.FC<SidebarProps> = ({
     setShowCamera(false);
   };
 
+  const wardrobeHoverTitle = useMemo(() => {
+    const lines: string[] = [];
+    if (onAddToWardrobe) {
+      lines.push(
+        image
+          ? `Add to wardrobe: ready — ${image.name}`
+          : 'Add to wardrobe: upload a photo first'
+      );
+    }
+    if (setUseWardrobeOnly) {
+      lines.push(
+        useWardrobeOnly
+          ? 'Use my wardrobe only: On (AI uses only your saved items)'
+          : 'Use my wardrobe only: Off (AI may suggest items you do not own)'
+      );
+    }
+    return lines.length > 0 ? lines.join('\n') : 'Wardrobe';
+  }, [onAddToWardrobe, image, setUseWardrobeOnly, useWardrobeOnly]);
+
+  const preferencesHoverTitle = useMemo(() => {
+    let body = preferenceSelectionSummary(filters, preferenceText);
+    if (isAdmin && setShowAiPromptResponse) {
+      body += `\nShow AI Prompt & Response: ${showAiPromptResponse ? 'On' : 'Off'}`;
+    }
+    return body;
+  }, [filters, preferenceText, isAdmin, setShowAiPromptResponse, showAiPromptResponse]);
+
+  const randomPicksHoverTitle = useMemo(() => {
+    const parts = [
+      'Random from Wardrobe uses the occasion, season, style, and notes in Preferences.',
+      'Random from History loads a past saved suggestion.',
+      '---',
+      preferenceSelectionSummary(filters, preferenceText),
+    ];
+    return parts.join('\n');
+  }, [filters, preferenceText]);
+
   return (
     <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-4 sm:p-6 lg:sticky lg:top-6">
       {/* User Profile */}
@@ -403,7 +487,10 @@ const Sidebar: React.FC<SidebarProps> = ({
       {/* Wardrobe section - collapsible for logged-in users */}
       {isAuthenticated && (onAddToWardrobe || setUseWardrobeOnly) && (
         <details className="mb-4 group border border-white/10 rounded-xl overflow-hidden" open>
-          <summary className="flex items-center justify-between px-4 py-3 bg-white/5 cursor-pointer list-none font-medium text-slate-200 hover:bg-white/10 transition-colors [&::-webkit-details-marker]:hidden">
+          <summary
+            className="flex items-center justify-between px-4 py-3 bg-white/5 cursor-pointer list-none font-medium text-slate-200 hover:bg-white/10 transition-colors [&::-webkit-details-marker]:hidden"
+            title={wardrobeHoverTitle}
+          >
             <span className="flex items-center gap-2">
               <span>👔</span>
               <span>Wardrobe</span>
@@ -496,7 +583,10 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Preferences - collapsible, default closed to reduce clutter */}
       <details className="mb-4 group border border-white/10 rounded-xl overflow-hidden">
-        <summary className="flex items-center justify-between px-4 py-3 bg-white/5 cursor-pointer list-none font-medium text-slate-200 hover:bg-white/10 transition-colors [&::-webkit-details-marker]:hidden">
+        <summary
+          className="flex items-center justify-between px-4 py-3 bg-white/5 cursor-pointer list-none font-medium text-slate-200 hover:bg-white/10 transition-colors [&::-webkit-details-marker]:hidden"
+          title={preferencesHoverTitle}
+        >
           <span className="flex items-center gap-2">
             <span>⚙️</span>
             <span>Preferences</span>
@@ -694,7 +784,10 @@ const Sidebar: React.FC<SidebarProps> = ({
       {/* Random picks - not AI; in Wardrobe section or separate area */}
       {(isAuthenticated && (onGetRandomSuggestion || onGetRandomFromHistory)) && (
         <details className="mb-4 group border border-white/10 rounded-xl overflow-hidden">
-          <summary className="flex items-center justify-between px-4 py-3 bg-white/5 cursor-pointer list-none font-medium text-slate-200 hover:bg-white/10 transition-colors [&::-webkit-details-marker]:hidden">
+          <summary
+            className="flex items-center justify-between px-4 py-3 bg-white/5 cursor-pointer list-none font-medium text-slate-200 hover:bg-white/10 transition-colors [&::-webkit-details-marker]:hidden"
+            title={randomPicksHoverTitle}
+          >
             <span className="flex items-center gap-2">
               <span>🎲</span>
               <span>Random picks</span>

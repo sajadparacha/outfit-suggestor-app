@@ -303,12 +303,9 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
               ? suggestion.imageUrl!
               : wardrobeImageSrc;
 
-            // If this card is using a wardrobe thumbnail, prefer the wardrobe item's own description
-            // so the text matches the image the user sees.
-            const displayValue =
-              wardrobeImageSrc && (match?.description || match?.color)
-                ? (match?.description || match?.color || value)
-                : value;
+            // Keep card text aligned with AI reasoning by always showing
+            // the AI's selected description for each outfit slot.
+            const displayValue = value;
 
             const sourceLabel = useUploadForThisCard
               ? '(your upload)'

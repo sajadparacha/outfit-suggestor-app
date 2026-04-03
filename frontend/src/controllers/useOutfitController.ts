@@ -39,6 +39,7 @@ interface UseOutfitControllerReturn {
   handleUseCachedSuggestion: () => void;
   handleGetNewSuggestion: () => Promise<void>;
   setShowDuplicateModal: (show: boolean) => void;
+  setSourceWardrobeItemId: (id: number | null) => void;
   onSuggestionSuccess?: () => void; // Callback for when suggestion is successful
 }
 
@@ -59,6 +60,7 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
   const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
   const [existingSuggestion, setExistingSuggestion] = useState<OutfitSuggestion | null>(null);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [sourceWardrobeItemId, setSourceWardrobeItemId] = useState<number | null>(null);
 
   /**
    * Get outfit suggestion from API
@@ -134,7 +136,8 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
         generateModelImage, 
         location || null,
         imageModel,
-        useWardrobeOnly
+        useWardrobeOnly,
+        sourceWardrobeItemId
       );
 
       // Debug: Log the response to see if model_image is present
@@ -152,7 +155,8 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
         imageUrl: URL.createObjectURL(effectiveImage), // Use the effective image for display
         model_image: data.model_image || null,
         raw: data,
-        meta: { usedPrompt: data.ai_prompt || prompt }
+        meta: { usedPrompt: data.ai_prompt || prompt },
+        source_wardrobe_item_id: data.source_wardrobe_item_id ?? sourceWardrobeItemId
       };
 
       console.log('Created suggestion:', {
@@ -175,7 +179,7 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
       setLoading(false);
       setLoadingMessage(null);
     }
-  }, [image, filters, preferenceText, generateModelImage, imageModel, useWardrobeOnly, options]);
+  }, [image, filters, preferenceText, generateModelImage, imageModel, useWardrobeOnly, sourceWardrobeItemId, options]);
 
   /**
    * Handle using cached/duplicate suggestion
@@ -281,6 +285,7 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
     handleUseCachedSuggestion,
     handleGetNewSuggestion,
     setShowDuplicateModal,
+    setSourceWardrobeItemId,
     onSuggestionSuccess: options?.onSuggestionSuccess
   };
 };

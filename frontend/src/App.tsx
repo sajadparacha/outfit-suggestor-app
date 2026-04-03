@@ -79,6 +79,7 @@ function App() {
     setGenerateModelImage,
     setImageModel,
     setUseWardrobeOnly,
+    setSourceWardrobeItemId,
     getSuggestion,
     getRandomSuggestion,
     handleUseCachedSuggestion,
@@ -148,6 +149,11 @@ function App() {
 
     // All business logic is now in the controller
     await getSuggestion();
+  };
+
+  const handleSetImage = (file: File | null) => {
+    setSourceWardrobeItemId(null);
+    setImage(file);
   };
 
   const handleUseCachedSuggestionWrapper = () => {
@@ -392,7 +398,7 @@ function App() {
                 preferenceText={preferenceText}
                 setPreferenceText={setPreferenceText}
                 image={image}
-                setImage={setImage}
+                setImage={handleSetImage}
                 onGetSuggestion={handleGetSuggestion}
                 onGetRandomSuggestion={isAuthenticated ? getRandomSuggestion : undefined}
                 onGetRandomFromHistory={isAuthenticated ? handleGetRandomFromHistory : undefined}
@@ -539,8 +545,12 @@ function App() {
                 onNavigateToMain={() => {
                   setCurrentView('main');
                 }}
+                onSourceImageLoaded={() => {
+                  showToast('Your selected item has been loaded. Now select the options and try to generate AI outfit.', 'success');
+                }}
                 outfitController={{
                   setImage,
+                  setSourceWardrobeItemId,
                   getSuggestion,
                   loading,
                   error,

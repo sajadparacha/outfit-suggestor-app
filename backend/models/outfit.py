@@ -37,6 +37,10 @@ class OutfitSuggestion(BaseModel):
         None,
         description="Primary key of the selected belt from user's wardrobe when available."
     )
+    source_wardrobe_item_id: int | None = Field(
+        None,
+        description="Primary key of the wardrobe item selected by the user before generating this AI suggestion."
+    )
     ai_prompt: str | None = Field(
         None,
         description="Complete prompt sent to the AI model for this suggestion."

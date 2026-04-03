@@ -266,7 +266,7 @@ class AIService:
                 wardrobe_context += "1. ONLY use items from the wardrobe list above\n"
                 wardrobe_context += "2. Do NOT invent or suggest any item not listed\n"
                 wardrobe_context += "3. Build the outfit by combining their existing items\n"
-                wardrobe_context += "4. For categories with no suitable item, suggest they add one to their wardrobe\n"
+                wardrobe_context += "4. For categories with no suitable item, write both: (a) a 'Consider adding a [type] to your wardrobe' note AND (b) a concrete AI suggestion with color/style/material details for that missing item\n"
                 wardrobe_context += "5. Preserve item IDs exactly as provided (these are primary keys)\n"
             else:
                 wardrobe_context += "\nWhen making recommendations:\n"
