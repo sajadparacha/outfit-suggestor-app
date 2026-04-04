@@ -54,7 +54,9 @@ describe('Random from History integration', () => {
     // Wait for app to load and Random from History button to appear
     await waitFor(() => {
       expect(screen.getByText(/Get Suggestion/i)).toBeInTheDocument();
-      expect(screen.getByText(/Random from History/i)).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /show random outfit from your history/i })
+      ).toBeInTheDocument();
     });
 
     const randomFromHistoryBtn = screen.getByRole('button', {
@@ -84,7 +86,9 @@ describe('Random from History integration', () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Random from History/i)).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /show random outfit from your history/i })
+      ).toBeInTheDocument();
     });
 
     const randomFromHistoryBtn = screen.getByRole('button', {

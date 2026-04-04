@@ -167,6 +167,42 @@ describe('OutfitPreview', () => {
       expect(shirtImg?.getAttribute('src')).toBe('data:image/jpeg;base64,base64_wardrobe_shirt');
     });
 
+    it('shows AI slot text for wardrobe-matched item when DB description differs', () => {
+      const suggestionWithMismatch = {
+        ...baseSuggestion,
+        shirt: 'Cream linen button-down (AI wording)',
+        shirt_id: 1,
+        matching_wardrobe_items: {
+          shirt: [
+            {
+              id: 1,
+              category: 'shirt',
+              color: 'cream',
+              description: 'Different wardrobe DB description',
+              image_data: 'base64_shirt_match',
+            },
+          ],
+          trouser: [],
+          blazer: [],
+          shoes: [],
+          belt: [],
+        },
+      };
+      render(
+        <OutfitPreview
+          suggestion={suggestionWithMismatch}
+          loading={false}
+          error={null}
+          onLike={mockOnLike}
+          onDislike={mockOnDislike}
+          onNext={mockOnNext}
+          hasImage={true}
+        />
+      );
+      expect(screen.getByText('Cream linen button-down (AI wording)')).toBeInTheDocument();
+      expect(screen.queryByText('Different wardrobe DB description')).not.toBeInTheDocument();
+    });
+
     it('shows shirt match (not upload) when upload was trousers (upload_matched_category trouser)', () => {
       const uploadedImageUrl = 'blob:http://localhost/fake-uploaded-trousers';
       const suggestionWithWardrobe = {

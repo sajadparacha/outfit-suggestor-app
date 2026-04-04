@@ -53,6 +53,24 @@ class TestOutfitEndpoints:
         )
         # May fail if OpenAI API key not set, but should not be auth error
         assert response.status_code != status.HTTP_401_UNAUTHORIZED
+
+    def test_suggest_outfit_echoes_source_wardrobe_item_id(self, client, auth_headers, sample_image):
+        """Client can send source_wardrobe_item_id; response echoes it for UI correlation."""
+        files = {"image": sample_image}
+        data = {
+            "text_input": "casual",
+            "generate_model_image": "false",
+            "source_wardrobe_item_id": "42",
+        }
+        response = client.post(
+            "/api/suggest-outfit",
+            files=files,
+            data=data,
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        body = response.json()
+        assert body.get("source_wardrobe_item_id") == 42
     
     def test_suggest_outfit_missing_image(self, client, auth_headers):
         """Test outfit suggestion without image"""

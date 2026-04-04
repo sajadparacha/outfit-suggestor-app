@@ -90,3 +90,23 @@ def test_ai_prompt_excludes_wardrobe_images_and_sensitive_fields():
     assert "\"shoes_id\"" in prompt
     assert "\"belt_id\"" in prompt
 
+
+def test_wardrobe_only_prompt_requires_consider_adding_and_concrete_suggestion():
+    """Wardrobe-only mode must instruct the model to pair 'Consider adding' with concrete details."""
+    ai = AIService(api_key="test-key")
+    item = DummyWardrobeItem(
+        id=1,
+        category="shirt",
+        name="Solo shirt",
+        color="White",
+        description="Only shirt in wardrobe",
+    )
+    prompt = ai._build_prompt(  # type: ignore[attr-defined]
+        text_input="Occasion: casual",
+        wardrobe_items={"shirt": [item]},
+        wardrobe_only=True,
+    )
+    assert "Consider adding a [type] to your wardrobe" in prompt
+    assert "concrete AI suggestion" in prompt
+    assert "color/style/material" in prompt
+

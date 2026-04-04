@@ -73,6 +73,20 @@ class _MockAIService:
             {"gpt4_cost": 0.0, "model_image_cost": 0.0, "total_cost": 0.0},
         )
 
+    def get_outfit_suggestion_text_only(self, text_input="", wardrobe_items=None, wardrobe_only=False):
+        """Used by /api/suggest-outfit-from-wardrobe (no image)."""
+        return (
+            OutfitSuggestion(
+                shirt="Test shirt",
+                trouser="Test trouser",
+                blazer="Test blazer",
+                shoes="Test shoes",
+                belt="Test belt",
+                reasoning="Test reasoning",
+            ),
+            {"gpt4_cost": 0.0, "model_image_cost": 0.0, "total_cost": 0.0},
+        )
+
     def generate_model_image(
         self,
         outfit_suggestion,

@@ -131,4 +131,48 @@ describe('Sidebar file validation', () => {
       screen.queryByText(/Random from History/i)
     ).not.toBeInTheDocument();
   });
+
+  describe('section hint tooltips', () => {
+    it('renders Preferences tooltip with occasion/season/style summary', () => {
+      render(<Sidebar {...defaultProps} />);
+      const tooltips = screen.getAllByRole('tooltip');
+      const prefs = tooltips.find((el) => el.textContent?.includes('Occasion: Casual'));
+      expect(prefs).toBeDefined();
+      expect(prefs?.textContent).toMatch(/Season: All Seasons/);
+      expect(prefs?.textContent).toMatch(/Style: Modern/);
+    });
+
+    it('renders Wardrobe tooltip with add-to-wardrobe and wardrobe-only hints when authenticated', () => {
+      const setUseWardrobeOnly = jest.fn();
+      render(
+        <Sidebar
+          {...defaultProps}
+          isAuthenticated
+          image={null}
+          onAddToWardrobe={jest.fn()}
+          setUseWardrobeOnly={setUseWardrobeOnly}
+        />
+      );
+      const tooltips = screen.getAllByRole('tooltip');
+      const wardrobeHint = tooltips.find((el) => el.textContent?.includes('Add to wardrobe'));
+      expect(wardrobeHint?.textContent).toMatch(/Add to wardrobe: upload a photo first/);
+      expect(wardrobeHint?.textContent).toMatch(/Use my wardrobe only: Off/);
+    });
+
+    it('renders Random picks tooltip explaining wardrobe vs history', () => {
+      render(
+        <Sidebar
+          {...defaultProps}
+          isAuthenticated
+          onGetRandomSuggestion={jest.fn()}
+          onGetRandomFromHistory={jest.fn()}
+        />
+      );
+      const tooltips = screen.getAllByRole('tooltip');
+      const randomHint = tooltips.find((el) =>
+        el.textContent?.includes('Random from Wardrobe uses')
+      );
+      expect(randomHint?.textContent).toMatch(/Random from History loads/);
+    });
+  });
 });
