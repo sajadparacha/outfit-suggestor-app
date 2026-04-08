@@ -108,6 +108,7 @@ class OutfitController:
         image_model: Optional[str] = None,
         use_wardrobe_only: bool = False,
         source_wardrobe_item_id: Optional[int] = None,
+        previous_outfit_text: Optional[str] = None,
         db: Session = None,
         current_user: Optional[User] = None
     ) -> OutfitSuggestion:
@@ -163,7 +164,8 @@ class OutfitController:
                 image_base64, 
                 text_input,
                 wardrobe_items=wardrobe_items_dict,
-                wardrobe_only=wardrobe_only_mode
+                wardrobe_only=wardrobe_only_mode,
+                previous_outfit_text=previous_outfit_text,
             )
             suggestion.source_wardrobe_item_id = source_wardrobe_item_id
             

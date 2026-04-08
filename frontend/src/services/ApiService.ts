@@ -149,6 +149,7 @@ class ApiService {
    * @param location - User's location for model customization
    * @param imageModel - Image generation model
    * @param useWardrobeOnly - If true, only suggest items from user's wardrobe (requires auth)
+   * @param previousOutfitText - When set, AI should propose a different outfit than this description
    * @returns Promise with outfit suggestion
    */
   async getSuggestion(
@@ -158,7 +159,8 @@ class ApiService {
     location: string | null = null,
     imageModel: string = 'dalle3',
     useWardrobeOnly: boolean = false,
-    sourceWardrobeItemId: number | null = null
+    sourceWardrobeItemId: number | null = null,
+    previousOutfitText: string | null = null
   ): Promise<OutfitResponse> {
     try {
       const formData = new FormData();
@@ -169,6 +171,9 @@ class ApiService {
       formData.append('use_wardrobe_only', useWardrobeOnly.toString());
       if (sourceWardrobeItemId !== null) {
         formData.append('source_wardrobe_item_id', sourceWardrobeItemId.toString());
+      }
+      if (previousOutfitText !== null && previousOutfitText.length > 0) {
+        formData.append('previous_outfit_text', previousOutfitText);
       }
       console.log('FormData - generate_model_image:', generateModelImage.toString());
       console.log('FormData - image_model:', imageModel);

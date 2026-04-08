@@ -14,7 +14,11 @@ interface WardrobeProps {
   outfitController?: {
     setImage: (image: File | null) => void;
     setSourceWardrobeItemId?: (id: number | null) => void;
-    getSuggestion: (skipDuplicateCheck?: boolean, sourceImage?: File | null) => Promise<void>;
+    getSuggestion: (
+      skipDuplicateCheck?: boolean,
+      sourceImage?: File | null,
+      alternateFromPrevious?: boolean
+    ) => Promise<void>;
     loading: boolean;
     error: string | null;
     showDuplicateModal: boolean;

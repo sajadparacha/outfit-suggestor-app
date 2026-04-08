@@ -54,7 +54,8 @@ class AIService:
         image_base64: str, 
         text_input: str = "",
         wardrobe_items: Optional[dict] = None,
-        wardrobe_only: bool = False
+        wardrobe_only: bool = False,
+        previous_outfit_text: Optional[str] = None,
     ) -> Tuple[OutfitSuggestion, Dict[str, any]]:
         """
         Get outfit suggestion from OpenAI based on image analysis
@@ -64,6 +65,7 @@ class AIService:
             text_input: Additional context or preferences
             wardrobe_items: Optional dict of wardrobe items by category (e.g., {"shirt": [...], "trouser": [...]})
             wardrobe_only: If True, AI must ONLY suggest items from wardrobe (no external suggestions)
+            previous_outfit_text: If set, AI should suggest a different outfit than this description
             
         Returns:
             Tuple of (OutfitSuggestion object, cost information dict)
@@ -71,7 +73,9 @@ class AIService:
         Raises:
             HTTPException: If API call fails
         """
-        prompt = self._build_prompt(text_input, wardrobe_items, wardrobe_only)
+        prompt = self._build_prompt(
+            text_input, wardrobe_items, wardrobe_only, previous_outfit_text=previous_outfit_text
+        )
         
         try:
             response = self.client.chat.completions.create(
@@ -199,7 +203,13 @@ class AIService:
                 detail=f"Error calling OpenAI API (text-only): {str(e)}"
             )
     
-    def _build_prompt(self, text_input: str = "", wardrobe_items: Optional[dict] = None, wardrobe_only: bool = False) -> str:
+    def _build_prompt(
+        self,
+        text_input: str = "",
+        wardrobe_items: Optional[dict] = None,
+        wardrobe_only: bool = False,
+        previous_outfit_text: Optional[str] = None,
+    ) -> str:
         """
         Build the prompt for OpenAI API
         
@@ -207,7 +217,8 @@ class AIService:
             text_input: Additional context from user
             wardrobe_items: Optional dict of wardrobe items by category
             wardrobe_only: If True, ONLY suggest items from wardrobe; do not suggest items they don't have
-            
+            previous_outfit_text: If set, user wants a different outfit than this description (e.g. "next" flow)
+
         Returns:
             Formatted prompt string
         """
@@ -275,7 +286,32 @@ class AIService:
                 wardrobe_context += "3. Only suggest new items if their wardrobe doesn't have suitable options\n"
                 wardrobe_context += "4. For items from their wardrobe, reference the description/color/brand you listed above\n"
                 wardrobe_context += "5. If you choose an item from wardrobe, return its exact ID unchanged\n"
-        
+
+        previous_block = ""
+        if previous_outfit_text and str(previous_outfit_text).strip():
+            prev = str(previous_outfit_text).strip()
+            if len(prev) > 12000:
+                prev = prev[:12000] + "\n[truncated]"
+            previous_block = f"""
+
+IMPORTANT — USER REQUESTED AN ALTERNATIVE OUTFIT:
+The user already received a complete outfit suggestion and wants a DIFFERENT outfit for the same uploaded photo and preferences.
+You MUST propose a noticeably different outfit: vary colors, pieces, formality, silhouette, or styling. Do NOT repeat the same combination or a near-duplicate.
+
+Previous suggestion (do NOT repeat this; use it only as what to avoid):
+---
+{prev}
+---
+
+"""
+
+        context_parts: List[str] = []
+        if previous_block.strip():
+            context_parts.append(previous_block.strip())
+        if text_input:
+            context_parts.append(f"Additional context: {text_input}")
+        context = ("\n\n".join(context_parts)) if context_parts else ""
+
         prompt = """
 You are a professional fashion stylist. Analyze the uploaded image of a shirt or blazer and provide a complete outfit suggestion.
 {wardrobe_context}
@@ -313,7 +349,7 @@ Respond in JSON format with the following structure:
 }}
 """.format(
             wardrobe_context=wardrobe_context,
-            context=f"\nAdditional context: {text_input}" if text_input else ""
+            context=f"\n{context}" if context else ""
         )
         
         return prompt

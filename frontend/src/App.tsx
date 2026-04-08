@@ -10,6 +10,7 @@ import Sidebar from './views/components/Sidebar';
 import OutfitPreview from './views/components/OutfitPreview';
 import OutfitHistory from './views/components/OutfitHistory';
 import About from './views/components/About';
+import UserGuide from './views/components/UserGuide';
 import Wardrobe from './views/components/Wardrobe';
 import AdminReports from './views/components/AdminReports';
 import Toast from './views/components/Toast';
@@ -42,11 +43,14 @@ function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   // View state (UI-only state)
-  const [currentView, setCurrentView] = useState<'main' | 'history' | 'wardrobe' | 'reports' | 'about' | 'settings'>('main');
+  const [currentView, setCurrentView] = useState<
+    'main' | 'history' | 'wardrobe' | 'reports' | 'about' | 'guide' | 'settings'
+  >('main');
   const [wardrobeCategoryFilter, setWardrobeCategoryFilter] = useState<string | null>(null);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showModelImageConfirm, setShowModelImageConfirm] = useState(false);
   const [modelImageConfirmed, setModelImageConfirmed] = useState(false);
+  const [pendingAlternateAfterModel, setPendingAlternateAfterModel] = useState(false);
   const [showAddWardrobeModal, setShowAddWardrobeModal] = useState(false);
   const [wardrobeFormData, setWardrobeFormData] = useState<{category: string; color: string; description: string} | null>(null);
   const [wardrobeImageToAdd, setWardrobeImageToAdd] = useState<File | null>(null);
@@ -131,6 +135,7 @@ function App() {
 
   // Event Handlers (UI orchestration only)
   const handleGetSuggestion = async (skipModelImageConfirm: boolean = false) => {
+    setPendingAlternateAfterModel(false);
     if (!image) {
       showToast('Please upload an image first', 'error');
       return;
@@ -149,6 +154,26 @@ function App() {
 
     // All business logic is now in the controller
     await getSuggestion();
+  };
+
+  /** Next suggestion: ask AI for a different outfit using the current one as context (same photo). */
+  const handleNextSuggestion = async (skipModelImageConfirm: boolean = false) => {
+    if (!image) {
+      showToast('Please upload an image first', 'error');
+      return;
+    }
+
+    if (generateModelImage && !skipModelImageConfirm && !modelImageConfirmed) {
+      setPendingAlternateAfterModel(true);
+      setShowModelImageConfirm(true);
+      return;
+    }
+
+    if (skipModelImageConfirm) {
+      setModelImageConfirmed(false);
+    }
+    setPendingAlternateAfterModel(false);
+    await getSuggestion(true, undefined, !!currentSuggestion);
   };
 
   const handleSetImage = (file: File | null) => {
@@ -322,27 +347,18 @@ function App() {
                   </>
                 )}
                 <button
-                  onClick={() => setShowIntroOverlay(true)}
-                  className="inline-flex items-center rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation bg-slate-800/60 text-slate-200 hover:bg-slate-700"
-                  aria-label="Open intro"
-                >
-                  <span className="mr-1.5" aria-hidden="true">
-                    ✨
-                  </span>
-                  <span>Intro</span>
-                </button>
-                <button
-                  onClick={() => setCurrentView('about')}
+                  onClick={() => setCurrentView('guide')}
                   className={`inline-flex items-center rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
-                    currentView === 'about'
+                    currentView === 'guide'
                       ? 'bg-white text-slate-900 shadow-sm'
                       : 'bg-slate-800/60 text-slate-200 hover:bg-slate-700'
                   }`}
+                  aria-current={currentView === 'guide' ? 'page' : undefined}
                 >
                   <span className="mr-1.5" aria-hidden="true">
-                    ℹ️
+                    📖
                   </span>
-                  <span>About</span>
+                  <span>Guide</span>
                 </button>
               </div>
             </div>
@@ -478,7 +494,7 @@ function App() {
                 isAdmin={!!user?.is_admin}
                 onLike={handleLike}
                 onDislike={handleDislike}
-                onNext={handleGetSuggestion}
+                onNext={handleNextSuggestion}
                 onNavigateToWardrobe={(category?: string) => {
                   setWardrobeCategoryFilter(category || null);
                   setCurrentView('wardrobe');
@@ -619,6 +635,8 @@ function App() {
         )}
 
         {currentView === 'about' && <About />}
+
+        {currentView === 'guide' && <UserGuide />}
 
         {currentView === 'settings' && (
           isAuthenticated ? (
@@ -788,13 +806,23 @@ function App() {
         onConfirm={async () => {
           setShowModelImageConfirm(false);
           setModelImageConfirmed(true);
-          await handleGetSuggestion(true);
+          if (pendingAlternateAfterModel) {
+            setPendingAlternateAfterModel(false);
+            await getSuggestion(true, undefined, !!currentSuggestion);
+          } else {
+            await handleGetSuggestion(true);
+          }
         }}
         onCancel={async () => {
           setShowModelImageConfirm(false);
           setGenerateModelImage(false);
           setModelImageConfirmed(false);
-          await handleGetSuggestion(true);
+          if (pendingAlternateAfterModel) {
+            setPendingAlternateAfterModel(false);
+            await getSuggestion(true, undefined, !!currentSuggestion);
+          } else {
+            await handleGetSuggestion(true);
+          }
         }}
       />
 
@@ -992,7 +1020,10 @@ function App() {
       <LoadingOverlay isLoading={loading} message={loadingMessage || 'Generating AI suggestion...'} />
 
       {/* Footer */}
-      <Footer />
+      <Footer
+        onOpenUserGuide={() => setCurrentView('guide')}
+        onOpenAbout={() => setCurrentView('about')}
+      />
     </div>
   );
 }

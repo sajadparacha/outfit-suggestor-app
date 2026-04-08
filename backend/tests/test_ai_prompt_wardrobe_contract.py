@@ -110,3 +110,18 @@ def test_wardrobe_only_prompt_requires_consider_adding_and_concrete_suggestion()
     assert "concrete AI suggestion" in prompt
     assert "color/style/material" in prompt
 
+
+def test_prompt_includes_previous_outfit_when_requesting_alternative():
+    """Next-suggestion flow sends prior outfit so the model proposes something different."""
+    ai = AIService(api_key="test-key")
+    prev = "Shirt: white linen\nTrousers: navy chinos\nReasoning: prior look"
+    prompt = ai._build_prompt(  # type: ignore[attr-defined]
+        text_input="Occasion: casual",
+        wardrobe_items=None,
+        wardrobe_only=False,
+        previous_outfit_text=prev,
+    )
+    assert "ALTERNATIVE" in prompt or "ALTERNATIVE OUTFIT" in prompt
+    assert "white linen" in prompt
+    assert "Do NOT repeat" in prompt
+

@@ -60,7 +60,9 @@ from services.wardrobe_service import WardrobeService
 class _MockAIService:
     """Mock AI service for tests. No OpenAI/Replicate calls."""
 
-    def get_outfit_suggestion(self, image_base64, text_input="", wardrobe_items=None, wardrobe_only=False):
+    def get_outfit_suggestion(
+        self, image_base64, text_input="", wardrobe_items=None, wardrobe_only=False, previous_outfit_text=None
+    ):
         return (
             OutfitSuggestion(
                 shirt="Test shirt",

@@ -42,11 +42,19 @@ describe('Mobile-friendly layout and touch targets', () => {
       expect(cls).toMatch(/py-2/);
     });
 
-    it('About tab is visible and has touch-friendly classes', () => {
+    it('Guide tab is visible and has touch-friendly classes', () => {
       render(<App />);
-      const aboutTab = screen.getByRole('button', { name: /About/i });
-      expect(aboutTab).toBeInTheDocument();
-      expect(aboutTab.getAttribute('class')).toMatch(/touch-manipulation/);
+      const guideTab = screen.getByRole('button', { name: 'Guide' });
+      expect(guideTab).toBeInTheDocument();
+      expect(guideTab.getAttribute('class')).toMatch(/touch-manipulation/);
+    });
+
+    it('About is in the footer with touch-friendly classes', async () => {
+      render(<App />);
+      await screen.findByText(/Get Suggestion/i);
+      const aboutFooter = screen.getByRole('button', { name: /About the app and creator/i });
+      expect(aboutFooter).toBeInTheDocument();
+      expect(aboutFooter.getAttribute('class')).toMatch(/touch-manipulation/);
     });
   });
 

@@ -9,6 +9,7 @@ import { OutfitSuggestion, Filters } from '../models/OutfitModels';
 import ApiService from '../services/ApiService';
 import { compressImageForOutfit, compressImageForWardrobe } from '../utils/imageUtils';
 import { getLocationString } from '../utils/geolocation';
+import { formatPreviousOutfitForPrompt } from '../utils/outfitPromptUtils';
 
 interface UseOutfitControllerReturn {
   // State
@@ -33,7 +34,11 @@ interface UseOutfitControllerReturn {
   setGenerateModelImage: (generate: boolean) => void;
   setImageModel: (model: string) => void;
   setUseWardrobeOnly: (use: boolean) => void;
-  getSuggestion: (skipDuplicateCheck?: boolean, sourceImage?: File | null) => Promise<void>;
+  getSuggestion: (
+    skipDuplicateCheck?: boolean,
+    sourceImage?: File | null,
+    alternateFromPrevious?: boolean
+  ) => Promise<void>;
   getRandomSuggestion: () => Promise<void>;
   clearError: () => void;
   handleUseCachedSuggestion: () => void;
@@ -67,13 +72,20 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
    * Handles duplicate checking, image compression, and location fetching
    * @param skipDuplicateCheck - Skip duplicate check and go straight to AI
    */
-  const getSuggestion = useCallback(async (skipDuplicateCheck: boolean = false, sourceImage?: File | null) => {
+  const getSuggestion = useCallback(
+    async (
+      skipDuplicateCheck: boolean = false,
+      sourceImage?: File | null,
+      alternateFromPrevious: boolean = false
+    ) => {
     const effectiveImage = sourceImage ?? image;
 
     if (!effectiveImage) {
       setError('Please upload an image first');
       return;
     }
+
+    const skipDup = skipDuplicateCheck || alternateFromPrevious;
 
     setLoading(true);
     setError(null);
@@ -85,10 +97,17 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
       const compressedImage = useWardrobeOnly
         ? await compressImageForWardrobe(effectiveImage)
         : await compressImageForOutfit(effectiveImage);
-      setLoadingMessage('Generating AI suggestion...');
+      setLoadingMessage(
+        alternateFromPrevious ? 'Asking AI for a different outfit...' : 'Generating AI suggestion...'
+      );
+
+      let previousOutfitText: string | null = null;
+      if (alternateFromPrevious && currentSuggestion) {
+        previousOutfitText = formatPreviousOutfitForPrompt(currentSuggestion);
+      }
       
       // Check for duplicate image (unless skipped)
-      if (!skipDuplicateCheck) {
+      if (!skipDup) {
         try {
           const duplicateCheck = await ApiService.checkDuplicate(compressedImage);
           
@@ -137,7 +156,8 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
         location || null,
         imageModel,
         useWardrobeOnly,
-        sourceWardrobeItemId
+        sourceWardrobeItemId,
+        previousOutfitText
       );
 
       // Debug: Log the response to see if model_image is present
@@ -179,7 +199,17 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
       setLoading(false);
       setLoadingMessage(null);
     }
-  }, [image, filters, preferenceText, generateModelImage, imageModel, useWardrobeOnly, sourceWardrobeItemId, options]);
+  }, [
+    image,
+    filters,
+    preferenceText,
+    generateModelImage,
+    imageModel,
+    useWardrobeOnly,
+    sourceWardrobeItemId,
+    currentSuggestion,
+    options,
+  ]);
 
   /**
    * Handle using cached/duplicate suggestion
