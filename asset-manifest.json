@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/outfit-suggestor-app/static/css/main.bc967ba9.css",
-    "main.js": "/outfit-suggestor-app/static/js/main.052a043c.js",
-    "static/js/453.d7446e4a.chunk.js": "/outfit-suggestor-app/static/js/453.d7446e4a.chunk.js",
-    "index.html": "/outfit-suggestor-app/index.html",
-    "main.bc967ba9.css.map": "/outfit-suggestor-app/static/css/main.bc967ba9.css.map",
-    "main.052a043c.js.map": "/outfit-suggestor-app/static/js/main.052a043c.js.map",
-    "453.d7446e4a.chunk.js.map": "/outfit-suggestor-app/static/js/453.d7446e4a.chunk.js.map"
+    "main.css": "/static/css/main.bc967ba9.css",
+    "main.js": "/static/js/main.de610731.js",
+    "static/js/453.d7446e4a.chunk.js": "/static/js/453.d7446e4a.chunk.js",
+    "index.html": "/index.html",
+    "main.bc967ba9.css.map": "/static/css/main.bc967ba9.css.map",
+    "main.de610731.js.map": "/static/js/main.de610731.js.map",
+    "453.d7446e4a.chunk.js.map": "/static/js/453.d7446e4a.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.bc967ba9.css",
-    "static/js/main.052a043c.js"
+    "static/js/main.de610731.js"
   ]
 }
