@@ -42,13 +42,16 @@ class Config:
     else:
         print(f"✅ Using database: {DATABASE_URL[:30]}...")  # Log first 30 chars for debugging
 
-    # CORS settings
-    ALLOWED_ORIGINS = [
-        "http://localhost:3000",  # React dev server
-        "https://sajadparacha.github.io",  # GitHub Pages URL
-        "https://web-production-dfcf8.up.railway.app",  # Railway backend (for docs)
-        "*"  # Allow all origins for now (can restrict later)
-    ]
+    # CORS settings (comma-separated list in env, fallback to sensible defaults)
+    _allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "").strip()
+    if _allowed_origins_env:
+        ALLOWED_ORIGINS = [origin.strip() for origin in _allowed_origins_env.split(",") if origin.strip()]
+    else:
+        ALLOWED_ORIGINS = [
+            "http://localhost:3000",  # React dev server
+            "https://sajadparacha.github.io",  # Legacy GitHub Pages URL
+            "https://closiq.me",  # Production custom domain
+        ]
     
     # Image similarity threshold for duplicate detection
     # Lower values = stricter matching (0 = identical, 5 = very similar, 10 = similar)

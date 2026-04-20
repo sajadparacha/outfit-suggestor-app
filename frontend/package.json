@@ -27,7 +27,7 @@
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build"
   },
-  "homepage": "https://sajadparacha.github.io/outfit-suggestor-app",
+  "homepage": "https://closiq.me",
   "eslintConfig": {
     "extends": [
       "react-app",

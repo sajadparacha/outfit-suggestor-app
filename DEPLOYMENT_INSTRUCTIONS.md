@@ -164,6 +164,43 @@ git push origin main
 
 ---
 
+## Step 5: Configure Custom Domain (`closiq.me`)
+
+If you want `https://closiq.me` to open the app:
+
+1. **Create DNS records** at your domain provider:
+   - Add A records for apex (`@`) to:
+     - `185.199.108.153`
+     - `185.199.109.153`
+     - `185.199.110.153`
+     - `185.199.111.153`
+   - Optional: add `www` CNAME → `sajadparacha.github.io`
+
+2. **Set GitHub Pages custom domain**:
+   - Repository Settings → Pages → Custom domain = `closiq.me`
+   - Enable **Enforce HTTPS**
+
+3. **Backend CORS**:
+   - Add backend env var:
+     - `ALLOWED_ORIGINS=http://localhost:3000,https://closiq.me`
+   - Redeploy backend after changing env vars
+
+4. **Frontend production API URL**:
+   - Ensure `frontend/.env.production` has:
+     - `REACT_APP_API_URL=https://<your-backend-domain>`
+
+5. **Deploy frontend**:
+   ```bash
+   cd frontend
+   npm run deploy
+   ```
+
+This repo already includes custom-domain files:
+- `frontend/package.json` → homepage `https://closiq.me`
+- `frontend/public/CNAME` → `closiq.me`
+
+---
+
 ## Environment Variables Reference
 
 ### Required for Railway:
