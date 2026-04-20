@@ -14,6 +14,16 @@ const { TextDecoder, TextEncoder } = require('util');
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (global as any).TextDecoder = TextDecoder;
 
+// jsdom does not implement blob URLs; components that preview uploaded files need these.
+if (typeof URL.createObjectURL !== 'function') {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (URL as any).createObjectURL = () => 'blob:http://localhost/mock';
+}
+if (typeof URL.revokeObjectURL !== 'function') {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (URL as any).revokeObjectURL = () => {};
+}
+
 // MSW (and its fetch interceptors) may require Web Streams globals in older Node/Jest runtimes.
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires

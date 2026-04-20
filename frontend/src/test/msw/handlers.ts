@@ -3,6 +3,11 @@ import { rest } from 'msw';
 const API_BASE = 'http://localhost:8001';
 
 export const handlers = [
+  // Default: App fetches recent history after a suggestion; tests can override with server.use.
+  rest.get(`${API_BASE}/api/outfit-history`, (_req, res, ctx) => {
+    return res(ctx.json([]));
+  }),
+
   rest.get(`${API_BASE}/api/wardrobe/summary`, (_req, res, ctx) => {
     return res(
       ctx.json({
