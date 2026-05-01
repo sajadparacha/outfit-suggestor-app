@@ -16,15 +16,22 @@ backend_status=0
 frontend_status=0
 
 echo "=== Backend tests (pytest) ==="
+# Run all backend tests via pytest discovery so new unit/integration tests are
+# included automatically (tests/, tests_remote/, and root-level test_*.py files).
+# Ignore virtualenv folders explicitly to avoid accidental third-party test collection.
 (
   cd "$ROOT_DIR/backend" \
     && pip install -q -r requirements.txt \
-    && pytest tests/ -v --tb=short --junitxml "$PYTEST_JUNIT_XML"
+    && pytest -v --tb=short --junitxml "$PYTEST_JUNIT_XML" \
+      --ignore=venv \
+      --ignore=.venv
 ) 2>&1 | tee "$BACKEND_LOG"
 backend_status=${PIPESTATUS[0]}
 
 echo ""
 echo "=== Frontend tests (Jest) ==="
+# Run all Jest-discovered tests (unit + integration) so new *.test.* files
+# are included automatically without editing this script.
 (
   cd "$ROOT_DIR/frontend" \
     && npm install \
