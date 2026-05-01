@@ -169,6 +169,27 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
       });
 
       // Create outfit suggestion object
+      const categoryAliases: Record<string, 'shirt' | 'trouser' | 'blazer' | 'shoes' | 'belt'> = {
+        shirt: 'shirt',
+        shirts: 'shirt',
+        trouser: 'trouser',
+        trousers: 'trouser',
+        pant: 'trouser',
+        pants: 'trouser',
+        blazer: 'blazer',
+        blazers: 'blazer',
+        jacket: 'blazer',
+        jackets: 'blazer',
+        shoe: 'shoes',
+        shoes: 'shoes',
+        belt: 'belt',
+        belts: 'belt',
+      };
+      const rawUploadCategory = data.source_slot || data.upload_matched_category;
+      const normalizedUploadCategory = rawUploadCategory
+        ? categoryAliases[String(rawUploadCategory).toLowerCase()] ?? null
+        : null;
+
       const suggestion: OutfitSuggestion = {
         ...data,
         id: Date.now().toString(),
@@ -176,7 +197,8 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
         model_image: data.model_image || null,
         raw: data,
         meta: { usedPrompt: data.ai_prompt || prompt },
-        source_wardrobe_item_id: data.source_wardrobe_item_id ?? sourceWardrobeItemId
+        source_wardrobe_item_id: data.source_wardrobe_item_id ?? sourceWardrobeItemId,
+        upload_matched_category: normalizedUploadCategory,
       };
 
       console.log('Created suggestion:', {

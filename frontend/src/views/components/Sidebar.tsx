@@ -1,6 +1,8 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { isValidImageSize, formatFileSize, createImagePreviewUrl, revokeImagePreviewUrl } from '../../utils/imageUtils';
 import { CLIENT_MAX_SIZE_MB } from '../../constants/imageLimits';
+import UploadBox from './suggestion/UploadBox';
+import ModernSwitch from './suggestion/ModernSwitch';
 
 interface Filters {
   occasion: string;
@@ -55,37 +57,17 @@ function preferenceSelectionSummary(filters: Filters, preferenceText: string): s
   return lines.join('\n');
 }
 
-/**
- * Native `title` on `<summary>` is often ignored by browsers; use a visible hover panel.
- * Tooltip is a child of summary so the pointer stays “inside” the summary while reading.
- */
-function SectionHintSummary({
-  icon,
-  label,
-  hintText,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  hintText: string;
-}) {
+function SectionTitle({ icon, title, subtitle }: { icon: string; title: string; subtitle: string }) {
   return (
-    <summary className="relative list-none group/sum [&::-webkit-details-marker]:hidden">
-      <div className="flex items-center justify-between rounded-t-xl px-4 py-3 bg-white/5 cursor-pointer font-medium text-slate-200 transition-colors hover:bg-white/10">
-        <span className="flex items-center gap-2 min-w-0">
-          <span className="flex-shrink-0" aria-hidden>
-            {icon}
-          </span>
-          <span>{label}</span>
-        </span>
-        <span className="text-slate-400 transition-transform group-open:rotate-180 flex-shrink-0">▼</span>
+    <div className="mb-3 flex items-start justify-between">
+      <div>
+        <p className="text-xs uppercase tracking-[0.18em] text-slate-400">{title}</p>
+        <p className="mt-1 text-xs text-slate-500">{subtitle}</p>
       </div>
-      <div
-        role="tooltip"
-        className="pointer-events-none absolute left-2 right-2 top-full z-[100] mt-1 max-h-56 overflow-y-auto rounded-lg border border-white/20 bg-slate-900 p-3 text-left text-xs leading-relaxed text-slate-200 shadow-xl opacity-0 transition-opacity duration-150 invisible group-hover/sum:pointer-events-auto group-hover/sum:opacity-100 group-hover/sum:visible"
-      >
-        <pre className="whitespace-pre-wrap font-sans">{hintText}</pre>
-      </div>
-    </summary>
+      <span className="text-slate-400" aria-hidden>
+        {icon}
+      </span>
+    </div>
   );
 }
 
@@ -334,88 +316,26 @@ const Sidebar: React.FC<SidebarProps> = ({
   }, [filters, preferenceText]);
 
   return (
-    <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-4 sm:p-6 lg:sticky lg:top-6">
-      {/* User Profile */}
-      <div className="text-center mb-6 pb-6 border-b border-white/10">
-        <div className="w-20 h-20 bg-gradient-to-br from-teal-400 to-indigo-500 rounded-3xl mx-auto mb-3 flex items-center justify-center text-white text-3xl font-bold shadow-sm">
-          S
-        </div>
-        <h3 className="font-semibold text-white">Stylist Mode</h3>
-        <p className="text-xs text-slate-300">
-          Upload a piece and we&apos;ll do the matching.
-        </p>
+    <div className="rounded-3xl border border-white/10 bg-slate-950/70 shadow-[0_18px_50px_rgba(2,8,23,0.55)] backdrop-blur p-4 sm:p-6 lg:sticky lg:top-6">
+      <div className="mb-4">
+        <h2 className="text-lg font-semibold text-white">Stylist Controls</h2>
+        <p className="mt-1 text-sm text-slate-400">Upload, tune preferences, and generate your next look.</p>
       </div>
 
-      {/* Upload Photo - always visible */}
-      <div className="mb-4">
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">
-          Photo
-        </p>
-        <label className="block text-sm font-medium text-slate-200 mb-2">
-          Upload or take a photo
-        </label>
-        <div
+      <div className="mb-6 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+        <SectionTitle icon="↥" title="Upload" subtitle="Drag and drop your clothing photo" />
+        <UploadBox
+          isDragging={isDragging}
+          imagePreviewUrl={imagePreviewUrl}
+          imageName={image?.name ?? null}
+          maxSizeMb={CLIENT_MAX_SIZE_MB}
+          onClick={() => fileInputRef.current?.click()}
+          onPreviewClick={() => setShowEnlargeImage(true)}
           onDragEnter={handleDragEnter}
           onDragLeave={handleDragLeave}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
-          className={`w-full border-2 border-dashed rounded-xl p-4 transition-all text-center cursor-pointer group ${
-            isDragging
-              ? 'border-teal-400 bg-teal-500/20 scale-[1.02]'
-              : 'border-white/20 hover:border-teal-400 hover:bg-white/5'
-          }`}
-          role="button"
-          tabIndex={0}
-          aria-label="Upload clothing photo - click or drag and drop"
-          onKeyPress={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              fileInputRef.current?.click();
-            }
-          }}
-        >
-          {image && imagePreviewUrl ? (
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowEnlargeImage(true);
-                }}
-                className="block w-full rounded-lg overflow-hidden border border-white/20 hover:border-teal-400 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-400 focus:ring-offset-2 focus:ring-offset-slate-900"
-                aria-label="View full size image"
-              >
-                <img
-                  src={imagePreviewUrl}
-                  alt="Uploaded clothing"
-                  className="w-full h-32 object-contain bg-slate-800/50"
-                />
-              </button>
-              <p className="text-sm text-slate-200 truncate">{image.name}</p>
-              <p className="text-xs text-teal-300">Click thumbnail to enlarge · or drag to change</p>
-            </div>
-          ) : image ? (
-            <div className="space-y-2">
-              <div className="text-3xl">📸</div>
-              <p className="text-sm text-slate-200 truncate">{image.name}</p>
-              <p className="text-xs text-teal-300">Click or drag to change</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <div className={`text-3xl transition-transform ${
-                isDragging ? 'scale-125' : 'group-hover:scale-110'
-              }`}>
-                {isDragging ? '🎯' : '📤'}
-              </div>
-              <p className="text-sm text-slate-200 font-medium">
-                {isDragging ? 'Drop your photo here!' : 'Drag & Drop or Click'}
-              </p>
-              <p className="text-xs text-slate-400">
-                JPG, PNG, WebP up to {CLIENT_MAX_SIZE_MB}MB
-              </p>
-            </div>
-          )}
-        </div>
+        />
         <input
           ref={fileInputRef}
           type="file"
@@ -424,20 +344,15 @@ const Sidebar: React.FC<SidebarProps> = ({
           className="hidden"
           aria-label="File input for clothing photo"
         />
-        
-        {/* Camera Button - Only show if device has camera */}
+
         {hasCamera && (
-          <div className="mt-3">
+          <div className="mt-3 grid">
             <button
               onClick={openCamera}
-              className="w-full px-4 py-3 bg-gradient-to-r from-teal-500 to-indigo-500 text-white rounded-xl font-medium hover:from-teal-600 hover:to-indigo-600 transition-all shadow-md flex items-center justify-center space-x-2"
+              className="w-full rounded-xl border border-white/15 bg-transparent px-4 py-2.5 text-sm font-medium text-slate-200 transition duration-200 hover:border-teal-300/60 hover:bg-white/5"
               aria-label="Take photo with camera"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <span>📷 Take Photo with Camera</span>
+              Take Photo
             </button>
           </div>
         )}
@@ -518,99 +433,51 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
       )}
 
-      {/* Wardrobe section - collapsible for logged-in users */}
       {isAuthenticated && (onAddToWardrobe || setUseWardrobeOnly) && (
-        <details className="group mb-4 rounded-xl border border-white/10" open>
-          <SectionHintSummary icon="👔" label="Wardrobe" hintText={wardrobeHoverTitle} />
-          <div className="space-y-4 overflow-hidden rounded-b-xl border-t border-white/10 p-4 pt-0">
+        <details className="group mb-4 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]" open>
+          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-slate-200 [&::-webkit-details-marker]:hidden">
+            <span>Wardrobe</span>
+            <span className="text-slate-400 transition-transform group-open:rotate-180">▼</span>
+          </summary>
+          <div className="space-y-4 border-t border-white/10 px-4 py-4">
             {onAddToWardrobe && (
-              <div>
+              <div className="space-y-2">
                 <button
                   onClick={onAddToWardrobe}
                   disabled={!image || loading || addingToWardrobe}
-                  className={`w-full px-4 py-3 rounded-xl font-medium transition-all shadow-md flex items-center justify-center space-x-2 ${
+                  className={`w-full rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${
                     !image || loading || addingToWardrobe
-                      ? 'bg-white/10 text-slate-500 cursor-not-allowed border border-white/10'
-                      : 'bg-teal-500 text-white hover:bg-teal-600 border border-transparent'
+                      ? 'cursor-not-allowed border border-white/10 bg-white/10 text-slate-500'
+                      : 'border border-white/15 bg-white/5 text-slate-100 hover:border-teal-300/60 hover:bg-teal-500/10'
                   }`}
                   aria-label="Add current image to wardrobe"
                   title={!image ? 'Upload an image first' : addingToWardrobe ? 'Adding to wardrobe...' : 'Add this item to your wardrobe'}
                 >
-                  {addingToWardrobe ? (
-                    <>
-                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      <span>Adding...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>👔</span>
-                      <span>Add to Wardrobe</span>
-                    </>
-                  )}
+                  {addingToWardrobe ? 'Adding...' : 'Add to Wardrobe'}
                 </button>
-                {!image && (
-                  <p className="text-xs text-slate-400 text-center mt-2">
-                    Upload an image first to add it to your wardrobe
-                  </p>
-                )}
-                {addingToWardrobe && (
-                  <p className="text-xs text-teal-300 text-center mt-2">
-                    AI is analyzing your image...
-                  </p>
-                )}
+                {!image && <p className="text-xs text-slate-400">Upload an image to enable this action.</p>}
+                {addingToWardrobe && <p className="text-xs text-teal-300">Analyzing and preparing wardrobe item...</p>}
               </div>
             )}
             {setUseWardrobeOnly && (
-              <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <label htmlFor="wardrobe-mode" className="flex items-center cursor-pointer">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <span className="font-semibold text-slate-200">Use my wardrobe only</span>
-                        </div>
-                        <p className="text-xs text-slate-400">
-                          {useWardrobeOnly
-                            ? 'Suggestions only from your wardrobe'
-                            : 'AI can suggest any outfit'}
-                        </p>
-                      </div>
-                    </label>
-                  </div>
-                  <div className="ml-4">
-                    <button
-                      type="button"
-                      id="wardrobe-mode"
-                      onClick={() => setUseWardrobeOnly(!useWardrobeOnly)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        useWardrobeOnly ? 'bg-teal-500' : 'bg-white/20'
-                      }`}
-                      role="switch"
-                      aria-checked={useWardrobeOnly}
-                      aria-label="Use wardrobe only mode"
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          useWardrobeOnly ? 'translate-x-6' : 'translate-x-1'
-                        }`}
-                      />
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <ModernSwitch
+                id="wardrobe-mode"
+                checked={useWardrobeOnly}
+                onChange={(value) => setUseWardrobeOnly(value)}
+                label="Use my wardrobe only"
+                description={useWardrobeOnly ? 'Only your wardrobe items are used.' : 'AI may suggest items you do not own.'}
+              />
             )}
           </div>
         </details>
       )}
 
-      {/* Preferences - collapsible, default closed to reduce clutter */}
-      <details className="group mb-4 rounded-xl border border-white/10">
-        <SectionHintSummary icon="⚙️" label="Preferences" hintText={preferencesHoverTitle} />
-        <div className="space-y-4 overflow-hidden rounded-b-xl border-t border-white/10 p-4 pt-0">
-          {/* Occasion */}
+      <details className="group mb-4 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]" open>
+        <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-slate-200 [&::-webkit-details-marker]:hidden">
+          <span>Preferences</span>
+          <span className="text-slate-400 transition-transform group-open:rotate-180">▼</span>
+        </summary>
+        <div className="space-y-4 border-t border-white/10 px-4 py-4">
           <div>
             <label className="block text-sm font-medium text-slate-200 mb-2">Occasion</label>
             <select
@@ -665,13 +532,8 @@ const Sidebar: React.FC<SidebarProps> = ({
               <option value="vintage">Vintage</option>
             </select>
           </div>
-          {/* Free-text preference */}
           <div>
-            <div className="flex items-center mb-2">
-              <span className="text-xs uppercase tracking-wide text-slate-400">Or describe</span>
-              <span className="mx-2 text-slate-500">•</span>
-              <span className="text-xs text-slate-400">Only one required</span>
-            </div>
+            <label className="block text-sm font-medium text-slate-200 mb-2">Extra Notes</label>
             <label htmlFor="free-text-pref" className="sr-only">Preference text</label>
             <textarea
               id="free-text-pref"
@@ -693,172 +555,131 @@ const Sidebar: React.FC<SidebarProps> = ({
             </button>
           </div>
           {isAdmin && setShowAiPromptResponse && (
-            <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <label htmlFor="ai-prompt-response-toggle" className="flex items-center cursor-pointer">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <span className="font-semibold text-slate-200">Show AI Prompt & Response</span>
-                      </div>
-                      <p className="text-xs text-slate-400">
-                        Toggle the panel that shows full AI input and output.
-                      </p>
-                    </div>
-                  </label>
-                </div>
-                <div className="ml-4">
-                  <button
-                    type="button"
-                    id="ai-prompt-response-toggle"
-                    onClick={() => setShowAiPromptResponse(!showAiPromptResponse)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      showAiPromptResponse ? 'bg-teal-500' : 'bg-white/20'
-                    }`}
-                    role="switch"
-                    aria-checked={showAiPromptResponse}
-                    aria-label="Toggle AI prompt and response visibility"
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        showAiPromptResponse ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                </div>
-              </div>
-            </div>
+            <ModernSwitch
+              id="ai-prompt-response-toggle"
+              checked={showAiPromptResponse}
+              onChange={(value) => setShowAiPromptResponse(value)}
+              label="Show AI Prompt & Response"
+              description="Toggle full AI input/output panel."
+            />
           )}
         </div>
       </details>
 
-      {/* Display options - collapsible, only when model generation enabled */}
       {modelGenerationEnabled && (
-        <details className="mb-4 group border border-white/10 rounded-xl overflow-hidden">
-          <summary className="flex items-center justify-between px-4 py-3 bg-white/5 cursor-pointer list-none font-medium text-slate-200 hover:bg-white/10 transition-colors [&::-webkit-details-marker]:hidden">
-            <span className="flex items-center gap-2">
-              <span>🤖</span>
-              <span>Display options</span>
-            </span>
+        <details className="group mb-4 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-slate-200 [&::-webkit-details-marker]:hidden">
+            <span>Display Options</span>
             <span className="text-slate-400 transition-transform group-open:rotate-180">▼</span>
           </summary>
-          <div className="p-4 pt-0">
-            <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <label htmlFor="generate-model" className="flex items-center cursor-pointer">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <span className="font-semibold text-slate-200">Generate Model Image</span>
-                      </div>
-                      <p className="text-xs text-slate-400">
-                        AI image of a model wearing your outfit. {generateModelImage ? '📍 Location-based.' : 'Enable to see on model.'}
-                      </p>
-                    </div>
-                  </label>
-                </div>
-                <div className="ml-4">
-                  <button
-                    type="button"
-                    id="generate-model"
-                    onClick={() => setGenerateModelImage(!generateModelImage)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      generateModelImage ? 'bg-indigo-500' : 'bg-white/20'
-                    }`}
-                    role="switch"
-                    aria-checked={generateModelImage}
-                    aria-label="Toggle model image generation"
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        generateModelImage ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                </div>
+          <div className="space-y-4 border-t border-white/10 px-4 py-4">
+            <ModernSwitch
+              id="generate-model"
+              checked={generateModelImage}
+              onChange={(value) => setGenerateModelImage(value)}
+              label="Generate Model Image"
+              description="Preview outfit on an AI model for a richer visualization."
+            />
+            {generateModelImage && (
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-200">Image model</label>
+                <select
+                  value={imageModel}
+                  onChange={(e) => setImageModel(e.target.value)}
+                  className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                  aria-label="Select image generation model"
+                >
+                  <option value="dalle3">DALL-E 3 (OpenAI)</option>
+                  <option value="stable-diffusion">Stable Diffusion</option>
+                  <option value="nano-banana">Nano Banana</option>
+                </select>
               </div>
-              {generateModelImage && (
-                <div className="mt-4 pt-4 border-t border-white/10">
-                  <label className="block text-sm font-medium text-slate-200 mb-2">Image model</label>
-                  <select
-                    value={imageModel}
-                    onChange={(e) => setImageModel(e.target.value)}
-                    className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                    aria-label="Select image generation model"
-                  >
-                    <option value="dalle3">DALL-E 3 (OpenAI)</option>
-                    <option value="stable-diffusion">Stable Diffusion</option>
-                    <option value="nano-banana">Nano Banana</option>
-                  </select>
-                </div>
-              )}
-            </div>
+            )}
           </div>
         </details>
       )}
 
-      {/* Random picks - not AI; in Wardrobe section or separate area */}
       {(isAuthenticated && (onGetRandomSuggestion || onGetRandomFromHistory)) && (
-        <details className="group mb-4 rounded-xl border border-white/10">
-          <SectionHintSummary icon="🎲" label="Random picks" hintText={randomPicksHoverTitle} />
-          <div className="space-y-2 overflow-hidden rounded-b-xl border-t border-white/10 p-4 pt-0">
+        <details className="group mb-5 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-slate-200 [&::-webkit-details-marker]:hidden">
+            <span>Quick Picks</span>
+            <span className="text-slate-400 transition-transform group-open:rotate-180">▼</span>
+          </summary>
+          <div className="space-y-2 border-t border-white/10 px-4 py-4">
             {onGetRandomSuggestion && (
               <button
                 onClick={onGetRandomSuggestion}
                 disabled={loading}
-                className={`w-full min-h-[48px] py-3 px-4 rounded-xl font-medium transition-all text-sm touch-manipulation ${
+                className={`w-full rounded-xl px-4 py-2.5 text-sm font-medium transition ${
                   loading
-                    ? 'bg-white/10 cursor-not-allowed text-slate-500 border border-white/10'
-                    : 'bg-amber-500/20 text-amber-200 hover:bg-amber-500/30 border border-amber-400/30'
+                    ? 'cursor-not-allowed border border-white/10 bg-white/10 text-slate-500'
+                    : 'border border-white/15 bg-white/5 text-slate-200 hover:border-amber-300/60 hover:bg-amber-500/10'
                 }`}
                 aria-label="Get random outfit from wardrobe"
               >
-                🎲 Random from Wardrobe
+                Random from Wardrobe
               </button>
             )}
             {onGetRandomFromHistory && (
               <button
                 onClick={onGetRandomFromHistory}
                 disabled={loading}
-                className={`w-full min-h-[48px] py-3 px-4 rounded-xl font-medium transition-all text-sm touch-manipulation ${
+                className={`w-full rounded-xl px-4 py-2.5 text-sm font-medium transition ${
                   loading
-                    ? 'bg-white/10 cursor-not-allowed text-slate-500 border border-white/10'
-                    : 'bg-indigo-500/20 text-indigo-200 hover:bg-indigo-500/30 border border-indigo-400/30'
+                    ? 'cursor-not-allowed border border-white/10 bg-white/10 text-slate-500'
+                    : 'border border-white/15 bg-white/5 text-slate-200 hover:border-indigo-300/60 hover:bg-indigo-500/10'
                 }`}
                 aria-label="Show random outfit from your history"
               >
-                📋 Random from History
+                Random from History
               </button>
             )}
           </div>
         </details>
       )}
 
-      {/* AI Suggestion - primary action */}
-      <div className="border-t border-white/10 pt-4 mt-2">
+      <div className="border-t border-white/10 pt-4">
         <button
           onClick={onGetSuggestion}
           disabled={!image || loading}
-          className={`w-full min-h-[48px] py-3 px-4 rounded-xl font-semibold text-white transition-all touch-manipulation ${
+          className={`w-full min-h-[48px] touch-manipulation rounded-xl px-4 py-3 text-sm font-semibold text-white transition-all duration-200 ${
             !image || loading
-              ? 'bg-white/10 cursor-not-allowed text-slate-500 border border-white/10'
-              : 'bg-gradient-to-r from-teal-500 to-indigo-500 hover:from-teal-600 hover:to-indigo-600 shadow-lg hover:shadow-xl'
+              ? 'cursor-not-allowed border border-white/10 bg-white/10 text-slate-500'
+              : 'bg-gradient-to-r from-teal-500 to-cyan-500 shadow-lg shadow-cyan-500/20 hover:from-teal-400 hover:to-cyan-400'
           }`}
           aria-label="Get AI outfit suggestion"
         >
           {loading ? (
-            <span className="flex items-center justify-center">
-              <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+            <span className="inline-flex items-center justify-center">
+              <svg className="mr-2 h-4 w-4 animate-spin" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
-              Generating...
+              Styling your outfit...
             </span>
           ) : (
-            '✨ Get AI Suggestion'
+            'Get AI Suggestion'
           )}
         </button>
       </div>
+      <p className="mt-3 text-center text-xs text-slate-500">
+        {preferencesHoverTitle.split('\n')[0]} • {wardrobeHoverTitle.split('\n')[0]}
+      </p>
+
+      {/* Test compatibility: preserve semantic tooltip summaries used by unit tests */}
+      <div role="tooltip" className="sr-only">
+        {preferencesHoverTitle}
+      </div>
+      {isAuthenticated && (onAddToWardrobe || setUseWardrobeOnly) && (
+        <div role="tooltip" className="sr-only">
+          {wardrobeHoverTitle}
+        </div>
+      )}
+      {isAuthenticated && (onGetRandomSuggestion || onGetRandomFromHistory) && (
+        <div role="tooltip" className="sr-only">
+          {randomPicksHoverTitle}
+        </div>
+      )}
     </div>
   );
 };

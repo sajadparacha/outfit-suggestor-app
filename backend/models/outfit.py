@@ -41,6 +41,10 @@ class OutfitSuggestion(BaseModel):
         None,
         description="Primary key of the wardrobe item selected by the user before generating this AI suggestion."
     )
+    source_slot: str | None = Field(
+        None,
+        description="AI-identified slot/category of the uploaded item in this outfit (shirt, trouser, blazer, shoes, belt)."
+    )
     ai_prompt: str | None = Field(
         None,
         description="Complete prompt sent to the AI model for this suggestion."

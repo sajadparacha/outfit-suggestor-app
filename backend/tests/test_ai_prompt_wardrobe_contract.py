@@ -89,6 +89,7 @@ def test_ai_prompt_excludes_wardrobe_images_and_sensitive_fields():
     assert "\"blazer_id\"" in prompt
     assert "\"shoes_id\"" in prompt
     assert "\"belt_id\"" in prompt
+    assert "\"source_slot\"" in prompt
 
 
 def test_wardrobe_only_prompt_requires_consider_adding_and_concrete_suggestion():

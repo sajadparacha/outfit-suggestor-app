@@ -41,6 +41,7 @@ export interface OutfitSuggestion {
   cost?: OutfitCost; // Cost breakdown for the AI suggestion in USD
   /** Category of the wardrobe item that matched the upload (e.g. 'shirt', 'trouser'). Use upload image for that category only. */
   upload_matched_category?: string | null;
+  source_slot?: string | null;
   shirt_id?: number | null;
   trouser_id?: number | null;
   blazer_id?: number | null;
@@ -77,6 +78,7 @@ export interface OutfitResponse {
   cost?: OutfitCost; // Cost breakdown for the AI suggestion in USD
   matching_wardrobe_items?: MatchingWardrobeItems;
   upload_matched_category?: string | null;
+  source_slot?: string | null;
   shirt_id?: number | null;
   trouser_id?: number | null;
   blazer_id?: number | null;

@@ -242,6 +242,81 @@ describe('OutfitPreview', () => {
       expect(trouserImg?.getAttribute('src')).toBe(uploadedImageUrl);
     });
 
+    it('prefers explicit uploaded-image wording over mismatched upload_matched_category', () => {
+      const uploadedImageUrl = 'blob:http://localhost/fake-uploaded-shirt';
+      const suggestionWithMismatch = {
+        ...baseSuggestion,
+        imageUrl: uploadedImageUrl,
+        upload_matched_category: 'blazer',
+        shirt: 'White shirt with red and black stripes from the uploaded image',
+        blazer: "Slim fit blazer in Charcoal gray (from user's wardrobe)",
+        blazer_id: 2,
+        matching_wardrobe_items: {
+          shirt: [],
+          trouser: [],
+          blazer: [
+            { id: 2, category: 'blazer', color: 'charcoal', description: 'Wardrobe blazer', image_data: 'base64_blazer' },
+          ],
+          shoes: [],
+          belt: [],
+        },
+      };
+
+      render(
+        <OutfitPreview
+          suggestion={suggestionWithMismatch}
+          loading={false}
+          error={null}
+          onLike={mockOnLike}
+          onDislike={mockOnDislike}
+          onNext={mockOnNext}
+          hasImage={true}
+        />
+      );
+
+      const shirtImg = screen.getAllByRole('img').find((img) => img.getAttribute('alt') === 'Shirt');
+      const blazerImg = screen.getAllByRole('img').find((img) => img.getAttribute('alt') === 'Blazer');
+      expect(shirtImg?.getAttribute('src')).toBe(uploadedImageUrl);
+      expect(blazerImg?.getAttribute('src')).toBe('data:image/jpeg;base64,base64_blazer');
+    });
+
+    it('uses source_slot as primary upload-slot signal when provided', () => {
+      const uploadedImageUrl = 'blob:http://localhost/fake-uploaded-item';
+      const suggestionWithSourceSlot = {
+        ...baseSuggestion,
+        imageUrl: uploadedImageUrl,
+        upload_matched_category: 'blazer',
+        source_slot: 'shirt',
+        blazer_id: 9,
+        matching_wardrobe_items: {
+          shirt: [],
+          trouser: [],
+          blazer: [
+            { id: 9, category: 'blazer', color: 'gray', description: 'Wardrobe blazer', image_data: 'base64_blazer_9' },
+          ],
+          shoes: [],
+          belt: [],
+        },
+      };
+
+      render(
+        <OutfitPreview
+          suggestion={suggestionWithSourceSlot}
+          loading={false}
+          error={null}
+          onLike={mockOnLike}
+          onDislike={mockOnDislike}
+          onNext={mockOnNext}
+          hasImage={true}
+        />
+      );
+
+      const shirtImg = screen.getAllByRole('img').find((img) => img.getAttribute('alt') === 'Shirt');
+      const blazerImg = screen.getAllByRole('img').find((img) => img.getAttribute('alt') === 'Blazer');
+      expect(shirtImg?.getAttribute('src')).toBe(uploadedImageUrl);
+      expect(blazerImg?.getAttribute('src')).toBe('data:image/jpeg;base64,base64_blazer_9');
+    });
+
     it('displays cost when present', () => {
       const suggestionWithCost = {
         ...baseSuggestion,

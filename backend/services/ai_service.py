@@ -345,6 +345,7 @@ Respond in JSON format with the following structure:
     "blazer_id": integer or null,
     "shoes_id": integer or null,
     "belt_id": integer or null,
+    "source_slot": "one of: shirt, trouser, blazer, shoes, belt, or null (which slot in this outfit corresponds to the uploaded item)",
     "reasoning": "brief explanation of why this outfit works well together"
 }}
 """.format(
@@ -383,6 +384,30 @@ Respond in JSON format with the following structure:
                         return int(stripped)
                 return None
 
+            def _parse_source_slot(value):
+                if value is None:
+                    return None
+                if not isinstance(value, str):
+                    return None
+                normalized = value.strip().lower()
+                aliases = {
+                    "shirt": "shirt",
+                    "shirts": "shirt",
+                    "trouser": "trouser",
+                    "trousers": "trouser",
+                    "pant": "trouser",
+                    "pants": "trouser",
+                    "blazer": "blazer",
+                    "blazers": "blazer",
+                    "jacket": "blazer",
+                    "jackets": "blazer",
+                    "shoe": "shoes",
+                    "shoes": "shoes",
+                    "belt": "belt",
+                    "belts": "belt",
+                }
+                return aliases.get(normalized)
+
             return OutfitSuggestion(
                 shirt=outfit_data.get("shirt", "Classic white dress shirt"),
                 trouser=outfit_data.get("trouser", "Dark navy dress trousers"),
@@ -394,6 +419,7 @@ Respond in JSON format with the following structure:
                 blazer_id=_parse_optional_int(outfit_data.get("blazer_id")),
                 shoes_id=_parse_optional_int(outfit_data.get("shoes_id")),
                 belt_id=_parse_optional_int(outfit_data.get("belt_id")),
+                source_slot=_parse_source_slot(outfit_data.get("source_slot")),
                 reasoning=outfit_data.get(
                     "reasoning", 
                     "A classic professional look that works for most business occasions."

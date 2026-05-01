@@ -49,10 +49,14 @@ class OutfitController:
     def _normalize_item_category_for_outfit(self, category: str) -> str:
         """Map wardrobe category variants to outfit categories."""
         normalized = (category or "").lower()
-        if normalized == "jacket":
+        if normalized in {"jacket", "jackets", "blazers"}:
             return "blazer"
-        if normalized in {"jeans", "pants"}:
+        if normalized in {"jeans", "pants", "pant", "trousers"}:
             return "trouser"
+        if normalized in {"shoe"}:
+            return "shoes"
+        if normalized in {"belts"}:
+            return "belt"
         return normalized
 
     def _apply_selected_ids_to_matches(
@@ -188,6 +192,13 @@ class OutfitController:
             
             # Match wardrobe items to outfit suggestion
             if current_user:
+                valid_slots = {"shirt", "trouser", "blazer", "shoes", "belt"}
+                # Prefer explicit AI-declared source slot for uploaded item when available.
+                if suggestion.source_slot:
+                    normalized_source_slot = self._normalize_item_category_for_outfit(suggestion.source_slot)
+                    if normalized_source_slot in valid_slots:
+                        suggestion.upload_matched_category = normalized_source_slot
+
                 # Get all wardrobe items
                 from services.wardrobe_service import WardrobeService
                 wardrobe_service = WardrobeService()
@@ -207,18 +218,22 @@ class OutfitController:
                 )
                 self._apply_selected_ids_to_matches(suggestion, matching_items, all_wardrobe_items)
                 
-                # Find which wardrobe item the uploaded image looks most like (relaxed threshold
-                # for different compression pipelines). Put that item first so the thumbnail
-                # shows the SAME shirt the user uploaded, not a different similar one.
+                # Find which wardrobe item the uploaded image looks most like.
+                # Keep the threshold conservative to avoid mislabeling uploads
+                # (e.g., shirt being pinned into shoes section).
                 similar_item = wardrobe_service.find_most_similar_wardrobe_item(
                     image_base64,
                     all_wardrobe_items,
-                    max_distance=25
+                    max_distance=12
                 )
                 if similar_item:
                     self._prioritize_item_in_matches(matching_items, similar_item)
-                    cat = (similar_item.category or "").lower()
-                    suggestion.upload_matched_category = "blazer" if cat == "jacket" else cat
+                    # Use similarity-derived category only as fallback when AI did not
+                    # explicitly specify which slot corresponds to the uploaded item.
+                    if not suggestion.upload_matched_category:
+                        normalized_category = self._normalize_item_category_for_outfit(similar_item.category or "")
+                        if normalized_category in valid_slots:
+                            suggestion.upload_matched_category = normalized_category
                 else:
                     wardrobe_service.reorder_matches_by_upload_similarity(
                         matching_items,

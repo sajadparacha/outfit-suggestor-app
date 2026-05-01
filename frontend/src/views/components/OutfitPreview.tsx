@@ -1,5 +1,6 @@
 import React from 'react';
 import { OutfitSuggestion, MatchingWardrobeItem } from '../../models/OutfitModels';
+import OutfitItemCard from './suggestion/OutfitItemCard';
 
 interface OutfitPreviewProps {
   suggestion: OutfitSuggestion | null;
@@ -30,8 +31,6 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
   showAiPromptResponse = true,
   isAdmin = false
 }) => {
-  // Hook must be first
-  const [showDetails, setShowDetails] = React.useState(false);
   const [showFullImage, setShowFullImage] = React.useState(false);
   const [fullWardrobeImage, setFullWardrobeImage] = React.useState<{ src: string; label: string } | null>(null);
 
@@ -112,6 +111,65 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
     });
   }, [suggestion]);
 
+  const selectedIdsByCategory: Partial<Record<'shirt' | 'trouser' | 'blazer' | 'shoes' | 'belt', number | null | undefined>> = suggestion
+    ? {
+        shirt: suggestion.shirt_id,
+        trouser: suggestion.trouser_id,
+        blazer: suggestion.blazer_id,
+        shoes: suggestion.shoes_id,
+        belt: suggestion.belt_id,
+      }
+    : {};
+
+  const confidenceLine = React.useMemo(() => {
+    if (!suggestion) return '';
+    const styleHint = suggestion.reasoning.toLowerCase().includes('business') ? 'Business Casual' : 'Smart Casual';
+    const seasonHint = suggestion.reasoning.toLowerCase().includes('spring')
+      ? 'Spring'
+      : suggestion.reasoning.toLowerCase().includes('summer')
+        ? 'Summer'
+        : 'All Seasons';
+    return `Optimized for ${styleHint} - ${seasonHint}`;
+  }, [suggestion]);
+
+  const resolvedUploadCategory = React.useMemo(() => {
+    if (!suggestion?.imageUrl) return null;
+
+    const categoryValues: Array<{ key: 'shirt' | 'trouser' | 'blazer' | 'shoes' | 'belt'; value: string }> = [
+      { key: 'shirt', value: suggestion.shirt || '' },
+      { key: 'trouser', value: suggestion.trouser || '' },
+      { key: 'blazer', value: suggestion.blazer || '' },
+      { key: 'shoes', value: suggestion.shoes || '' },
+      { key: 'belt', value: suggestion.belt || '' },
+    ];
+
+    // Prefer explicit AI wording when present (e.g. "from the uploaded image").
+    const textMatchedCategory = categoryValues.find(({ value }) =>
+      /uploaded image|from your upload|your upload/i.test(value)
+    )?.key;
+
+    if (textMatchedCategory) return textMatchedCategory;
+
+    const raw = (suggestion.source_slot || suggestion.upload_matched_category || '').toLowerCase();
+    const aliases: Record<string, 'shirt' | 'trouser' | 'blazer' | 'shoes' | 'belt'> = {
+      shirt: 'shirt',
+      shirts: 'shirt',
+      trouser: 'trouser',
+      trousers: 'trouser',
+      pant: 'trouser',
+      pants: 'trouser',
+      blazer: 'blazer',
+      blazers: 'blazer',
+      jacket: 'blazer',
+      jackets: 'blazer',
+      shoe: 'shoes',
+      shoes: 'shoes',
+      belt: 'belt',
+      belts: 'belt',
+    };
+    return aliases[raw] ?? null;
+  }, [suggestion]);
+
   if (loading) {
     return (
       <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-4 sm:p-6 lg:p-8">
@@ -177,343 +235,245 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
   }
 
   return (
-    <div className="rounded-2xl bg-white/5 border border-white/10 overflow-hidden transition-all shadow-xl backdrop-blur hover:shadow-2xl">
-      {/* Side by Side: Uploaded Image and Generated Model Image */}
-      <div className="relative bg-gradient-to-br from-slate-800/80 to-slate-900/80">
+    <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-4 shadow-[0_18px_50px_rgba(2,8,23,0.55)] backdrop-blur sm:p-6 lg:p-8">
+      <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/70 shadow-xl">
         {suggestion.model_image && suggestion.imageUrl ? (
-          // Show both images side by side
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
-            {/* Uploaded Image - Left Side */}
-            <div className="relative bg-white/5 rounded-xl overflow-hidden border border-white/10">
-              <div className="absolute top-2 left-2 bg-teal-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-lg z-10">
-                📤 Your Upload
-              </div>
-              <img
-                src={suggestion.imageUrl}
-                alt="Uploaded clothing item"
-                className="w-full h-auto max-h-[600px] object-contain"
-              />
+          <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2">
+            <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/80">
+              <span className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-900">Uploaded item</span>
+              <img src={suggestion.imageUrl} alt="Uploaded clothing item" className="h-[360px] w-full object-contain md:h-[420px]" />
             </div>
-            
-            {/* Generated Model Image - Right Side */}
-            <div className="relative bg-white/5 rounded-xl overflow-hidden border border-white/10">
-              <div className="absolute top-2 left-2 bg-purple-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-lg z-10">
-                🤖 AI Model
-              </div>
-              <div className="absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded-full text-xs font-medium z-10">
-                🔍 Click to expand
-              </div>
+            <button
+              type="button"
+              onClick={() => setShowFullImage(true)}
+              className="relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/80 text-left"
+            >
+              <span className="absolute left-3 top-3 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 px-3 py-1 text-xs font-semibold text-white">AI model preview</span>
               <img
                 src={`data:image/png;base64,${suggestion.model_image}`}
                 alt="AI generated model wearing recommended outfit"
-                className="w-full h-auto max-h-[600px] object-contain cursor-pointer hover:opacity-90 transition-opacity"
-                onClick={() => setShowFullImage(true)}
+                className="h-[360px] w-full object-contain md:h-[420px]"
                 onError={(e) => {
-                  console.error('Error loading model image:', e);
                   const target = e.target as HTMLImageElement;
-                  if (target.src.includes('image/png')) {
-                    target.src = `data:image/jpeg;base64,${suggestion.model_image}`;
-                  }
-                }}
-                onLoad={() => {
-                  console.log('✅ Model image loaded successfully');
+                  if (target.src.includes('image/png')) target.src = `data:image/jpeg;base64,${suggestion.model_image}`;
                 }}
               />
-            </div>
+            </button>
           </div>
         ) : suggestion.model_image ? (
-          // Only model image available
-          <div className="relative min-h-[400px] bg-slate-900/80 flex items-center justify-center">
+          <button
+            type="button"
+            onClick={() => setShowFullImage(true)}
+            className="relative flex min-h-[360px] w-full items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-left"
+          >
+            <span className="absolute left-3 top-3 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 px-3 py-1 text-xs font-semibold text-white">AI model preview</span>
             <img
               src={`data:image/png;base64,${suggestion.model_image}`}
               alt="AI generated model wearing recommended outfit"
-              className="w-full h-auto max-h-[600px] object-contain cursor-pointer hover:opacity-90 transition-opacity"
-              onClick={() => setShowFullImage(true)}
+              className="max-h-[520px] w-full object-contain"
               onError={(e) => {
-                console.error('Error loading model image:', e);
                 const target = e.target as HTMLImageElement;
-                if (target.src.includes('image/png')) {
-                  target.src = `data:image/jpeg;base64,${suggestion.model_image}`;
-                }
-              }}
-              onLoad={() => {
-                console.log('✅ Model image loaded successfully');
+                if (target.src.includes('image/png')) target.src = `data:image/jpeg;base64,${suggestion.model_image}`;
               }}
             />
-            <div className="absolute top-4 right-4 bg-purple-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg z-10">
-              🤖 AI Model
-            </div>
-            <div className="absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1 rounded-full text-xs font-medium z-10">
-              🔍 Click to expand
-            </div>
-          </div>
+          </button>
         ) : suggestion.imageUrl ? (
-          // Only uploaded image available
-          <div className="relative">
-            <img
-              src={suggestion.imageUrl}
-              alt="Uploaded clothing item"
-              className="w-full h-96 object-contain"
-            />
-            <div className="absolute top-4 right-4 bg-teal-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">
-              📤 Your Upload
-            </div>
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/80 p-4">
+            <span className="absolute left-7 top-7 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-900">Uploaded item</span>
+            <img src={suggestion.imageUrl} alt="Uploaded clothing item" className="h-[360px] w-full object-contain md:h-[420px]" />
           </div>
         ) : (
-          <div className="h-96 flex items-center justify-center">
-            <div className="text-6xl">👔</div>
-          </div>
+          <div className="flex h-[340px] items-center justify-center text-6xl text-slate-500">👔</div>
         )}
       </div>
 
-      {/* Outfit Details */}
-      <div className="p-4 sm:p-6 lg:p-8">
-        <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">Your Perfect Outfit</h2>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
-          {(
-            [
-              { key: 'shirt', label: 'Shirt', icon: '👕', value: suggestion.shirt, bg: 'bg-teal-500/10', text: 'text-teal-300' },
-              { key: 'trouser', label: 'Trousers', icon: '👖', value: suggestion.trouser, bg: 'bg-purple-500/10', text: 'text-purple-300' },
-              { key: 'blazer', label: 'Blazer', icon: '🧥', value: suggestion.blazer, bg: 'bg-blue-500/10', text: 'text-blue-300' },
-              { key: 'shoes', label: 'Shoes', icon: '👞', value: suggestion.shoes, bg: 'bg-amber-500/10', text: 'text-amber-300' },
-              { key: 'belt', label: 'Belt', icon: '🎀', value: suggestion.belt, bg: 'bg-rose-500/10', text: 'text-rose-300' },
-            ] as const
-          ).map(({ key, label, icon, value, bg, text }) => {
-            const selectedIdsByCategory: Partial<Record<'shirt' | 'trouser' | 'blazer' | 'shoes' | 'belt', number | null | undefined>> = {
-              shirt: suggestion.shirt_id,
-              trouser: suggestion.trouser_id,
-              blazer: suggestion.blazer_id,
-              shoes: suggestion.shoes_id,
-              belt: suggestion.belt_id,
-            };
-            const categoryMatches = suggestion.matching_wardrobe_items?.[key] || [];
-            const selectedId = selectedIdsByCategory[key];
-            // Only use wardrobe match when the AI returned a primary key for this slot.
-            // If the AI didn't provide an ID (null/undefined), treat it as "suggested by AI".
-            const match = (selectedId
-              ? categoryMatches.find((item) => item.id === selectedId)
-              : undefined) as MatchingWardrobeItem | undefined;
-            // Use uploaded image only for the category that matched the upload (e.g. shirt card only when upload was a shirt)
-            const useUploadForThisCard = suggestion.imageUrl && key === (suggestion.upload_matched_category ?? '');
-            const wardrobeImageSrc = !useUploadForThisCard && match?.image_data
-              ? `data:image/jpeg;base64,${match.image_data}`
-              : null;
-            const thumbSrc = useUploadForThisCard
-              ? suggestion.imageUrl!
-              : wardrobeImageSrc;
-
-            // Keep card text aligned with AI reasoning by always showing
-            // the AI's selected description for each outfit slot.
-            const displayValue = value;
-
-            const sourceLabel = useUploadForThisCard
-              ? '(your upload)'
-              : wardrobeImageSrc
-                ? '(from wardrobe)'
-                : !match
-                  ? '(suggested by AI)'
-                  : null;
-
-            return (
-              <div
-                key={key}
-                className={`${bg} rounded-xl p-4 border border-white/10 ${key === 'belt' ? 'md:col-span-2' : ''} flex gap-4 items-start`}
-              >
-                {thumbSrc && (
-                  <button
-                    type="button"
-                    onClick={() => setFullWardrobeImage({ src: thumbSrc, label })}
-                    className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border-2 border-white shadow cursor-pointer hover:ring-2 ring-teal-500 ring-offset-1 transition-all focus:outline-none focus:ring-2 focus:ring-teal-500"
-                    aria-label={`View ${label} full size`}
-                    title="Click to view full size"
-                  >
-                    <img
-                      src={thumbSrc}
-                      alt={label}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className={`text-sm font-medium ${text} mb-1`}>
-                    {icon} {label}
-                    {sourceLabel && <span className="ml-1 text-xs">{sourceLabel}</span>}
-                  </div>
-                  <p className="text-slate-200">{displayValue}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Reasoning */}
-        <div className="bg-white/5 border border-white/10 rounded-xl p-6 mb-6">
-          <div className="flex items-start space-x-3">
-            <div className="text-2xl">💡</div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-white mb-2">Why This Works</h3>
-              <p className="text-slate-200 leading-relaxed">{suggestion.reasoning}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Cost Display (admin only) */}
-        {isAdmin && suggestion.cost && (
-          <div className="bg-teal-500/10 border border-teal-400/20 rounded-xl p-4 mb-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-teal-200 mb-1">💰 AI Suggestion Cost</h3>
-                <div className="text-sm text-slate-200 space-y-1">
-                  <div>GPT-4 Vision: {formatCost(suggestion.cost.gpt4_cost)}</div>
-                  {suggestion.cost.model_image_cost !== undefined && suggestion.cost.model_image_cost > 0 && (
-                    <div>Model Image ({suggestion.model_image?.length ? 'DALL-E 3' : 'Other'}): {formatCost(suggestion.cost.model_image_cost)}</div>
-                  )}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-white">
-                  {formatCost(suggestion.cost.total_cost)}
-                </div>
-                <div className="text-xs text-teal-300">Total</div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showAiPromptResponse && (
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4 sm:p-5 mb-6">
-            <h3 className="font-semibold text-white mb-4">AI Prompt & Response (only available to Admin)</h3>
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-              <div className="rounded-lg border border-white/10 bg-slate-900/40 p-3">
-                <div className="text-xs uppercase tracking-wide text-slate-400 mb-2">Input Prompt</div>
-                <pre className="text-sm text-slate-200 whitespace-pre-wrap break-words max-h-56 overflow-auto">{aiPrompt}</pre>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-slate-900/40 p-3">
-                <div className="text-xs uppercase tracking-wide text-slate-400 mb-2">AI Response</div>
-                <pre className="text-sm text-slate-200 whitespace-pre-wrap break-words max-h-56 overflow-auto">{aiResponse}</pre>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Action Buttons - touch-friendly on mobile */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
-          <button
-            onClick={onNext}
-            disabled={!hasImage}
-            className={`min-h-[48px] px-4 py-3 rounded-xl font-medium transition-all shadow-md touch-manipulation ${
-              hasImage
-                ? 'bg-teal-500 text-white hover:bg-teal-600 active:scale-[0.98]'
-                : 'bg-white/10 text-slate-500 cursor-not-allowed border border-white/10'
-            }`}
-            aria-label="Get next suggestion"
-          >
-            🔄 Next
-          </button>
-          
-          <button
-            onClick={onLike}
-            disabled={!hasImage}
-            className={`min-h-[48px] px-4 py-3 rounded-xl font-medium transition-all shadow-md touch-manipulation ${
-              hasImage
-                ? 'bg-emerald-500 text-white hover:bg-emerald-600 active:scale-[0.98]'
-                : 'bg-white/10 text-slate-500 cursor-not-allowed border border-white/10'
-            }`}
-            aria-label="Like this outfit"
-          >
-            👍 Like
-          </button>
-          
-          <button
-            onClick={onDislike}
-            disabled={!hasImage}
-            className={`min-h-[48px] px-4 py-3 rounded-xl font-medium transition-all shadow-md touch-manipulation ${
-              hasImage
-                ? 'bg-slate-600 text-white hover:bg-slate-500 active:scale-[0.98]'
-                : 'bg-white/10 text-slate-500 cursor-not-allowed border border-white/10'
-            }`}
-            aria-label="Dislike this outfit"
-          >
-            👎 Dislike
-          </button>
-        </div>
-
-        {/* Add to Wardrobe Button - Only show if authenticated */}
-        {isAuthenticated && onAddToWardrobe && (
-          <div className="flex flex-col items-center gap-2">
-            <button
-              onClick={onAddToWardrobe}
-              disabled={!hasImage}
-              className={`min-h-[48px] px-6 py-3 rounded-xl font-medium transition-all shadow-md flex items-center justify-center gap-2 touch-manipulation ${
-                hasImage
-                  ? 'bg-indigo-500 text-white hover:bg-indigo-600 active:scale-[0.98]'
-                  : 'bg-white/10 text-slate-500 cursor-not-allowed border border-white/10'
-              }`}
-              aria-label="Add new item to your wardrobe"
-            >
-              <span>👔</span>
-              <span>Add to Wardrobe</span>
-            </button>
-            <p className="text-sm text-slate-400 text-center">
-              If you want to add a new item to your wardrobe, press this button.
-            </p>
-          </div>
+      <div className="mt-6">
+        <h2 className="text-2xl font-bold text-white sm:text-3xl">AI Styled Outfit</h2>
+        <p className="sr-only">Your Perfect Outfit</p>
+        <p className="mt-1 text-sm text-teal-200">{confidenceLine}</p>
+        {process.env.NODE_ENV !== 'production' && (
+          <p className="mt-2 inline-flex items-center rounded-full border border-sky-300/30 bg-sky-500/10 px-2.5 py-1 text-[11px] text-sky-200">
+            Debug: upload matched category = {suggestion.upload_matched_category || 'none'}
+          </p>
         )}
       </div>
 
-      {/* Modal: AI Details */}
-      {showDetails && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
-          <div className="rounded-2xl bg-slate-900 border border-white/10 max-w-2xl w-full shadow-2xl backdrop-blur">
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
-              <h3 className="text-lg font-semibold text-white">AI Recommendation Details</h3>
-              <button
-                onClick={() => setShowDetails(false)}
-                aria-label="Close details"
-                className="p-2 rounded hover:bg-white/10 text-slate-300"
-              >
-                ✖
-              </button>
-            </div>
-            <div className="p-4 space-y-4 max-h-[70vh] overflow-auto">
-              <>
-                {suggestion.meta?.usedPrompt && (
-                  <div className="bg-white/5 rounded-xl p-3 border border-white/10">
-                    <div className="text-xs uppercase tracking-wide text-slate-400 mb-1">Prompt Sent</div>
-                    <pre className="text-sm text-slate-200 whitespace-pre-wrap">{suggestion.meta.usedPrompt}</pre>
-                  </div>
+      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {(
+          [
+            { key: 'shirt', label: 'Shirt', value: suggestion.shirt },
+            { key: 'trouser', label: 'Trousers', value: suggestion.trouser },
+            { key: 'blazer', label: 'Blazer', value: suggestion.blazer },
+            { key: 'shoes', label: 'Shoes', value: suggestion.shoes },
+            { key: 'belt', label: 'Belt', value: suggestion.belt },
+          ] as const
+        ).map(({ key, label, value }) => {
+          const categoryMatches = suggestion.matching_wardrobe_items?.[key] || [];
+          const selectedId = selectedIdsByCategory[key];
+          const match = (selectedId ? categoryMatches.find((item) => item.id === selectedId) : undefined) as MatchingWardrobeItem | undefined;
+          const useUploadForThisCard = !!suggestion.imageUrl && key === resolvedUploadCategory;
+          const wardrobeImageSrc = !useUploadForThisCard && match?.image_data ? `data:image/jpeg;base64,${match.image_data}` : null;
+          const thumbSrc = useUploadForThisCard ? suggestion.imageUrl! : wardrobeImageSrc;
+          const tagLabel = useUploadForThisCard ? 'From your upload' : wardrobeImageSrc ? 'From your wardrobe' : 'AI Suggested';
+          const tagTone = useUploadForThisCard || wardrobeImageSrc ? 'wardrobe' : 'ai';
+          const legacyHint = !match && !useUploadForThisCard ? '(suggested by AI)' : undefined;
+
+          return (
+            <OutfitItemCard
+              key={key}
+              title={label}
+              description={value}
+              imageSrc={thumbSrc}
+              imageAlt={label}
+              tag={tagLabel}
+              tagTone={tagTone}
+              legacyHint={legacyHint}
+              onImageClick={thumbSrc ? () => setFullWardrobeImage({ src: thumbSrc, label }) : undefined}
+            />
+          );
+        })}
+      </div>
+
+      <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+        <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-300">Why This Works</h3>
+        <p className="text-sm leading-6 text-slate-200">{suggestion.reasoning}</p>
+      </div>
+
+      {isAdmin && suggestion.cost && (
+        <div className="mt-5 rounded-xl border border-teal-400/20 bg-teal-500/10 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-teal-200 mb-1">AI Suggestion Cost</h3>
+              <div className="text-sm text-slate-200 space-y-1">
+                <div>GPT-4 Vision: {formatCost(suggestion.cost.gpt4_cost)}</div>
+                {suggestion.cost.model_image_cost !== undefined && suggestion.cost.model_image_cost > 0 && (
+                  <div>Model Image: {formatCost(suggestion.cost.model_image_cost)}</div>
                 )}
-                <div className="bg-white/5 rounded-xl p-3 border border-white/10">
-                  <div className="text-xs uppercase tracking-wide text-slate-400 mb-1">Parsed Recommendation</div>
-                  <pre className="text-sm text-slate-200 whitespace-pre-wrap">{JSON.stringify({
-                    shirt: suggestion.shirt,
-                    trouser: suggestion.trouser,
-                    blazer: suggestion.blazer,
-                    shoes: suggestion.shoes,
-                    belt: suggestion.belt,
-                    reasoning: suggestion.reasoning
-                  }, null, 2)}</pre>
-                </div>
-                {suggestion.raw && (
-                  <details className="bg-white/5 rounded-xl p-3 border border-white/10">
-                    <summary className="cursor-pointer text-sm font-medium text-slate-200">Raw AI Response JSON</summary>
-                    <pre className="mt-2 text-xs text-slate-300 whitespace-pre-wrap">{JSON.stringify(suggestion.raw, null, 2)}</pre>
-                  </details>
-                )}
-              </>
+              </div>
             </div>
-            <div className="p-4 border-t border-white/10 flex justify-end">
-              <button
-                onClick={() => setShowDetails(false)}
-                className="px-4 py-2 bg-teal-500 text-white rounded-full hover:bg-teal-600"
-              >
-                Close
-              </button>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-white">{formatCost(suggestion.cost.total_cost)}</div>
+              <div className="text-xs text-teal-300">Total</div>
             </div>
           </div>
         </div>
       )}
+
+      {showAiPromptResponse && (
+        <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.02] p-4 sm:p-5">
+          <h3 className="mb-4 font-semibold text-white">AI Prompt & Response (Admin)</h3>
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <div className="rounded-lg border border-white/10 bg-slate-900/40 p-3">
+              <div className="mb-2 text-xs uppercase tracking-wide text-slate-400">Input Prompt</div>
+              <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-words text-sm text-slate-200">{aiPrompt}</pre>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-slate-900/40 p-3">
+              <div className="mb-2 text-xs uppercase tracking-wide text-slate-400">AI Response</div>
+              <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-words text-sm text-slate-200">{aiResponse}</pre>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <button
+          onClick={onNext}
+          disabled={!hasImage}
+          className={`min-h-[48px] touch-manipulation rounded-xl px-4 py-3 text-sm font-semibold transition-all ${
+            hasImage
+              ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-lg shadow-cyan-500/20 hover:from-teal-400 hover:to-cyan-400'
+              : 'cursor-not-allowed border border-white/10 bg-white/10 text-slate-500'
+          }`}
+          aria-label="Get next suggestion"
+        >
+          Regenerate Outfit
+        </button>
+
+        <button
+          onClick={onLike}
+          disabled={!hasImage}
+          className={`min-h-[48px] touch-manipulation rounded-xl px-4 py-3 text-sm font-medium transition-all ${
+            hasImage
+              ? 'border border-white/20 bg-white/5 text-slate-100 hover:border-emerald-300/60 hover:bg-emerald-500/10'
+              : 'cursor-not-allowed border border-white/10 bg-white/10 text-slate-500'
+          }`}
+          aria-label="Like this outfit"
+        >
+          Like Outfit
+        </button>
+
+        <button
+          onClick={onDislike}
+          disabled={!hasImage}
+          className={`min-h-[48px] touch-manipulation rounded-xl px-4 py-3 text-sm font-medium transition-all ${
+            hasImage
+              ? 'border border-white/20 bg-white/5 text-slate-200 hover:border-slate-200/50 hover:bg-white/10'
+              : 'cursor-not-allowed border border-white/10 bg-white/10 text-slate-500'
+          }`}
+          aria-label="Dislike this outfit"
+        >
+          Try Variation
+        </button>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <span className="text-xs uppercase tracking-wide text-slate-400">Try another style</span>
+        {['Casual', 'Business', 'Smart Casual'].map((chip) => (
+          <button
+            key={chip}
+            onClick={onNext}
+            disabled={!hasImage}
+            className="rounded-full border border-white/15 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-teal-300/60 hover:bg-teal-500/10"
+          >
+            {chip}
+          </button>
+        ))}
+        {onNavigateToWardrobe && (
+          <button
+            type="button"
+            onClick={() => onNavigateToWardrobe()}
+            className="ml-auto rounded-full border border-white/15 px-3 py-1.5 text-xs text-slate-300 transition hover:border-sky-300/60 hover:text-sky-200"
+          >
+            Open Wardrobe
+          </button>
+        )}
+      </div>
+
+      {isAuthenticated && onAddToWardrobe && (
+        <div className="mt-4">
+          <button
+            onClick={onAddToWardrobe}
+            disabled={!hasImage}
+            className={`min-h-[48px] touch-manipulation rounded-xl px-5 py-3 text-sm font-medium transition-all ${
+              hasImage
+                ? 'border border-white/15 bg-white/5 text-slate-200 hover:border-indigo-300/60 hover:bg-indigo-500/10'
+                : 'cursor-not-allowed border border-white/10 bg-white/10 text-slate-500'
+            }`}
+            aria-label="Add new item to your wardrobe"
+          >
+            Add to Wardrobe
+          </button>
+        </div>
+      )}
+
+      <div className="fixed inset-x-0 bottom-3 z-40 px-4 sm:hidden">
+        <div className="mx-auto flex max-w-md gap-2 rounded-2xl border border-white/10 bg-slate-900/90 p-2 backdrop-blur">
+          <button
+            onClick={onNext}
+            disabled={!hasImage}
+            className="flex-1 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Regenerate
+          </button>
+          <button
+            onClick={onLike}
+            disabled={!hasImage}
+            className="flex-1 rounded-xl border border-white/20 px-3 py-2 text-xs font-medium text-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Like
+          </button>
+        </div>
+      </div>
 
       {/* Modal: Full Wardrobe Item Image */}
       {fullWardrobeImage && (

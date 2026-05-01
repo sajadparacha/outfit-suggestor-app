@@ -101,3 +101,10 @@ def test_category_normalization_injection_jeans_to_trouser():
     assert len(matching_items["trouser"]) == 1
     assert matching_items["trouser"][0]["id"] == 777
 
+
+def test_category_normalization_handles_shoe_and_jackets_aliases():
+    controller = _make_controller()
+
+    assert controller._normalize_item_category_for_outfit("shoe") == "shoes"  # type: ignore[attr-defined]
+    assert controller._normalize_item_category_for_outfit("jackets") == "blazer"  # type: ignore[attr-defined]
+
