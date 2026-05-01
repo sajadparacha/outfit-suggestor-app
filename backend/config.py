@@ -12,6 +12,14 @@ load_dotenv()
 
 class Config:
     """Application configuration"""
+    # Runtime environment
+    ENVIRONMENT = os.getenv("APP_ENV", os.getenv("ENVIRONMENT", "development")).lower()
+    # Admin integration test runner should never be exposed in production by default.
+    ENABLE_ADMIN_TEST_RUNNER = os.getenv(
+        "ENABLE_ADMIN_TEST_RUNNER",
+        "false" if ENVIRONMENT == "production" else "true",
+    ).lower() == "true"
+
     # API & server settings
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
     REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")

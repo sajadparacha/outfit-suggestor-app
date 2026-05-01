@@ -16,6 +16,7 @@ import sys
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
+from config import Config
 from dependencies import get_current_admin_user
 from models.user import User
 
@@ -137,6 +138,12 @@ _PYTEST_BACKEND_COMMAND: list[str] | None = None
 
 class RunTestRequest(BaseModel):
     test_id: str
+
+
+def _ensure_test_runner_enabled() -> None:
+    if not Config.ENABLE_ADMIN_TEST_RUNNER:
+        # Return Not Found to avoid exposing privileged operational tooling.
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
 
 
 def _can_import_pytest(python_cmd: str) -> bool:
@@ -419,6 +426,7 @@ async def list_integration_tests(
     current_user: User = Depends(get_current_admin_user),
 ):
     _ = current_user
+    _ensure_test_runner_enabled()
     return {"tests": [case.__dict__ for case in TEST_CASES]}
 
 
@@ -428,6 +436,7 @@ async def run_integration_test(
     current_user: User = Depends(get_current_admin_user),
 ):
     _ = current_user
+    _ensure_test_runner_enabled()
     test_case = TEST_CASES_BY_ID.get(payload.test_id)
     if not test_case:
         raise HTTPException(
@@ -453,6 +462,7 @@ async def run_all_integration_tests(
     current_user: User = Depends(get_current_admin_user),
 ):
     _ = current_user
+    _ensure_test_runner_enabled()
     acquired = RUN_LOCK.acquire(blocking=False)
     if not acquired:
         raise HTTPException(

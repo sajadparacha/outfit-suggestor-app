@@ -38,6 +38,16 @@ function App() {
     return urlParams.get('modelGeneration') === 'true';
   }, []);
 
+  // Test runner should be hidden in production unless explicitly enabled.
+  const testRunnerEnabled = React.useMemo(() => {
+    const flag = process.env.REACT_APP_ENABLE_ADMIN_TEST_RUNNER;
+    if (flag === 'true') return true;
+    if (flag === 'false') return false;
+
+    const host = window.location.hostname;
+    return host === 'localhost' || host === '127.0.0.1';
+  }, []);
+
   // Authentication
   const { user, isAuthenticated, isLoading: authLoading, login, register, logout, error: authError, clearError } = useAuthController();
   const [showRegister, setShowRegister] = useState(false);
@@ -332,16 +342,18 @@ function App() {
                         >
                           <span>Reports</span>
                         </button>
-                        <button
-                          onClick={() => setCurrentView('integration-tests')}
-                          className={`inline-flex items-center rounded-full px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
-                            currentView === 'integration-tests'
-                              ? 'bg-white/95 text-slate-900 shadow-sm'
-                              : 'text-slate-300 hover:bg-white/5 hover:text-white'
-                          }`}
-                        >
-                          <span>Test Runner</span>
-                        </button>
+                        {testRunnerEnabled && (
+                          <button
+                            onClick={() => setCurrentView('integration-tests')}
+                            className={`inline-flex items-center rounded-full px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
+                              currentView === 'integration-tests'
+                                ? 'bg-white/95 text-slate-900 shadow-sm'
+                                : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                            }`}
+                          >
+                            <span>Test Runner</span>
+                          </button>
+                        )}
                       </>
                     )}
                     <button
@@ -678,9 +690,16 @@ function App() {
 
         {currentView === 'integration-tests' && (
           isAuthenticated && user && user.is_admin ? (
-            <ErrorBoundary label="Integration Tests" resetKey={currentView}>
-              <AdminIntegrationTestRunner user={user} />
-            </ErrorBoundary>
+            testRunnerEnabled ? (
+              <ErrorBoundary label="Integration Tests" resetKey={currentView}>
+                <AdminIntegrationTestRunner user={user} />
+              </ErrorBoundary>
+            ) : (
+              <div className="max-w-2xl mx-auto rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-8 text-center">
+                <h2 className="text-2xl font-bold text-white mb-4">Integration Tests</h2>
+                <p className="text-slate-200 mb-6">Test Runner is disabled in this environment.</p>
+              </div>
+            )
           ) : (
             <div className="max-w-2xl mx-auto rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-8 text-center">
               <h2 className="text-2xl font-bold text-white mb-4">Integration Tests</h2>
