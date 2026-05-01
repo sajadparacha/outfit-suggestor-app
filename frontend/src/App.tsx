@@ -13,6 +13,7 @@ import About from './views/components/About';
 import UserGuide from './views/components/UserGuide';
 import Wardrobe from './views/components/Wardrobe';
 import AdminReports from './views/components/AdminReports';
+import AdminIntegrationTestRunner from './views/components/AdminIntegrationTestRunner';
 import Toast from './views/components/Toast';
 import Footer from './views/components/Footer';
 import ConfirmationModal from './views/components/ConfirmationModal';
@@ -44,7 +45,7 @@ function App() {
 
   // View state (UI-only state)
   const [currentView, setCurrentView] = useState<
-    'main' | 'history' | 'wardrobe' | 'reports' | 'about' | 'guide' | 'settings'
+    'main' | 'history' | 'wardrobe' | 'reports' | 'integration-tests' | 'about' | 'guide' | 'settings'
   >('main');
   const [wardrobeCategoryFilter, setWardrobeCategoryFilter] = useState<string | null>(null);
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -213,7 +214,7 @@ function App() {
     await handleGetSuggestion(); // Get a new suggestion
   };
 
-  const handleLogin = async (credentials: { username: string; password: string }) => {
+  const handleLogin = async (credentials: { username: string; password: string }): Promise<boolean> => {
     try {
       await login(credentials);
       showToast('Welcome back! 👋', 'success');
@@ -221,12 +222,14 @@ function App() {
         localStorage.setItem('intro_hero_seen', 'true');
         setShowIntroOverlay(true);
       }
+      return true;
     } catch (err) {
       // Error is handled by auth controller
+      return false;
     }
   };
 
-  const handleRegister = async (data: { email: string; password: string; full_name?: string }) => {
+  const handleRegister = async (data: { email: string; password: string; full_name?: string }): Promise<boolean> => {
     try {
       await register(data);
       // Auto-login happens in the controller
@@ -235,14 +238,24 @@ function App() {
         localStorage.setItem('intro_hero_seen', 'true');
         setShowIntroOverlay(true);
       }
+      return true;
     } catch (err) {
       // Error is handled by auth controller
+      return false;
     }
   };
 
   const handleLogout = () => {
     logout();
     showToast('Logged out successfully', 'success');
+  };
+
+  const handleQuickStyle = (style: string, occasion?: string) => {
+    setFilters({
+      ...filters,
+      style,
+      occasion: occasion ?? filters.occasion,
+    });
   };
 
   // Show loading state while checking authentication
@@ -269,117 +282,115 @@ function App() {
         <div className="absolute -top-32 -left-24 h-72 w-72 rounded-full bg-indigo-500 blur-3xl" />
         <div className="absolute -bottom-24 right-0 h-72 w-72 rounded-full bg-teal-400 blur-3xl" />
       </div>
-      {/* Navigation Tabs - scrollable on mobile, touch-friendly */}
-      <div className="bg-slate-900/95 md:bg-slate-950/95 border-b border-slate-700 md:border-slate-800">
-        <div className="container mx-auto px-3 sm:px-4 py-2">
-          <div className="flex justify-between items-center gap-2">
+      <div className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl">
+        <div className="container mx-auto px-3 sm:px-4 py-2.5">
+          <div className="flex min-h-[48px] items-center justify-between gap-2">
             <div className="flex flex-1 min-w-0 overflow-x-auto overflow-y-hidden scrollbar-none -mx-1 px-1 sm:mx-0 sm:px-0">
               <div className="flex items-center gap-1.5 sm:gap-2 flex-nowrap mx-auto sm:mx-0">
                 <button
                   onClick={() => setCurrentView('main')}
-                  className={`inline-flex items-center rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
+                  className={`inline-flex items-center rounded-full px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
                     currentView === 'main'
-                      ? 'bg-white text-slate-900 shadow-sm'
-                      : 'bg-slate-800/60 text-slate-200 hover:bg-slate-700'
+                      ? 'bg-white/95 text-slate-900 shadow-sm'
+                      : 'text-slate-300 hover:bg-white/5 hover:text-white'
                   }`}
                 >
-                  <span className="mr-1.5" aria-hidden="true">
-                    🎨
-                  </span>
+                  <span className="mr-1.5 text-[10px] text-teal-300">●</span>
                   <span>Get Suggestion</span>
                 </button>
                 {isAuthenticated && (
                   <>
                     <button
                       onClick={() => setCurrentView('history')}
-                      className={`inline-flex items-center rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
+                      className={`inline-flex items-center rounded-full px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
                         currentView === 'history'
-                          ? 'bg-white text-slate-900 shadow-sm'
-                          : 'bg-slate-800/60 text-slate-200 hover:bg-slate-700'
+                          ? 'bg-white/95 text-slate-900 shadow-sm'
+                          : 'text-slate-300 hover:bg-white/5 hover:text-white'
                       }`}
                     >
-                      <span className="mr-1.5" aria-hidden="true">
-                        📋
-                      </span>
                       <span>History</span>
                     </button>
                     <button
                       onClick={() => setCurrentView('wardrobe')}
-                      className={`inline-flex items-center rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
+                      className={`inline-flex items-center rounded-full px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
                         currentView === 'wardrobe'
-                          ? 'bg-white text-slate-900 shadow-sm'
-                          : 'bg-slate-800/60 text-slate-200 hover:bg-slate-700'
+                          ? 'bg-white/95 text-slate-900 shadow-sm'
+                          : 'text-slate-300 hover:bg-white/5 hover:text-white'
                       }`}
                     >
-                      <span className="mr-1.5" aria-hidden="true">
-                        👔
-                      </span>
                       <span>Wardrobe</span>
                     </button>
                     {user?.is_admin && (
-                      <button
-                        onClick={() => setCurrentView('reports')}
-                        className={`inline-flex items-center rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
-                          currentView === 'reports'
-                            ? 'bg-white text-slate-900 shadow-sm'
-                            : 'bg-slate-800/60 text-slate-200 hover:bg-slate-700'
-                        }`}
-                      >
-                        <span className="mr-1.5" aria-hidden="true">
-                          📊
-                        </span>
-                        <span>Reports</span>
-                      </button>
+                      <>
+                        <button
+                          onClick={() => setCurrentView('reports')}
+                          className={`inline-flex items-center rounded-full px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
+                            currentView === 'reports'
+                              ? 'bg-white/95 text-slate-900 shadow-sm'
+                              : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                          }`}
+                        >
+                          <span>Reports</span>
+                        </button>
+                        <button
+                          onClick={() => setCurrentView('integration-tests')}
+                          className={`inline-flex items-center rounded-full px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
+                            currentView === 'integration-tests'
+                              ? 'bg-white/95 text-slate-900 shadow-sm'
+                              : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                          }`}
+                        >
+                          <span>Test Runner</span>
+                        </button>
+                      </>
                     )}
                     <button
                       onClick={() => setCurrentView('settings')}
-                      className={`inline-flex items-center rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
+                      className={`inline-flex items-center rounded-full px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
                         currentView === 'settings'
-                          ? 'bg-white text-slate-900 shadow-sm'
-                          : 'bg-slate-800/60 text-slate-200 hover:bg-slate-700'
+                          ? 'bg-white/95 text-slate-900 shadow-sm'
+                          : 'text-slate-300 hover:bg-white/5 hover:text-white'
                       }`}
                     >
-                      <span className="mr-1.5" aria-hidden="true">
-                        ⚙️
-                      </span>
                       <span>Settings</span>
                     </button>
                   </>
                 )}
                 <button
                   onClick={() => setCurrentView('guide')}
-                  className={`inline-flex items-center rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
+                  className={`inline-flex items-center rounded-full px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
                     currentView === 'guide'
-                      ? 'bg-white text-slate-900 shadow-sm'
-                      : 'bg-slate-800/60 text-slate-200 hover:bg-slate-700'
+                      ? 'bg-white/95 text-slate-900 shadow-sm'
+                      : 'text-slate-300 hover:bg-white/5 hover:text-white'
                   }`}
                   aria-current={currentView === 'guide' ? 'page' : undefined}
                 >
-                  <span className="mr-1.5" aria-hidden="true">
-                    📖
-                  </span>
                   <span>Guide</span>
                 </button>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               {isAuthenticated ? (
-                <>
-                  <span className="text-xs sm:text-sm text-slate-100 truncate max-w-[80px] sm:max-w-none">
-                    {user?.full_name || user?.email}
-                  </span>
+                <div className="flex items-center gap-2">
+                  <div
+                    className="h-9 w-9 rounded-full bg-gradient-to-br from-teal-400 to-cyan-500 text-sm font-semibold text-slate-900 flex items-center justify-center"
+                    aria-label="User avatar"
+                    title={user?.full_name || user?.email || 'User'}
+                  >
+                    {(user?.full_name || user?.email || 'U').charAt(0).toUpperCase()}
+                  </div>
                   <button
                     onClick={handleLogout}
-                    className="min-h-[36px] px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-900 bg-white border border-slate-200 rounded-full hover:bg-slate-50 transition-colors touch-manipulation"
+                    className="min-h-[36px] rounded-full border border-white/15 bg-white/[0.03] px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-100 transition hover:bg-white/10"
                   >
                     Logout
                   </button>
-                </>
+                </div>
               ) : (
                 <div className="flex items-center gap-1 sm:gap-2">
                   <button
                     onClick={() => setShowRegister(true)}
-                    className="min-h-[36px] px-3 py-1.5 text-xs sm:text-sm font-medium text-indigo-200 bg-transparent border border-indigo-400/70 rounded-full hover:bg-indigo-500/20 transition-colors touch-manipulation"
+                    className="min-h-[36px] rounded-full border border-indigo-400/50 bg-transparent px-3 py-1.5 text-xs sm:text-sm font-medium text-indigo-200 transition-colors hover:bg-indigo-500/20 touch-manipulation"
                   >
                     Sign Up
                   </button>
@@ -388,7 +399,7 @@ function App() {
                       setShowRegister(false);
                       setShowLoginModal(true);
                     }}
-                    className="min-h-[36px] px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-900 bg-white rounded-full hover:bg-slate-100 transition-colors touch-manipulation"
+                    className="min-h-[36px] rounded-full bg-white px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-900 transition-colors hover:bg-slate-100 touch-manipulation"
                   >
                     Login
                   </button>
@@ -405,7 +416,7 @@ function App() {
         style={{ pointerEvents: loading ? 'none' : 'auto' }}
       >
         {currentView === 'main' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8">
+          <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:gap-8 xl:grid-cols-12">
             {/* Left Sidebar */}
             <div className="lg:col-span-3">
               <Sidebar
@@ -485,7 +496,7 @@ function App() {
             </div>
 
             {/* Main Content Area */}
-            <div className="lg:col-span-9">
+            <div className="xl:col-span-6">
               <OutfitPreview
                 suggestion={currentSuggestion}
                 loading={loading}
@@ -546,6 +557,63 @@ function App() {
                 }}
               />
             </div>
+
+            <aside className="xl:col-span-3">
+              <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)] backdrop-blur xl:sticky xl:top-6">
+                <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">AI Insights</h3>
+                <p className="mt-2 text-sm text-slate-200">Sharper combinations with less contrast noise and better season-context balancing.</p>
+
+                <div className="mt-4 rounded-2xl border border-teal-400/25 bg-teal-500/10 p-3 text-sm text-teal-100">
+                  Optimized for Business Casual - Spring
+                </div>
+
+                <div className="mt-5">
+                  <h4 className="text-sm font-medium text-white">Try Another Style</h4>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleQuickStyle('Casual', 'casual')}
+                      className="rounded-full border border-white/15 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-200 transition hover:border-teal-300/70 hover:bg-teal-500/10"
+                    >
+                      Casual
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleQuickStyle('Businees Casual', 'business')}
+                      className="rounded-full border border-white/15 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-200 transition hover:border-teal-300/70 hover:bg-teal-500/10"
+                    >
+                      Business
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleQuickStyle('modern')}
+                      className="rounded-full border border-white/15 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-200 transition hover:border-teal-300/70 hover:bg-teal-500/10"
+                    >
+                      Smart Casual
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-5 space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => handleNextSuggestion()}
+                    disabled={!image || loading}
+                    className="w-full rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cyan-500/20 transition hover:from-teal-400 hover:to-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Regenerate Outfit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleLike}
+                    disabled={!currentSuggestion}
+                    className="w-full rounded-xl border border-white/15 bg-white/[0.03] px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:border-emerald-300/60 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Like Outfit
+                  </button>
+                </div>
+              </div>
+            </aside>
           </div>
         )}
 
@@ -604,6 +672,19 @@ function App() {
             <div className="max-w-2xl mx-auto rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-8 text-center">
               <h2 className="text-2xl font-bold text-white mb-4">📊 Reports</h2>
               <p className="text-slate-200 mb-6">Admin privileges are required to view reports.</p>
+            </div>
+          )
+        )}
+
+        {currentView === 'integration-tests' && (
+          isAuthenticated && user && user.is_admin ? (
+            <ErrorBoundary label="Integration Tests" resetKey={currentView}>
+              <AdminIntegrationTestRunner user={user} />
+            </ErrorBoundary>
+          ) : (
+            <div className="max-w-2xl mx-auto rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-8 text-center">
+              <h2 className="text-2xl font-bold text-white mb-4">Integration Tests</h2>
+              <p className="text-slate-200 mb-6">Admin privileges are required to run integration tests.</p>
             </div>
           )
         )}
@@ -745,8 +826,10 @@ function App() {
               {showRegister ? (
                 <Register
                   onRegister={async (data) => {
-                    await handleRegister(data);
-                    setShowRegister(false);
+                    const success = await handleRegister(data);
+                    if (success) {
+                      setShowRegister(false);
+                    }
                   }}
                   onSwitchToLogin={() => {
                     setShowRegister(false);
@@ -759,8 +842,10 @@ function App() {
               ) : (
                 <Login
                   onLogin={async (credentials) => {
-                    await handleLogin(credentials);
-                    setShowLoginModal(false);
+                    const success = await handleLogin(credentials);
+                    if (success) {
+                      setShowLoginModal(false);
+                    }
                   }}
                   onSwitchToRegister={() => {
                     setShowLoginModal(false);

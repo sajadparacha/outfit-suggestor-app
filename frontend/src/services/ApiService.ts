@@ -1037,6 +1037,73 @@ class ApiService {
     }
     return await response.json();
   }
+
+  /**
+   * List integration tests available to run (admin-only)
+   */
+  async listIntegrationTests(): Promise<{ tests: Array<{ id: string; name: string; description: string; layer: 'frontend' | 'backend'; path: string }> }> {
+    const url = `${this.baseUrl}/api/admin/integration-tests/`;
+    const response = await this.fetchWithLogging(url, { headers: this.getHeaders() });
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const error: ApiError = await response.json();
+        errorMessage = error.detail || errorMessage;
+      } catch {
+        // ignore
+      }
+      throw new Error(errorMessage);
+    }
+    return await response.json();
+  }
+
+  /**
+   * Run a single integration test by id (admin-only)
+   */
+  async runIntegrationTest(testId: string): Promise<any> {
+    const url = `${this.baseUrl}/api/admin/integration-tests/run`;
+    const response = await this.fetchWithLogging(url, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ test_id: testId }),
+    });
+
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const error: ApiError = await response.json();
+        errorMessage = error.detail || errorMessage;
+      } catch {
+        // ignore
+      }
+      throw new Error(errorMessage);
+    }
+    return await response.json();
+  }
+
+  /**
+   * Run all integration suites from the admin allowlist
+   */
+  async runAllIntegrationTests(): Promise<any> {
+    const url = `${this.baseUrl}/api/admin/integration-tests/run-all`;
+    const response = await this.fetchWithLogging(url, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({}),
+    });
+
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const error: ApiError = await response.json();
+        errorMessage = error.detail || errorMessage;
+      } catch {
+        // ignore
+      }
+      throw new Error(errorMessage);
+    }
+    return await response.json();
+  }
 }
 
 // Export singleton instance

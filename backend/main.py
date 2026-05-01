@@ -15,6 +15,7 @@ from routes.outfit_routes import router as outfit_router
 from routes.auth_routes import router as auth_router
 from routes.wardrobe_routes import router as wardrobe_router
 from routes.access_log_routes import router as access_log_router
+from routes.integration_test_routes import router as integration_test_router
 from models.database import Base, engine
 # Import models to ensure they're registered with SQLAlchemy
 from models.user import User  # noqa: F401
@@ -69,6 +70,7 @@ app.include_router(auth_router)
 app.include_router(outfit_router)
 app.include_router(wardrobe_router)
 app.include_router(access_log_router)
+app.include_router(integration_test_router)
 
 
 @app.get("/")
