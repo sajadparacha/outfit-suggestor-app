@@ -5,6 +5,7 @@ interface WardrobeGapAnalysisProps {
   result: WardrobeGapAnalysisResponse | null;
   loading: boolean;
   error: string | null;
+  isAdmin?: boolean;
 }
 
 const categoryOrder = ['shirt', 'trouser', 'blazer', 'shoes', 'belt'];
@@ -38,7 +39,18 @@ const renderChips = (items: string[], emptyLabel: string, tone: 'neutral' | 'dan
   );
 };
 
-const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({ result, loading, error }) => {
+const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
+  result,
+  loading,
+  error,
+  isAdmin = false,
+}) => {
+  const formatCost = (cost: number): string => {
+    if (cost < 0.01) return `$${cost.toFixed(4)}`;
+    if (cost < 0.1) return `$${cost.toFixed(3)}`;
+    return `$${cost.toFixed(2)}`;
+  };
+
   const orderedCategories = React.useMemo(() => {
     if (!result) {
       return [];
@@ -83,8 +95,63 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({ result, loadi
               <span className="font-medium text-white">{prettyLabel(result.season)}</span> •{' '}
               <span className="font-medium text-white">{prettyLabel(result.style)}</span>
             </p>
+            <p className="mt-2 text-xs text-slate-400">
+              Mode used: <span className="font-medium text-slate-200">{prettyLabel(result.analysis_mode || 'free')}</span>
+            </p>
             <p className="mt-2 text-sm text-slate-300">{result.overall_summary}</p>
           </div>
+
+          {isAdmin && (
+            <div className="rounded-xl border border-teal-400/20 bg-teal-500/10 p-4">
+              {result.cost ? (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-teal-200 mb-1">Analysis Cost</h3>
+                    <div className="text-sm text-slate-200 space-y-1">
+                      <div>ChatGPT: {formatCost(result.cost.gpt4_cost)}</div>
+                      {result.cost.input_tokens !== undefined && (
+                        <div>Input tokens: {result.cost.input_tokens}</div>
+                      )}
+                      {result.cost.output_tokens !== undefined && (
+                        <div>Output tokens: {result.cost.output_tokens}</div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-white">{formatCost(result.cost.total_cost)}</div>
+                    <div className="text-xs text-teal-300">Total</div>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <h3 className="font-semibold text-teal-200 mb-1">Analysis Cost</h3>
+                  <p className="text-sm text-slate-200">
+                    Cost details are unavailable for this run (likely free-mode or premium fallback).
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {isAdmin && (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 sm:p-5">
+              <h3 className="mb-4 font-semibold text-white">AI Prompt & Response (Admin)</h3>
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                <div className="rounded-lg border border-white/10 bg-slate-900/40 p-3">
+                  <div className="mb-2 text-xs uppercase tracking-wide text-slate-400">Input Prompt</div>
+                  <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-words text-sm text-slate-200">
+                    {result.ai_prompt || 'Prompt is unavailable for this run (likely free-mode or premium fallback).'}
+                  </pre>
+                </div>
+                <div className="rounded-lg border border-white/10 bg-slate-900/40 p-3">
+                  <div className="mb-2 text-xs uppercase tracking-wide text-slate-400">AI Response</div>
+                  <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-words text-sm text-slate-200">
+                    {result.ai_raw_response || 'Response is unavailable for this run (likely free-mode or premium fallback).'}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="grid gap-4 md:grid-cols-2">
             {orderedCategories.map((category) => {

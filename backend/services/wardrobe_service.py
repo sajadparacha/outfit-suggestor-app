@@ -829,6 +829,7 @@ class WardrobeService:
             "occasion": occasion,
             "season": season,
             "style": style,
+            "analysis_mode": "free",
             "analysis_by_category": analysis_by_category,
             "overall_summary": summary,
         }

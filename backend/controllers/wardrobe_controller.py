@@ -434,6 +434,57 @@ class WardrobeController:
     ) -> WardrobeGapAnalysisResponse:
         """Analyze wardrobe inventory and return missing colors/styles by category."""
         try:
+            if request.analysis_mode == "premium":
+                from config import get_ai_service
+
+                wardrobe_items, _ = self.wardrobe_service.get_user_wardrobe(
+                    db=db,
+                    user_id=current_user.id,
+                    category=None,
+                    search=None,
+                    limit=None,
+                    offset=None,
+                )
+                wardrobe_payload = [
+                    {
+                        "id": item.id,
+                        "category": item.category,
+                        "color": item.color,
+                        "description": item.description,
+                        "brand": item.brand,
+                        "name": item.name,
+                        "size": item.size,
+                        "tags": item.tags,
+                        "condition": item.condition,
+                    }
+                    for item in wardrobe_items
+                ]
+                ai_service = get_ai_service()
+                try:
+                    analysis = ai_service.analyze_wardrobe_gaps_with_chatgpt(
+                        wardrobe_items=wardrobe_payload,
+                        occasion=request.occasion,
+                        season=request.season,
+                        style=request.style,
+                        text_input=request.text_input,
+                    )
+                    return WardrobeGapAnalysisResponse(**analysis)
+                except HTTPException:
+                    # Graceful fallback so users never hit a hard 500 when premium parsing/provider fails.
+                    fallback = self.wardrobe_service.analyze_wardrobe_gaps(
+                        db=db,
+                        user_id=current_user.id,
+                        occasion=request.occasion,
+                        season=request.season,
+                        style=request.style,
+                        text_input=request.text_input,
+                    )
+                    fallback["analysis_mode"] = "free"
+                    fallback["overall_summary"] = (
+                        "Premium analysis is temporarily unavailable. Showing free rules-based analysis."
+                    )
+                    return WardrobeGapAnalysisResponse(**fallback)
+
             analysis = self.wardrobe_service.analyze_wardrobe_gaps(
                 db=db,
                 user_id=current_user.id,

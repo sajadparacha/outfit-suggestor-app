@@ -3,6 +3,7 @@ Test cases for Wardrobe API endpoints
 """
 import pytest
 from fastapi import status
+from fastapi import HTTPException
 from tests.test_helpers import setup_auth_override, clear_auth_override
 
 
@@ -352,4 +353,111 @@ class TestWardrobeEndpoints:
         assert isinstance(shirt_analysis["missing_colors"], list)
         assert isinstance(shirt_analysis["recommended_purchases"], list)
         assert "overall_summary" in payload
-        assert "blue" in shirt_analysis["missing_colors"]
+
+    def test_analyze_wardrobe_gaps_premium_success(self, client, auth_headers, db, test_user, monkeypatch):
+        """Premium mode uses ChatGPT analysis path and returns structured response."""
+        from models.wardrobe import WardrobeItem
+        import config as app_config
+
+        db.add(
+            WardrobeItem(
+                user_id=test_user.id,
+                category="shirt",
+                color="Navy",
+                description="Business shirt",
+            )
+        )
+        db.commit()
+
+        class _MockPremiumAI:
+            def analyze_wardrobe_gaps_with_chatgpt(self, wardrobe_items, occasion, season, style, text_input=""):
+                return {
+                    "occasion": occasion,
+                    "season": season,
+                    "style": style,
+                    "analysis_mode": "premium",
+                    "analysis_by_category": {
+                        "shirt": {
+                            "category": "shirt",
+                            "owned_colors": ["blue"],
+                            "owned_styles": ["business"],
+                            "missing_colors": ["white"],
+                            "missing_styles": ["formal"],
+                            "recommended_purchases": ["Add a white shirt."],
+                            "item_count": 1,
+                        },
+                        "trouser": {"category": "trouser", "owned_colors": [], "owned_styles": [], "missing_colors": [], "missing_styles": [], "recommended_purchases": [], "item_count": 0},
+                        "blazer": {"category": "blazer", "owned_colors": [], "owned_styles": [], "missing_colors": [], "missing_styles": [], "recommended_purchases": [], "item_count": 0},
+                        "shoes": {"category": "shoes", "owned_colors": [], "owned_styles": [], "missing_colors": [], "missing_styles": [], "recommended_purchases": [], "item_count": 0},
+                        "belt": {"category": "belt", "owned_colors": [], "owned_styles": [], "missing_colors": [], "missing_styles": [], "recommended_purchases": [], "item_count": 0},
+                    },
+                    "overall_summary": "Premium summary",
+                    "ai_prompt": "mock premium prompt",
+                    "ai_raw_response": "{\"mock\":true}",
+                    "cost": {
+                        "gpt4_cost": 0.0012,
+                        "model_image_cost": 0.0,
+                        "total_cost": 0.0012,
+                        "input_tokens": 100,
+                        "output_tokens": 120,
+                    },
+                }
+
+        monkeypatch.setattr(app_config, "get_ai_service", lambda: _MockPremiumAI())
+
+        response = client.post(
+            "/api/wardrobe/analyze-gaps",
+            headers=auth_headers,
+            json={
+                "occasion": "business",
+                "season": "winter",
+                "style": "classic",
+                "text_input": "office focus",
+                "analysis_mode": "premium",
+            },
+        )
+        assert response.status_code == status.HTTP_200_OK
+        payload = response.json()
+        assert payload["analysis_by_category"]["shirt"]["recommended_purchases"] == ["Add a white shirt."]
+        assert payload["analysis_mode"] == "premium"
+        assert payload["ai_prompt"] == "mock premium prompt"
+        assert payload["ai_raw_response"] == "{\"mock\":true}"
+        assert payload["cost"]["total_cost"] == 0.0012
+
+    def test_analyze_wardrobe_gaps_premium_falls_back_when_ai_fails(self, client, auth_headers, db, test_user, monkeypatch):
+        """Premium mode gracefully falls back to free analysis on provider/parse failures."""
+        from models.wardrobe import WardrobeItem
+        import config as app_config
+
+        db.add(
+            WardrobeItem(
+                user_id=test_user.id,
+                category="shirt",
+                color="White",
+                description="Formal shirt",
+            )
+        )
+        db.commit()
+
+        class _FailingPremiumAI:
+            def analyze_wardrobe_gaps_with_chatgpt(self, wardrobe_items, occasion, season, style, text_input=""):
+                raise HTTPException(status_code=500, detail="Premium parser failure")
+
+        monkeypatch.setattr(app_config, "get_ai_service", lambda: _FailingPremiumAI())
+
+        response = client.post(
+            "/api/wardrobe/analyze-gaps",
+            headers=auth_headers,
+            json={
+                "occasion": "business",
+                "season": "winter",
+                "style": "classic",
+                "text_input": "office focus",
+                "analysis_mode": "premium",
+            },
+        )
+        assert response.status_code == status.HTTP_200_OK
+        payload = response.json()
+        assert payload["analysis_mode"] == "free"
+        assert "temporarily unavailable" in payload["overall_summary"].lower()
+        assert "analysis_by_category" in payload

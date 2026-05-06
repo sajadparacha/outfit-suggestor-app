@@ -126,4 +126,25 @@ describe('ApiService.analyzeWardrobeGaps', () => {
       })
     );
   });
+
+  it('includes analysis_mode when provided', async () => {
+    await apiService.analyzeWardrobeGaps({
+      occasion: 'formal',
+      season: 'summer',
+      style: 'modern',
+      text_input: 'premium flow',
+      analysis_mode: 'premium',
+    });
+
+    const [, init] = (global.fetch as jest.Mock).mock.calls[0] as [string, RequestInit];
+    expect(init.body).toBe(
+      JSON.stringify({
+        occasion: 'formal',
+        season: 'summer',
+        style: 'modern',
+        text_input: 'premium flow',
+        analysis_mode: 'premium',
+      })
+    );
+  });
 });

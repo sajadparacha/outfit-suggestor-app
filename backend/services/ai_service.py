@@ -2,6 +2,7 @@
 import json
 import base64
 import io
+import re
 from typing import Optional, Tuple, Literal, Dict, List
 
 import openai
@@ -202,6 +203,175 @@ class AIService:
                 status_code=500,
                 detail=f"Error calling OpenAI API (text-only): {str(e)}"
             )
+
+    def analyze_wardrobe_gaps_with_chatgpt(
+        self,
+        wardrobe_items: List[dict],
+        occasion: str,
+        season: str,
+        style: str,
+        text_input: str = "",
+    ) -> dict:
+        """
+        Premium wardrobe analysis powered by ChatGPT.
+        Returns the same shape as WardrobeGapAnalysisResponse.
+        """
+        prompt = f"""
+You are an expert fashion stylist and wardrobe consultant.
+Analyze the user's wardrobe and return missing color/style recommendations.
+
+User context:
+- occasion: {occasion}
+- season: {season}
+- style preference: {style}
+- extra notes: {text_input or "(none)"}
+
+Wardrobe items (JSON list):
+{json.dumps(wardrobe_items, ensure_ascii=True)}
+
+Rules:
+1) Analyze categories: shirt, trouser, blazer, shoes, belt.
+2) For each category return:
+   - category
+   - owned_colors (normalized)
+   - owned_styles (derived from descriptions)
+   - missing_colors
+   - missing_styles
+   - recommended_purchases (3 concise bullet-like strings)
+   - item_count
+3) Be practical and fashion-aware for the provided context.
+4) Return STRICT JSON only, no markdown, no extra prose.
+
+Required JSON shape:
+{{
+  "occasion": "string",
+  "season": "string",
+  "style": "string",
+  "analysis_by_category": {{
+    "shirt": {{
+      "category": "shirt",
+      "owned_colors": ["..."],
+      "owned_styles": ["..."],
+      "missing_colors": ["..."],
+      "missing_styles": ["..."],
+      "recommended_purchases": ["...", "...", "..."],
+      "item_count": 0
+    }},
+    "trouser": {{ "...": "..." }},
+    "blazer": {{ "...": "..." }},
+    "shoes": {{ "...": "..." }},
+    "belt": {{ "...": "..." }}
+  }},
+  "overall_summary": "string"
+}}
+""".strip()
+
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=self.max_tokens,
+                temperature=0.2,
+                response_format={"type": "json_object"},
+            )
+            content = response.choices[0].message.content or "{}"
+            usage = response.usage
+            input_tokens = usage.prompt_tokens if usage else 0
+            output_tokens = usage.completion_tokens if usage else 0
+            gpt4_cost = CostCalculator.calculate_gpt4_cost(
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                has_image=False,
+            )
+            parsed = self._safe_parse_json_object(content)
+
+            # Minimal shape enforcement fallback
+            required_categories = ["shirt", "trouser", "blazer", "shoes", "belt"]
+            categories = parsed.get("analysis_by_category", {})
+            if not isinstance(categories, dict):
+                categories = {}
+            for category in required_categories:
+                entry = categories.get(category, {})
+                categories[category] = {
+                    "category": category,
+                    "owned_colors": entry.get("owned_colors", []) if isinstance(entry, dict) else [],
+                    "owned_styles": entry.get("owned_styles", []) if isinstance(entry, dict) else [],
+                    "missing_colors": entry.get("missing_colors", []) if isinstance(entry, dict) else [],
+                    "missing_styles": entry.get("missing_styles", []) if isinstance(entry, dict) else [],
+                    "recommended_purchases": entry.get("recommended_purchases", []) if isinstance(entry, dict) else [],
+                    "item_count": entry.get("item_count", 0) if isinstance(entry, dict) else 0,
+                }
+
+            return {
+                "occasion": str(parsed.get("occasion", occasion)),
+                "season": str(parsed.get("season", season)),
+                "style": str(parsed.get("style", style)),
+                "analysis_mode": "premium",
+                "analysis_by_category": categories,
+                "overall_summary": str(parsed.get("overall_summary", "Premium wardrobe analysis completed.")),
+                "ai_prompt": prompt,
+                "ai_raw_response": content,
+                "cost": {
+                    "gpt4_cost": gpt4_cost,
+                    "model_image_cost": 0.0,
+                    "total_cost": gpt4_cost,
+                    "input_tokens": input_tokens,
+                    "output_tokens": output_tokens,
+                },
+            }
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error calling OpenAI API for premium wardrobe analysis: {str(e)}",
+            )
+
+    def _safe_parse_json_object(self, content: str) -> dict:
+        """
+        Parse model output robustly even when the model emits minor JSON formatting issues.
+        """
+        candidates: List[str] = []
+        raw = (content or "").strip()
+        if not raw:
+            return {}
+
+        # Candidate 1: raw content as-is.
+        candidates.append(raw)
+
+        # Candidate 2: strip common markdown code fences.
+        fenced = raw
+        if fenced.startswith("```"):
+            fenced = re.sub(r"^```(?:json)?\s*", "", fenced, flags=re.IGNORECASE)
+            fenced = re.sub(r"\s*```$", "", fenced)
+            candidates.append(fenced.strip())
+
+        # Candidate 3: extract the outermost JSON object.
+        start_idx = raw.find("{")
+        end_idx = raw.rfind("}") + 1
+        if start_idx >= 0 and end_idx > start_idx:
+            candidates.append(raw[start_idx:end_idx].strip())
+
+        # Candidate 4: trailing-comma cleaned variants.
+        for candidate in list(candidates):
+            cleaned = re.sub(r",\s*([}\]])", r"\1", candidate)
+            if cleaned != candidate:
+                candidates.append(cleaned)
+
+        last_error: Optional[Exception] = None
+        seen = set()
+        for candidate in candidates:
+            if candidate in seen:
+                continue
+            seen.add(candidate)
+            try:
+                parsed = json.loads(candidate)
+                if isinstance(parsed, dict):
+                    return parsed
+            except Exception as exc:
+                last_error = exc
+
+        if last_error:
+            raise last_error
+        return {}
     
     def _build_prompt(
         self,

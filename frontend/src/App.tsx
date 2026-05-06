@@ -78,6 +78,8 @@ function App() {
   const [wardrobeGapResult, setWardrobeGapResult] = useState<WardrobeGapAnalysisResponse | null>(null);
   const [wardrobeGapLoading, setWardrobeGapLoading] = useState(false);
   const [wardrobeGapError, setWardrobeGapError] = useState<string | null>(null);
+  const [wardrobeAnalysisLoadingMessage, setWardrobeAnalysisLoadingMessage] = useState('Analyzing your wardrobe...');
+  const [showWardrobeAnalysisModeModal, setShowWardrobeAnalysisModeModal] = useState(false);
 
   // Controllers (Business Logic)
   const {
@@ -229,12 +231,17 @@ function App() {
     await handleGetSuggestion(); // Get a new suggestion
   };
 
-  const handleAnalyzeWardrobe = async () => {
+  const runWardrobeAnalysis = async (mode: 'free' | 'premium') => {
     if (!isAuthenticated) {
       showToast('Please login to analyze your wardrobe.', 'error');
       return;
     }
 
+    setWardrobeAnalysisLoadingMessage(
+      mode === 'premium'
+        ? 'Running Premium Analysis with ChatGPT...'
+        : 'Analyzing your wardrobe with free rules...'
+    );
     setWardrobeGapLoading(true);
     setWardrobeGapError(null);
     try {
@@ -243,9 +250,15 @@ function App() {
         season: filters.season || 'all',
         style: filters.style || 'modern',
         text_input: preferenceText || '',
+        analysis_mode: mode,
       });
       setWardrobeGapResult(result);
-      showToast('Wardrobe analysis is ready. ✅', 'success');
+      showToast(
+        mode === 'premium'
+          ? 'Premium Analysis is ready. ✅'
+          : 'Wardrobe analysis is ready. ✅',
+        'success'
+      );
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to analyze wardrobe';
       setWardrobeGapError(message);
@@ -253,6 +266,14 @@ function App() {
     } finally {
       setWardrobeGapLoading(false);
     }
+  };
+
+  const handleAnalyzeWardrobe = () => {
+    if (!isAuthenticated) {
+      showToast('Please login to analyze your wardrobe.', 'error');
+      return;
+    }
+    setShowWardrobeAnalysisModeModal(true);
   };
 
   const handleLogin = async (credentials: { username: string; password: string }): Promise<boolean> => {
@@ -304,11 +325,15 @@ function App() {
   }
 
   // Allow anonymous access - show login/register as optional modal, not required
+  const appBusy = loading || wardrobeGapLoading;
+  const appBusyMessage = loading
+    ? (loadingMessage || 'Generating AI suggestion...')
+    : wardrobeAnalysisLoadingMessage;
 
   return (
     <div 
       className="min-h-screen bg-slate-900 md:bg-slate-950 text-white relative"
-      style={{ pointerEvents: loading ? 'none' : 'auto' }}
+      style={{ pointerEvents: appBusy ? 'none' : 'auto' }}
     >
       {/* Subtle gradient orbs – lighter on mobile for daytime use */}
       <div className="fixed inset-0 opacity-20 md:opacity-30 pointer-events-none overflow-hidden">
@@ -448,7 +473,7 @@ function App() {
       {/* Main Content */}
       <div 
         className="relative container mx-auto px-3 sm:px-4 py-4 sm:py-8"
-        style={{ pointerEvents: loading ? 'none' : 'auto' }}
+        style={{ pointerEvents: appBusy ? 'none' : 'auto' }}
       >
         {currentView === 'main' && (
           <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:gap-8 xl:grid-cols-12">
@@ -597,6 +622,7 @@ function App() {
                 result={wardrobeGapResult}
                 loading={wardrobeGapLoading}
                 error={wardrobeGapError}
+                isAdmin={!!user?.is_admin}
               />
             </div>
 
@@ -1095,7 +1121,57 @@ function App() {
       />
 
       {/* Loading Overlay - Disables entire app when generating suggestion */}
-      <LoadingOverlay isLoading={loading} message={loadingMessage || 'Generating AI suggestion...'} />
+      <LoadingOverlay isLoading={appBusy} message={appBusyMessage} />
+
+      {/* Wardrobe Analysis Mode Picker */}
+      {showWardrobeAnalysisModeModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+            onClick={() => setShowWardrobeAnalysisModeModal(false)}
+          ></div>
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className="relative rounded-2xl bg-slate-900 border border-white/10 shadow-2xl max-w-md w-full p-6 transform transition-all backdrop-blur">
+              <h3 className="text-lg font-semibold text-white text-center mb-2">Choose Analysis Mode</h3>
+              <p className="text-sm text-slate-200 text-center mb-6">
+                Pick how you want your wardrobe analyzed.
+              </p>
+              <div className="space-y-3">
+                <button
+                  onClick={async () => {
+                    setShowWardrobeAnalysisModeModal(false);
+                    await runWardrobeAnalysis('free');
+                  }}
+                  className="w-full rounded-xl border border-emerald-300/30 bg-emerald-500/15 px-4 py-3 text-left transition hover:bg-emerald-500/25"
+                >
+                  <div className="text-sm font-semibold text-emerald-100">Free Analysis (Current)</div>
+                  <div className="text-xs text-emerald-200/90 mt-1">
+                    Rules-based analysis on our backend. No external AI cost.
+                  </div>
+                </button>
+                <button
+                  onClick={async () => {
+                    setShowWardrobeAnalysisModeModal(false);
+                    await runWardrobeAnalysis('premium');
+                  }}
+                  className="w-full rounded-xl border border-indigo-300/30 bg-indigo-500/15 px-4 py-3 text-left transition hover:bg-indigo-500/25"
+                >
+                  <div className="text-sm font-semibold text-indigo-100">Premium Analysis</div>
+                  <div className="text-xs text-indigo-200/90 mt-1">
+                    ChatGPT-powered deep fashion analysis and recommendations.
+                  </div>
+                </button>
+              </div>
+              <button
+                onClick={() => setShowWardrobeAnalysisModeModal(false)}
+                className="w-full mt-4 px-4 py-2 bg-white/10 text-slate-200 rounded-full hover:bg-white/20 transition-colors font-medium border border-white/15"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <Footer

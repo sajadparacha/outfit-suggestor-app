@@ -1,6 +1,6 @@
 """Pydantic schemas for wardrobe API requests and responses"""
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Literal
 from datetime import datetime
 
 
@@ -57,6 +57,10 @@ class WardrobeGapAnalysisRequest(BaseModel):
     season: str = Field(default="all", description="Season (all, spring, summer, fall, winter)")
     style: str = Field(default="modern", description="Preferred dressing style")
     text_input: str = Field(default="", description="Optional free-text preferences")
+    analysis_mode: Literal["free", "premium"] = Field(
+        default="free",
+        description="free = rules-based local analysis, premium = ChatGPT-powered analysis",
+    )
 
 
 class WardrobeCategoryGapResponse(BaseModel):
@@ -75,6 +79,10 @@ class WardrobeGapAnalysisResponse(BaseModel):
     occasion: str
     season: str
     style: str
+    analysis_mode: str = "free"
     analysis_by_category: Dict[str, WardrobeCategoryGapResponse]
     overall_summary: str
+    ai_prompt: Optional[str] = None
+    ai_raw_response: Optional[str] = None
+    cost: Optional[dict] = None
 

@@ -50,8 +50,9 @@ const About: React.FC = () => {
               to complete your look. If you upload a combination, it identifies what's already there 
               and suggests the missing elements. Choose your suggestion mode: <strong className="text-white">use wardrobe only</strong> 
               (AI suggests outfits only from items in your wardrobe) or <strong className="text-white">free generation</strong> 
-              (AI can suggest any outfit). The app features a <strong className="text-white">smart wardrobe management system</strong> 
-              that learns your collection and makes recommendations practical and personalized.
+              (AI can suggest any outfit). The app also includes <strong className="text-white">Analyze My Wardrobe</strong> with two modes:
+              <strong className="text-white"> Free Analysis</strong> (rules-based) and <strong className="text-white">Premium Analysis</strong> (ChatGPT-powered).
+              The app features a <strong className="text-white">smart wardrobe management system</strong> that learns your collection and makes recommendations practical and personalized.
             </p>
             <p className="text-slate-200 leading-relaxed">
               Built with cutting-edge technologies including OpenAI's GPT-4 Vision, DALL-E 3, Stable Diffusion, 
@@ -59,9 +60,10 @@ const About: React.FC = () => {
               combines the power of artificial intelligence with modern web development to deliver a seamless 
               fashion experience. Generate stunning AI-powered model images to visualize complete outfits, 
               manage and edit your wardrobe with intelligent duplicate detection, get outfit suggestions directly 
-              from wardrobe items, and track costs transparently. Images are optimized with smart compression 
+              from wardrobe items, run category-level wardrobe gap analysis, and track costs transparently. Images are optimized with smart compression 
               (max 10MB, JPG/PNG/WebP) for fast uploads and efficient AI processing. All suggestions are saved 
-              to your searchable history with full-screen image viewing. Admins can view access logs and usage reports.
+              to your searchable history with full-screen image viewing. Admins can view access logs, usage reports,
+              and premium wardrobe-analysis AI prompt/response and cost details.
             </p>
           </div>
 
@@ -99,6 +101,13 @@ const About: React.FC = () => {
                   <div>
                     <h4 className="font-semibold text-white">Get Suggestions from Wardrobe</h4>
                     <p className="text-sm text-slate-300">Click "Get AI Suggestion" on any wardrobe item to instantly get outfit recommendations. Uses the same powerful duplicate detection and filtering as the main suggestion flow.</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <span className="text-2xl">🧠</span>
+                  <div>
+                    <h4 className="font-semibold text-white">Analyze My Wardrobe</h4>
+                    <p className="text-sm text-slate-300">Run category-wise gap analysis (shirts, trousers, blazers, shoes, belts) to see owned colors/styles, missing pieces, and buy-next recommendations for your selected occasion, season, and style.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
@@ -168,7 +177,7 @@ const About: React.FC = () => {
                   <span className="text-2xl">💰</span>
                   <div>
                     <h4 className="font-semibold text-white">Transparent Cost Display</h4>
-                    <p className="text-sm text-slate-300">See the exact cost breakdown in USD for each AI suggestion, including GPT-4 Vision analysis and optional model image generation. Full transparency on AI service costs.</p>
+                    <p className="text-sm text-slate-300">See the exact cost breakdown in USD for AI suggestions and premium wardrobe analysis. Admin users also get full prompt/response visibility for premium runs.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
@@ -392,7 +401,7 @@ const About: React.FC = () => {
           <div className="text-3xl mb-3">🎨</div>
           <h4 className="font-semibold text-white mb-2">AI Fashion Expert</h4>
           <p className="text-sm text-slate-300">
-            Powered by OpenAI GPT-4 Vision for styling, BLIP/ViT-GPT2 for wardrobe analysis, and DALL-E 3, Stable Diffusion & Nano Banana for outfit visualizations. Wardrobe mode toggle for personalized vs free suggestions.
+            Powered by OpenAI GPT-4 Vision for styling, rules-based and ChatGPT-powered premium wardrobe analysis, plus DALL-E 3, Stable Diffusion & Nano Banana for outfit visualizations. Includes wardrobe mode toggles and transparent admin diagnostics.
           </p>
         </div>
 

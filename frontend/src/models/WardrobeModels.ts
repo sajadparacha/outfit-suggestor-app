@@ -47,6 +47,15 @@ export interface WardrobeGapAnalysisRequest {
   season: string;
   style: string;
   text_input: string;
+  analysis_mode?: 'free' | 'premium';
+}
+
+export interface WardrobeAnalysisCost {
+  gpt4_cost: number;
+  model_image_cost?: number;
+  total_cost: number;
+  input_tokens?: number;
+  output_tokens?: number;
 }
 
 export interface WardrobeCategoryGap {
@@ -63,7 +72,11 @@ export interface WardrobeGapAnalysisResponse {
   occasion: string;
   season: string;
   style: string;
+  analysis_mode?: 'free' | 'premium' | string;
   analysis_by_category: Record<string, WardrobeCategoryGap>;
   overall_summary: string;
+  ai_prompt?: string | null;
+  ai_raw_response?: string | null;
+  cost?: WardrobeAnalysisCost;
 }
 

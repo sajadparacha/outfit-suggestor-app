@@ -101,6 +101,7 @@ const UserGuide: React.FC = () => {
     { id: 'quick-start', label: 'Quick start', icon: '🚀' },
     { id: 'suggestion-flow', label: 'Get outfit suggestions', icon: '🎯' },
     { id: 'results', label: 'Your results', icon: '✨' },
+    { id: 'wardrobe-analysis', label: 'Analyze my wardrobe', icon: '🧠' },
     { id: 'wardrobe', label: 'Wardrobe', icon: '👔' },
     { id: 'random-history', label: 'Random & history', icon: '🎲' },
     { id: 'account', label: 'Account', icon: '⚙️' },
@@ -236,10 +237,33 @@ const UserGuide: React.FC = () => {
               <span className="text-teal-400 font-bold shrink-0">•</span>
               <span>
                 Admins can toggle <strong className="text-white">Show AI Prompt &amp; Response</strong> in the sidebar
-                to peek at the technical details (optional).
+                to peek at technical details on outfit suggestions. Wardrobe analysis also surfaces admin diagnostics
+                when premium metadata is available.
               </span>
             </li>
           </ul>
+        </SectionCard>
+
+        <SectionCard
+          id="wardrobe-analysis"
+          icon="🧠"
+          title="Analyze My Wardrobe"
+          subtitle="Find what you own, what you miss, and what to buy next."
+          accent="indigo"
+        >
+          <StepList
+            items={[
+              'In Get Suggestion, set occasion, season, style, and optional notes in Preferences.',
+              'Click Analyze My Wardrobe in the left panel.',
+              'Choose Free Analysis (rules-based) or Premium Analysis (ChatGPT-powered).',
+              'The app locks during analysis and shows a progress message, similar to Get AI Suggestion.',
+              'Review category cards for owned colors/styles, missing colors/styles, and buy-next recommendations.',
+            ]}
+          />
+          <TipBox>
+            <strong className="text-white">Admin users:</strong> premium runs can include mode used, cost, full AI
+            prompt, and full AI response inside the analysis panel.
+          </TipBox>
         </SectionCard>
 
         <SectionCard
@@ -366,6 +390,10 @@ const UserGuide: React.FC = () => {
               {
                 key: 'wardrobe',
                 body: 'Wardrobe-only needs items in your closet first; an empty wardrobe may fall back to open suggestions.',
+              },
+              {
+                key: 'premium',
+                body: 'If Premium Analysis cannot complete, the system may safely fall back to Free Analysis. Check the "Mode used" line in results.',
               },
             ].map((row) => (
               <li
