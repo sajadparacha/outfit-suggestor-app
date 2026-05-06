@@ -13,6 +13,8 @@ interface WardrobeProps {
   onSuggestionReady?: (suggestion: any) => void; // Callback when outfit suggestion is ready
   onNavigateToMain?: () => void; // Callback to navigate to main view
   onSourceImageLoaded?: () => void; // Callback after source wardrobe image is preloaded in main flow
+  onAnalyzeWardrobe?: () => void;
+  analyzingWardrobe?: boolean;
   outfitController?: {
     setImage: (image: File | null) => void;
     setSourceWardrobeItemId?: (id: number | null) => void;
@@ -34,7 +36,9 @@ const Wardrobe: React.FC<WardrobeProps> = ({
   onSuggestionReady,
   onNavigateToMain,
   onSourceImageLoaded,
-  outfitController
+  outfitController,
+  onAnalyzeWardrobe,
+  analyzingWardrobe = false,
 }) => {
   const {
     wardrobeItems,
@@ -568,17 +572,33 @@ const Wardrobe: React.FC<WardrobeProps> = ({
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 gap-3">
             <div>
               <h1 className="text-3xl font-bold text-white mb-2">👔 My Wardrobe</h1>
               <p className="text-slate-300">Add items to get personalized outfit suggestions</p>
             </div>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="px-6 py-3 bg-teal-500 text-white rounded-xl font-semibold hover:bg-teal-600 transition-all shadow-md"
-            >
-              + Add Item
-            </button>
+            <div className="flex items-center gap-2">
+              {onAnalyzeWardrobe && (
+                <button
+                  onClick={onAnalyzeWardrobe}
+                  disabled={analyzingWardrobe}
+                  className={`px-4 py-3 rounded-xl font-semibold transition-all shadow-md ${
+                    analyzingWardrobe
+                      ? 'cursor-not-allowed bg-white/10 text-slate-400 border border-white/10'
+                      : 'bg-indigo-500 text-white hover:bg-indigo-600'
+                  }`}
+                  aria-label="Analyze my wardrobe gaps"
+                >
+                  {analyzingWardrobe ? 'Analyzing...' : 'Analyze My Wardrobe'}
+                </button>
+              )}
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="px-6 py-3 bg-teal-500 text-white rounded-xl font-semibold hover:bg-teal-600 transition-all shadow-md"
+              >
+                + Add Item
+              </button>
+            </div>
           </div>
 
           {/* Category Filters */}

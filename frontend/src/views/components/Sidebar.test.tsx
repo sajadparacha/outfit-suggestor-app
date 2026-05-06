@@ -132,34 +132,20 @@ describe('Sidebar file validation', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('shows analyze wardrobe button for authenticated users with handler', () => {
-    const onAnalyzeWardrobe = jest.fn();
+  it('shows insights shortcut link for authenticated users', () => {
+    const onOpenInsights = jest.fn();
     render(
       <Sidebar
         {...defaultProps}
         isAuthenticated
-        onAnalyzeWardrobe={onAnalyzeWardrobe}
+        onOpenInsights={onOpenInsights}
       />
     );
 
-    const button = screen.getByRole('button', { name: /analyze my wardrobe gaps/i });
-    expect(button).toBeInTheDocument();
-    fireEvent.click(button);
-    expect(onAnalyzeWardrobe).toHaveBeenCalledTimes(1);
-  });
-
-  it('disables analyze wardrobe button and shows loading copy while analyzing', () => {
-    render(
-      <Sidebar
-        {...defaultProps}
-        isAuthenticated
-        onAnalyzeWardrobe={jest.fn()}
-        analyzingWardrobe
-      />
-    );
-
-    expect(screen.getByRole('button', { name: /analyze my wardrobe gaps/i })).toBeDisabled();
-    expect(screen.getByText(/Analyzing Wardrobe\.\.\./i)).toBeInTheDocument();
+    const shortcut = screen.getByRole('button', { name: /open insights for wardrobe analysis/i });
+    expect(shortcut).toBeInTheDocument();
+    fireEvent.click(shortcut);
+    expect(onOpenInsights).toHaveBeenCalledTimes(1);
   });
 
   describe('section hint tooltips', () => {

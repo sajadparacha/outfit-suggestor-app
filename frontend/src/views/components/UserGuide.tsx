@@ -132,7 +132,7 @@ const UserGuide: React.FC = () => {
           </p>
           <p className="mt-6 text-sm text-slate-500">
             Tip: use the <strong className="text-slate-400 font-semibold">tabs at the top</strong> for Get Suggestion,
-            Guide, History, or Wardrobe. <strong className="text-slate-400 font-semibold">About</strong> (app story &
+            Guide, History, Wardrobe, and Insights. <strong className="text-slate-400 font-semibold">About</strong> (app story &
             creator links) lives in the <strong className="text-slate-400 font-semibold">footer</strong>.
           </p>
         </div>
@@ -254,7 +254,7 @@ const UserGuide: React.FC = () => {
           <StepList
             items={[
               'In Get Suggestion, set occasion, season, style, and optional notes in Preferences.',
-              'Click Analyze My Wardrobe in the left panel.',
+              'Open the Wardrobe tab and click Analyze My Wardrobe in the header.',
               'Choose Free Analysis (rules-based) or Premium Analysis (ChatGPT-powered).',
               'The app locks during analysis and shows a progress message, similar to Get AI Suggestion.',
               'Review category cards for owned colors/styles, missing colors/styles, and buy-next recommendations.',
@@ -327,6 +327,7 @@ const UserGuide: React.FC = () => {
           <div className="grid gap-3 sm:grid-cols-2">
             {[
               { k: 'Settings', d: 'Email, name, password, and a shortcut to your wardrobe.' },
+              { k: 'Insights', d: 'Dedicated wardrobe gap analysis page with category recommendations.' },
               { k: 'Guide', d: 'Step-by-step help and tips (this page).' },
               { k: 'About', d: 'Product story, features, and creator links—open from the page footer.' },
               { k: 'Reports', d: 'Admins only—usage and access insights.' },

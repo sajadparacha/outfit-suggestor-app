@@ -57,7 +57,7 @@ function App() {
 
   // View state (UI-only state)
   const [currentView, setCurrentView] = useState<
-    'main' | 'history' | 'wardrobe' | 'reports' | 'integration-tests' | 'about' | 'guide' | 'settings'
+    'main' | 'history' | 'wardrobe' | 'insights' | 'reports' | 'integration-tests' | 'about' | 'guide' | 'settings'
   >('main');
   const [wardrobeCategoryFilter, setWardrobeCategoryFilter] = useState<string | null>(null);
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -253,6 +253,7 @@ function App() {
         analysis_mode: mode,
       });
       setWardrobeGapResult(result);
+      setCurrentView('insights');
       showToast(
         mode === 'premium'
           ? 'Premium Analysis is ready. ✅'
@@ -378,6 +379,16 @@ function App() {
                     >
                       <span>Wardrobe</span>
                     </button>
+                    <button
+                      onClick={() => setCurrentView('insights')}
+                      className={`inline-flex items-center rounded-full px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
+                        currentView === 'insights'
+                          ? 'bg-white/95 text-slate-900 shadow-sm'
+                          : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                      }`}
+                    >
+                      <span>Insights</span>
+                    </button>
                     {user?.is_admin && (
                       <>
                         <button
@@ -489,8 +500,7 @@ function App() {
                 onGetSuggestion={handleGetSuggestion}
                 onGetRandomSuggestion={isAuthenticated ? getRandomSuggestion : undefined}
                 onGetRandomFromHistory={isAuthenticated ? handleGetRandomFromHistory : undefined}
-                onAnalyzeWardrobe={isAuthenticated ? handleAnalyzeWardrobe : undefined}
-                analyzingWardrobe={wardrobeGapLoading}
+                onOpenInsights={isAuthenticated ? () => setCurrentView('insights') : undefined}
                 loading={loading}
                 generateModelImage={generateModelImage}
                 setGenerateModelImage={setGenerateModelImage}
@@ -618,12 +628,6 @@ function App() {
                   }
                 }}
               />
-              <WardrobeGapAnalysis
-                result={wardrobeGapResult}
-                loading={wardrobeGapLoading}
-                error={wardrobeGapError}
-                isAdmin={!!user?.is_admin}
-              />
             </div>
 
           </div>
@@ -634,6 +638,8 @@ function App() {
             <ErrorBoundary label="Wardrobe" resetKey={currentView}>
               <Wardrobe 
                 initialCategory={wardrobeCategoryFilter}
+                onAnalyzeWardrobe={handleAnalyzeWardrobe}
+                analyzingWardrobe={wardrobeGapLoading}
                 onSuggestionReady={(suggestion) => {
                   // Suggestion is already set by the outfit controller's getSuggestion
                   setCurrentSuggestion(suggestion);
@@ -670,6 +676,60 @@ function App() {
                 className="px-6 py-3 bg-teal-500 text-white rounded-full font-semibold hover:bg-teal-600 transition-colors"
               >
                 Login to Continue
+              </button>
+            </div>
+          )
+        )}
+
+        {currentView === 'insights' && (
+          isAuthenticated ? (
+            <div className="max-w-5xl mx-auto">
+              <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-6 mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <h2 className="text-2xl font-bold text-white">Wardrobe Insights</h2>
+                    <p className="text-slate-300 mt-1">
+                      Understand wardrobe gaps by category and plan what to buy next.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleAnalyzeWardrobe}
+                      disabled={wardrobeGapLoading}
+                      className={`px-4 py-2.5 rounded-xl font-semibold transition-all ${
+                        wardrobeGapLoading
+                          ? 'cursor-not-allowed bg-white/10 text-slate-500 border border-white/10'
+                          : 'bg-indigo-500 text-white hover:bg-indigo-600'
+                      }`}
+                    >
+                      {wardrobeGapLoading ? 'Analyzing...' : 'Run Analysis'}
+                    </button>
+                    <button
+                      onClick={() => setCurrentView('wardrobe')}
+                      className="px-4 py-2.5 rounded-xl font-medium bg-white/10 text-slate-200 hover:bg-white/20 border border-white/15 transition-colors"
+                    >
+                      Open Wardrobe
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <WardrobeGapAnalysis
+                result={wardrobeGapResult}
+                loading={wardrobeGapLoading}
+                error={wardrobeGapError}
+                isAdmin={!!user?.is_admin}
+              />
+            </div>
+          ) : (
+            <div className="max-w-2xl mx-auto rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-8 text-center">
+              <h2 className="text-2xl font-bold text-white mb-4">Wardrobe Insights</h2>
+              <p className="text-slate-200 mb-6">Please log in to analyze your wardrobe and view insights.</p>
+              <button
+                onClick={() => setShowLoginModal(true)}
+                className="px-6 py-2 bg-teal-500 text-white rounded-full hover:bg-teal-600 transition-colors"
+              >
+                Login
               </button>
             </div>
           )
