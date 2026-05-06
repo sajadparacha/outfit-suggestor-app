@@ -759,7 +759,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                           onClick={() => handleOpenHistorySuggestions(item)}
                           disabled={historyLoadingForItem === item.id}
                           className="px-4 py-2 bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
-                          title="Show history suggestions for this item"
+                          title="Show past suggestions for this item"
                         >
                           {historyLoadingForItem === item.id ? (
                             <>
@@ -767,7 +767,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                               Loading...
                             </>
                           ) : (
-                            <>📚 History Suggestions</>
+                            <>📚 Past Suggestions</>
                           )}
                         </button>
                       )}
@@ -1461,13 +1461,41 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                       <div key={entry.id} className="rounded-xl border border-white/10 bg-white/5 p-4">
                         <div className="flex items-start justify-between gap-4">
                           <div className="min-w-0">
-                            <p className="text-xs text-slate-400">{new Date(entry.created_at).toLocaleString()}</p>
-                            <p className="mt-2 text-slate-100"><span className="font-medium">Shirt:</span> {entry.shirt}</p>
-                            <p className="text-slate-100"><span className="font-medium">Trouser:</span> {entry.trouser}</p>
-                            <p className="text-slate-100"><span className="font-medium">Blazer:</span> {entry.blazer}</p>
-                            <p className="text-slate-100"><span className="font-medium">Shoes:</span> {entry.shoes}</p>
-                            <p className="text-slate-100"><span className="font-medium">Belt:</span> {entry.belt}</p>
-                            <p className="mt-2 text-sm text-slate-300 line-clamp-3">{entry.reasoning}</p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-xs font-semibold tracking-wide text-slate-300 uppercase">Suggestion #{entry.id}</span>
+                              <span className="text-[11px] px-2 py-1 rounded-full border border-white/15 bg-white/5 text-slate-300">
+                                {new Date(entry.created_at).toLocaleString()}
+                              </span>
+                            </div>
+
+                            {entry.text_input && (
+                              <p className="mt-2 text-sm text-slate-300 line-clamp-2">
+                                <span className="text-slate-400">Prompt:</span> {entry.text_input}
+                              </p>
+                            )}
+
+                            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <div className="rounded-lg border border-white/10 bg-slate-900/40 px-3 py-2 text-sm text-slate-100">
+                                <span className="text-slate-400">👔 Shirt:</span> {entry.shirt}
+                              </div>
+                              <div className="rounded-lg border border-white/10 bg-slate-900/40 px-3 py-2 text-sm text-slate-100">
+                                <span className="text-slate-400">👖 Trouser:</span> {entry.trouser}
+                              </div>
+                              <div className="rounded-lg border border-white/10 bg-slate-900/40 px-3 py-2 text-sm text-slate-100">
+                                <span className="text-slate-400">🧥 Blazer:</span> {entry.blazer}
+                              </div>
+                              <div className="rounded-lg border border-white/10 bg-slate-900/40 px-3 py-2 text-sm text-slate-100">
+                                <span className="text-slate-400">👞 Shoes:</span> {entry.shoes}
+                              </div>
+                              <div className="rounded-lg border border-white/10 bg-slate-900/40 px-3 py-2 text-sm text-slate-100 sm:col-span-2">
+                                <span className="text-slate-400">🎀 Belt:</span> {entry.belt}
+                              </div>
+                            </div>
+
+                            <div className="mt-3 rounded-lg border border-teal-400/20 bg-teal-500/5 p-3">
+                              <p className="text-xs uppercase tracking-wide text-teal-300 mb-1">Why This Works</p>
+                              <p className="text-sm text-slate-200 line-clamp-3">{entry.reasoning}</p>
+                            </div>
                           </div>
                           <button
                             onClick={() => handleSelectHistorySuggestion(entry)}

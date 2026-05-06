@@ -148,7 +148,7 @@ describe('Wardrobe page', () => {
       />
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: /History Suggestions/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Past Suggestions/i }));
     expect(await screen.findByRole('heading', { name: /History Suggestions/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Use This/i }));
 
@@ -191,7 +191,7 @@ describe('Wardrobe page', () => {
     await waitFor(() => {
       expect(ApiService.getOutfitHistory).toHaveBeenCalled();
     });
-    expect(screen.queryByRole('button', { name: /History Suggestions/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Past Suggestions/i })).not.toBeInTheDocument();
   });
 
   it('shows history suggestions button when history links by source_wardrobe_item_id', async () => {
@@ -221,7 +221,7 @@ describe('Wardrobe page', () => {
 
     render(<Wardrobe />);
 
-    expect(await screen.findByRole('button', { name: /History Suggestions/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Past Suggestions/i })).toBeInTheDocument();
   });
 
   it('shows history suggestions button when history links by shirt_id', async () => {
@@ -252,6 +252,6 @@ describe('Wardrobe page', () => {
 
     render(<Wardrobe />);
 
-    expect(await screen.findByRole('button', { name: /History Suggestions/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Past Suggestions/i })).toBeInTheDocument();
   });
 });
