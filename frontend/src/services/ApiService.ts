@@ -6,7 +6,14 @@
 
 import { OutfitResponse, ApiError, OutfitHistoryEntry } from '../models/OutfitModels';
 import { RegisterRequest, LoginRequest, TokenResponse, User } from '../models/AuthModels';
-import { WardrobeItem, WardrobeItemCreate, WardrobeItemUpdate, WardrobeSummary } from '../models/WardrobeModels';
+import {
+  WardrobeItem,
+  WardrobeItemCreate,
+  WardrobeItemUpdate,
+  WardrobeSummary,
+  WardrobeGapAnalysisRequest,
+  WardrobeGapAnalysisResponse,
+} from '../models/WardrobeModels';
 
 class ApiService {
   private baseUrl: string;
@@ -773,6 +780,34 @@ class ApiService {
     } catch (error) {
       if (error instanceof Error) throw error;
       throw new Error('Failed to get random outfit');
+    }
+  }
+
+  /**
+   * Analyze wardrobe for missing colors/styles by category.
+   */
+  async analyzeWardrobeGaps(
+    request: WardrobeGapAnalysisRequest
+  ): Promise<WardrobeGapAnalysisResponse> {
+    try {
+      const url = `${this.baseUrl}/api/wardrobe/analyze-gaps`;
+      const response = await this.fetchWithLogging(url, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(request),
+      });
+
+      if (!response.ok) {
+        const error: ApiError = await response.json();
+        throw new Error(error.detail || 'Failed to analyze wardrobe gaps');
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to analyze wardrobe gaps');
     }
   }
 

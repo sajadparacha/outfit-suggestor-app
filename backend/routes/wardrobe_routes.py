@@ -1,14 +1,15 @@
 """Wardrobe API routes - Thin HTTP layer using controllers"""
 from fastapi import APIRouter, File, UploadFile, Depends, Form, Query
-from typing import Optional, List
+from typing import Optional
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
 
 from models.wardrobe_schemas import (
     WardrobeItemCreate, 
     WardrobeItemUpdate, 
     WardrobeItemResponse,
-    WardrobeSummaryResponse
+    WardrobeSummaryResponse,
+    WardrobeGapAnalysisRequest,
+    WardrobeGapAnalysisResponse,
 )
 from models.user import User
 from models.database import get_db
@@ -133,6 +134,24 @@ async def get_random_outfit(
         style=style,
         db=db,
         current_user=current_user
+    )
+
+
+@router.post("/analyze-gaps", response_model=WardrobeGapAnalysisResponse)
+async def analyze_wardrobe_gaps(
+    request: WardrobeGapAnalysisRequest,
+    wardrobe_controller: WardrobeController = Depends(get_wardrobe_controller),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Analyze user's wardrobe to identify missing colors/styles by category.
+    Requires authentication.
+    """
+    return await wardrobe_controller.analyze_wardrobe_gaps(
+        request=request,
+        db=db,
+        current_user=current_user,
     )
 
 

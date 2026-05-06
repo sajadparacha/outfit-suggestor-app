@@ -42,3 +42,28 @@ export interface WardrobeSummary {
   categories: string[];
 }
 
+export interface WardrobeGapAnalysisRequest {
+  occasion: string;
+  season: string;
+  style: string;
+  text_input: string;
+}
+
+export interface WardrobeCategoryGap {
+  category: string;
+  owned_colors: string[];
+  owned_styles: string[];
+  missing_colors: string[];
+  missing_styles: string[];
+  recommended_purchases: string[];
+  item_count: number;
+}
+
+export interface WardrobeGapAnalysisResponse {
+  occasion: string;
+  season: string;
+  style: string;
+  analysis_by_category: Record<string, WardrobeCategoryGap>;
+  overall_summary: string;
+}
+

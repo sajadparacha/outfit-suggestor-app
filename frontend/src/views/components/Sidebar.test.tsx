@@ -132,6 +132,36 @@ describe('Sidebar file validation', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('shows analyze wardrobe button for authenticated users with handler', () => {
+    const onAnalyzeWardrobe = jest.fn();
+    render(
+      <Sidebar
+        {...defaultProps}
+        isAuthenticated
+        onAnalyzeWardrobe={onAnalyzeWardrobe}
+      />
+    );
+
+    const button = screen.getByRole('button', { name: /analyze my wardrobe gaps/i });
+    expect(button).toBeInTheDocument();
+    fireEvent.click(button);
+    expect(onAnalyzeWardrobe).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables analyze wardrobe button and shows loading copy while analyzing', () => {
+    render(
+      <Sidebar
+        {...defaultProps}
+        isAuthenticated
+        onAnalyzeWardrobe={jest.fn()}
+        analyzingWardrobe
+      />
+    );
+
+    expect(screen.getByRole('button', { name: /analyze my wardrobe gaps/i })).toBeDisabled();
+    expect(screen.getByText(/Analyzing Wardrobe\.\.\./i)).toBeInTheDocument();
+  });
+
   describe('section hint tooltips', () => {
     it('renders Preferences tooltip with occasion/season/style summary', () => {
       render(<Sidebar {...defaultProps} />);

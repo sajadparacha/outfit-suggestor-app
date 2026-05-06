@@ -75,3 +75,55 @@ describe('ApiService.getSuggestion', () => {
     expect(fd.get('previous_outfit_text')).toBe('Shirt: white\nTrousers: navy');
   });
 });
+
+describe('ApiService.analyzeWardrobeGaps', () => {
+  const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+    const responseBody = {
+      occasion: 'business',
+      season: 'winter',
+      style: 'classic',
+      overall_summary: 'Looks balanced.',
+      analysis_by_category: {},
+    };
+    const res = {
+      ok: true,
+      status: 200,
+      headers: { get: (h: string) => (h === 'content-type' ? 'application/json' : null) },
+      json: async () => responseBody,
+      clone() {
+        return res;
+      },
+    };
+    global.fetch = jest.fn().mockResolvedValue(res) as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    jest.restoreAllMocks();
+  });
+
+  it('posts occasion, season, style and text_input payload', async () => {
+    await apiService.analyzeWardrobeGaps({
+      occasion: 'business',
+      season: 'winter',
+      style: 'classic',
+      text_input: 'No bright colors',
+    });
+
+    expect(global.fetch).toHaveBeenCalled();
+    const [url, init] = (global.fetch as jest.Mock).mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/api/wardrobe/analyze-gaps');
+    expect(init.method).toBe('POST');
+    expect(init.body).toBe(
+      JSON.stringify({
+        occasion: 'business',
+        season: 'winter',
+        style: 'classic',
+        text_input: 'No bright colors',
+      })
+    );
+  });
+});

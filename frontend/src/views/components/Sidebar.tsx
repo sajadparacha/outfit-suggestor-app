@@ -81,6 +81,8 @@ interface SidebarProps {
   onGetSuggestion: () => void;
   onGetRandomSuggestion?: () => void;
   onGetRandomFromHistory?: () => void;
+  onAnalyzeWardrobe?: () => void;
+  analyzingWardrobe?: boolean;
   loading: boolean;
   generateModelImage: boolean;
   setGenerateModelImage: (generate: boolean) => void;
@@ -108,6 +110,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   onGetSuggestion,
   onGetRandomSuggestion,
   onGetRandomFromHistory,
+  onAnalyzeWardrobe,
+  analyzingWardrobe = false,
   loading,
   generateModelImage,
   setGenerateModelImage,
@@ -639,6 +643,20 @@ const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       <div className="border-t border-white/10 pt-4">
+        {isAuthenticated && onAnalyzeWardrobe && (
+          <button
+            onClick={onAnalyzeWardrobe}
+            disabled={loading || analyzingWardrobe}
+            className={`mb-3 w-full min-h-[44px] rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
+              loading || analyzingWardrobe
+                ? 'cursor-not-allowed border border-white/10 bg-white/10 text-slate-500'
+                : 'border border-white/15 bg-white/5 text-slate-100 hover:border-indigo-300/60 hover:bg-indigo-500/10'
+            }`}
+            aria-label="Analyze my wardrobe gaps"
+          >
+            {analyzingWardrobe ? 'Analyzing Wardrobe...' : 'Analyze My Wardrobe'}
+          </button>
+        )}
         <button
           onClick={onGetSuggestion}
           disabled={!image || loading}

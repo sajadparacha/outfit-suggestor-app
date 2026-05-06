@@ -30,6 +30,8 @@ import { useAuthController } from './controllers/useAuthController';
 import { useWardrobeController } from './controllers/useWardrobeController';
 import ApiService from './services/ApiService';
 import { historyEntryToSuggestion } from './utils/historyUtils';
+import WardrobeGapAnalysis from './views/components/WardrobeGapAnalysis';
+import { WardrobeGapAnalysisResponse } from './models/WardrobeModels';
 
 function App() {
   // Check URL parameter for model generation feature flag
@@ -73,6 +75,9 @@ function App() {
     if (saved === null) return true;
     return saved === 'true';
   });
+  const [wardrobeGapResult, setWardrobeGapResult] = useState<WardrobeGapAnalysisResponse | null>(null);
+  const [wardrobeGapLoading, setWardrobeGapLoading] = useState(false);
+  const [wardrobeGapError, setWardrobeGapError] = useState<string | null>(null);
 
   // Controllers (Business Logic)
   const {
@@ -222,6 +227,32 @@ function App() {
   const handleDislike = async () => {
     showToast("We'll improve our suggestions! 👎", 'success');
     await handleGetSuggestion(); // Get a new suggestion
+  };
+
+  const handleAnalyzeWardrobe = async () => {
+    if (!isAuthenticated) {
+      showToast('Please login to analyze your wardrobe.', 'error');
+      return;
+    }
+
+    setWardrobeGapLoading(true);
+    setWardrobeGapError(null);
+    try {
+      const result = await ApiService.analyzeWardrobeGaps({
+        occasion: filters.occasion || 'casual',
+        season: filters.season || 'all',
+        style: filters.style || 'modern',
+        text_input: preferenceText || '',
+      });
+      setWardrobeGapResult(result);
+      showToast('Wardrobe analysis is ready. ✅', 'success');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to analyze wardrobe';
+      setWardrobeGapError(message);
+      showToast(message, 'error');
+    } finally {
+      setWardrobeGapLoading(false);
+    }
   };
 
   const handleLogin = async (credentials: { username: string; password: string }): Promise<boolean> => {
@@ -433,6 +464,8 @@ function App() {
                 onGetSuggestion={handleGetSuggestion}
                 onGetRandomSuggestion={isAuthenticated ? getRandomSuggestion : undefined}
                 onGetRandomFromHistory={isAuthenticated ? handleGetRandomFromHistory : undefined}
+                onAnalyzeWardrobe={isAuthenticated ? handleAnalyzeWardrobe : undefined}
+                analyzingWardrobe={wardrobeGapLoading}
                 loading={loading}
                 generateModelImage={generateModelImage}
                 setGenerateModelImage={setGenerateModelImage}
@@ -559,6 +592,11 @@ function App() {
                     setAddingToWardrobe(false);
                   }
                 }}
+              />
+              <WardrobeGapAnalysis
+                result={wardrobeGapResult}
+                loading={wardrobeGapLoading}
+                error={wardrobeGapError}
               />
             </div>
 

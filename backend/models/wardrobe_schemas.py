@@ -1,6 +1,6 @@
 """Pydantic schemas for wardrobe API requests and responses"""
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List, Dict
 from datetime import datetime
 
 
@@ -49,4 +49,32 @@ class WardrobeSummaryResponse(BaseModel):
     by_category: dict
     by_color: dict
     categories: list
+
+
+class WardrobeGapAnalysisRequest(BaseModel):
+    """Schema for wardrobe gap analysis request."""
+    occasion: str = Field(default="casual", description="Occasion (casual, business, formal, etc.)")
+    season: str = Field(default="all", description="Season (all, spring, summer, fall, winter)")
+    style: str = Field(default="modern", description="Preferred dressing style")
+    text_input: str = Field(default="", description="Optional free-text preferences")
+
+
+class WardrobeCategoryGapResponse(BaseModel):
+    """Per-category wardrobe gap analysis result."""
+    category: str
+    owned_colors: List[str]
+    owned_styles: List[str]
+    missing_colors: List[str]
+    missing_styles: List[str]
+    recommended_purchases: List[str]
+    item_count: int
+
+
+class WardrobeGapAnalysisResponse(BaseModel):
+    """Wardrobe gap analysis response."""
+    occasion: str
+    season: str
+    style: str
+    analysis_by_category: Dict[str, WardrobeCategoryGapResponse]
+    overall_summary: str
 

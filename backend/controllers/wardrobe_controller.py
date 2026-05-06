@@ -1,10 +1,17 @@
 """Wardrobe Controller - Handles wardrobe-related request orchestration"""
-from typing import Optional, List
+from typing import Optional
 from fastapi import UploadFile, HTTPException
 from sqlalchemy.orm import Session
 
 from models.user import User
-from models.wardrobe_schemas import WardrobeItemCreate, WardrobeItemUpdate, WardrobeItemResponse, WardrobeSummaryResponse
+from models.wardrobe_schemas import (
+    WardrobeItemCreate,
+    WardrobeItemUpdate,
+    WardrobeItemResponse,
+    WardrobeSummaryResponse,
+    WardrobeGapAnalysisRequest,
+    WardrobeGapAnalysisResponse,
+)
 from services.wardrobe_service import WardrobeService
 from services.wardrobe_ai_service import WardrobeAIService
 from utils.image_processor import encode_image, validate_image
@@ -417,5 +424,28 @@ class WardrobeController:
             raise HTTPException(
                 status_code=500,
                 detail=f"Error checking duplicate: {str(e)}"
+            )
+
+    async def analyze_wardrobe_gaps(
+        self,
+        request: WardrobeGapAnalysisRequest,
+        db: Session,
+        current_user: User,
+    ) -> WardrobeGapAnalysisResponse:
+        """Analyze wardrobe inventory and return missing colors/styles by category."""
+        try:
+            analysis = self.wardrobe_service.analyze_wardrobe_gaps(
+                db=db,
+                user_id=current_user.id,
+                occasion=request.occasion,
+                season=request.season,
+                style=request.style,
+                text_input=request.text_input,
+            )
+            return WardrobeGapAnalysisResponse(**analysis)
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error analyzing wardrobe gaps: {str(e)}",
             )
 

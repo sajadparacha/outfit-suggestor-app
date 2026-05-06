@@ -300,3 +300,56 @@ class TestWardrobeEndpoints:
             headers=auth_headers
         )
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    def test_analyze_wardrobe_gaps_unauthorized(self, client):
+        """Wardrobe gap analysis requires authentication."""
+        response = client.post(
+            "/api/wardrobe/analyze-gaps",
+            json={
+                "occasion": "business",
+                "season": "winter",
+                "style": "classic",
+            },
+        )
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_analyze_wardrobe_gaps_success(self, client, auth_headers, db, test_user):
+        """Gap analysis returns owned and missing data grouped by category."""
+        from models.wardrobe import WardrobeItem
+
+        db.add_all([
+            WardrobeItem(
+                user_id=test_user.id,
+                category="shirt",
+                color="White",
+                description="Formal solid regular fit shirt",
+            ),
+            WardrobeItem(
+                user_id=test_user.id,
+                category="trouser",
+                color="Black",
+                description="Business regular fit trouser",
+            ),
+        ])
+        db.commit()
+
+        response = client.post(
+            "/api/wardrobe/analyze-gaps",
+            headers=auth_headers,
+            json={
+                "occasion": "business",
+                "season": "winter",
+                "style": "classic",
+            },
+        )
+        assert response.status_code == status.HTTP_200_OK
+        payload = response.json()
+        assert payload["occasion"] == "business"
+        assert "analysis_by_category" in payload
+        assert "shirt" in payload["analysis_by_category"]
+        shirt_analysis = payload["analysis_by_category"]["shirt"]
+        assert "white" in shirt_analysis["owned_colors"]
+        assert isinstance(shirt_analysis["missing_colors"], list)
+        assert isinstance(shirt_analysis["recommended_purchases"], list)
+        assert "overall_summary" in payload
+        assert "blue" in shirt_analysis["missing_colors"]
