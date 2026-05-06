@@ -1,10 +1,12 @@
 import React, { useState, useRef } from 'react';
 import { useWardrobeController } from '../../controllers/useWardrobeController';
 import { WardrobeItem, WardrobeItemCreate, WardrobeItemUpdate } from '../../models/WardrobeModels';
+import { OutfitHistoryEntry } from '../../models/OutfitModels';
 import ApiService from '../../services/ApiService';
 import { isValidImageSize, formatFileSize } from '../../utils/imageUtils';
 import { WARDROBE_MAX_SIZE_MB } from '../../constants/imageLimits';
 import ConfirmationModal from './ConfirmationModal';
+import { historyEntryToSuggestion } from '../../utils/historyUtils';
 
 interface WardrobeProps {
   initialCategory?: string | null;
@@ -89,6 +91,32 @@ const Wardrobe: React.FC<WardrobeProps> = ({
   // State for outfit suggestion from wardrobe item
   const [suggestionLoading, setSuggestionLoading] = useState<number | null>(null); // Store item ID being processed
   const [suggestionError, setSuggestionError] = useState<string | null>(null);
+  const [historyLoadingForItem, setHistoryLoadingForItem] = useState<number | null>(null);
+  const [showHistorySuggestionsModal, setShowHistorySuggestionsModal] = useState(false);
+  const [historySuggestions, setHistorySuggestions] = useState<OutfitHistoryEntry[]>([]);
+  const [historySuggestionsError, setHistorySuggestionsError] = useState<string | null>(null);
+  const [historySourceItem, setHistorySourceItem] = useState<WardrobeItem | null>(null);
+  const [historyImageIndex, setHistoryImageIndex] = useState<Set<string>>(new Set());
+  const [historyItemIdIndex, setHistoryItemIdIndex] = useState<Set<number>>(new Set());
+
+  const historyEntryReferencesItem = React.useCallback((entry: OutfitHistoryEntry, item: WardrobeItem): boolean => {
+    if (entry.source_wardrobe_item_id === item.id) {
+      return true;
+    }
+
+    const slotIds = [
+      entry.shirt_id,
+      entry.trouser_id,
+      entry.blazer_id,
+      entry.shoes_id,
+      entry.belt_id,
+    ];
+    if (slotIds.some((id) => id === item.id)) {
+      return true;
+    }
+
+    return !!item.image_data && !!entry.image_data && entry.image_data === item.image_data;
+  }, []);
 
   // Essential categories only - matches outfit suggestion structure
   const categories = ['shirt', 'trouser', 'blazer', 'shoes', 'belt', 'other'];
@@ -103,6 +131,55 @@ const Wardrobe: React.FC<WardrobeProps> = ({
       loadWardrobe(undefined, undefined, 1);
     }
   }, [loadWardrobe, loadSummary, initialCategory, setSelectedCategory]);
+
+  React.useEffect(() => {
+    let active = true;
+
+    const loadHistoryIndex = async () => {
+      if (wardrobeItems.length === 0) {
+        setHistoryImageIndex(new Set());
+        setHistoryItemIdIndex(new Set());
+        return;
+      }
+
+      try {
+        const allHistory = await ApiService.getOutfitHistory(100);
+        const index = new Set(
+          allHistory
+            .map((entry) => entry.image_data)
+            .filter((imageData): imageData is string => !!imageData)
+        );
+        const itemIdIndex = new Set(
+          allHistory.flatMap((entry) => {
+            const ids = [
+              entry.source_wardrobe_item_id,
+              entry.shirt_id,
+              entry.trouser_id,
+              entry.blazer_id,
+              entry.shoes_id,
+              entry.belt_id,
+            ];
+            return ids.filter((itemId): itemId is number => typeof itemId === 'number');
+          })
+        );
+        if (active) {
+          setHistoryImageIndex(index);
+          setHistoryItemIdIndex(itemIdIndex);
+        }
+      } catch (err) {
+        if (active) {
+          setHistoryImageIndex(new Set());
+          setHistoryItemIdIndex(new Set());
+        }
+      }
+    };
+
+    void loadHistoryIndex();
+
+    return () => {
+      active = false;
+    };
+  }, [wardrobeItems]);
 
   // Handle category filter
   const handleCategoryFilter = (category: string | null) => {
@@ -425,6 +502,67 @@ const Wardrobe: React.FC<WardrobeProps> = ({
     }
   };
 
+  const handleOpenHistorySuggestions = async (item: WardrobeItem) => {
+    if (!item.image_data) {
+      setSuggestionError("This item doesn't have an image. Please add an image first.");
+      return;
+    }
+
+    setHistoryLoadingForItem(item.id);
+    setHistorySuggestionsError(null);
+    setHistorySuggestions([]);
+    setHistorySourceItem(item);
+
+    try {
+      const allHistory = await ApiService.getOutfitHistory(100);
+      const matchingByItem = allHistory.filter((entry) => historyEntryReferencesItem(entry, item));
+
+      setHistorySuggestions(matchingByItem);
+      setShowHistorySuggestionsModal(true);
+      if (matchingByItem.length === 0) {
+        setHistorySuggestionsError('No history suggestions found for this wardrobe item yet.');
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load history suggestions';
+      setHistorySuggestionsError(errorMessage);
+      setShowHistorySuggestionsModal(true);
+    } finally {
+      setHistoryLoadingForItem(null);
+    }
+  };
+
+  const handleSelectHistorySuggestion = async (entry: OutfitHistoryEntry) => {
+    if (!historySourceItem?.image_data) {
+      setHistorySuggestionsError('Could not load source item image for this history suggestion.');
+      return;
+    }
+
+    try {
+      if (outfitController) {
+        const response = await fetch(`data:image/jpeg;base64,${historySourceItem.image_data}`);
+        const blob = await response.blob();
+        const file = new File([blob], `wardrobe-item-${historySourceItem.id}.jpg`, { type: 'image/jpeg' });
+
+        if (outfitController.setSourceWardrobeItemId) {
+          outfitController.setSourceWardrobeItemId(historySourceItem.id);
+        }
+        outfitController.setImage(file);
+        onSourceImageLoaded?.();
+      }
+
+      const suggestion = historyEntryToSuggestion(entry);
+      onSuggestionReady?.(suggestion);
+      setShowHistorySuggestionsModal(false);
+      setHistorySuggestions([]);
+      setHistorySuggestionsError(null);
+      setHistorySourceItem(null);
+      onNavigateToMain?.();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load selected history suggestion';
+      setHistorySuggestionsError(errorMessage);
+    }
+  };
+
   return (
     <div className="py-8 px-4">
       <div className="max-w-4xl mx-auto">
@@ -613,6 +751,23 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                             <>
                               ✨ Get AI Suggestion
                             </>
+                          )}
+                        </button>
+                      )}
+                      {(historyItemIdIndex.has(item.id) || (!!item.image_data && historyImageIndex.has(item.image_data))) && (
+                        <button
+                          onClick={() => handleOpenHistorySuggestions(item)}
+                          disabled={historyLoadingForItem === item.id}
+                          className="px-4 py-2 bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
+                          title="Show history suggestions for this item"
+                        >
+                          {historyLoadingForItem === item.id ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              Loading...
+                            </>
+                          ) : (
+                            <>📚 History Suggestions</>
                           )}
                         </button>
                       )}
@@ -1267,6 +1422,74 @@ const Wardrobe: React.FC<WardrobeProps> = ({
             setDuplicateItem(null);
           }}
         />
+
+        {/* History Suggestions Modal */}
+        {showHistorySuggestionsModal && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="rounded-2xl bg-slate-900 border border-white/10 shadow-2xl max-w-3xl w-full max-h-[85vh] overflow-y-auto backdrop-blur">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-2xl font-bold text-white">📚 History Suggestions</h2>
+                  <button
+                    onClick={() => {
+                      setShowHistorySuggestionsModal(false);
+                      setHistorySuggestions([]);
+                      setHistorySuggestionsError(null);
+                      setHistorySourceItem(null);
+                    }}
+                    className="text-slate-400 hover:text-white text-2xl"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {historySourceItem && (
+                  <p className="text-slate-300 mb-4">
+                    Showing history outfits for selected item: <span className="text-white font-medium capitalize">{historySourceItem.category}</span>
+                  </p>
+                )}
+
+                {historySuggestionsError && (
+                  <div className="bg-amber-500/20 border border-amber-400/30 rounded-xl p-3 mb-4 text-amber-100">
+                    {historySuggestionsError}
+                  </div>
+                )}
+
+                {historySuggestions.length > 0 ? (
+                  <div className="space-y-3">
+                    {historySuggestions.map((entry) => (
+                      <div key={entry.id} className="rounded-xl border border-white/10 bg-white/5 p-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0">
+                            <p className="text-xs text-slate-400">{new Date(entry.created_at).toLocaleString()}</p>
+                            <p className="mt-2 text-slate-100"><span className="font-medium">Shirt:</span> {entry.shirt}</p>
+                            <p className="text-slate-100"><span className="font-medium">Trouser:</span> {entry.trouser}</p>
+                            <p className="text-slate-100"><span className="font-medium">Blazer:</span> {entry.blazer}</p>
+                            <p className="text-slate-100"><span className="font-medium">Shoes:</span> {entry.shoes}</p>
+                            <p className="text-slate-100"><span className="font-medium">Belt:</span> {entry.belt}</p>
+                            <p className="mt-2 text-sm text-slate-300 line-clamp-3">{entry.reasoning}</p>
+                          </div>
+                          <button
+                            onClick={() => handleSelectHistorySuggestion(entry)}
+                            className="px-4 py-2 bg-teal-500 text-white rounded-xl font-semibold hover:bg-teal-600 transition-colors whitespace-nowrap"
+                          >
+                            Use This
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  !historySuggestionsError && (
+                    <div className="rounded-xl border border-white/10 bg-white/5 p-6 text-center text-slate-300">
+                      No matching history suggestions found for this item.
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

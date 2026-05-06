@@ -106,5 +106,12 @@ export interface OutfitHistoryEntry {
   shoes: string;
   belt: string;
   reasoning: string;
+  shirt_id?: number | null;
+  trouser_id?: number | null;
+  blazer_id?: number | null;
+  shoes_id?: number | null;
+  belt_id?: number | null;
+  source_wardrobe_item_id?: number | null;
+  matching_wardrobe_items?: MatchingWardrobeItems;
 }
 

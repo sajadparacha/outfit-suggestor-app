@@ -62,4 +62,29 @@ describe('historyEntryToSuggestion', () => {
 
     expect(suggestion.meta?.usedPrompt).toBe('Random outfit from your history');
   });
+
+  it('preserves wardrobe item ids and matching items from history', () => {
+    const entry: OutfitHistoryEntry = {
+      ...baseEntry,
+      shirt_id: 11,
+      trouser_id: 22,
+      blazer_id: 33,
+      shoes_id: 44,
+      belt_id: 55,
+      source_wardrobe_item_id: 11,
+      matching_wardrobe_items: {
+        shirt: [{ id: 11, category: 'shirt', color: 'White', description: 'Oxford', image_data: 'shirt-img' }],
+        trouser: [{ id: 22, category: 'trouser', color: 'Navy', description: 'Chino', image_data: 'trouser-img' }],
+        blazer: [],
+        shoes: [],
+        belt: [],
+      },
+    };
+
+    const suggestion = historyEntryToSuggestion(entry);
+    expect(suggestion.shirt_id).toBe(11);
+    expect(suggestion.trouser_id).toBe(22);
+    expect(suggestion.source_wardrobe_item_id).toBe(11);
+    expect(suggestion.matching_wardrobe_items?.shirt[0]?.id).toBe(11);
+  });
 });

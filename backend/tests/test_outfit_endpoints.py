@@ -139,6 +139,14 @@ class TestOutfitEndpoints:
         data = response.json()
         assert isinstance(data, list)
         assert len(data) > 0
+        first = data[0]
+        assert "shirt_id" in first
+        assert "trouser_id" in first
+        assert "blazer_id" in first
+        assert "shoes_id" in first
+        assert "belt_id" in first
+        assert "source_wardrobe_item_id" in first
+        assert "matching_wardrobe_items" in first
     
     def test_get_outfit_history_with_limit(self, client, auth_headers):
         """Test getting outfit history with limit parameter"""

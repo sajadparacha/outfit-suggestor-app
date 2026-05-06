@@ -102,6 +102,59 @@ class OutfitController:
                 "description": selected_item.description,
                 "image_data": selected_item.image_data
             })
+
+    def _serialize_wardrobe_item(self, item: WardrobeItem) -> Dict:
+        return {
+            "id": item.id,
+            "category": item.category,
+            "color": item.color,
+            "description": item.description,
+            "image_data": item.image_data,
+        }
+
+    def _build_history_matching_items(
+        self,
+        db: Session,
+        user_id: int,
+        entry: object,
+    ) -> Dict[str, List[Dict]]:
+        matching_items: Dict[str, List[Dict]] = {
+            "shirt": [],
+            "trouser": [],
+            "blazer": [],
+            "shoes": [],
+            "belt": [],
+        }
+        selected_ids = {
+            "shirt": getattr(entry, "shirt_id", None),
+            "trouser": getattr(entry, "trouser_id", None),
+            "blazer": getattr(entry, "blazer_id", None),
+            "shoes": getattr(entry, "shoes_id", None),
+            "belt": getattr(entry, "belt_id", None),
+        }
+        id_values = [item_id for item_id in selected_ids.values() if item_id]
+        if not id_values:
+            return matching_items
+
+        items = (
+            db.query(WardrobeItem)
+            .filter(WardrobeItem.user_id == user_id)
+            .filter(WardrobeItem.id.in_(id_values))
+            .all()
+        )
+        items_by_id = {item.id: item for item in items}
+
+        for category, item_id in selected_ids.items():
+            if not item_id:
+                continue
+            wardrobe_item = items_by_id.get(item_id)
+            if not wardrobe_item:
+                continue
+            normalized_item_category = self._normalize_item_category_for_outfit(wardrobe_item.category or "")
+            if normalized_item_category == category:
+                matching_items[category] = [self._serialize_wardrobe_item(wardrobe_item)]
+
+        return matching_items
     
     async def suggest_outfit(
         self,
@@ -544,9 +597,21 @@ class OutfitController:
             # Format response
             result = []
             for entry in history:
+                created_at = getattr(entry, "created_at", None)
+                if hasattr(created_at, "isoformat"):
+                    created_at_str = created_at.isoformat()
+                elif created_at is not None:
+                    created_at_str = str(created_at)
+                else:
+                    created_at_str = ""
+                matching_items = self._build_history_matching_items(
+                    db=db,
+                    user_id=current_user.id,
+                    entry=entry,
+                )
                 result.append({
                     "id": entry.id,
-                    "created_at": entry.created_at.isoformat(),
+                    "created_at": created_at_str,
                     "text_input": entry.text_input,
                     "image_data": entry.image_data,
                     "model_image": getattr(entry, 'model_image', None),
@@ -555,7 +620,14 @@ class OutfitController:
                     "blazer": entry.blazer,
                     "shoes": entry.shoes,
                     "belt": entry.belt,
-                    "reasoning": entry.reasoning
+                    "reasoning": entry.reasoning,
+                    "shirt_id": getattr(entry, "shirt_id", None),
+                    "trouser_id": getattr(entry, "trouser_id", None),
+                    "blazer_id": getattr(entry, "blazer_id", None),
+                    "shoes_id": getattr(entry, "shoes_id", None),
+                    "belt_id": getattr(entry, "belt_id", None),
+                    "source_wardrobe_item_id": getattr(entry, "source_wardrobe_item_id", None),
+                    "matching_wardrobe_items": matching_items,
                 })
             
             return result

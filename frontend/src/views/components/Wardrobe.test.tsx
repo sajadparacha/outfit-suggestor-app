@@ -1,7 +1,8 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Wardrobe from './Wardrobe';
 import type { WardrobeItem } from '../../models/WardrobeModels';
+import ApiService from '../../services/ApiService';
 
 // Mock state: shared array so we can test both empty and with-items in one file
 const mockWardrobeItems: WardrobeItem[] = [];
@@ -95,5 +96,162 @@ describe('Wardrobe page', () => {
     expect(inputs.length).toBeGreaterThan(0);
     const firstInput = inputs[0] as HTMLInputElement;
     expect(firstInput.accept).toBe('image/jpeg,image/jpg,image/png,image/webp');
+  });
+
+  it('loads history suggestions for an item and allows selecting one', async () => {
+    const itemWithImage: WardrobeItem = {
+      ...mockWardrobeItem,
+      image_data: 'base64-image-a',
+    };
+    mockWardrobeItems.push(itemWithImage);
+
+    const onSuggestionReady = jest.fn();
+    const onNavigateToMain = jest.fn();
+    const onSourceImageLoaded = jest.fn();
+    const setImage = jest.fn();
+    const setSourceWardrobeItemId = jest.fn();
+
+    jest.spyOn(ApiService, 'getOutfitHistory').mockResolvedValue([
+      {
+        id: 101,
+        created_at: '2026-05-04T09:00:00.000Z',
+        text_input: 'Office casual',
+        image_data: 'base64-image-a',
+        model_image: null,
+        shirt: 'White oxford shirt',
+        trouser: 'Navy chinos',
+        blazer: 'Grey blazer',
+        shoes: 'Brown loafers',
+        belt: 'Brown leather belt',
+        reasoning: 'Balanced smart-casual look for work.',
+      },
+    ]);
+
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      blob: async () => new Blob(['image'], { type: 'image/jpeg' }),
+    } as Response);
+
+    render(
+      <Wardrobe
+        onSuggestionReady={onSuggestionReady}
+        onNavigateToMain={onNavigateToMain}
+        onSourceImageLoaded={onSourceImageLoaded}
+        outfitController={{
+          setImage,
+          setSourceWardrobeItemId,
+          getSuggestion: jest.fn(),
+          loading: false,
+          error: null,
+          showDuplicateModal: false,
+          handleUseCachedSuggestion: jest.fn(),
+        }}
+      />
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /History Suggestions/i }));
+    expect(await screen.findByRole('heading', { name: /History Suggestions/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Use This/i }));
+
+    await waitFor(() => {
+      expect(setSourceWardrobeItemId).toHaveBeenCalledWith(1);
+      expect(setImage).toHaveBeenCalledTimes(1);
+      expect(onSourceImageLoaded).toHaveBeenCalledTimes(1);
+      expect(onSuggestionReady).toHaveBeenCalledTimes(1);
+      expect(onNavigateToMain).toHaveBeenCalledTimes(1);
+    });
+
+    fetchSpy.mockRestore();
+  });
+
+  it('does not show history suggestions button when item has no history', async () => {
+    const itemWithImage: WardrobeItem = {
+      ...mockWardrobeItem,
+      image_data: 'base64-image-no-history',
+    };
+    mockWardrobeItems.push(itemWithImage);
+
+    jest.spyOn(ApiService, 'getOutfitHistory').mockResolvedValue([
+      {
+        id: 202,
+        created_at: '2026-05-04T10:00:00.000Z',
+        text_input: 'Different item',
+        image_data: 'other-image-data',
+        model_image: null,
+        shirt: 'Black polo',
+        trouser: 'Beige chinos',
+        blazer: 'None',
+        shoes: 'White sneakers',
+        belt: 'Brown belt',
+        reasoning: 'Different source image from current wardrobe item.',
+      },
+    ]);
+
+    render(<Wardrobe />);
+
+    await waitFor(() => {
+      expect(ApiService.getOutfitHistory).toHaveBeenCalled();
+    });
+    expect(screen.queryByRole('button', { name: /History Suggestions/i })).not.toBeInTheDocument();
+  });
+
+  it('shows history suggestions button when history links by source_wardrobe_item_id', async () => {
+    const itemWithImage: WardrobeItem = {
+      ...mockWardrobeItem,
+      id: 99,
+      image_data: 'current-item-image',
+    };
+    mockWardrobeItems.push(itemWithImage);
+
+    jest.spyOn(ApiService, 'getOutfitHistory').mockResolvedValue([
+      {
+        id: 303,
+        created_at: '2026-05-04T12:00:00.000Z',
+        text_input: 'Linked by source item id',
+        image_data: 'different-image-data',
+        model_image: null,
+        shirt: 'Blue shirt',
+        trouser: 'Gray trousers',
+        blazer: 'Navy blazer',
+        shoes: 'Black shoes',
+        belt: 'Black belt',
+        reasoning: 'Linked entry',
+        source_wardrobe_item_id: 99,
+      },
+    ]);
+
+    render(<Wardrobe />);
+
+    expect(await screen.findByRole('button', { name: /History Suggestions/i })).toBeInTheDocument();
+  });
+
+  it('shows history suggestions button when history links by shirt_id', async () => {
+    const shirtItem: WardrobeItem = {
+      ...mockWardrobeItem,
+      id: 501,
+      category: 'shirt',
+      image_data: null,
+    };
+    mockWardrobeItems.push(shirtItem);
+
+    jest.spyOn(ApiService, 'getOutfitHistory').mockResolvedValue([
+      {
+        id: 404,
+        created_at: '2026-05-06T09:00:00.000Z',
+        text_input: 'linked by shirt id',
+        image_data: null,
+        model_image: null,
+        shirt: 'Blue oxford shirt',
+        trouser: 'Gray chinos',
+        blazer: 'Navy blazer',
+        shoes: 'Black shoes',
+        belt: 'Black belt',
+        reasoning: 'Linked via shirt_id.',
+        shirt_id: 501,
+      },
+    ]);
+
+    render(<Wardrobe />);
+
+    expect(await screen.findByRole('button', { name: /History Suggestions/i })).toBeInTheDocument();
   });
 });

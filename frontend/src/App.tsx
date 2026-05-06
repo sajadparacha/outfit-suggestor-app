@@ -260,14 +260,6 @@ function App() {
     showToast('Logged out successfully', 'success');
   };
 
-  const handleQuickStyle = (style: string, occasion?: string) => {
-    setFilters({
-      ...filters,
-      style,
-      occasion: occasion ?? filters.occasion,
-    });
-  };
-
   // Show loading state while checking authentication
   if (authLoading) {
     return (
@@ -508,7 +500,7 @@ function App() {
             </div>
 
             {/* Main Content Area */}
-            <div className="xl:col-span-6">
+            <div className="xl:col-span-9">
               <OutfitPreview
                 suggestion={currentSuggestion}
                 loading={loading}
@@ -570,62 +562,6 @@ function App() {
               />
             </div>
 
-            <aside className="xl:col-span-3">
-              <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)] backdrop-blur xl:sticky xl:top-6">
-                <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">AI Insights</h3>
-                <p className="mt-2 text-sm text-slate-200">Sharper combinations with less contrast noise and better season-context balancing.</p>
-
-                <div className="mt-4 rounded-2xl border border-teal-400/25 bg-teal-500/10 p-3 text-sm text-teal-100">
-                  Optimized for Business Casual - Spring
-                </div>
-
-                <div className="mt-5">
-                  <h4 className="text-sm font-medium text-white">Try Another Style</h4>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleQuickStyle('Casual', 'casual')}
-                      className="rounded-full border border-white/15 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-200 transition hover:border-teal-300/70 hover:bg-teal-500/10"
-                    >
-                      Casual
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleQuickStyle('Businees Casual', 'business')}
-                      className="rounded-full border border-white/15 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-200 transition hover:border-teal-300/70 hover:bg-teal-500/10"
-                    >
-                      Business
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleQuickStyle('modern')}
-                      className="rounded-full border border-white/15 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-200 transition hover:border-teal-300/70 hover:bg-teal-500/10"
-                    >
-                      Smart Casual
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mt-5 space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => handleNextSuggestion()}
-                    disabled={!image || loading}
-                    className="w-full rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cyan-500/20 transition hover:from-teal-400 hover:to-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Regenerate Outfit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleLike}
-                    disabled={!currentSuggestion}
-                    className="w-full rounded-xl border border-white/15 bg-white/[0.03] px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:border-emerald-300/60 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Like Outfit
-                  </button>
-                </div>
-              </div>
-            </aside>
           </div>
         )}
 
