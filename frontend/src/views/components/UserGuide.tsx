@@ -101,7 +101,7 @@ const UserGuide: React.FC = () => {
     { id: 'quick-start', label: 'Quick start', icon: '🚀' },
     { id: 'suggestion-flow', label: 'Get outfit suggestions', icon: '🎯' },
     { id: 'results', label: 'Your results', icon: '✨' },
-    { id: 'wardrobe-analysis', label: 'Analyze my wardrobe', icon: '🧠' },
+    { id: 'wardrobe-analysis', label: 'Insights & wardrobe analysis', icon: '🧠' },
     { id: 'wardrobe', label: 'Wardrobe', icon: '👔' },
     { id: 'random-history', label: 'Random & history', icon: '🎲' },
     { id: 'account', label: 'Account', icon: '⚙️' },
@@ -253,8 +253,9 @@ const UserGuide: React.FC = () => {
         >
           <StepList
             items={[
-              'In Get Suggestion, set occasion, season, style, and optional notes in Preferences.',
-              'Open the Wardrobe tab and click Analyze My Wardrobe in the header.',
+              'Open the Insights tab to use the dedicated wardrobe analysis workspace.',
+              'Set occasion, season, style, and optional notes in Analysis Preferences.',
+              'You can also start from Wardrobe by clicking Analyze My Wardrobe in the header.',
               'Choose Free Analysis (rules-based) or Premium Analysis (ChatGPT-powered).',
               'The app locks during analysis and shows a progress message, similar to Get AI Suggestion.',
               'Review category cards for owned colors/styles, missing colors/styles, and buy-next recommendations.',

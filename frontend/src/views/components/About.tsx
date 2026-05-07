@@ -50,7 +50,8 @@ const About: React.FC = () => {
               to complete your look. If you upload a combination, it identifies what's already there 
               and suggests the missing elements. Choose your suggestion mode: <strong className="text-white">use wardrobe only</strong> 
               (AI suggests outfits only from items in your wardrobe) or <strong className="text-white">free generation</strong> 
-              (AI can suggest any outfit). The app also includes <strong className="text-white">Analyze My Wardrobe</strong> with two modes:
+              (AI can suggest any outfit). The app also includes a dedicated <strong className="text-white">Insights</strong> page for
+              <strong className="text-white"> Analyze My Wardrobe</strong> with two modes:
               <strong className="text-white"> Free Analysis</strong> (rules-based) and <strong className="text-white">Premium Analysis</strong> (ChatGPT-powered).
               The app features a <strong className="text-white">smart wardrobe management system</strong> that learns your collection and makes recommendations practical and personalized.
             </p>
@@ -106,8 +107,8 @@ const About: React.FC = () => {
                 <div className="flex items-start space-x-3">
                   <span className="text-2xl">🧠</span>
                   <div>
-                    <h4 className="font-semibold text-white">Analyze My Wardrobe</h4>
-                    <p className="text-sm text-slate-300">Run category-wise gap analysis (shirts, trousers, blazers, shoes, belts) to see owned colors/styles, missing pieces, and buy-next recommendations for your selected occasion, season, and style.</p>
+                    <h4 className="font-semibold text-white">Insights: Wardrobe Analysis</h4>
+                    <p className="text-sm text-slate-300">Run category-wise gap analysis (shirts, trousers, blazers, shoes, belts) on the dedicated Insights page, set occasion/season/style/notes, and see owned colors/styles, missing pieces, and buy-next recommendations.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
