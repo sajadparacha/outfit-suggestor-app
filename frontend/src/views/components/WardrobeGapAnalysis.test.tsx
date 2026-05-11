@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import WardrobeGapAnalysis from './WardrobeGapAnalysis';
 import { WardrobeGapAnalysisResponse } from '../../models/WardrobeModels';
 
@@ -33,6 +33,9 @@ describe('WardrobeGapAnalysis', () => {
     expect(screen.getByText(/Best next purchases are in blazer and shoes/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Shirt/i })).toBeInTheDocument();
     expect(screen.getByText(/Add a black shirt for better office coverage/i)).toBeInTheDocument();
+    expect(screen.getByText(/Categories analyzed/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/^1$/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Top buy-next category/i)).toBeInTheDocument();
   });
 
   it('renders admin cost and prompt/response panels when available', () => {
@@ -76,5 +79,47 @@ describe('WardrobeGapAnalysis', () => {
     expect(screen.getByText(/AI Prompt & Response \(Admin\)/i)).toBeInTheDocument();
     expect(screen.getByText(/full prompt text/i)).toBeInTheDocument();
     expect(screen.getByText(/\{"analysis":"full"\}/i)).toBeInTheDocument();
+    expect(screen.getByText(/Admin diagnostics/i)).toBeInTheDocument();
+  });
+
+  it('toggles category details and opens men-focused image search on right click', () => {
+    const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
+    const result: WardrobeGapAnalysisResponse = {
+      occasion: 'casual',
+      season: 'summer',
+      style: 'modern',
+      overall_summary: 'Add brighter tones.',
+      analysis_by_category: {
+        shirt: {
+          category: 'shirt',
+          owned_colors: ['white'],
+          owned_styles: ['solid'],
+          missing_colors: ['pastel pink'],
+          missing_styles: ['linen'],
+          recommended_purchases: ['Pastel pink linen shirt'],
+          item_count: 1,
+        },
+      },
+    };
+
+    render(<WardrobeGapAnalysis result={result} loading={false} error={null} />);
+
+    // Details are initially hidden.
+    expect(screen.queryByText(/Owned Colors/i)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /view details/i }));
+    expect(screen.getByText(/Owned Colors/i)).toBeInTheDocument();
+
+    const missingColorChip = screen.getAllByRole('button', {
+      name: /right click to search images for Pastel Pink Shirt/i,
+    })[0];
+    fireEvent.contextMenu(missingColorChip);
+
+    expect(openSpy).toHaveBeenCalledTimes(1);
+    const calledUrl = String(openSpy.mock.calls[0][0]);
+    expect(calledUrl).toContain('tbm=isch');
+    expect(calledUrl).toContain(encodeURIComponent('men pastel pink Shirt outfit menswear'));
+
+    openSpy.mockRestore();
   });
 });

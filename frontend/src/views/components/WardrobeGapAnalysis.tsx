@@ -39,6 +39,42 @@ const renderChips = (items: string[], emptyLabel: string, tone: 'neutral' | 'dan
   );
 };
 
+const renderMissingColorSearchChips = (
+  category: string,
+  colors: string[],
+  emptyLabel: string
+) => {
+  if (colors.length === 0) {
+    return <span className="text-xs text-slate-400">{emptyLabel}</span>;
+  }
+
+  const toneClass = 'bg-amber-500/15 text-amber-200 border-amber-300/25 hover:bg-amber-500/25';
+
+  const handleContextMenu = (event: React.MouseEvent, color: string) => {
+    event.preventDefault();
+    const query = `men ${color} ${prettyLabel(category)} outfit menswear`;
+    const url = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(query)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {colors.map((color) => (
+        <button
+          key={color}
+          type="button"
+          onContextMenu={(event) => handleContextMenu(event, color)}
+          className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${toneClass}`}
+          title="Right-click to search Google Images"
+          aria-label={`Right click to search images for ${color} ${prettyLabel(category)}`}
+        >
+          {prettyLabel(color)}
+        </button>
+      ))}
+    </div>
+  );
+};
+
 const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
   result,
   loading,
@@ -228,7 +264,6 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
                     <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-100">
                       {prettyLabel(entry.category)}
                     </h4>
-                    <span className="text-xs text-slate-400">{entry.item_count} item(s)</span>
                   </div>
 
                   <div className="space-y-3">
@@ -236,7 +271,10 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
                       <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">
                         Top missing colors
                       </p>
-                      {renderChips(topMissingColors, 'Color coverage looks good.', 'danger')}
+                      {renderMissingColorSearchChips(entry.category, topMissingColors, 'Color coverage looks good.')}
+                      {topMissingColors.length > 0 && (
+                        <p className="mt-1 text-[11px] text-amber-300/80">Right-click a color chip to open image search.</p>
+                      )}
                     </div>
                     <div>
                       <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">
@@ -273,7 +311,10 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
                         </div>
                         <div>
                           <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">Missing Colors</p>
-                          {renderChips(entry.missing_colors, 'Color coverage looks good.', 'danger')}
+                          {renderMissingColorSearchChips(entry.category, entry.missing_colors, 'Color coverage looks good.')}
+                          {entry.missing_colors.length > 0 && (
+                            <p className="mt-1 text-[11px] text-amber-300/80">Right-click a color chip to open image search.</p>
+                          )}
                         </div>
                         <div>
                           <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">Owned Styles</p>
