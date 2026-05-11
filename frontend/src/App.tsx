@@ -705,32 +705,19 @@ function App() {
                       Understand wardrobe gaps by category and plan what to buy next.
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={handleAnalyzeWardrobe}
-                      disabled={wardrobeGapLoading}
-                      className={`px-4 py-2.5 rounded-xl font-semibold transition-all ${
-                        wardrobeGapLoading
-                          ? 'cursor-not-allowed bg-white/10 text-slate-500 border border-white/10'
-                          : 'bg-indigo-500 text-white hover:bg-indigo-600'
-                      }`}
-                    >
-                      {wardrobeGapLoading ? 'Analyzing...' : 'Run Analysis'}
-                    </button>
-                    <button
-                      onClick={() => setCurrentView('wardrobe')}
-                      className="px-4 py-2.5 rounded-xl font-medium bg-white/10 text-slate-200 hover:bg-white/20 border border-white/15 transition-colors"
-                    >
-                      Open Wardrobe
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => setCurrentView('wardrobe')}
+                    className="px-4 py-2.5 rounded-xl font-medium bg-white/10 text-slate-200 hover:bg-white/20 border border-white/15 transition-colors w-fit"
+                  >
+                    Open Wardrobe
+                  </button>
                 </div>
               </div>
 
               <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-6 mb-6">
                 <h3 className="text-lg font-semibold text-white mb-1">Analysis Preferences</h3>
                 <p className="text-sm text-slate-300 mb-4">
-                  Set the same parameters used on Get Suggestion before running wardrobe analysis.
+                  Tell us your context so the analysis matches your event, season, and style needs.
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -778,7 +765,7 @@ function App() {
                       aria-label="Select style for wardrobe insights"
                     >
                       <option value="">Select style</option>
-                      <option value="Businees Casual">Businees Casual</option>
+                      <option value="Businees Casual">Business Casual</option>
                       <option value="Casual">Casual</option>
                       <option value="modern">Modern</option>
                       <option value="classic">Classic</option>
@@ -802,13 +789,26 @@ function App() {
                   />
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleClearInsightsPreferences}
-                  className="mt-4 px-4 py-2.5 rounded-xl font-medium bg-white/10 text-slate-200 hover:bg-white/20 border border-white/15 transition-colors"
-                >
-                  Clear Preferences
-                </button>
+                <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={handleClearInsightsPreferences}
+                    className="px-4 py-2.5 rounded-xl font-medium bg-white/10 text-slate-200 hover:bg-white/20 border border-white/15 transition-colors"
+                  >
+                    Clear
+                  </button>
+                  <button
+                    onClick={handleAnalyzeWardrobe}
+                    disabled={wardrobeGapLoading}
+                    className={`px-4 py-2.5 rounded-xl font-semibold transition-all ${
+                      wardrobeGapLoading
+                        ? 'cursor-not-allowed bg-white/10 text-slate-500 border border-white/10'
+                        : 'bg-indigo-500 text-white hover:bg-indigo-600'
+                    }`}
+                  >
+                    {wardrobeGapLoading ? 'Analyzing...' : 'Analyze My Wardrobe'}
+                  </button>
+                </div>
               </div>
 
               <WardrobeGapAnalysis
