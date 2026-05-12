@@ -14,7 +14,7 @@ class AuthService: ObservableObject {
     
     @Published var currentUser: User?
     @Published var authToken: String?
-    @Published var isAuthenticated: Bool { authToken != nil && currentUser != nil }
+    var isAuthenticated: Bool { authToken != nil && currentUser != nil }
     
     private init() {
         self.baseURL = "http://localhost:8001"

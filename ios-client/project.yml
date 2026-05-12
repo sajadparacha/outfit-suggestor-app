@@ -1,0 +1,24 @@
+name: OutfitSuggestor
+options:
+  minimumXcodeGenVersion: 2.45.0
+  deploymentTarget:
+    iOS: 16.0
+packages: {}
+targets:
+  OutfitSuggestor:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: OutfitSuggestor
+        excludes:
+          - "**/*.md"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.sajad.outfitsuggestor
+        INFOPLIST_FILE: OutfitSuggestor/Resources/Info.plist
+        SWIFT_VERSION: 5.0
+        TARGETED_DEVICE_FAMILY: "1,2"
+        DEVELOPMENT_TEAM: ""
+    scheme:
+      testTargets: []

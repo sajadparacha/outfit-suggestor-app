@@ -79,7 +79,7 @@ struct WardrobeListView: View {
                                 }
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                Button(role: .destructive) { deleteItem(id: item.id) } {
+                                SwiftUI.Button(role: .destructive, action: { deleteItem(id: item.id) }) {
                                     Label("Delete", systemImage: "trash")
                                 }
                             }
