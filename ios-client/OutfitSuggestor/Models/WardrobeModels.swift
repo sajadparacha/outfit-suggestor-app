@@ -21,6 +21,39 @@ struct WardrobeItem: Codable, Identifiable {
     let wear_count: Int
     let created_at: String
     let updated_at: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case category
+        case name
+        case description
+        case color
+        case brand
+        case size
+        case image_data
+        case tags
+        case condition
+        case wear_count
+        case created_at
+        case updated_at
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(Int.self, forKey: .id)
+        category = try c.decodeIfPresent(String.self, forKey: .category) ?? "other"
+        name = try c.decodeIfPresent(String.self, forKey: .name)
+        description = try c.decodeIfPresent(String.self, forKey: .description)
+        color = try c.decodeIfPresent(String.self, forKey: .color)
+        brand = try c.decodeIfPresent(String.self, forKey: .brand)
+        size = try c.decodeIfPresent(String.self, forKey: .size)
+        image_data = try c.decodeIfPresent(String.self, forKey: .image_data)
+        tags = try c.decodeIfPresent(String.self, forKey: .tags)
+        condition = try c.decodeIfPresent(String.self, forKey: .condition)
+        wear_count = try c.decodeIfPresent(Int.self, forKey: .wear_count) ?? 0
+        created_at = try c.decodeIfPresent(String.self, forKey: .created_at) ?? ""
+        updated_at = try c.decodeIfPresent(String.self, forKey: .updated_at) ?? ""
+    }
 }
 
 struct WardrobeSummary: Codable {

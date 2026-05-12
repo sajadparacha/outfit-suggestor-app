@@ -11,6 +11,8 @@ struct WardrobeListView: View {
     @State private var response: WardrobeListResponse?
     @State private var isLoading = true
     @State private var errorMessage: String?
+    @State private var hasLoaded = false
+    @State private var isRequestInFlight = false
     @State private var showAddSheet = false
     @State private var categoryFilter = "All"
     @State private var searchText = ""
@@ -36,7 +38,7 @@ struct WardrobeListView: View {
             } else if let err = errorMessage {
                 VStack {
                     Text(err).foregroundColor(.red).padding()
-                    Button("Retry") { load() }
+                    Button("Retry") { Task { await load() } }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let resp = response, resp.items.isEmpty {
@@ -55,7 +57,7 @@ struct WardrobeListView: View {
                             ForEach(wardrobeCategoryOptions, id: \.self) { Text($0).tag($0) }
                         }
                         .pickerStyle(.menu)
-                        .onChange(of: categoryFilter) { _ in load() }
+                        .onChange(of: categoryFilter) { _ in Task { await load() } }
                     }
                     .padding(.horizontal)
                     
@@ -67,7 +69,7 @@ struct WardrobeListView: View {
                     List {
                         ForEach(filteredItems) { item in
                             HStack {
-                                NavigationLink(destination: WardrobeFormView(item: item, onSaved: { load() }, onCancel: { })) {
+                                NavigationLink(destination: WardrobeFormView(item: item, onSaved: { Task { await load() } }, onCancel: { })) {
                                     WardrobeRowView(item: item)
                                 }
                                 if let onGet = onGetSuggestionFromItem {
@@ -96,9 +98,13 @@ struct WardrobeListView: View {
                 }
             }
         }
-        .onAppear { load() }
+        .onAppear {
+            guard !hasLoaded else { return }
+            hasLoaded = true
+            Task { await load() }
+        }
         .sheet(isPresented: $showAddSheet) {
-            WardrobeFormView(item: nil, onSaved: { showAddSheet = false; load() }, onCancel: { showAddSheet = false })
+            WardrobeFormView(item: nil, onSaved: { showAddSheet = false; Task { await load() } }, onCancel: { showAddSheet = false })
         }
     }
 
@@ -106,30 +112,28 @@ struct WardrobeListView: View {
         Task {
             do {
                 try await APIService.shared.deleteWardrobeItem(id: id)
-                await MainActor.run { load() }
+                await MainActor.run { Task { await load() } }
             } catch {
                 await MainActor.run { errorMessage = error.localizedDescription }
             }
         }
     }
 
-    private func load() {
+    @MainActor
+    private func load() async {
+        guard !isRequestInFlight else { return }
+        isRequestInFlight = true
         isLoading = true
         errorMessage = nil
         let category: String? = (categoryFilter == "All") ? nil : categoryFilter
-        Task {
-            do {
-                let r = try await APIService.shared.getWardrobe(category: category, limit: 100)
-                await MainActor.run {
-                    response = r
-                    isLoading = false
-                }
-            } catch {
-                await MainActor.run {
-                    errorMessage = error.localizedDescription
-                    isLoading = false
-                }
-            }
+        defer { isRequestInFlight = false }
+        do {
+            let r = try await APIService.shared.getWardrobe(category: category, limit: 100)
+            response = r
+            isLoading = false
+        } catch {
+            errorMessage = error.localizedDescription
+            isLoading = false
         }
     }
 }

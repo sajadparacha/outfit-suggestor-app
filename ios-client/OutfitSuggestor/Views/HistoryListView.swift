@@ -10,6 +10,8 @@ struct HistoryListView: View {
     @State private var entries: [OutfitHistoryEntry] = []
     @State private var isLoading = true
     @State private var errorMessage: String?
+    @State private var hasLoaded = false
+    @State private var isRequestInFlight = false
     @State private var searchText = ""
     @State private var sortNewestFirst = true
     @State private var fullScreenImage: UIImage?
@@ -44,7 +46,7 @@ struct HistoryListView: View {
             } else if let err = errorMessage {
                 VStack {
                     Text(err).foregroundColor(.red).padding()
-                    Button("Retry") { load() }
+                    Button("Retry") { Task { await load() } }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if entries.isEmpty {
@@ -88,7 +90,11 @@ struct HistoryListView: View {
             }
         }
         .navigationTitle("History")
-        .onAppear { load() }
+        .onAppear {
+            guard !hasLoaded else { return }
+            hasLoaded = true
+            Task { await load() }
+        }
         .fullScreenCover(isPresented: Binding(get: { fullScreenImage != nil }, set: { if !$0 { fullScreenImage = nil } })) {
             if let img = fullScreenImage {
                 FullScreenImageView(image: img) {
@@ -98,22 +104,20 @@ struct HistoryListView: View {
         }
     }
     
-    private func load() {
+    @MainActor
+    private func load() async {
+        guard !isRequestInFlight else { return }
+        isRequestInFlight = true
         isLoading = true
         errorMessage = nil
-        Task {
-            do {
-                let list = try await APIService.shared.getOutfitHistory(limit: 50)
-                await MainActor.run {
-                    entries = list
-                    isLoading = false
-                }
-            } catch {
-                await MainActor.run {
-                    errorMessage = error.localizedDescription
-                    isLoading = false
-                }
-            }
+        defer { isRequestInFlight = false }
+        do {
+            let list = try await APIService.shared.getOutfitHistory(limit: 15)
+            entries = list
+            isLoading = false
+        } catch {
+            errorMessage = error.localizedDescription
+            isLoading = false
         }
     }
     
@@ -137,25 +141,27 @@ struct HistoryRowView: View {
         HStack(alignment: .center, spacing: 8) {
             if let onView = onViewImage {
                 HStack(spacing: 6) {
-                    if let b64 = entry.image_data, let data = Data(base64Encoded: b64), let img = UIImage(data: data) {
-                        Button(action: { onView(img) }) {
-                            Image(uiImage: img)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 44, height: 44)
-                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                    if entry.image_data != nil {
+                        Button(action: {
+                            if let b64 = entry.image_data, let data = Data(base64Encoded: b64), let img = UIImage(data: data) {
+                                onView(img)
+                            }
+                        }) {
+                            Label("Input", systemImage: "photo")
+                                .font(.caption)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.bordered)
                     }
-                    if let b64 = entry.model_image, let data = Data(base64Encoded: b64), let img = UIImage(data: data) {
-                        Button(action: { onView(img) }) {
-                            Image(uiImage: img)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 44, height: 44)
-                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                    if entry.model_image != nil {
+                        Button(action: {
+                            if let b64 = entry.model_image, let data = Data(base64Encoded: b64), let img = UIImage(data: data) {
+                                onView(img)
+                            }
+                        }) {
+                            Label("Model", systemImage: "person.crop.square")
+                                .font(.caption)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.bordered)
                     }
                 }
             }

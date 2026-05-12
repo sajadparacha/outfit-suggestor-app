@@ -131,12 +131,17 @@ class APIService {
         guard let url = URL(string: "\(baseURL)/api/outfit-history?limit=\(limit)") else { throw APIServiceError.invalidURL }
         var request = URLRequest(url: url)
         setAuthIfNeeded(&request)
+        request.timeoutInterval = 20
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
             if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
             throw APIServiceError.invalidResponse
         }
-        return try JSONDecoder().decode([OutfitHistoryEntry].self, from: data)
+        do {
+            return try JSONDecoder().decode([OutfitHistoryEntry].self, from: data)
+        } catch {
+            throw APIServiceError.serverError("History decode failed: \(error.localizedDescription)")
+        }
     }
     
     func deleteOutfitHistory(entryId: Int) async throws {
@@ -158,12 +163,17 @@ class APIService {
         guard let url = comp.url else { throw APIServiceError.invalidURL }
         var request = URLRequest(url: url)
         setAuthIfNeeded(&request)
+        request.timeoutInterval = 20
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
             if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
             throw APIServiceError.invalidResponse
         }
-        return try JSONDecoder().decode(WardrobeListResponse.self, from: data)
+        do {
+            return try JSONDecoder().decode(WardrobeListResponse.self, from: data)
+        } catch {
+            throw APIServiceError.serverError("Wardrobe decode failed: \(error.localizedDescription)")
+        }
     }
     
     func getWardrobeSummary() async throws -> WardrobeSummary {
