@@ -17,7 +17,7 @@ class AuthService: ObservableObject {
     var isAuthenticated: Bool { authToken != nil && currentUser != nil }
     
     private init() {
-        self.baseURL = "http://localhost:8001"
+        self.baseURL = AppConfig.apiBaseURL
         self.session = URLSession.shared
         self.authToken = TokenStorage.load()
         if authToken != nil {

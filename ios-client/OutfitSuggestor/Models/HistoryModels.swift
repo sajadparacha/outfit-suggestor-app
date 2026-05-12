@@ -48,6 +48,32 @@ struct OutfitHistoryEntry: Codable, Identifiable {
         belt = try c.decodeIfPresent(String.self, forKey: .belt) ?? ""
         reasoning = try c.decodeIfPresent(String.self, forKey: .reasoning) ?? ""
     }
+
+    init(
+        id: Int,
+        created_at: String,
+        text_input: String?,
+        image_data: String?,
+        model_image: String?,
+        shirt: String,
+        trouser: String,
+        blazer: String,
+        shoes: String,
+        belt: String,
+        reasoning: String
+    ) {
+        self.id = id
+        self.created_at = created_at
+        self.text_input = text_input
+        self.image_data = image_data
+        self.model_image = model_image
+        self.shirt = shirt
+        self.trouser = trouser
+        self.blazer = blazer
+        self.shoes = shoes
+        self.belt = belt
+        self.reasoning = reasoning
+    }
 }
 
 extension OutfitHistoryEntry {

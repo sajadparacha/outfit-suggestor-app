@@ -21,4 +21,18 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         DEVELOPMENT_TEAM: ""
     scheme:
-      testTargets: []
+      testTargets:
+        - OutfitSuggestorTests
+  OutfitSuggestorTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: OutfitSuggestorTests
+    dependencies:
+      - target: OutfitSuggestor
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.sajad.outfitsuggestor.tests
+        SWIFT_VERSION: 5.0
+        GENERATE_INFOPLIST_FILE: YES

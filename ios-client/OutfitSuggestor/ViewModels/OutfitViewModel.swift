@@ -24,10 +24,10 @@ class OutfitViewModel: ObservableObject {
     @Published var showDuplicateModal = false
     @Published var existingDuplicateSuggestion: OutfitSuggestion?
     
-    private let apiService: APIService
+    private let apiService: APIServiceProtocol
     private var cancellables = Set<AnyCancellable>()
     
-    init(apiService: APIService = .shared) {
+    init(apiService: APIServiceProtocol = APIService.shared) {
         self.apiService = apiService
     }
     
@@ -196,6 +196,9 @@ class OutfitViewModel: ObservableObject {
             )
             currentSuggestion = suggestion
         } catch let error as APIServiceError {
+            if (error.errorDescription ?? "").localizedCaseInsensitiveContains("log in again") {
+                AuthService.shared.logout()
+            }
             showErrorMessage(error.errorDescription ?? "An error occurred")
         } catch {
             showErrorMessage(error.localizedDescription)

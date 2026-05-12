@@ -7,10 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0D0FFD43456FF9B083A5AE92 /* APIServiceIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4ED51E6300690222125BE0F /* APIServiceIntegrationTests.swift */; };
 		17264711E2D62BDF6ED8703C /* OutfitSuggestionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18F5CCBC1004CA2D66F07B2E /* OutfitSuggestionView.swift */; };
 		17F65BD1144F4A9136BB2454 /* InsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 777166D6A9515B3BA3538439 /* InsightsView.swift */; };
 		211622AE1065E76C4D82451E /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65F83DC80A17A5A7B6CC15D0 /* RootView.swift */; };
 		219CC1A4A5BDD78FC15E6D32 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E8840F40CF3A5119424E263 /* ContentView.swift */; };
+		23CB85FFAAF34EEC0F240672 /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 585D224C3BAB35D9CD03EA3B /* AppConfig.swift */; };
 		309273348A8D785B69481960 /* WardrobeFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B35421E2E5C40F12D828A0A4 /* WardrobeFormView.swift */; };
 		31DDD4470D0C8ECF436D00C0 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E0406F4D345CC73138185B9 /* SettingsView.swift */; };
 		374506E92269BDC77604854D /* OutfitViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14E774459799783475D23A6C /* OutfitViewModel.swift */; };
@@ -29,6 +31,7 @@
 		AAE87AAF310E73964C11C7FB /* WardrobeListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66828E50349EE49EE62FFFFD /* WardrobeListView.swift */; };
 		B030C4AADF57B3488189CD98 /* AuthModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7F8B084F37279B1A44C15F4 /* AuthModels.swift */; };
 		B8A0449F46DB87CCAFA78217 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D6378272AE2D99A215788C /* MainTabView.swift */; };
+		BDC51E614A7C765FB3FA7572 /* OutfitViewModelIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D86343F4A060EB70A1831EAA /* OutfitViewModelIntegrationTests.swift */; };
 		C7F027A59B48C9E0730C18C5 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60FB09DAD00AB05C5F220D23 /* AboutView.swift */; };
 		D49CCC05C1C483C20F5B066E /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D805DBEB8393D1EF9B9EAD33 /* APIService.swift */; };
 		D4C904B093445C0E14BB2DA5 /* ReportsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AF4C72CE761E107EEAD6ED6 /* ReportsView.swift */; };
@@ -37,7 +40,18 @@
 		F68C6A553BEF575A09AD033F /* HistoryListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CBF29F94D7782AC11CB81D9 /* HistoryListView.swift */; };
 		F88BE9025293974B0251B9F9 /* HeroView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D48E9D66A6647B473956314 /* HeroView.swift */; };
 		FA023D9F55B7FB5B4FF54BED /* TokenStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E8D18B61E9EF222656069F /* TokenStorage.swift */; };
+		FD933F9E2EC6AC064C14756F /* AppConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 969C61A8446536869AAFE1CD /* AppConfigTests.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		C4AA4111F038841A8E622B9A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 09B3882A3A47F24FA108F183 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 73E8DE2A1D94825B55F8B785;
+			remoteInfo = OutfitSuggestor;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		09D6378272AE2D99A215788C /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
@@ -52,6 +66,7 @@
 		4CBF29F94D7782AC11CB81D9 /* HistoryListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryListView.swift; sourceTree = "<group>"; };
 		4FDE60751389D95FDB822F3E /* OutfitSuggestor.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OutfitSuggestor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		54E8D18B61E9EF222656069F /* TokenStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenStorage.swift; sourceTree = "<group>"; };
+		585D224C3BAB35D9CD03EA3B /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
 		60FB09DAD00AB05C5F220D23 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		62893A1B15D2311F3AEBA721 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		65F83DC80A17A5A7B6CC15D0 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
@@ -61,12 +76,16 @@
 		7D48E9D66A6647B473956314 /* HeroView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeroView.swift; sourceTree = "<group>"; };
 		7E8840F40CF3A5119424E263 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		8E0406F4D345CC73138185B9 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		969C61A8446536869AAFE1CD /* AppConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfigTests.swift; sourceTree = "<group>"; };
 		977BD13092DD8A2D98C4471D /* ImageUploadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageUploadView.swift; sourceTree = "<group>"; };
 		9AF4C72CE761E107EEAD6ED6 /* ReportsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportsView.swift; sourceTree = "<group>"; };
+		A4ED51E6300690222125BE0F /* APIServiceIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIServiceIntegrationTests.swift; sourceTree = "<group>"; };
 		B35421E2E5C40F12D828A0A4 /* WardrobeFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeFormView.swift; sourceTree = "<group>"; };
 		CAD5EBF0712C9529021C41B8 /* WardrobeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeModels.swift; sourceTree = "<group>"; };
+		D04F26D19AAD67E14DA721C1 /* OutfitSuggestorTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OutfitSuggestorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D805DBEB8393D1EF9B9EAD33 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
 		D828982B992DC46F17EBDF27 /* IntegrationTestRunnerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntegrationTestRunnerView.swift; sourceTree = "<group>"; };
+		D86343F4A060EB70A1831EAA /* OutfitViewModelIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitViewModelIntegrationTests.swift; sourceTree = "<group>"; };
 		DE08B45FCDDE652CA1907D91 /* OutfitSuggestorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitSuggestorApp.swift; sourceTree = "<group>"; };
 		E3016CC9235E918186E85387 /* ImagePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePicker.swift; sourceTree = "<group>"; };
 		E7F8B084F37279B1A44C15F4 /* AuthModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthModels.swift; sourceTree = "<group>"; };
@@ -75,6 +94,16 @@
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
+		384222D780F1291F491220F0 /* OutfitSuggestorTests */ = {
+			isa = PBXGroup;
+			children = (
+				A4ED51E6300690222125BE0F /* APIServiceIntegrationTests.swift */,
+				969C61A8446536869AAFE1CD /* AppConfigTests.swift */,
+				D86343F4A060EB70A1831EAA /* OutfitViewModelIntegrationTests.swift */,
+			);
+			path = OutfitSuggestorTests;
+			sourceTree = "<group>";
+		};
 		48DB226138D7502CAC1BBDC4 /* Views */ = {
 			isa = PBXGroup;
 			children = (
@@ -113,6 +142,7 @@
 			isa = PBXGroup;
 			children = (
 				4FDE60751389D95FDB822F3E /* OutfitSuggestor.app */,
+				D04F26D19AAD67E14DA721C1 /* OutfitSuggestorTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -120,6 +150,7 @@
 		B03A5A91EAFDED2AFA475892 /* Utils */ = {
 			isa = PBXGroup;
 			children = (
+				585D224C3BAB35D9CD03EA3B /* AppConfig.swift */,
 				E3016CC9235E918186E85387 /* ImagePicker.swift */,
 				79B25D4D09B5BB781246B0DF /* LocationService.swift */,
 				54E8D18B61E9EF222656069F /* TokenStorage.swift */,
@@ -173,6 +204,7 @@
 			isa = PBXGroup;
 			children = (
 				B50B50A04089C8C43CD2B925 /* OutfitSuggestor */,
+				384222D780F1291F491220F0 /* OutfitSuggestorTests */,
 				938BA973EF7395BC418FD86B /* Products */,
 			);
 			sourceTree = "<group>";
@@ -180,6 +212,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		34FD16507CAAB378C8FCA24D /* OutfitSuggestorTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EDB099C3F941A7762B1CB3A3 /* Build configuration list for PBXNativeTarget "OutfitSuggestorTests" */;
+			buildPhases = (
+				AA81AAD301F88A0EBBFAAC89 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B33ADD8663F06CDFB5E79381 /* PBXTargetDependency */,
+			);
+			name = OutfitSuggestorTests;
+			packageProductDependencies = (
+			);
+			productName = OutfitSuggestorTests;
+			productReference = D04F26D19AAD67E14DA721C1 /* OutfitSuggestorTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		73E8DE2A1D94825B55F8B785 /* OutfitSuggestor */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = DD09C061B54BE082847E5CE1 /* Build configuration list for PBXNativeTarget "OutfitSuggestor" */;
@@ -226,6 +276,7 @@
 			projectRoot = "";
 			targets = (
 				73E8DE2A1D94825B55F8B785 /* OutfitSuggestor */,
+				34FD16507CAAB378C8FCA24D /* OutfitSuggestorTests */,
 			);
 		};
 /* End PBXProject section */
@@ -237,6 +288,7 @@
 			files = (
 				D49CCC05C1C483C20F5B066E /* APIService.swift in Sources */,
 				C7F027A59B48C9E0730C18C5 /* AboutView.swift in Sources */,
+				23CB85FFAAF34EEC0F240672 /* AppConfig.swift in Sources */,
 				B030C4AADF57B3488189CD98 /* AuthModels.swift in Sources */,
 				96A83F2AAE2ED65AD4E24997 /* AuthService.swift in Sources */,
 				219CC1A4A5BDD78FC15E6D32 /* ContentView.swift in Sources */,
@@ -268,9 +320,46 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AA81AAD301F88A0EBBFAAC89 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0D0FFD43456FF9B083A5AE92 /* APIServiceIntegrationTests.swift in Sources */,
+				FD933F9E2EC6AC064C14756F /* AppConfigTests.swift in Sources */,
+				BDC51E614A7C765FB3FA7572 /* OutfitViewModelIntegrationTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		B33ADD8663F06CDFB5E79381 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 73E8DE2A1D94825B55F8B785 /* OutfitSuggestor */;
+			targetProxy = C4AA4111F038841A8E622B9A /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		263E0CF038DA5A3D292998A0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.sajad.outfitsuggestor.tests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OutfitSuggestor.app/OutfitSuggestor";
+			};
+			name = Debug;
+		};
 		8AF716E39165F803FEA10065 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -428,6 +517,25 @@
 			};
 			name = Release;
 		};
+		F0EFA67DD53FD0CDC33AEF92 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.sajad.outfitsuggestor.tests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OutfitSuggestor.app/OutfitSuggestor";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -445,6 +553,15 @@
 			buildConfigurations = (
 				8AF716E39165F803FEA10065 /* Debug */,
 				BAFA96525811FD47E5613183 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		EDB099C3F941A7762B1CB3A3 /* Build configuration list for PBXNativeTarget "OutfitSuggestorTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				263E0CF038DA5A3D292998A0 /* Debug */,
+				F0EFA67DD53FD0CDC33AEF92 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

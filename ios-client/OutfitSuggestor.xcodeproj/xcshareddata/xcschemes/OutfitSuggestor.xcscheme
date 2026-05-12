@@ -39,6 +39,17 @@
          </BuildableReference>
       </MacroExpansion>
       <Testables>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "34FD16507CAAB378C8FCA24D"
+               BuildableName = "OutfitSuggestorTests.xctest"
+               BlueprintName = "OutfitSuggestorTests"
+               ReferencedContainer = "container:OutfitSuggestor.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
       <CommandLineArguments>
       </CommandLineArguments>

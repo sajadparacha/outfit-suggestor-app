@@ -8,22 +8,54 @@
 import Foundation
 import UIKit
 
+protocol APIServiceProtocol {
+    func getSuggestion(
+        image: UIImage,
+        textInput: String,
+        useWardrobeOnly: Bool,
+        generateModelImage: Bool,
+        imageModel: String,
+        location: String?
+    ) async throws -> OutfitSuggestion
+    func getSuggestionFromWardrobeItem(
+        itemId: Int,
+        textInput: String,
+        generateModelImage: Bool,
+        imageModel: String,
+        location: String?
+    ) async throws -> OutfitSuggestion
+    func getOutfitHistory(limit: Int) async throws -> [OutfitHistoryEntry]
+    func checkOutfitDuplicate(image: UIImage) async throws -> OutfitDuplicateResponse
+    func getRandomOutfit(occasion: String, season: String, style: String) async throws -> OutfitSuggestion
+}
+
 class APIService {
     static let shared = APIService()
     
     private let baseURL: String
     private let session: URLSession
+    private let authTokenProvider: () -> String
     
-    private init() {
-        self.baseURL = "http://localhost:8001"
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 30
-        config.timeoutIntervalForResource = 60
-        self.session = URLSession(configuration: config)
+    init(
+        baseURL: String = AppConfig.apiBaseURL,
+        session: URLSession? = nil,
+        authTokenProvider: (() -> String?)? = nil
+    ) {
+        self.baseURL = baseURL
+        self.authTokenProvider = { authTokenProvider?() ?? AuthService.shared.authToken ?? "" }
+        if let session = session {
+            self.session = session
+        } else {
+            let config = URLSessionConfiguration.default
+            config.timeoutIntervalForRequest = 30
+            config.timeoutIntervalForResource = 60
+            self.session = URLSession(configuration: config)
+        }
     }
     
     private func authHeader() -> String? {
-        guard let token = AuthService.shared.authToken else { return nil }
+        let token = authTokenProvider()
+        guard !token.isEmpty else { return nil }
         return "Bearer \(token)"
     }
     
@@ -341,13 +373,31 @@ class APIService {
         guard let url = comp.url else { throw APIServiceError.invalidURL }
         var request = URLRequest(url: url)
         setAuthIfNeeded(&request)
+        request.timeoutInterval = 20
         let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-            if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
+        guard let http = response as? HTTPURLResponse else {
             throw APIServiceError.invalidResponse
         }
-        let raw = try JSONDecoder().decode(RandomOutfitResponse.self, from: data)
-        return raw.toOutfitSuggestion()
+        guard http.statusCode == 200 else {
+            if http.statusCode == 401 {
+                throw APIServiceError.serverError("Session expired or invalid. Please log in again.")
+            }
+            if let err = try? JSONDecoder().decode(APIError.self, from: data) {
+                throw APIServiceError.serverError(err.detail)
+            }
+            let rawBody = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if !rawBody.isEmpty {
+                throw APIServiceError.serverError("Random wardrobe failed (\(http.statusCode)): \(rawBody)")
+            }
+            throw APIServiceError.httpError(http.statusCode)
+        }
+        if let raw = try? JSONDecoder().decode(RandomOutfitResponse.self, from: data) {
+            return raw.toOutfitSuggestion()
+        }
+        if let suggestion = try? JSONDecoder().decode(OutfitSuggestion.self, from: data) {
+            return suggestion
+        }
+        throw APIServiceError.serverError("Random wardrobe decode failed: unexpected response format")
     }
     
     // MARK: - Access Logs (admin-only)
@@ -519,6 +569,8 @@ class APIService {
         return try JSONDecoder().decode([IntegrationTestResult].self, from: data)
     }
 }
+
+extension APIService: APIServiceProtocol {}
 
 // MARK: - Access Logs (admin)
 struct AccessLogEntry: Codable, Identifiable {

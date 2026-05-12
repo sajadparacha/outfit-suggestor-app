@@ -54,6 +54,8 @@
 	<string>We need access to your camera to take photos for outfit suggestions.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Your location is used to customize AI-generated model images for culturally appropriate appearance.</string>
+	<key>API_BASE_URL</key>
+	<string>https://web-production-dfcf8.up.railway.app</string>
 </dict>
 </plist>
 
