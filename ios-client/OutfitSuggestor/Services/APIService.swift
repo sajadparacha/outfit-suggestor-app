@@ -150,10 +150,11 @@ class APIService {
     
     // MARK: - Wardrobe
     
-    func getWardrobe(category: String? = nil, limit: Int = 50, offset: Int = 0) async throws -> WardrobeListResponse {
+    func getWardrobe(category: String? = nil, search: String? = nil, limit: Int = 50, offset: Int = 0) async throws -> WardrobeListResponse {
         var comp = URLComponents(string: "\(baseURL)/api/wardrobe")!
         comp.queryItems = [URLQueryItem(name: "limit", value: "\(limit)"), URLQueryItem(name: "offset", value: "\(offset)")]
         if let c = category, !c.isEmpty { comp.queryItems?.append(URLQueryItem(name: "category", value: c)) }
+        if let s = search, !s.isEmpty { comp.queryItems?.append(URLQueryItem(name: "search", value: s)) }
         guard let url = comp.url else { throw APIServiceError.invalidURL }
         var request = URLRequest(url: url)
         setAuthIfNeeded(&request)
@@ -414,6 +415,99 @@ class APIService {
         guard let http = response as? HTTPURLResponse else { return false }
         return http.statusCode == 200
     }
+    
+    // MARK: - Outfit Duplicate Check
+    
+    /// Check if an image already exists in outfit history (before making a suggestion)
+    func checkOutfitDuplicate(image: UIImage) async throws -> OutfitDuplicateResponse {
+        guard let url = URL(string: "\(baseURL)/api/check-duplicate") else { throw APIServiceError.invalidURL }
+        let boundary = UUID().uuidString
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        setAuthIfNeeded(&request)
+        var body = Data()
+        guard let imageData = image.jpegData(compressionQuality: 0.8) else { throw APIServiceError.invalidImage }
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"image\"; filename=\"photo.jpg\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+        body.append(imageData)
+        body.append("\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        request.httpBody = body
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
+            throw APIServiceError.invalidResponse
+        }
+        return try JSONDecoder().decode(OutfitDuplicateResponse.self, from: data)
+    }
+    
+    // MARK: - Wardrobe Gap Analysis
+    
+    /// Analyze wardrobe gaps (auth required)
+    func analyzeWardrobeGaps(request body: WardrobeGapAnalysisRequest) async throws -> WardrobeGapAnalysisResponse {
+        guard let url = URL(string: "\(baseURL)/api/wardrobe/analyze-gaps") else { throw APIServiceError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        setAuthIfNeeded(&request)
+        request.httpBody = try JSONEncoder().encode(body)
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
+            throw APIServiceError.invalidResponse
+        }
+        return try JSONDecoder().decode(WardrobeGapAnalysisResponse.self, from: data)
+    }
+    
+    // MARK: - Integration Tests (Admin)
+    
+    /// List available integration tests (admin only)
+    func listIntegrationTests() async throws -> [IntegrationTestCase] {
+        guard let url = URL(string: "\(baseURL)/api/admin/integration-tests/") else { throw APIServiceError.invalidURL }
+        var request = URLRequest(url: url)
+        setAuthIfNeeded(&request)
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
+            throw APIServiceError.invalidResponse
+        }
+        return try JSONDecoder().decode([IntegrationTestCase].self, from: data)
+    }
+    
+    /// Run a single integration test (admin only)
+    func runIntegrationTest(testId: String) async throws -> IntegrationTestResult {
+        guard let url = URL(string: "\(baseURL)/api/admin/integration-tests/run") else { throw APIServiceError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 120
+        setAuthIfNeeded(&request)
+        request.httpBody = try JSONEncoder().encode(["test_id": testId])
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
+            throw APIServiceError.invalidResponse
+        }
+        return try JSONDecoder().decode(IntegrationTestResult.self, from: data)
+    }
+    
+    /// Run all integration tests (admin only)
+    func runAllIntegrationTests() async throws -> [IntegrationTestResult] {
+        guard let url = URL(string: "\(baseURL)/api/admin/integration-tests/run-all") else { throw APIServiceError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 300
+        setAuthIfNeeded(&request)
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
+            throw APIServiceError.invalidResponse
+        }
+        return try JSONDecoder().decode([IntegrationTestResult].self, from: data)
+    }
 }
 
 // MARK: - Access Logs (admin)
@@ -461,6 +555,48 @@ struct UserCount: Codable {
 struct AccessLogUsageResponse: Codable {
     let by_operation_type: [String: Int]?
     let total_requests: Int?
+}
+
+// MARK: - Outfit Duplicate Check Response
+struct OutfitDuplicateResponse: Codable {
+    let is_duplicate: Bool
+    let existing_suggestion: OutfitSuggestion?
+}
+
+// MARK: - Integration Tests (Admin)
+struct IntegrationTestCase: Codable, Identifiable {
+    let id: String
+    let name: String
+    let description: String
+    let layer: String
+    let path: String
+}
+
+struct IntegrationTestCaseResult: Codable {
+    let name: String
+    let status: String
+    let failure_cause: String?
+}
+
+struct IntegrationTestResult: Codable, Identifiable {
+    var id: String { test_id }
+    let test_id: String
+    let name: String
+    let description: String
+    let layer: String
+    let path: String
+    let started_at: String
+    let duration_ms: Double
+    let status: String
+    let timed_out: Bool
+    let exit_code: Int
+    let command: String
+    let passed: Int
+    let failed: Int
+    let skipped: Int
+    let suite_failure_cause: String?
+    let test_cases: [IntegrationTestCaseResult]
+    let output_excerpt: String
 }
 
 // Backend random-outfit returns { shirt, trouser, blazer, shoes, belt, reasoning, matching_wardrobe_items }

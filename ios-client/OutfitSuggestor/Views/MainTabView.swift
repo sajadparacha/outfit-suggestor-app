@@ -2,7 +2,7 @@
 //  MainTabView.swift
 //  OutfitSuggestor
 //
-//  Tab navigation: Main, History, Wardrobe, Settings, About
+//  Tab navigation: Main, History, Wardrobe, Insights, Reports (admin), Integration Tests (admin), Settings, Guide, About
 //
 
 import SwiftUI
@@ -40,25 +40,43 @@ struct MainTabView: View {
             .tabItem { Label("Wardrobe", systemImage: "tshirt") }
             .tag(2)
             
+            NavigationView {
+                InsightsView()
+            }
+            .tabItem { Label("Insights", systemImage: "chart.bar.xaxis") }
+            .tag(3)
+            
             if isAdmin {
                 NavigationView {
                     ReportsView()
                 }
                 .tabItem { Label("Reports", systemImage: "chart.bar") }
-                .tag(3)
+                .tag(4)
+                
+                NavigationView {
+                    IntegrationTestRunnerView()
+                }
+                .tabItem { Label("Tests", systemImage: "testtube.2") }
+                .tag(5)
             }
             
             NavigationView {
                 SettingsView()
             }
             .tabItem { Label("Settings", systemImage: "gearshape") }
-            .tag(4)
+            .tag(6)
+            
+            NavigationView {
+                UserGuideView()
+            }
+            .tabItem { Label("Guide", systemImage: "book") }
+            .tag(7)
             
             NavigationView {
                 AboutView()
             }
             .tabItem { Label("About", systemImage: "info.circle") }
-            .tag(5)
+            .tag(8)
         }
     }
 }

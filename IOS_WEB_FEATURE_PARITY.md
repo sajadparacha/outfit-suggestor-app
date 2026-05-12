@@ -15,10 +15,15 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 | **Filters / preference text** | ✅ | ✅ | Occasion, season, style; free text |
 | **Wardrobe-only mode** | ✅ | ✅ | Toggle when logged in (Main flow) |
 | **Model image generation** | ✅ | ✅ | Toggle + model picker (DALL-E 3, Stable Diffusion, Nano Banana); full-screen view |
-| **Wardrobe** | ✅ | ✅ | List, add, edit, delete, category filter, "Get suggestion" from item |
+| **Wardrobe** | ✅ | ✅ | List, add, edit, delete, category filter, search, "Get suggestion" from item |
 | **Outfit history** | ✅ | ✅ | List, search, sort (newest/oldest), delete, load into main view |
 | **Random from wardrobe** | ✅ | ✅ | Button on Main; GET /api/wardrobe/random-outfit |
 | **Random from history** | ✅ | ✅ | Button on Main; client picks from history |
+| **Duplicate detection** | ✅ | ✅ | Check before suggestion; use cached or force new |
+| **Next / Alternate outfit** | ✅ | ✅ | Button after suggestion; requests a different outfit |
+| **Wardrobe Insights** | ✅ | ✅ | Gap analysis by category (free/premium mode) |
+| **User Guide** | ✅ | ✅ | In-app documentation with feature walkthroughs |
+| **Integration Tests (Admin)** | ✅ | ✅ | Admin-only test runner (list/run/run-all) |
 | **Settings** | ✅ | ✅ | Change password, account info, logout |
 | **About** | ✅ | ✅ | App info, links |
 | **Admin reports** | ✅ | ✅ | Reports tab (admin only); access logs list + stats |

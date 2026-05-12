@@ -13,7 +13,20 @@ struct WardrobeListView: View {
     @State private var errorMessage: String?
     @State private var showAddSheet = false
     @State private var categoryFilter = "All"
+    @State private var searchText = ""
     var onGetSuggestionFromItem: ((Int) -> Void)?
+    
+    private var filteredItems: [WardrobeItem] {
+        guard let items = response?.items else { return [] }
+        if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return items }
+        let query = searchText.lowercased()
+        return items.filter { item in
+            (item.description?.lowercased().contains(query) ?? false) ||
+            (item.color?.lowercased().contains(query) ?? false) ||
+            (item.name?.lowercased().contains(query) ?? false) ||
+            item.category.lowercased().contains(query)
+        }
+    }
 
     var body: some View {
         Group {
@@ -35,16 +48,24 @@ struct WardrobeListView: View {
                 }
                 .padding()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let resp = response {
+            } else if response != nil {
                 VStack(spacing: 0) {
-                    Picker("Category", selection: $categoryFilter) {
-                        ForEach(wardrobeCategoryOptions, id: \.self) { Text($0).tag($0) }
+                    HStack {
+                        Picker("Category", selection: $categoryFilter) {
+                            ForEach(wardrobeCategoryOptions, id: \.self) { Text($0).tag($0) }
+                        }
+                        .pickerStyle(.menu)
+                        .onChange(of: categoryFilter) { _ in load() }
                     }
-                    .pickerStyle(.menu)
                     .padding(.horizontal)
-                    .onChange(of: categoryFilter) { _ in load() }
+                    
+                    TextField("Search wardrobe...", text: $searchText)
+                        .textFieldStyle(.roundedBorder)
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+                    
                     List {
-                        ForEach(resp.items) { item in
+                        ForEach(filteredItems) { item in
                             HStack {
                                 NavigationLink(destination: WardrobeFormView(item: item, onSaved: { load() }, onCancel: { })) {
                                     WardrobeRowView(item: item)

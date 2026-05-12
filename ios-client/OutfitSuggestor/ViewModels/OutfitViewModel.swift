@@ -21,6 +21,8 @@ class OutfitViewModel: ObservableObject {
     @Published var useWardrobeOnly = false
     @Published var generateModelImage = false
     @Published var imageModel = "dalle3"
+    @Published var showDuplicateModal = false
+    @Published var existingDuplicateSuggestion: OutfitSuggestion?
     
     private let apiService: APIService
     private var cancellables = Set<AnyCancellable>()
@@ -31,8 +33,8 @@ class OutfitViewModel: ObservableObject {
     
     var isAuthenticated: Bool { AuthService.shared.isAuthenticated }
     
-    /// Get outfit suggestion from API (optionally wardrobe-only when logged in)
-    func getSuggestion() async {
+    /// Get outfit suggestion from API with optional duplicate check
+    func getSuggestion(skipDuplicateCheck: Bool = false) async {
         guard let image = selectedImage else {
             showErrorMessage("Please select an image first")
             return
@@ -40,6 +42,21 @@ class OutfitViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         showError = false
+        
+        if !skipDuplicateCheck {
+            do {
+                let dupResult = try await apiService.checkOutfitDuplicate(image: image)
+                if dupResult.is_duplicate, let existing = dupResult.existing_suggestion {
+                    existingDuplicateSuggestion = existing
+                    showDuplicateModal = true
+                    isLoading = false
+                    return
+                }
+            } catch {
+                // If duplicate check fails, proceed with suggestion anyway
+            }
+        }
+        
         do {
             var location: String? = nil
             if generateModelImage {
@@ -61,6 +78,66 @@ class OutfitViewModel: ObservableObject {
             showErrorMessage(error.errorDescription ?? "An error occurred")
         } catch {
             showErrorMessage("An unexpected error occurred: \(error.localizedDescription)")
+        }
+        isLoading = false
+    }
+    
+    /// Use the cached duplicate suggestion
+    func useCachedSuggestion() {
+        if let existing = existingDuplicateSuggestion {
+            currentSuggestion = existing
+        }
+        showDuplicateModal = false
+        existingDuplicateSuggestion = nil
+    }
+    
+    /// Force a new suggestion (ignore duplicate)
+    func forceNewSuggestion() async {
+        showDuplicateModal = false
+        existingDuplicateSuggestion = nil
+        await getSuggestion(skipDuplicateCheck: true)
+    }
+    
+    /// Get an alternate/next outfit suggestion using the same photo but asking for something different
+    func getNextSuggestion() async {
+        guard let image = selectedImage, let previous = currentSuggestion else {
+            showErrorMessage("No current suggestion to get an alternate for")
+            return
+        }
+        isLoading = true
+        errorMessage = nil
+        showError = false
+        do {
+            var location: String? = nil
+            if generateModelImage {
+                location = await LocationService.shared.getLocationString()
+            }
+            let previousOutfitText = """
+            Previous outfit (suggest something DIFFERENT):
+            Shirt: \(previous.shirt)
+            Trousers: \(previous.trouser)
+            Blazer: \(previous.blazer)
+            Shoes: \(previous.shoes)
+            Belt: \(previous.belt)
+            """
+            let basePrompt = preferenceText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? filters.description
+                : "User preferences: \(preferenceText)"
+            let fullPrompt = "\(basePrompt)\n\n\(previousOutfitText)"
+            
+            let suggestion = try await apiService.getSuggestion(
+                image: image,
+                textInput: fullPrompt,
+                useWardrobeOnly: isAuthenticated && useWardrobeOnly,
+                generateModelImage: generateModelImage,
+                imageModel: imageModel,
+                location: location
+            )
+            currentSuggestion = suggestion
+        } catch let error as APIServiceError {
+            showErrorMessage(error.errorDescription ?? "An error occurred")
+        } catch {
+            showErrorMessage(error.localizedDescription)
         }
         isLoading = false
     }

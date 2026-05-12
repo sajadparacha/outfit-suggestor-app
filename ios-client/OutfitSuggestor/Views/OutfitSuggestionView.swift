@@ -10,6 +10,9 @@ import UIKit
 
 struct OutfitSuggestionView: View {
     let suggestion: OutfitSuggestion
+    var onNext: (() -> Void)?
+    var onAddToWardrobe: (() -> Void)?
+    var isLoading: Bool = false
     @State private var showModelImageFullScreen = false
     
     private var modelImageData: Data? {
@@ -110,6 +113,23 @@ struct OutfitSuggestionView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.blue.opacity(0.1))
             .cornerRadius(12)
+            
+            // Action buttons: Next outfit and Add to Wardrobe
+            HStack(spacing: 12) {
+                if let onNext = onNext {
+                    Button(action: onNext) {
+                        Label("Next Outfit", systemImage: "arrow.right.circle")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(isLoading)
+                }
+                if let onAddToWardrobe = onAddToWardrobe {
+                    Button(action: onAddToWardrobe) {
+                        Label("Add to Wardrobe", systemImage: "plus.circle")
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
         }
         .padding()
         .background(Color(UIColor.systemBackground))
@@ -193,7 +213,9 @@ struct OutfitSuggestionView_Previews: PreviewProvider {
                 reasoning: "This outfit combines classic business attire with modern proportions.",
                 model_image: nil,
                 matching_wardrobe_items: nil
-            )
+            ),
+            onNext: {},
+            onAddToWardrobe: {}
         )
         .padding()
     }

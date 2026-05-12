@@ -74,7 +74,12 @@ struct MainFlowView: View {
                     .disabled(viewModel.selectedImage == nil || viewModel.isLoading)
                     
                     if let suggestion = viewModel.currentSuggestion {
-                        OutfitSuggestionView(suggestion: suggestion)
+                        OutfitSuggestionView(
+                            suggestion: suggestion,
+                            onNext: { Task { await viewModel.getNextSuggestion() } },
+                            onAddToWardrobe: nil,
+                            isLoading: viewModel.isLoading
+                        )
                             .padding(.horizontal)
                             .transition(.opacity)
                     }
@@ -94,6 +99,13 @@ struct MainFlowView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text(viewModel.errorMessage ?? "An error occurred")
+        }
+        .alert("Duplicate Found", isPresented: $viewModel.showDuplicateModal) {
+            Button("Use Cached") { viewModel.useCachedSuggestion() }
+            Button("Get New") { Task { await viewModel.forceNewSuggestion() } }
+            Button("Cancel", role: .cancel) { viewModel.showDuplicateModal = false }
+        } message: {
+            Text("This image was already analyzed. Would you like to use the cached suggestion or get a new one?")
         }
     }
 }
