@@ -3,7 +3,7 @@ import random
 from typing import Optional, List, Dict, Any, Set
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
-from datetime import datetime
+from datetime import datetime, timezone
 import imagehash
 from PIL import Image
 import io
@@ -248,7 +248,7 @@ class WardrobeService:
                 else:
                     setattr(item, field, value)
         
-        item.updated_at = datetime.utcnow()
+        item.updated_at = datetime.now(timezone.utc)
         db.commit()
         db.refresh(item)
         return item

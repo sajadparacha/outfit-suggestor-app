@@ -1,5 +1,5 @@
 """ORM models for persisting outfit suggestion history."""
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Integer, String, DateTime, Text, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -19,7 +19,7 @@ class OutfitHistory(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False, index=True
+        DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True
     )
 
     # User relationship (nullable for backward compatibility)

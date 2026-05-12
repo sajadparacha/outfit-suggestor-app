@@ -1,5 +1,5 @@
 """Wardrobe model for storing user's clothing items."""
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from sqlalchemy import Integer, String, DateTime, Text, ForeignKey, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -60,10 +60,10 @@ class WardrobeItem(Base):
     
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False
+        DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+        DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False
     )
     
     # Relationship to user
