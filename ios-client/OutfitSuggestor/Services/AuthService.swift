@@ -14,6 +14,7 @@ class AuthService: ObservableObject {
     
     @Published var currentUser: User?
     @Published var authToken: String?
+    @Published var isBootstrapping = false
     var isAuthenticated: Bool { authToken != nil && currentUser != nil }
     
     private init() {
@@ -21,6 +22,7 @@ class AuthService: ObservableObject {
         self.session = URLSession.shared
         self.authToken = TokenStorage.load()
         if authToken != nil {
+            self.isBootstrapping = true
             Task { await fetchCurrentUser() }
         }
     }
@@ -75,6 +77,8 @@ class AuthService: ObservableObject {
     
     // MARK: - Me
     func fetchCurrentUser() async {
+        await MainActor.run { isBootstrapping = true }
+        defer { Task { @MainActor in self.isBootstrapping = false } }
         guard let token = authToken else { return }
         guard let url = URL(string: "\(baseURL)/api/auth/me") else { return }
         var request = URLRequest(url: url)

@@ -71,7 +71,8 @@ class OutfitViewModel: ObservableObject {
                 useWardrobeOnly: isAuthenticated && useWardrobeOnly,
                 generateModelImage: generateModelImage,
                 imageModel: imageModel,
-                location: location
+                location: location,
+                previousOutfitText: nil
             )
             currentSuggestion = suggestion
         } catch let error as APIServiceError {
@@ -131,7 +132,8 @@ class OutfitViewModel: ObservableObject {
                 useWardrobeOnly: isAuthenticated && useWardrobeOnly,
                 generateModelImage: generateModelImage,
                 imageModel: imageModel,
-                location: location
+                location: location,
+                previousOutfitText: previousOutfitText
             )
             currentSuggestion = suggestion
         } catch let error as APIServiceError {

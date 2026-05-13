@@ -19,6 +19,7 @@ targets:
         INFOPLIST_FILE: OutfitSuggestor/Resources/Info.plist
         SWIFT_VERSION: 5.0
         TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: ""
     scheme:
       testTargets:
@@ -36,3 +37,5 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.sajad.outfitsuggestor.tests
         SWIFT_VERSION: 5.0
         GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGNING_ALLOWED: NO

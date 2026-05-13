@@ -2,7 +2,7 @@
 //  RootView.swift
 //  OutfitSuggestor
 //
-//  Shows Login/Register when not authenticated, MainTabView when authenticated.
+//  Root shell. Main app is available in guest mode; auth unlocks extra features.
 //
 
 import SwiftUI
@@ -11,14 +11,19 @@ struct RootView: View {
     @ObservedObject var auth = AuthService.shared
     
     var body: some View {
-        Group {
-            if auth.isAuthenticated {
-                MainTabView()
-            } else {
-                NavigationView {
-                    LoginRegisterChoiceView()
-                }
+        if auth.isBootstrapping {
+            ZStack {
+                LinearGradient(
+                    colors: [AppTheme.bgPrimary, AppTheme.bgSecondary],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+                ProgressView("Restoring session...")
+                    .foregroundColor(AppTheme.textPrimary)
             }
+        } else {
+            MainTabView()
         }
     }
 }

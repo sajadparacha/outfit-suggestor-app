@@ -87,13 +87,10 @@ struct IntegrationTestRunnerView: View {
     private func runSingle(testId: String) async {
         runningTestId = testId
         errorMessage = nil
+        results.removeAll()
         do {
             let result = try await APIService.shared.runIntegrationTest(testId: testId)
-            if let idx = results.firstIndex(where: { $0.test_id == testId }) {
-                results[idx] = result
-            } else {
-                results.append(result)
-            }
+            results = [result]
         } catch let error as APIServiceError {
             errorMessage = error.errorDescription
         } catch {
@@ -105,6 +102,7 @@ struct IntegrationTestRunnerView: View {
     private func runAll() async {
         runningAll = true
         errorMessage = nil
+        results.removeAll()
         do {
             results = try await APIService.shared.runAllIntegrationTests()
         } catch let error as APIServiceError {

@@ -16,26 +16,40 @@ struct SettingsView: View {
     
     var body: some View {
         Form {
-            Section(header: Text("Account")) {
-                if let user = auth.currentUser {
-                    LabeledContent("Email", value: user.email)
-                    if let name = user.full_name, !name.isEmpty { LabeledContent("Name", value: name) }
+            if auth.isAuthenticated {
+                Section(header: Text("Account")) {
+                    if let user = auth.currentUser {
+                        LabeledContent("Email", value: user.email)
+                        if let name = user.full_name, !name.isEmpty { LabeledContent("Name", value: name) }
+                    }
                 }
-            }
-            Section(header: Text("Change password")) {
-                SecureField("Current password", text: $currentPassword)
-                SecureField("New password", text: $newPassword)
-                SecureField("Confirm new password", text: $confirmPassword)
-                if let msg = message {
-                    Text(msg).foregroundColor(isSuccess ? .green : .red)
+                Section(header: Text("Change password")) {
+                    SecureField("Current password", text: $currentPassword)
+                    SecureField("New password", text: $newPassword)
+                    SecureField("Confirm new password", text: $confirmPassword)
+                    if let msg = message {
+                        Text(msg).foregroundColor(isSuccess ? .green : .red)
+                    }
+                    Button("Update password") {
+                        changePassword()
+                    }
+                    .disabled(currentPassword.isEmpty || newPassword.isEmpty || newPassword != confirmPassword || isLoading)
                 }
-                Button("Update password") {
-                    changePassword()
+                Section {
+                    Button("Log out", role: .destructive) { auth.logout() }
                 }
-                .disabled(currentPassword.isEmpty || newPassword.isEmpty || newPassword != confirmPassword || isLoading)
-            }
-            Section {
-                Button("Log out", role: .destructive) { auth.logout() }
+            } else {
+                Section("Sign in to unlock more") {
+                    Text("You can still get outfit suggestions as a guest. Log in to use History, Wardrobe, Random picks, and Insights.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    NavigationLink("Log in") {
+                        LoginView()
+                    }
+                    NavigationLink("Sign up") {
+                        RegisterView()
+                    }
+                }
             }
         }
         .navigationTitle("Settings")

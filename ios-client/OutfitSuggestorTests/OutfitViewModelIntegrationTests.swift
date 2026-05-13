@@ -109,7 +109,8 @@ private final class MockAPIService: APIServiceProtocol {
         useWardrobeOnly: Bool,
         generateModelImage: Bool,
         imageModel: String,
-        location: String?
+        location: String?,
+        previousOutfitText: String?
     ) async throws -> OutfitSuggestion {
         throw APIServiceError.invalidResponse
     }

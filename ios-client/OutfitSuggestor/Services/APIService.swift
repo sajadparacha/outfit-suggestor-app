@@ -15,7 +15,8 @@ protocol APIServiceProtocol {
         useWardrobeOnly: Bool,
         generateModelImage: Bool,
         imageModel: String,
-        location: String?
+        location: String?,
+        previousOutfitText: String?
     ) async throws -> OutfitSuggestion
     func getSuggestionFromWardrobeItem(
         itemId: Int,
@@ -72,7 +73,8 @@ class APIService {
         useWardrobeOnly: Bool = false,
         generateModelImage: Bool = false,
         imageModel: String = "dalle3",
-        location: String? = nil
+        location: String? = nil,
+        previousOutfitText: String? = nil
     ) async throws -> OutfitSuggestion {
         guard let url = URL(string: "\(baseURL)/api/suggest-outfit") else { throw APIServiceError.invalidURL }
         let boundary = UUID().uuidString
@@ -109,6 +111,12 @@ class APIService {
             body.append("--\(boundary)\r\n".data(using: .utf8)!)
             body.append("Content-Disposition: form-data; name=\"location\"\r\n\r\n".data(using: .utf8)!)
             body.append(loc.data(using: .utf8)!)
+            body.append("\r\n".data(using: .utf8)!)
+        }
+        if let previousOutfitText, !previousOutfitText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"previous_outfit_text\"\r\n\r\n".data(using: .utf8)!)
+            body.append(previousOutfitText.data(using: .utf8)!)
             body.append("\r\n".data(using: .utf8)!)
         }
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
@@ -533,6 +541,9 @@ class APIService {
             if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
             throw APIServiceError.invalidResponse
         }
+        if let wrapped = try? JSONDecoder().decode(IntegrationTestListResponse.self, from: data) {
+            return wrapped.tests
+        }
         return try JSONDecoder().decode([IntegrationTestCase].self, from: data)
     }
     
@@ -659,6 +670,10 @@ struct IntegrationTestResult: Codable, Identifiable {
     let suite_failure_cause: String?
     let test_cases: [IntegrationTestCaseResult]
     let output_excerpt: String
+}
+
+private struct IntegrationTestListResponse: Codable {
+    let tests: [IntegrationTestCase]
 }
 
 // Backend random-outfit returns { shirt, trouser, blazer, shoes, belt, reasoning, matching_wardrobe_items }

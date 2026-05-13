@@ -27,13 +27,23 @@ struct WardrobeFormView: View {
     @State private var duplicateExistingItem: WardrobeItem?
     @Environment(\.dismiss) private var dismiss
 
-    init(item: WardrobeItem? = nil, onSaved: @escaping () -> Void, onCancel: @escaping () -> Void) {
+    init(
+        item: WardrobeItem? = nil,
+        initialCategory: String? = nil,
+        initialColor: String? = nil,
+        initialDescription: String? = nil,
+        initialImage: UIImage? = nil,
+        onSaved: @escaping () -> Void,
+        onCancel: @escaping () -> Void
+    ) {
         self.item = item
         self.onSaved = onSaved
         self.onCancel = onCancel
-        _category = State(initialValue: item?.category ?? wardrobeCategories[0])
-        _color = State(initialValue: item?.color ?? "")
-        _description = State(initialValue: item?.description ?? "")
+        let categoryValue = (item?.category ?? initialCategory ?? wardrobeCategories[0]).lowercased()
+        _category = State(initialValue: wardrobeCategories.contains(categoryValue) ? categoryValue : wardrobeCategories[0])
+        _color = State(initialValue: item?.color ?? initialColor ?? "")
+        _description = State(initialValue: item?.description ?? initialDescription ?? "")
+        _selectedImage = State(initialValue: initialImage)
     }
 
     var body: some View {

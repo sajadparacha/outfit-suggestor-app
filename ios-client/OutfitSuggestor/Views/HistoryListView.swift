@@ -112,7 +112,7 @@ struct HistoryListView: View {
         errorMessage = nil
         defer { isRequestInFlight = false }
         do {
-            let list = try await APIService.shared.getOutfitHistory(limit: 15)
+            let list = try await APIService.shared.getOutfitHistory(limit: 50)
             entries = list
             isLoading = false
         } catch {

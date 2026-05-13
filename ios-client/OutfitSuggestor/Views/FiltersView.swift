@@ -15,13 +15,14 @@ struct FiltersView: View {
         VStack(spacing: 16) {
             Text("Preferences")
                 .font(.headline)
+                .foregroundColor(AppTheme.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
             
             // Free text input
             VStack(alignment: .leading, spacing: 8) {
                 Text("Describe your style")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppTheme.textSecondary)
                 
                 TextField("e.g., Business casual, modern style", text: $preferenceText)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -33,24 +34,24 @@ struct FiltersView: View {
             
             Text("Or use filters")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppTheme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
             
             // Occasion Picker
             VStack(alignment: .leading, spacing: 8) {
                 Text("Occasion")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppTheme.textSecondary)
                 
                 Picker("Occasion", selection: $filters.occasion) {
                     ForEach(Occasion.allCases, id: \.self) { occasion in
-                        Text(occasion.rawValue).tag(occasion.rawValue.lowercased())
+                        Text(occasion.rawValue).tag(occasion.apiValue)
                     }
                 }
                 .pickerStyle(MenuPickerStyle())
                 .frame(maxWidth: .infinity)
                 .padding(8)
-                .background(Color(UIColor.secondarySystemBackground))
+                .background(Color.white.opacity(0.08))
                 .cornerRadius(8)
             }
             
@@ -58,17 +59,17 @@ struct FiltersView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Season")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppTheme.textSecondary)
                 
                 Picker("Season", selection: $filters.season) {
                     ForEach(Season.allCases, id: \.self) { season in
-                        Text(season.rawValue).tag(season.rawValue.lowercased())
+                        Text(season.rawValue).tag(season.apiValue)
                     }
                 }
                 .pickerStyle(MenuPickerStyle())
                 .frame(maxWidth: .infinity)
                 .padding(8)
-                .background(Color(UIColor.secondarySystemBackground))
+                .background(Color.white.opacity(0.08))
                 .cornerRadius(8)
             }
             
@@ -76,24 +77,22 @@ struct FiltersView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Style")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppTheme.textSecondary)
                 
                 Picker("Style", selection: $filters.style) {
                     ForEach(Style.allCases, id: \.self) { style in
-                        Text(style.rawValue).tag(style.rawValue.lowercased())
+                        Text(style.rawValue).tag(style.apiValue)
                     }
                 }
                 .pickerStyle(MenuPickerStyle())
                 .frame(maxWidth: .infinity)
                 .padding(8)
-                .background(Color(UIColor.secondarySystemBackground))
+                .background(Color.white.opacity(0.08))
                 .cornerRadius(8)
             }
         }
         .padding()
-        .background(Color(UIColor.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+        .glassCard()
     }
 }
 

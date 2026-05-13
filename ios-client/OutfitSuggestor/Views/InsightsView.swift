@@ -9,6 +9,7 @@
 import SwiftUI
 
 struct InsightsView: View {
+    @ObservedObject private var auth = AuthService.shared
     @State private var occasion = "casual"
     @State private var season = "all"
     @State private var style = "modern"
@@ -18,9 +19,9 @@ struct InsightsView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     
-    private let occasions = ["casual", "business", "formal", "party", "date"]
+    private let occasions = ["casual", "business", "formal", "party", "date", "sports"]
     private let seasons = ["all", "spring", "summer", "fall", "winter"]
-    private let styles = ["modern", "classic", "trendy", "minimalist", "bold"]
+    private let styles = ["business casual", "casual", "modern", "classic", "trendy", "minimalist", "bold", "vintage"]
     
     var body: some View {
         ScrollView {
@@ -29,7 +30,7 @@ struct InsightsView: View {
                 VStack(spacing: 8) {
                     Image(systemName: "chart.bar.xaxis")
                         .font(.largeTitle)
-                        .foregroundColor(.teal)
+                        .foregroundColor(AppTheme.accent)
                     Text("Wardrobe Insights")
                         .font(.title2)
                         .fontWeight(.bold)
@@ -79,7 +80,7 @@ struct InsightsView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(isLoading ? Color.gray : Color.teal)
+                .background(isLoading ? Color.gray : AppTheme.accent)
                 .foregroundColor(.white)
                 .cornerRadius(12)
                 .padding(.horizontal)
@@ -94,7 +95,7 @@ struct InsightsView: View {
                 
                 // Results
                 if let result = result {
-                    GapAnalysisResultView(result: result)
+                    GapAnalysisResultView(result: result, isAdmin: auth.currentUser?.is_admin == true)
                 }
                 
                 Spacer(minLength: 50)
@@ -130,6 +131,7 @@ struct InsightsView: View {
 
 struct GapAnalysisResultView: View {
     let result: WardrobeGapAnalysisResponse
+    let isAdmin: Bool
     
     private let categoryOrder = ["shirt", "trouser", "blazer", "shoes", "belt"]
     
@@ -176,9 +178,53 @@ struct GapAnalysisResultView: View {
             }
             .padding()
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(UIColor.secondarySystemBackground))
+            .background(AppTheme.surface)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(AppTheme.border, lineWidth: 1)
+            )
             .cornerRadius(12)
             .padding(.horizontal)
+
+            if isAdmin, let cost = result.cost {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Analysis Cost")
+                        .font(.headline)
+                        .foregroundColor(AppTheme.textPrimary)
+                    Text("ChatGPT: \(formatCost(cost.gpt4_cost ?? 0))")
+                        .font(.subheadline)
+                        .foregroundColor(AppTheme.textSecondary)
+                    if let input = cost.input_tokens {
+                        Text("Input tokens: \(input)")
+                            .font(.caption)
+                            .foregroundColor(AppTheme.textSecondary)
+                    }
+                    if let output = cost.output_tokens {
+                        Text("Output tokens: \(output)")
+                            .font(.caption)
+                            .foregroundColor(AppTheme.textSecondary)
+                    }
+                    Text("Total: \(formatCost(cost.total_cost ?? 0))")
+                        .font(.headline)
+                        .foregroundColor(AppTheme.accent)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .background(AppTheme.accentSoft)
+                .cornerRadius(12)
+                .padding(.horizontal)
+            }
+
+            if isAdmin {
+                if let prompt = result.ai_prompt, !prompt.isEmpty {
+                    AdminInsightsPanel(title: "Input Prompt", content: prompt)
+                        .padding(.horizontal)
+                }
+                if let raw = result.ai_raw_response, !raw.isEmpty {
+                    AdminInsightsPanel(title: "AI Response", content: raw)
+                        .padding(.horizontal)
+                }
+            }
             
             // Per-category cards
             ForEach(orderedCategories, id: \.self) { category in
@@ -199,10 +245,6 @@ struct CategoryGapCard: View {
             HStack {
                 Text(entry.category.capitalized)
                     .font(.headline)
-                Spacer()
-                Text("\(entry.item_count) item(s)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
             }
             
             if !entry.owned_colors.isEmpty {
@@ -237,6 +279,46 @@ struct CategoryGapCard: View {
         .background(Color(UIColor.secondarySystemBackground))
         .cornerRadius(12)
     }
+}
+
+private struct AdminInsightsPanel: View {
+    let title: String
+    let content: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundColor(AppTheme.textSecondary)
+            ScrollView(.vertical, showsIndicators: true) {
+                Text(content)
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundColor(AppTheme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(minHeight: 90, maxHeight: 140)
+            .padding(8)
+            .background(Color.black.opacity(0.25))
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(AppTheme.border, lineWidth: 1)
+            )
+        }
+        .padding()
+        .background(AppTheme.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(AppTheme.border, lineWidth: 1)
+        )
+        .cornerRadius(12)
+    }
+}
+
+private func formatCost(_ value: Double) -> String {
+    if value < 0.01 { return String(format: "$%.4f", value) }
+    if value < 0.1 { return String(format: "$%.3f", value) }
+    return String(format: "$%.2f", value)
 }
 
 struct ChipSection: View {

@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 @testable import OutfitSuggestor
 
 final class APIServiceIntegrationTests: XCTestCase {
@@ -85,6 +86,76 @@ final class APIServiceIntegrationTests: XCTestCase {
         } catch {
             XCTFail("Unexpected error type: \(error)")
         }
+    }
+
+    func testGetSuggestionAcceptsPreviousOutfitTextInput() async throws {
+        let image = UIGraphicsImageRenderer(size: CGSize(width: 4, height: 4)).image { context in
+            UIColor.black.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 4, height: 4))
+        }
+
+        let service = makeService { request in
+            XCTAssertEqual(request.url?.path, "/api/suggest-outfit")
+            return (
+                HTTPURLResponse(
+                    url: request.url!,
+                    statusCode: 200,
+                    httpVersion: nil,
+                    headerFields: nil
+                )!,
+                """
+                {
+                  "shirt":"navy shirt",
+                  "trouser":"beige trouser",
+                  "blazer":"sand blazer",
+                  "shoes":"white sneaker",
+                  "belt":"tan belt",
+                  "reasoning":"lighter summer contrast"
+                }
+                """.data(using: .utf8)!
+            )
+        }
+
+        _ = try await service.getSuggestion(
+            image: image,
+            textInput: "summer smart casual",
+            useWardrobeOnly: false,
+            generateModelImage: false,
+            imageModel: "dalle3",
+            location: nil,
+            previousOutfitText: "shirt: white shirt\ntrouser: black trouser"
+        )
+    }
+
+    func testListIntegrationTestsDecodesWrappedResponseShape() async throws {
+        let service = makeService { request in
+            XCTAssertEqual(request.url?.path, "/api/admin/integration-tests")
+            return (
+                HTTPURLResponse(
+                    url: request.url!,
+                    statusCode: 200,
+                    httpVersion: nil,
+                    headerFields: nil
+                )!,
+                """
+                {
+                  "tests": [
+                    {
+                      "id": "api_wardrobe",
+                      "name": "Wardrobe API",
+                      "description": "Checks wardrobe endpoints",
+                      "layer": "backend",
+                      "path": "tests/integration/test_wardrobe.py"
+                    }
+                  ]
+                }
+                """.data(using: .utf8)!
+            )
+        }
+
+        let tests = try await service.listIntegrationTests()
+        XCTAssertEqual(tests.count, 1)
+        XCTAssertEqual(tests.first?.id, "api_wardrobe")
     }
 
     private func makeService(

@@ -25,6 +25,14 @@ struct MatchingWardrobeItems: Codable {
     let belt: [MatchingWardrobeItem]?
 }
 
+struct OutfitCost: Codable {
+    let gpt4_cost: Double
+    let model_image_cost: Double?
+    let total_cost: Double
+    let input_tokens: Int?
+    let output_tokens: Int?
+}
+
 // MARK: - Outfit Suggestion Response
 struct OutfitSuggestion: Codable, Identifiable {
     let id: String
@@ -41,9 +49,12 @@ struct OutfitSuggestion: Codable, Identifiable {
     var matching_wardrobe_items: MatchingWardrobeItems?
     /// Category of the wardrobe item that matched the upload (e.g. "shirt", "trouser"). Use upload image for that category only.
     var upload_matched_category: String?
+    var ai_prompt: String?
+    var ai_raw_response: String?
+    var cost: OutfitCost?
     
     enum CodingKeys: String, CodingKey {
-        case shirt, trouser, blazer, shoes, belt, reasoning, model_image, matching_wardrobe_items, upload_matched_category
+        case shirt, trouser, blazer, shoes, belt, reasoning, model_image, matching_wardrobe_items, upload_matched_category, ai_prompt, ai_raw_response, cost
     }
     
     init(from decoder: Decoder) throws {
@@ -58,6 +69,9 @@ struct OutfitSuggestion: Codable, Identifiable {
         self.model_image = try container.decodeIfPresent(String.self, forKey: .model_image)
         self.matching_wardrobe_items = try container.decodeIfPresent(MatchingWardrobeItems.self, forKey: .matching_wardrobe_items)
         self.upload_matched_category = try container.decodeIfPresent(String.self, forKey: .upload_matched_category)
+        self.ai_prompt = try container.decodeIfPresent(String.self, forKey: .ai_prompt)
+        self.ai_raw_response = try container.decodeIfPresent(String.self, forKey: .ai_raw_response)
+        self.cost = try container.decodeIfPresent(OutfitCost.self, forKey: .cost)
         self.imageData = nil
     }
     
@@ -72,6 +86,9 @@ struct OutfitSuggestion: Codable, Identifiable {
         try container.encodeIfPresent(model_image, forKey: .model_image)
         try container.encodeIfPresent(matching_wardrobe_items, forKey: .matching_wardrobe_items)
         try container.encodeIfPresent(upload_matched_category, forKey: .upload_matched_category)
+        try container.encodeIfPresent(ai_prompt, forKey: .ai_prompt)
+        try container.encodeIfPresent(ai_raw_response, forKey: .ai_raw_response)
+        try container.encodeIfPresent(cost, forKey: .cost)
     }
     
     init(id: String = UUID().uuidString,
@@ -84,7 +101,10 @@ struct OutfitSuggestion: Codable, Identifiable {
          imageData: Data? = nil,
          model_image: String? = nil,
          matching_wardrobe_items: MatchingWardrobeItems? = nil,
-         upload_matched_category: String? = nil) {
+         upload_matched_category: String? = nil,
+         ai_prompt: String? = nil,
+         ai_raw_response: String? = nil,
+         cost: OutfitCost? = nil) {
         self.id = id
         self.shirt = shirt
         self.trouser = trouser
@@ -96,6 +116,9 @@ struct OutfitSuggestion: Codable, Identifiable {
         self.model_image = model_image
         self.matching_wardrobe_items = matching_wardrobe_items
         self.upload_matched_category = upload_matched_category
+        self.ai_prompt = ai_prompt
+        self.ai_raw_response = ai_raw_response
+        self.cost = cost
     }
 }
 
@@ -122,6 +145,16 @@ enum Occasion: String, CaseIterable {
     case formal = "Formal"
     case party = "Party"
     case date = "Date Night"
+
+    var apiValue: String {
+        switch self {
+        case .casual: return "casual"
+        case .business: return "business"
+        case .formal: return "formal"
+        case .party: return "party"
+        case .date: return "date"
+        }
+    }
 }
 
 enum Season: String, CaseIterable {
@@ -130,6 +163,16 @@ enum Season: String, CaseIterable {
     case summer = "Summer"
     case fall = "Fall"
     case winter = "Winter"
+
+    var apiValue: String {
+        switch self {
+        case .all: return "all"
+        case .spring: return "spring"
+        case .summer: return "summer"
+        case .fall: return "fall"
+        case .winter: return "winter"
+        }
+    }
 }
 
 enum Style: String, CaseIterable {
@@ -138,5 +181,15 @@ enum Style: String, CaseIterable {
     case trendy = "Trendy"
     case minimalist = "Minimalist"
     case bold = "Bold"
+
+    var apiValue: String {
+        switch self {
+        case .modern: return "modern"
+        case .classic: return "classic"
+        case .trendy: return "trendy"
+        case .minimalist: return "minimalist"
+        case .bold: return "bold"
+        }
+    }
 }
 

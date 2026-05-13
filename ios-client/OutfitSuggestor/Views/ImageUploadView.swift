@@ -15,6 +15,7 @@ struct ImageUploadView: View {
         VStack(spacing: 16) {
             Text("Upload Image")
                 .font(.headline)
+                .foregroundColor(AppTheme.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
             
             if let image = selectedImage {
@@ -44,31 +45,29 @@ struct ImageUploadView: View {
                     VStack(spacing: 16) {
                         Image(systemName: "photo.on.rectangle.angled")
                             .font(.system(size: 50))
-                            .foregroundColor(.blue)
+                            .foregroundColor(AppTheme.accent)
                         
                         Text("Tap to Upload Image")
                             .font(.headline)
-                            .foregroundColor(.primary)
+                            .foregroundColor(AppTheme.textPrimary)
                         
                         Text("JPEG, PNG supported")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(AppTheme.textSecondary)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(40)
-                    .background(Color(UIColor.secondarySystemBackground))
+                    .background(Color.white.opacity(0.03))
                     .cornerRadius(12)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.blue.opacity(0.5), style: StrokeStyle(lineWidth: 2, dash: [10]))
+                            .stroke(AppTheme.accent.opacity(0.8), style: StrokeStyle(lineWidth: 2, dash: [8]))
                     )
                 }
             }
         }
         .padding()
-        .background(Color(UIColor.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+        .glassCard()
     }
 }
 

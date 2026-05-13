@@ -11,8 +11,11 @@ import UIKit
 struct OutfitSuggestionView: View {
     let suggestion: OutfitSuggestion
     var onNext: (() -> Void)?
+    var onLike: (() -> Void)?
+    var onDislike: (() -> Void)?
     var onAddToWardrobe: (() -> Void)?
     var isLoading: Bool = false
+    var isAdmin: Bool = false
     @State private var showModelImageFullScreen = false
     
     private var modelImageData: Data? {
@@ -46,6 +49,7 @@ struct OutfitSuggestionView: View {
             Text("Your Perfect Outfit")
                 .font(.title2)
                 .fontWeight(.bold)
+                .foregroundColor(AppTheme.textPrimary)
             
             if let data = modelImageData, let uiImage = UIImage(data: data) {
                 Button(action: { showModelImageFullScreen = true }) {
@@ -99,19 +103,20 @@ struct OutfitSuggestionView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Image(systemName: "lightbulb.fill")
-                        .foregroundColor(.yellow)
+                        .foregroundColor(AppTheme.accent)
                     Text("Why This Outfit Works")
                         .font(.headline)
+                        .foregroundColor(AppTheme.textPrimary)
                 }
                 
                 Text(suggestion.reasoning)
                     .font(.body)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding()
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.blue.opacity(0.1))
+            .background(AppTheme.accentSoft)
             .cornerRadius(12)
             
             // Action buttons: Next outfit and Add to Wardrobe
@@ -121,6 +126,7 @@ struct OutfitSuggestionView: View {
                         Label("Next Outfit", systemImage: "arrow.right.circle")
                     }
                     .buttonStyle(.borderedProminent)
+                    .tint(AppTheme.accent)
                     .disabled(isLoading)
                 }
                 if let onAddToWardrobe = onAddToWardrobe {
@@ -128,13 +134,102 @@ struct OutfitSuggestionView: View {
                         Label("Add to Wardrobe", systemImage: "plus.circle")
                     }
                     .buttonStyle(.bordered)
+                    .tint(AppTheme.accent)
                 }
+            }
+
+            HStack(spacing: 12) {
+                if let onLike = onLike {
+                    Button(action: onLike) {
+                        Label("Like Outfit", systemImage: "hand.thumbsup")
+                    }
+                    .buttonStyle(.bordered)
+                }
+                if let onDislike = onDislike {
+                    Button(action: onDislike) {
+                        Label("Try Variation", systemImage: "arrow.triangle.2.circlepath")
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+
+            if isAdmin, let cost = suggestion.cost {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("AI Suggestion Cost")
+                        .font(.headline)
+                        .foregroundColor(AppTheme.textPrimary)
+                    Text("GPT-4 Vision: \(formatCost(cost.gpt4_cost))")
+                        .font(.subheadline)
+                        .foregroundColor(AppTheme.textSecondary)
+                    if let modelCost = cost.model_image_cost, modelCost > 0 {
+                        Text("Model Image: \(formatCost(modelCost))")
+                            .font(.subheadline)
+                            .foregroundColor(AppTheme.textSecondary)
+                    }
+                    Text("Total: \(formatCost(cost.total_cost))")
+                        .font(.headline)
+                        .foregroundColor(AppTheme.accent)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .background(AppTheme.accentSoft)
+                .cornerRadius(12)
+            }
+
+            if isAdmin {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("AI Prompt & Response")
+                        .font(.headline)
+                        .foregroundColor(AppTheme.textPrimary)
+                    adminCodePanel(title: "Input Prompt", text: suggestion.ai_prompt ?? "Prompt details unavailable for this run.")
+                    adminCodePanel(
+                        title: "AI Response",
+                        text: suggestion.ai_raw_response ?? """
+                        {
+                          "shirt": "\(suggestion.shirt)",
+                          "trouser": "\(suggestion.trouser)",
+                          "blazer": "\(suggestion.blazer)",
+                          "shoes": "\(suggestion.shoes)",
+                          "belt": "\(suggestion.belt)",
+                          "reasoning": "\(suggestion.reasoning)"
+                        }
+                        """
+                    )
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .padding()
-        .background(Color(UIColor.systemBackground))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+        .glassCard()
+    }
+
+    private func formatCost(_ cost: Double) -> String {
+        if cost < 0.01 { return String(format: "$%.4f", cost) }
+        if cost < 0.1 { return String(format: "$%.3f", cost) }
+        return String(format: "$%.2f", cost)
+    }
+
+    @ViewBuilder
+    private func adminCodePanel(title: String, text: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title.uppercased())
+                .font(.caption2.weight(.semibold))
+                .foregroundColor(AppTheme.textSecondary)
+            ScrollView(.vertical, showsIndicators: true) {
+                Text(text)
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundColor(AppTheme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(minHeight: 90, maxHeight: 140)
+            .padding(8)
+            .background(Color.black.opacity(0.25))
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(AppTheme.border, lineWidth: 1)
+            )
+        }
     }
 }
 
@@ -181,22 +276,26 @@ struct OutfitItemCard: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(label)
                     .font(.headline)
-                    .foregroundColor(.primary)
+                    .foregroundColor(AppTheme.textPrimary)
                 if thumbnailImage != nil {
                     Text("(from wardrobe)")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppTheme.textSecondary)
                 }
                 Text(description)
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(AppTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             
             Spacer()
         }
         .padding()
-        .background(Color(UIColor.secondarySystemBackground))
+        .background(Color.white.opacity(0.06))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(AppTheme.border, lineWidth: 1)
+        )
         .cornerRadius(12)
     }
 }

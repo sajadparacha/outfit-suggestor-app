@@ -13,6 +13,7 @@ struct MainTabView: View {
     @State private var selectedTab = 0
     
     private var isAdmin: Bool { auth.currentUser?.is_admin == true }
+    private var testRunnerEnabled: Bool { AppConfig.enableAdminTestRunner }
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -22,29 +23,35 @@ struct MainTabView: View {
             .tabItem { Label("Suggest", systemImage: "sparkles") }
             .tag(0)
             
-            NavigationView {
-                HistoryListView { entry in
-                    viewModel.loadFromHistory(entry)
-                    selectedTab = 0
+            if auth.isAuthenticated {
+                NavigationView {
+                    HistoryListView { entry in
+                        viewModel.loadFromHistory(entry)
+                        selectedTab = 0
+                    }
                 }
+                .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
+                .tag(1)
             }
-            .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
-            .tag(1)
             
-            NavigationView {
-                WardrobeListView(onGetSuggestionFromItem: { itemId in
-                    selectedTab = 0
-                    Task { await viewModel.getSuggestionFromWardrobeItem(id: itemId) }
-                })
+            if auth.isAuthenticated {
+                NavigationView {
+                    WardrobeListView(onGetSuggestionFromItem: { itemId in
+                        selectedTab = 0
+                        Task { await viewModel.getSuggestionFromWardrobeItem(id: itemId) }
+                    })
+                }
+                .tabItem { Label("Wardrobe", systemImage: "tshirt") }
+                .tag(2)
             }
-            .tabItem { Label("Wardrobe", systemImage: "tshirt") }
-            .tag(2)
             
-            NavigationView {
-                InsightsView()
+            if auth.isAuthenticated {
+                NavigationView {
+                    InsightsView()
+                }
+                .tabItem { Label("Insights", systemImage: "chart.bar.xaxis") }
+                .tag(3)
             }
-            .tabItem { Label("Insights", systemImage: "chart.bar.xaxis") }
-            .tag(3)
             
             if isAdmin {
                 NavigationView {
@@ -53,11 +60,13 @@ struct MainTabView: View {
                 .tabItem { Label("Reports", systemImage: "chart.bar") }
                 .tag(4)
                 
-                NavigationView {
-                    IntegrationTestRunnerView()
+                if testRunnerEnabled {
+                    NavigationView {
+                        IntegrationTestRunnerView()
+                    }
+                    .tabItem { Label("Tests", systemImage: "testtube.2") }
+                    .tag(5)
                 }
-                .tabItem { Label("Tests", systemImage: "testtube.2") }
-                .tag(5)
             }
             
             NavigationView {
@@ -77,6 +86,13 @@ struct MainTabView: View {
             }
             .tabItem { Label("About", systemImage: "info.circle") }
             .tag(8)
+        }
+        .tint(AppTheme.accent)
+        .preferredColorScheme(.dark)
+        .onChange(of: auth.isAuthenticated) { isAuthenticated in
+            if !isAuthenticated && selectedTab != 0 && selectedTab != 6 && selectedTab != 7 && selectedTab != 8 {
+                selectedTab = 0
+            }
         }
     }
 }

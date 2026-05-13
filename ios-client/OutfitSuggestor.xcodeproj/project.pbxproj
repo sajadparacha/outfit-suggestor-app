@@ -33,6 +33,7 @@
 		B8A0449F46DB87CCAFA78217 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D6378272AE2D99A215788C /* MainTabView.swift */; };
 		BDC51E614A7C765FB3FA7572 /* OutfitViewModelIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D86343F4A060EB70A1831EAA /* OutfitViewModelIntegrationTests.swift */; };
 		C7F027A59B48C9E0730C18C5 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60FB09DAD00AB05C5F220D23 /* AboutView.swift */; };
+		C9F8C11DE63D85713E22F929 /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BC4B22EF6A4F893952634C9 /* AppTheme.swift */; };
 		D49CCC05C1C483C20F5B066E /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D805DBEB8393D1EF9B9EAD33 /* APIService.swift */; };
 		D4C904B093445C0E14BB2DA5 /* ReportsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AF4C72CE761E107EEAD6ED6 /* ReportsView.swift */; };
 		E4D8F27D9BCD253F45AF2C89 /* MainFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 106F6C638D7D7BC45FC53DE7 /* MainFlowView.swift */; };
@@ -58,13 +59,14 @@
 		106F6C638D7D7BC45FC53DE7 /* MainFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlowView.swift; sourceTree = "<group>"; };
 		14E774459799783475D23A6C /* OutfitViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitViewModel.swift; sourceTree = "<group>"; };
 		18F5CCBC1004CA2D66F07B2E /* OutfitSuggestionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitSuggestionView.swift; sourceTree = "<group>"; };
+		1BC4B22EF6A4F893952634C9 /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
 		1E0DF875D431141A2F841D3F /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		2602BE97B13F02079895BAEB /* FiltersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FiltersView.swift; sourceTree = "<group>"; };
 		320B1BD2DA38C4879F46C68C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		3C4C31A8216581E9E830B306 /* UserGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserGuideView.swift; sourceTree = "<group>"; };
 		4BC8F20C54523955442C7FFF /* OutfitModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitModels.swift; sourceTree = "<group>"; };
 		4CBF29F94D7782AC11CB81D9 /* HistoryListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryListView.swift; sourceTree = "<group>"; };
-		4FDE60751389D95FDB822F3E /* OutfitSuggestor.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OutfitSuggestor.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4FDE60751389D95FDB822F3E /* OutfitSuggestor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OutfitSuggestor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		54E8D18B61E9EF222656069F /* TokenStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenStorage.swift; sourceTree = "<group>"; };
 		585D224C3BAB35D9CD03EA3B /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
 		60FB09DAD00AB05C5F220D23 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
@@ -130,6 +132,14 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
+		5F27084579783312106D7E4C /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				1BC4B22EF6A4F893952634C9 /* AppTheme.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
 		66285900FE692F74CCF8A1C2 /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
@@ -165,6 +175,7 @@
 				C70E62A8CE7289CD4E56579C /* Models */,
 				C6C2893F741D63D483F9F16A /* Resources */,
 				C3CF807D3AB3FE74EEAC3E8E /* Services */,
+				5F27084579783312106D7E4C /* Theme */,
 				B03A5A91EAFDED2AFA475892 /* Utils */,
 				66285900FE692F74CCF8A1C2 /* ViewModels */,
 				48DB226138D7502CAC1BBDC4 /* Views */,
@@ -256,8 +267,11 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					34FD16507CAAB378C8FCA24D = {
+						ProvisioningStyle = Automatic;
+					};
 					73E8DE2A1D94825B55F8B785 = {
-						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
 					};
 				};
 			};
@@ -289,6 +303,7 @@
 				D49CCC05C1C483C20F5B066E /* APIService.swift in Sources */,
 				C7F027A59B48C9E0730C18C5 /* AboutView.swift in Sources */,
 				23CB85FFAAF34EEC0F240672 /* AppConfig.swift in Sources */,
+				C9F8C11DE63D85713E22F929 /* AppTheme.swift in Sources */,
 				B030C4AADF57B3488189CD98 /* AuthModels.swift in Sources */,
 				96A83F2AAE2ED65AD4E24997 /* AuthService.swift in Sources */,
 				219CC1A4A5BDD78FC15E6D32 /* ContentView.swift in Sources */,
@@ -345,6 +360,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -365,7 +382,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = "";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 7UVB6XM3R7;
 				INFOPLIST_FILE = OutfitSuggestor/Resources/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -447,7 +465,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = "";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 7UVB6XM3R7;
 				INFOPLIST_FILE = OutfitSuggestor/Resources/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -521,6 +540,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
