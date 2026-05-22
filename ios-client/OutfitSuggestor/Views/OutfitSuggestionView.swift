@@ -16,6 +16,7 @@ struct OutfitSuggestionView: View {
     var onAddToWardrobe: (() -> Void)?
     var isLoading: Bool = false
     var isAdmin: Bool = false
+    var showsActionSection: Bool = true
     @State private var showModelImageFullScreen = false
     
     private var modelImageData: Data? {
@@ -119,37 +120,40 @@ struct OutfitSuggestionView: View {
             .background(AppTheme.accentSoft)
             .cornerRadius(12)
             
-            // Action buttons: Next outfit and Add to Wardrobe
-            HStack(spacing: 12) {
-                if let onNext = onNext {
-                    Button(action: onNext) {
-                        Label("Next Outfit", systemImage: "arrow.right.circle")
+            if showsActionSection {
+                // Optional legacy action section. New main flow can hide this and render
+                // its own state-specific actions to avoid duplicated controls.
+                HStack(spacing: 12) {
+                    if let onNext = onNext {
+                        Button(action: onNext) {
+                            Label("Next Outfit", systemImage: "arrow.right.circle")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(AppTheme.accent)
+                        .disabled(isLoading)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(AppTheme.accent)
-                    .disabled(isLoading)
-                }
-                if let onAddToWardrobe = onAddToWardrobe {
-                    Button(action: onAddToWardrobe) {
-                        Label("Add to Wardrobe", systemImage: "plus.circle")
+                    if let onAddToWardrobe = onAddToWardrobe {
+                        Button(action: onAddToWardrobe) {
+                            Label("Add to Wardrobe", systemImage: "plus.circle")
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(AppTheme.accent)
                     }
-                    .buttonStyle(.bordered)
-                    .tint(AppTheme.accent)
                 }
-            }
 
-            HStack(spacing: 12) {
-                if let onLike = onLike {
-                    Button(action: onLike) {
-                        Label("Like Outfit", systemImage: "hand.thumbsup")
+                HStack(spacing: 12) {
+                    if let onLike = onLike {
+                        Button(action: onLike) {
+                            Label("Like Outfit", systemImage: "hand.thumbsup")
+                        }
+                        .buttonStyle(.bordered)
                     }
-                    .buttonStyle(.bordered)
-                }
-                if let onDislike = onDislike {
-                    Button(action: onDislike) {
-                        Label("Try Variation", systemImage: "arrow.triangle.2.circlepath")
+                    if let onDislike = onDislike {
+                        Button(action: onDislike) {
+                            Label("Try Variation", systemImage: "arrow.triangle.2.circlepath")
+                        }
+                        .buttonStyle(.bordered)
                     }
-                    .buttonStyle(.bordered)
                 }
             }
 

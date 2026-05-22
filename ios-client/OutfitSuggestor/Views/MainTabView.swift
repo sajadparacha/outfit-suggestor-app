@@ -2,7 +2,7 @@
 //  MainTabView.swift
 //  OutfitSuggestor
 //
-//  Tab navigation: Main, History, Wardrobe, Insights, Reports (admin), Integration Tests (admin), Settings, Guide, About
+//  Tab navigation: Main, History, Wardrobe, Insights, Reports (admin), Settings, Guide, About
 //
 
 import SwiftUI
@@ -13,79 +13,90 @@ struct MainTabView: View {
     @State private var selectedTab = 0
     
     private var isAdmin: Bool { auth.currentUser?.is_admin == true }
-    private var testRunnerEnabled: Bool { AppConfig.enableAdminTestRunner }
     
     var body: some View {
-        TabView(selection: $selectedTab) {
-            NavigationView {
-                MainFlowView(viewModel: viewModel)
-            }
-            .tabItem { Label("Suggest", systemImage: "sparkles") }
-            .tag(0)
-            
-            if auth.isAuthenticated {
+        ZStack {
+            TabView(selection: $selectedTab) {
                 NavigationView {
-                    HistoryListView { entry in
-                        viewModel.loadFromHistory(entry)
-                        selectedTab = 0
-                    }
+                    MainFlowView(
+                        viewModel: viewModel,
+                        onRequestHistory: auth.isAuthenticated ? { selectedTab = 1 } : nil
+                    )
                 }
-                .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
-                .tag(1)
-            }
-            
-            if auth.isAuthenticated {
-                NavigationView {
-                    WardrobeListView(onGetSuggestionFromItem: { itemId in
-                        selectedTab = 0
-                        Task { await viewModel.getSuggestionFromWardrobeItem(id: itemId) }
-                    })
-                }
-                .tabItem { Label("Wardrobe", systemImage: "tshirt") }
-                .tag(2)
-            }
-            
-            if auth.isAuthenticated {
-                NavigationView {
-                    InsightsView()
-                }
-                .tabItem { Label("Insights", systemImage: "chart.bar.xaxis") }
-                .tag(3)
-            }
-            
-            if isAdmin {
-                NavigationView {
-                    ReportsView()
-                }
-                .tabItem { Label("Reports", systemImage: "chart.bar") }
-                .tag(4)
+                .tabItem { Label("Suggest", systemImage: "sparkles") }
+                .tag(0)
                 
-                if testRunnerEnabled {
+                if auth.isAuthenticated {
                     NavigationView {
-                        IntegrationTestRunnerView()
+                        HistoryListView { entry in
+                            viewModel.loadFromHistory(entry)
+                            selectedTab = 0
+                        }
                     }
-                    .tabItem { Label("Tests", systemImage: "testtube.2") }
-                    .tag(5)
+                    .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
+                    .tag(1)
                 }
+                
+                if auth.isAuthenticated {
+                    NavigationView {
+                        WardrobeListView(
+                            onGetSuggestionFromItem: { itemId in
+                                selectedTab = 0
+                                Task { await viewModel.getSuggestionFromWardrobeItem(id: itemId) }
+                            },
+                            onSelectHistorySuggestion: { entry in
+                                viewModel.loadFromHistory(entry)
+                                selectedTab = 0
+                            }
+                        )
+                    }
+                    .tabItem { Label("Wardrobe", systemImage: "tshirt") }
+                    .tag(2)
+                }
+                
+                if auth.isAuthenticated {
+                    NavigationView {
+                        InsightsView()
+                    }
+                    .tabItem { Label("Insights", systemImage: "chart.bar.xaxis") }
+                    .tag(3)
+                }
+                
+                if isAdmin {
+                    NavigationView {
+                        ReportsView()
+                    }
+                    .tabItem { Label("Reports", systemImage: "chart.bar") }
+                    .tag(4)
+                }
+                
+                NavigationView {
+                    SettingsView()
+                }
+                .tabItem { Label("Settings", systemImage: "gearshape") }
+                .tag(6)
+                
+                NavigationView {
+                    UserGuideView()
+                }
+                .tabItem { Label("Guide", systemImage: "book") }
+                .tag(7)
+                
+                NavigationView {
+                    AboutView()
+                }
+                .tabItem { Label("About", systemImage: "info.circle") }
+                .tag(8)
             }
-            
-            NavigationView {
-                SettingsView()
+            .allowsHitTesting(!viewModel.isLoading)
+
+            if viewModel.isLoading {
+                Color.black.opacity(0.22)
+                    .ignoresSafeArea()
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Global Loading Lock")
+                    .accessibilityIdentifier("global.loadingLock")
             }
-            .tabItem { Label("Settings", systemImage: "gearshape") }
-            .tag(6)
-            
-            NavigationView {
-                UserGuideView()
-            }
-            .tabItem { Label("Guide", systemImage: "book") }
-            .tag(7)
-            
-            NavigationView {
-                AboutView()
-            }
-            .tabItem { Label("About", systemImage: "info.circle") }
-            .tag(8)
         }
         .tint(AppTheme.accent)
         .preferredColorScheme(.dark)

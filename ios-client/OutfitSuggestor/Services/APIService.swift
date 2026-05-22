@@ -36,6 +36,7 @@ class APIService {
     private let baseURL: String
     private let session: URLSession
     private let authTokenProvider: () -> String
+    private let uiTestStore = UITestDataStore.shared
     
     init(
         baseURL: String = AppConfig.apiBaseURL,
@@ -63,6 +64,11 @@ class APIService {
     private func setAuthIfNeeded(_ request: inout URLRequest) {
         if let v = authHeader() { request.setValue(v, forHTTPHeaderField: "Authorization") }
     }
+
+    private func maybeSimulateUITestDelay() async {
+        guard AppConfig.isUITestMode else { return }
+        try? await Task.sleep(nanoseconds: 1_800_000_000)
+    }
     
     // MARK: - Suggest Outfit
     
@@ -76,6 +82,10 @@ class APIService {
         location: String? = nil,
         previousOutfitText: String? = nil
     ) async throws -> OutfitSuggestion {
+        if AppConfig.isUITestMode {
+            await maybeSimulateUITestDelay()
+            return uiTestStore.makeSuggestionForUpload(image: image, textInput: textInput)
+        }
         guard let url = URL(string: "\(baseURL)/api/suggest-outfit") else { throw APIServiceError.invalidURL }
         let boundary = UUID().uuidString
         var request = URLRequest(url: url)
@@ -141,6 +151,10 @@ class APIService {
         imageModel: String = "dalle3",
         location: String? = nil
     ) async throws -> OutfitSuggestion {
+        if AppConfig.isUITestMode {
+            await maybeSimulateUITestDelay()
+            return uiTestStore.makeSuggestionFromWardrobeItem(itemId: itemId)
+        }
         guard let url = URL(string: "\(baseURL)/api/suggest-outfit-from-wardrobe-item/\(itemId)") else { throw APIServiceError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -168,6 +182,10 @@ class APIService {
     // MARK: - Outfit History
     
     func getOutfitHistory(limit: Int = 50) async throws -> [OutfitHistoryEntry] {
+        if AppConfig.isUITestMode {
+            await maybeSimulateUITestDelay()
+            return uiTestStore.history(limit: limit)
+        }
         guard let url = URL(string: "\(baseURL)/api/outfit-history?limit=\(limit)") else { throw APIServiceError.invalidURL }
         var request = URLRequest(url: url)
         setAuthIfNeeded(&request)
@@ -185,6 +203,10 @@ class APIService {
     }
     
     func deleteOutfitHistory(entryId: Int) async throws {
+        if AppConfig.isUITestMode {
+            uiTestStore.deleteHistory(entryId: entryId)
+            return
+        }
         guard let url = URL(string: "\(baseURL)/api/outfit-history/\(entryId)") else { throw APIServiceError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
@@ -196,6 +218,10 @@ class APIService {
     // MARK: - Wardrobe
     
     func getWardrobe(category: String? = nil, search: String? = nil, limit: Int = 50, offset: Int = 0) async throws -> WardrobeListResponse {
+        if AppConfig.isUITestMode {
+            await maybeSimulateUITestDelay()
+            return uiTestStore.wardrobe(category: category, search: search, limit: limit, offset: offset)
+        }
         var comp = URLComponents(string: "\(baseURL)/api/wardrobe")!
         comp.queryItems = [URLQueryItem(name: "limit", value: "\(limit)"), URLQueryItem(name: "offset", value: "\(offset)")]
         if let c = category, !c.isEmpty { comp.queryItems?.append(URLQueryItem(name: "category", value: c)) }
@@ -372,6 +398,10 @@ class APIService {
     
     /// Random outfit from wardrobe (auth required)
     func getRandomOutfit(occasion: String = "casual", season: String = "all", style: String = "modern") async throws -> OutfitSuggestion {
+        if AppConfig.isUITestMode {
+            await maybeSimulateUITestDelay()
+            return uiTestStore.randomSuggestion()
+        }
         var comp = URLComponents(string: "\(baseURL)/api/wardrobe/random-outfit")!
         comp.queryItems = [
             URLQueryItem(name: "occasion", value: occasion),
@@ -488,6 +518,9 @@ class APIService {
     
     /// Check if an image already exists in outfit history (before making a suggestion)
     func checkOutfitDuplicate(image: UIImage) async throws -> OutfitDuplicateResponse {
+        if AppConfig.isUITestMode {
+            return OutfitDuplicateResponse(is_duplicate: false, existing_suggestion: nil)
+        }
         guard let url = URL(string: "\(baseURL)/api/check-duplicate") else { throw APIServiceError.invalidURL }
         let boundary = UUID().uuidString
         var request = URLRequest(url: url)
@@ -529,56 +562,6 @@ class APIService {
         return try JSONDecoder().decode(WardrobeGapAnalysisResponse.self, from: data)
     }
     
-    // MARK: - Integration Tests (Admin)
-    
-    /// List available integration tests (admin only)
-    func listIntegrationTests() async throws -> [IntegrationTestCase] {
-        guard let url = URL(string: "\(baseURL)/api/admin/integration-tests/") else { throw APIServiceError.invalidURL }
-        var request = URLRequest(url: url)
-        setAuthIfNeeded(&request)
-        let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-            if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
-            throw APIServiceError.invalidResponse
-        }
-        if let wrapped = try? JSONDecoder().decode(IntegrationTestListResponse.self, from: data) {
-            return wrapped.tests
-        }
-        return try JSONDecoder().decode([IntegrationTestCase].self, from: data)
-    }
-    
-    /// Run a single integration test (admin only)
-    func runIntegrationTest(testId: String) async throws -> IntegrationTestResult {
-        guard let url = URL(string: "\(baseURL)/api/admin/integration-tests/run") else { throw APIServiceError.invalidURL }
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 120
-        setAuthIfNeeded(&request)
-        request.httpBody = try JSONEncoder().encode(["test_id": testId])
-        let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-            if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
-            throw APIServiceError.invalidResponse
-        }
-        return try JSONDecoder().decode(IntegrationTestResult.self, from: data)
-    }
-    
-    /// Run all integration tests (admin only)
-    func runAllIntegrationTests() async throws -> [IntegrationTestResult] {
-        guard let url = URL(string: "\(baseURL)/api/admin/integration-tests/run-all") else { throw APIServiceError.invalidURL }
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 300
-        setAuthIfNeeded(&request)
-        let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-            if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
-            throw APIServiceError.invalidResponse
-        }
-        return try JSONDecoder().decode([IntegrationTestResult].self, from: data)
-    }
 }
 
 extension APIService: APIServiceProtocol {}
@@ -636,46 +619,6 @@ struct OutfitDuplicateResponse: Codable {
     let existing_suggestion: OutfitSuggestion?
 }
 
-// MARK: - Integration Tests (Admin)
-struct IntegrationTestCase: Codable, Identifiable {
-    let id: String
-    let name: String
-    let description: String
-    let layer: String
-    let path: String
-}
-
-struct IntegrationTestCaseResult: Codable {
-    let name: String
-    let status: String
-    let failure_cause: String?
-}
-
-struct IntegrationTestResult: Codable, Identifiable {
-    var id: String { test_id }
-    let test_id: String
-    let name: String
-    let description: String
-    let layer: String
-    let path: String
-    let started_at: String
-    let duration_ms: Double
-    let status: String
-    let timed_out: Bool
-    let exit_code: Int
-    let command: String
-    let passed: Int
-    let failed: Int
-    let skipped: Int
-    let suite_failure_cause: String?
-    let test_cases: [IntegrationTestCaseResult]
-    let output_excerpt: String
-}
-
-private struct IntegrationTestListResponse: Codable {
-    let tests: [IntegrationTestCase]
-}
-
 // Backend random-outfit returns { shirt, trouser, blazer, shoes, belt, reasoning, matching_wardrobe_items }
 struct RandomOutfitResponse: Codable {
     let shirt: String
@@ -687,6 +630,170 @@ struct RandomOutfitResponse: Codable {
     
     func toOutfitSuggestion() -> OutfitSuggestion {
         OutfitSuggestion(shirt: shirt, trouser: trouser, blazer: blazer, shoes: shoes, belt: belt, reasoning: reasoning, imageData: nil)
+    }
+}
+
+final class UITestDataStore {
+    static let shared = UITestDataStore()
+
+    private let lock = NSLock()
+    private var wardrobeItems: [WardrobeItem]
+    private var historyEntries: [OutfitHistoryEntry]
+    private var nextHistoryId: Int
+
+    private init() {
+        wardrobeItems = [
+            WardrobeItem(id: 1, category: "shirt", name: "Oxford Shirt", description: "White oxford shirt", color: "White"),
+            WardrobeItem(id: 2, category: "trouser", name: "Chino", description: "Navy chinos", color: "Navy"),
+            WardrobeItem(id: 3, category: "shoes", name: "Loafers", description: "Black loafers", color: "Black"),
+            WardrobeItem(id: 4, category: "belt", name: "Leather Belt", description: "Brown leather belt", color: "Brown"),
+            WardrobeItem(id: 5, category: "hat", name: "Wool Hat", description: "Soft gray wool hat", color: "Gray")
+        ]
+        historyEntries = [
+            OutfitHistoryEntry(
+                id: 100,
+                created_at: "2026-05-22T10:19:00",
+                text_input: "Occasion: casual, Season: all, Style: modern",
+                image_data: nil,
+                model_image: nil,
+                shirt: "White cotton button-down shirt",
+                trouser: "Dark gray slim-fit chinos",
+                blazer: "Navy blue unstructured blazer",
+                shoes: "Black leather loafers",
+                belt: "Black leather belt",
+                reasoning: "Clean casual look with contrast and balance.",
+                source_wardrobe_item_id: 3,
+                shoes_id: 3
+            ),
+            OutfitHistoryEntry(
+                id: 101,
+                created_at: "2026-05-21T09:00:00",
+                text_input: "Business smart outfit",
+                image_data: nil,
+                model_image: nil,
+                shirt: "Light blue spread-collar shirt",
+                trouser: "Charcoal wool trousers",
+                blazer: "Mid-gray blazer",
+                shoes: "Dark brown brogues",
+                belt: "Dark brown leather belt",
+                reasoning: "Business-ready with grounded neutral palette.",
+                source_wardrobe_item_id: 2,
+                trouser_id: 2,
+                belt_id: 4
+            ),
+            OutfitHistoryEntry(
+                id: 102,
+                created_at: "2026-05-20T08:15:00",
+                text_input: "Weekend linen profile",
+                image_data: nil,
+                model_image: nil,
+                shirt: "Linen cream shirt",
+                trouser: "Stone drawstring trousers",
+                blazer: "No blazer",
+                shoes: "White canvas sneakers",
+                belt: "No belt",
+                reasoning: "Breathable, relaxed weekend outfit.",
+                source_wardrobe_item_id: 1,
+                shirt_id: 1
+            )
+        ]
+        nextHistoryId = 200
+    }
+
+    func wardrobe(category: String?, search: String?, limit: Int, offset: Int) -> WardrobeListResponse {
+        lock.lock()
+        defer { lock.unlock() }
+        var items = wardrobeItems
+        if let category, !category.isEmpty {
+            items = items.filter { $0.category.caseInsensitiveCompare(category) == .orderedSame }
+        }
+        if let search, !search.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let q = search.lowercased()
+            items = items.filter { item in
+                item.category.lowercased().contains(q)
+                    || (item.name?.lowercased().contains(q) ?? false)
+                    || (item.description?.lowercased().contains(q) ?? false)
+                    || (item.color?.lowercased().contains(q) ?? false)
+            }
+        }
+        let total = items.count
+        let end = min(items.count, offset + limit)
+        let paged = offset < end ? Array(items[offset..<end]) : []
+        return WardrobeListResponse(items: paged, total: total, limit: limit, offset: offset)
+    }
+
+    func history(limit: Int) -> [OutfitHistoryEntry] {
+        lock.lock()
+        defer { lock.unlock() }
+        return Array(historyEntries.prefix(limit))
+    }
+
+    func deleteHistory(entryId: Int) {
+        lock.lock()
+        defer { lock.unlock() }
+        historyEntries.removeAll { $0.id == entryId }
+    }
+
+    func makeSuggestionFromWardrobeItem(itemId: Int) -> OutfitSuggestion {
+        lock.lock()
+        defer { lock.unlock() }
+        let suggestion = OutfitSuggestion(
+            shirt: "Crisp white shirt from wardrobe",
+            trouser: "Slim navy trousers",
+            blazer: "Soft gray blazer",
+            shoes: "Polished black loafers",
+            belt: "Matching black leather belt",
+            reasoning: "Built around your selected wardrobe item for a balanced, versatile outfit."
+        )
+        appendSuggestionToHistory(suggestion, sourceWardrobeItemId: itemId)
+        return suggestion
+    }
+
+    func makeSuggestionForUpload(image: UIImage, textInput: String) -> OutfitSuggestion {
+        lock.lock()
+        defer { lock.unlock() }
+        let suggestion = OutfitSuggestion(
+            shirt: "Minimal white tee",
+            trouser: "Relaxed charcoal trousers",
+            blazer: "Lightweight navy blazer",
+            shoes: "Clean white sneakers",
+            belt: "Matte black belt",
+            reasoning: "A modern smart-casual combination tuned for comfort and clean contrast.",
+            imageData: image.jpegData(compressionQuality: 0.8)
+        )
+        appendSuggestionToHistory(suggestion, sourceWardrobeItemId: nil, prompt: textInput)
+        return suggestion
+    }
+
+    func randomSuggestion() -> OutfitSuggestion {
+        OutfitSuggestion(
+            shirt: "Soft beige shirt",
+            trouser: "Olive trousers",
+            blazer: "Stone blazer",
+            shoes: "Brown derby shoes",
+            belt: "Brown textured belt",
+            reasoning: "Randomly selected from your test wardrobe profile."
+        )
+    }
+
+    private func appendSuggestionToHistory(_ suggestion: OutfitSuggestion, sourceWardrobeItemId: Int?, prompt: String? = nil) {
+        let now = ISO8601DateFormatter().string(from: Date())
+        let entry = OutfitHistoryEntry(
+            id: nextHistoryId,
+            created_at: now,
+            text_input: prompt,
+            image_data: suggestion.imageData?.base64EncodedString(),
+            model_image: nil,
+            shirt: suggestion.shirt,
+            trouser: suggestion.trouser,
+            blazer: suggestion.blazer,
+            shoes: suggestion.shoes,
+            belt: suggestion.belt,
+            reasoning: suggestion.reasoning,
+            source_wardrobe_item_id: sourceWardrobeItemId
+        )
+        nextHistoryId += 1
+        historyEntries.insert(entry, at: 0)
     }
 }
 

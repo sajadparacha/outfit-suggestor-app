@@ -11,6 +11,7 @@ enum AppConfig {
     private static let defaultAPIBaseURL = "https://web-production-dfcf8.up.railway.app"
     private static let userDefaultsAPIKey = "api_base_url_override"
     private static let defaultEnableAdminTestRunner = false
+    private static let uiTestFlag = "UI_TEST_MODE"
 
     static var apiBaseURL: String {
         if let override = UserDefaults.standard.string(forKey: userDefaultsAPIKey)?
@@ -38,5 +39,10 @@ enum AppConfig {
 #else
         return defaultEnableAdminTestRunner
 #endif
+    }
+
+    static var isUITestMode: Bool {
+        let processInfo = ProcessInfo.processInfo
+        return processInfo.arguments.contains(uiTestFlag) || processInfo.environment[uiTestFlag] == "1"
     }
 }

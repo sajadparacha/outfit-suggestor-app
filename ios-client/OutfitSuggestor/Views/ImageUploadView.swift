@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct ImageUploadView: View {
     @Binding var selectedImage: UIImage?
@@ -63,6 +64,20 @@ struct ImageUploadView: View {
                         RoundedRectangle(cornerRadius: 12)
                             .stroke(AppTheme.accent.opacity(0.8), style: StrokeStyle(lineWidth: 2, dash: [8]))
                     )
+                }
+                .accessibilityIdentifier("main.uploadButton")
+
+                if AppConfig.isUITestMode {
+                    Button("Use Sample Image") {
+                        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 240, height: 320))
+                        selectedImage = renderer.image { ctx in
+                            UIColor.systemTeal.setFill()
+                            ctx.fill(CGRect(x: 0, y: 0, width: 240, height: 320))
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(AppTheme.accent)
+                    .accessibilityIdentifier("main.useSampleImageButton")
                 }
             }
         }

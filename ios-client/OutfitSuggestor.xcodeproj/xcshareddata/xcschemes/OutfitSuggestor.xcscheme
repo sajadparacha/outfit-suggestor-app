@@ -21,6 +21,20 @@
                ReferencedContainer = "container:OutfitSuggestor.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "EA3252C02C75444A81E2E791"
+               BuildableName = "OutfitSuggestorUITests.xctest"
+               BlueprintName = "OutfitSuggestorUITests"
+               ReferencedContainer = "container:OutfitSuggestor.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -47,6 +61,17 @@
                BlueprintIdentifier = "34FD16507CAAB378C8FCA24D"
                BuildableName = "OutfitSuggestorTests.xctest"
                BlueprintName = "OutfitSuggestorTests"
+               ReferencedContainer = "container:OutfitSuggestor.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "EA3252C02C75444A81E2E791"
+               BuildableName = "OutfitSuggestorUITests.xctest"
+               BlueprintName = "OutfitSuggestorUITests"
                ReferencedContainer = "container:OutfitSuggestor.xcodeproj">
             </BuildableReference>
          </TestableReference>

@@ -19,6 +19,12 @@ struct OutfitHistoryEntry: Codable, Identifiable {
     let shoes: String
     let belt: String
     let reasoning: String
+    let source_wardrobe_item_id: Int?
+    let shirt_id: Int?
+    let trouser_id: Int?
+    let blazer_id: Int?
+    let shoes_id: Int?
+    let belt_id: Int?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -32,6 +38,12 @@ struct OutfitHistoryEntry: Codable, Identifiable {
         case shoes
         case belt
         case reasoning
+        case source_wardrobe_item_id
+        case shirt_id
+        case trouser_id
+        case blazer_id
+        case shoes_id
+        case belt_id
     }
 
     init(from decoder: Decoder) throws {
@@ -47,6 +59,12 @@ struct OutfitHistoryEntry: Codable, Identifiable {
         shoes = try c.decodeIfPresent(String.self, forKey: .shoes) ?? ""
         belt = try c.decodeIfPresent(String.self, forKey: .belt) ?? ""
         reasoning = try c.decodeIfPresent(String.self, forKey: .reasoning) ?? ""
+        source_wardrobe_item_id = try c.decodeIfPresent(Int.self, forKey: .source_wardrobe_item_id)
+        shirt_id = try c.decodeIfPresent(Int.self, forKey: .shirt_id)
+        trouser_id = try c.decodeIfPresent(Int.self, forKey: .trouser_id)
+        blazer_id = try c.decodeIfPresent(Int.self, forKey: .blazer_id)
+        shoes_id = try c.decodeIfPresent(Int.self, forKey: .shoes_id)
+        belt_id = try c.decodeIfPresent(Int.self, forKey: .belt_id)
     }
 
     init(
@@ -60,7 +78,13 @@ struct OutfitHistoryEntry: Codable, Identifiable {
         blazer: String,
         shoes: String,
         belt: String,
-        reasoning: String
+        reasoning: String,
+        source_wardrobe_item_id: Int? = nil,
+        shirt_id: Int? = nil,
+        trouser_id: Int? = nil,
+        blazer_id: Int? = nil,
+        shoes_id: Int? = nil,
+        belt_id: Int? = nil
     ) {
         self.id = id
         self.created_at = created_at
@@ -73,6 +97,12 @@ struct OutfitHistoryEntry: Codable, Identifiable {
         self.shoes = shoes
         self.belt = belt
         self.reasoning = reasoning
+        self.source_wardrobe_item_id = source_wardrobe_item_id
+        self.shirt_id = shirt_id
+        self.trouser_id = trouser_id
+        self.blazer_id = blazer_id
+        self.shoes_id = shoes_id
+        self.belt_id = belt_id
     }
 }
 

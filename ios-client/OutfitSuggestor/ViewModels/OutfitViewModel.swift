@@ -11,6 +11,14 @@ import Combine
 
 @MainActor
 class OutfitViewModel: ObservableObject {
+    enum LoadingContext: Equatable {
+        case suggestion
+        case nextSuggestion
+        case wardrobeItem
+        case randomWardrobe
+        case randomHistory
+    }
+
     @Published var selectedImage: UIImage?
     @Published var currentSuggestion: OutfitSuggestion?
     @Published var isLoading = false
@@ -23,9 +31,13 @@ class OutfitViewModel: ObservableObject {
     @Published var imageModel = "dalle3"
     @Published var showDuplicateModal = false
     @Published var existingDuplicateSuggestion: OutfitSuggestion?
+    @Published var loadingMessage: String?
+    @Published var loadingContext: LoadingContext?
     
     private let apiService: APIServiceProtocol
     private var cancellables = Set<AnyCancellable>()
+    private var cachedHistory: [OutfitHistoryEntry] = []
+    private var hasLoadedHistory = false
     
     init(apiService: APIServiceProtocol = APIService.shared) {
         self.apiService = apiService
@@ -40,6 +52,10 @@ class OutfitViewModel: ObservableObject {
             return
         }
         isLoading = true
+        loadingContext = .suggestion
+        loadingMessage = generateModelImage
+            ? "Creating your outfit idea and model preview..."
+            : "Creating your outfit idea..."
         errorMessage = nil
         showError = false
         
@@ -50,6 +66,8 @@ class OutfitViewModel: ObservableObject {
                     existingDuplicateSuggestion = existing
                     showDuplicateModal = true
                     isLoading = false
+                    loadingMessage = nil
+                    loadingContext = nil
                     return
                 }
             } catch {
@@ -75,12 +93,16 @@ class OutfitViewModel: ObservableObject {
                 previousOutfitText: nil
             )
             currentSuggestion = suggestion
+            // Suggestion flow may add new history entries server-side; mark cache stale.
+            hasLoadedHistory = false
         } catch let error as APIServiceError {
             showErrorMessage(error.errorDescription ?? "An error occurred")
         } catch {
             showErrorMessage("An unexpected error occurred: \(error.localizedDescription)")
         }
         isLoading = false
+        loadingMessage = nil
+        loadingContext = nil
     }
     
     /// Use the cached duplicate suggestion
@@ -106,6 +128,10 @@ class OutfitViewModel: ObservableObject {
             return
         }
         isLoading = true
+        loadingContext = .nextSuggestion
+        loadingMessage = generateModelImage
+            ? "Trying another look with a model preview..."
+            : "Trying another outfit option..."
         errorMessage = nil
         showError = false
         do {
@@ -136,12 +162,15 @@ class OutfitViewModel: ObservableObject {
                 previousOutfitText: previousOutfitText
             )
             currentSuggestion = suggestion
+            hasLoadedHistory = false
         } catch let error as APIServiceError {
             showErrorMessage(error.errorDescription ?? "An error occurred")
         } catch {
             showErrorMessage(error.localizedDescription)
         }
         isLoading = false
+        loadingMessage = nil
+        loadingContext = nil
     }
     
     /// Load a suggestion from history (e.g. after tapping in History tab)
@@ -158,6 +187,8 @@ class OutfitViewModel: ObservableObject {
     func getSuggestionFromWardrobeItem(id: Int) async {
         guard isAuthenticated else { showErrorMessage("Please log in"); return }
         isLoading = true
+        loadingContext = .wardrobeItem
+        loadingMessage = "Creating an outfit from this wardrobe piece..."
         errorMessage = nil
         showError = false
         do {
@@ -176,18 +207,23 @@ class OutfitViewModel: ObservableObject {
                 location: location
             )
             currentSuggestion = suggestion
+            hasLoadedHistory = false
         } catch let error as APIServiceError {
             showErrorMessage(error.errorDescription ?? "An error occurred")
         } catch {
             showErrorMessage(error.localizedDescription)
         }
         isLoading = false
+        loadingMessage = nil
+        loadingContext = nil
     }
     
     /// Random outfit from wardrobe (auth required)
     func getRandomFromWardrobe() async {
         guard isAuthenticated else { showErrorMessage("Please log in"); return }
         isLoading = true
+        loadingContext = .randomWardrobe
+        loadingMessage = "Picking a random look from your wardrobe..."
         errorMessage = nil
         showError = false
         do {
@@ -197,6 +233,7 @@ class OutfitViewModel: ObservableObject {
                 style: filters.style.lowercased()
             )
             currentSuggestion = suggestion
+            hasLoadedHistory = false
         } catch let error as APIServiceError {
             if (error.errorDescription ?? "").localizedCaseInsensitiveContains("log in again") {
                 AuthService.shared.logout()
@@ -206,19 +243,28 @@ class OutfitViewModel: ObservableObject {
             showErrorMessage(error.localizedDescription)
         }
         isLoading = false
+        loadingMessage = nil
+        loadingContext = nil
     }
     
     /// Random outfit from history (client-side pick)
     func getRandomFromHistory() async {
         guard isAuthenticated else { showErrorMessage("Please log in"); return }
         isLoading = true
+        loadingContext = .randomHistory
+        loadingMessage = "Picking a random look from your history..."
         errorMessage = nil
         showError = false
         do {
-            let list = try await apiService.getOutfitHistory(limit: 50)
-            guard let entry = list.randomElement() else {
+            if !hasLoadedHistory {
+                cachedHistory = try await apiService.getOutfitHistory(limit: 100)
+                hasLoadedHistory = true
+            }
+            guard let entry = cachedHistory.randomElement() else {
                 showErrorMessage("No history yet. Get some outfit suggestions first.")
                 isLoading = false
+                loadingMessage = nil
+                loadingContext = nil
                 return
             }
             currentSuggestion = entry.toOutfitSuggestion()
@@ -226,6 +272,8 @@ class OutfitViewModel: ObservableObject {
             showErrorMessage(error.localizedDescription)
         }
         isLoading = false
+        loadingMessage = nil
+        loadingContext = nil
     }
     
     func clearSelection() {
@@ -233,6 +281,8 @@ class OutfitViewModel: ObservableObject {
         currentSuggestion = nil
         errorMessage = nil
         showError = false
+        loadingMessage = nil
+        loadingContext = nil
     }
     
     func updateFilters(occasion: String? = nil, season: String? = nil, style: String? = nil) {

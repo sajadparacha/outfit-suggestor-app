@@ -5,6 +5,7 @@
 
 import SwiftUI
 import UIKit
+import Foundation
 
 struct HistoryListView: View {
     @State private var entries: [OutfitHistoryEntry] = []
@@ -13,14 +14,16 @@ struct HistoryListView: View {
     @State private var hasLoaded = false
     @State private var isRequestInFlight = false
     @State private var searchText = ""
+    @State private var appliedSearchText = ""
     @State private var sortNewestFirst = true
+    @State private var hasLoadedAll = false
     @State private var fullScreenImage: UIImage?
     var onSelectEntry: (OutfitHistoryEntry) -> Void
     
     private var filteredAndSorted: [OutfitHistoryEntry] {
         var list = entries
-        if !searchText.trimmingCharacters(in: .whitespaces).isEmpty {
-            let q = searchText.lowercased()
+        if !appliedSearchText.trimmingCharacters(in: .whitespaces).isEmpty {
+            let q = appliedSearchText.lowercased()
             list = list.filter {
                 $0.shirt.lowercased().contains(q) ||
                 $0.trouser.lowercased().contains(q) ||
@@ -39,57 +42,62 @@ struct HistoryListView: View {
     }
     
     var body: some View {
-        Group {
-            if isLoading {
-                ProgressView("Loading history…")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let err = errorMessage {
-                VStack {
-                    Text(err).foregroundColor(.red).padding()
-                    Button("Retry") { Task { await load() } }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if entries.isEmpty {
-                Text("No outfit history yet. Get some suggestions on the main tab.")
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                VStack(spacing: 0) {
-                    HStack(spacing: 8) {
-                        HStack {
-                            Image(systemName: "magnifyingglass")
-                                .foregroundColor(.secondary)
-                            TextField("Search by items, colors, context…", text: $searchText)
-                                .textFieldStyle(.plain)
-                        }
-                        .padding(8)
-                        .background(Color(UIColor.secondarySystemBackground))
-                        .cornerRadius(8)
-                        Picker("Sort", selection: $sortNewestFirst) {
-                            Text("Newest").tag(true)
-                            Text("Oldest").tag(false)
-                        }
-                        .pickerStyle(.menu)
-                        .frame(width: 100)
+        ZStack {
+            LinearGradient(
+                colors: [AppTheme.bgPrimary, AppTheme.bgSecondary],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+            
+            Group {
+                if isLoading {
+                    ProgressView("Loading history…")
+                        .tint(.white)
+                        .foregroundColor(AppTheme.textSecondary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let err = errorMessage {
+                    VStack(spacing: 12) {
+                        Text(err)
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
+                        Button("Retry") { Task { await load(limit: hasLoadedAll ? 200 : 2) } }
+                            .buttonStyle(.borderedProminent)
+                            .tint(AppTheme.accent)
                     }
                     .padding()
-                    List {
-                        ForEach(filteredAndSorted) { entry in
-                            HistoryRowView(entry: entry) {
-                                onSelectEntry(entry)
-                            } onDelete: {
-                                delete(entry)
-                            } onViewImage: { image in
-                                fullScreenImage = image
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if entries.isEmpty {
+                    Text("No outfit history yet. Get some suggestions on the main tab.")
+                        .foregroundColor(AppTheme.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 14) {
+                            headerSection
+                            searchAndSortSection
+                            LazyVStack(spacing: 14) {
+                                ForEach(Array(filteredAndSorted.enumerated()), id: \.element.id) { index, entry in
+                                    WebStyleHistoryCardView(
+                                        entry: entry,
+                                        onSelect: { onSelectEntry(entry) },
+                                        onDelete: { delete(entry) },
+                                        onViewImage: { image in fullScreenImage = image }
+                                    )
+                                    .accessibilityIdentifier("history.card.index.\(index)")
+                                }
                             }
                         }
+                        .padding(.horizontal, 14)
+                        .padding(.top, 8)
+                        .padding(.bottom, 16)
                     }
                 }
             }
         }
-        .navigationTitle("History")
+        .navigationTitle("Outfit History")
         .onAppear {
             guard !hasLoaded else { return }
             hasLoaded = true
@@ -104,16 +112,106 @@ struct HistoryListView: View {
         }
     }
     
+    private var headerSection: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Showing last \(entries.count) entries. Click load all to see more.")
+                    .font(.caption)
+                    .foregroundColor(AppTheme.textSecondary)
+            }
+            Spacer()
+            if !hasLoadedAll {
+                Button {
+                    Task { await load(limit: 200) }
+                } label: {
+                    Label("Load All", systemImage: "arrow.clockwise.circle.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(AppTheme.surface)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(AppTheme.border, lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("history.loadAllButton")
+            }
+        }
+    }
+    
+    private var searchAndSortSection: some View {
+        let controlHeight: CGFloat = 52
+        return HStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(AppTheme.textSecondary)
+                TextField("Search by clothing items, colors, or context...", text: $searchText)
+                    .foregroundColor(AppTheme.textPrimary)
+                    .textFieldStyle(.plain)
+                    .submitLabel(.search)
+                    .onSubmit { applySearch() }
+                    .accessibilityIdentifier("history.searchField")
+            }
+            .padding(.horizontal, 12)
+            .frame(height: controlHeight)
+            .background(AppTheme.surface)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(AppTheme.border, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            
+            Button("Search") {
+                applySearch()
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundColor(.white)
+            .padding(.horizontal, 14)
+            .frame(height: controlHeight)
+            .background(AppTheme.accent)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .accessibilityIdentifier("history.searchButton")
+            
+            Menu {
+                Button("Newest First") { sortNewestFirst = true }
+                Button("Oldest First") { sortNewestFirst = false }
+            } label: {
+                HStack(spacing: 6) {
+                    Text(sortNewestFirst ? "Newest First" : "Oldest First")
+                        .lineLimit(1)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.caption.weight(.semibold))
+                }
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(AppTheme.textPrimary)
+                .frame(maxWidth: .infinity)
+                .frame(height: controlHeight)
+            }
+            .frame(width: 120)
+            .background(AppTheme.surface)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(AppTheme.border, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .accessibilityIdentifier("history.sortMenu")
+        }
+    }
+    
     @MainActor
-    private func load() async {
+    private func load(limit: Int = 2) async {
         guard !isRequestInFlight else { return }
         isRequestInFlight = true
         isLoading = true
         errorMessage = nil
         defer { isRequestInFlight = false }
         do {
-            let list = try await APIService.shared.getOutfitHistory(limit: 50)
+            let list = try await APIService.shared.getOutfitHistory(limit: limit)
             entries = list
+            hasLoadedAll = limit > 2
             isLoading = false
         } catch {
             errorMessage = error.localizedDescription
@@ -129,50 +227,172 @@ struct HistoryListView: View {
             } catch { }
         }
     }
+    
+    private func applySearch() {
+        appliedSearchText = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 }
 
-struct HistoryRowView: View {
+struct WebStyleHistoryCardView: View {
     let entry: OutfitHistoryEntry
     let onSelect: () -> Void
     let onDelete: () -> Void
     var onViewImage: ((UIImage) -> Void)?
     
+    private var inputImage: UIImage? {
+        decodeBase64Image(entry.image_data)
+    }
+    
+    private var modelImage: UIImage? {
+        decodeBase64Image(entry.model_image)
+    }
+    
+    private var hasPrompt: Bool {
+        !(entry.text_input?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+    }
+    
+    private func formattedDate(_ raw: String) -> String {
+        let isoFormats = [
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSS",
+            "yyyy-MM-dd'T'HH:mm:ss.SSS",
+            "yyyy-MM-dd'T'HH:mm:ss"
+        ]
+        let parser = DateFormatter()
+        parser.locale = Locale(identifier: "en_US_POSIX")
+        for format in isoFormats {
+            parser.dateFormat = format
+            if let date = parser.date(from: raw) {
+                let output = DateFormatter()
+                output.dateFormat = "MMM d, yyyy, h:mm a"
+                return output.string(from: date)
+            }
+        }
+        if let date = ISO8601DateFormatter().date(from: raw) {
+            let output = DateFormatter()
+            output.dateFormat = "MMM d, yyyy, h:mm a"
+            return output.string(from: date)
+        }
+        return raw
+    }
+    
+    private func decodeBase64Image(_ value: String?) -> UIImage? {
+        guard let raw = value, !raw.isEmpty else { return nil }
+        let payload = raw.contains("base64,") ? String(raw.split(separator: ",").last ?? "") : raw
+        let cleaned = payload.replacingOccurrences(of: "\\s", with: "", options: .regularExpression)
+        guard let data = Data(base64Encoded: cleaned), let image = UIImage(data: data) else { return nil }
+        return image
+    }
+    
     var body: some View {
-        HStack(alignment: .center, spacing: 8) {
-            if let onView = onViewImage {
-                HStack(spacing: 6) {
-                    if entry.image_data != nil {
-                        Button(action: {
-                            if let b64 = entry.image_data, let data = Data(base64Encoded: b64), let img = UIImage(data: data) {
-                                onView(img)
-                            }
-                        }) {
-                            Label("Input", systemImage: "photo")
-                                .font(.caption)
-                        }
-                        .buttonStyle(.bordered)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 8) {
+                Text(formattedDate(entry.created_at))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(AppTheme.textPrimary)
+                    .accessibilityIdentifier("history.card.date.\(entry.id)")
+                
+                Spacer()
+                
+                if hasPrompt {
+                    Text("Custom")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(AppTheme.accent)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(AppTheme.accentSoft)
+                        .clipShape(Capsule())
+                }
+                
+                Button(action: onDelete) {
+                    Image(systemName: "trash")
+                        .foregroundColor(.red.opacity(0.85))
+                }
+                .buttonStyle(.plain)
+            }
+            
+            if let prompt = entry.text_input, !prompt.isEmpty {
+                Text("\"\(prompt)\"")
+                    .font(.subheadline.italic())
+                    .foregroundColor(AppTheme.textSecondary)
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.white.opacity(0.04))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(AppTheme.border, lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            
+            VStack(alignment: .leading, spacing: 7) {
+                WebOutfitLine(icon: "👔", title: "SHIRT", value: entry.shirt)
+                WebOutfitLine(icon: "👖", title: "TROUSER", value: entry.trouser)
+                WebOutfitLine(icon: "🧥", title: "BLAZER", value: entry.blazer)
+                WebOutfitLine(icon: "👞", title: "SHOES", value: entry.shoes)
+                WebOutfitLine(icon: "🎀", title: "BELT", value: entry.belt)
+            }
+            
+            if let onView = onViewImage, inputImage != nil || modelImage != nil {
+                HStack(spacing: 8) {
+                    if let image = inputImage {
+                        Button(action: { onView(image) }) { thumbnail(image: image) }
+                            .buttonStyle(.plain)
                     }
-                    if entry.model_image != nil {
-                        Button(action: {
-                            if let b64 = entry.model_image, let data = Data(base64Encoded: b64), let img = UIImage(data: data) {
-                                onView(img)
-                            }
-                        }) {
-                            Label("Model", systemImage: "person.crop.square")
-                                .font(.caption)
-                        }
-                        .buttonStyle(.bordered)
+                    if let image = modelImage {
+                        Button(action: { onView(image) }) { thumbnail(image: image) }
+                            .buttonStyle(.plain)
                     }
                 }
             }
-            VStack(alignment: .leading, spacing: 4) {
-                Text(entry.shirt).font(.subheadline).lineLimit(1)
-                Text(entry.created_at).font(.caption).foregroundColor(.secondary)
+            
+            HStack {
+                Spacer()
+                Button("Load") {
+                    onSelect()
+                }
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(AppTheme.accent)
+                .clipShape(Capsule())
             }
-            Spacer()
-            Button("Load", action: onSelect)
-            Button("Delete", role: .destructive, action: onDelete)
         }
-        .padding(.vertical, 4)
+        .padding(14)
+        .glassCard()
+        .accessibilityIdentifier("history.card.\(entry.id)")
+    }
+    
+    @ViewBuilder
+    private func thumbnail(image: UIImage) -> some View {
+        Image(uiImage: image)
+            .resizable()
+            .scaledToFill()
+            .frame(width: 56, height: 56)
+            .clipped()
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 10))
+    }
+}
+
+struct WebOutfitLine: View {
+    let icon: String
+    let title: String
+    let value: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("\(icon) \(title)")
+                .font(.caption.weight(.semibold))
+                .foregroundColor(AppTheme.textSecondary)
+            Text(value)
+                .font(.subheadline)
+                .foregroundColor(AppTheme.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }

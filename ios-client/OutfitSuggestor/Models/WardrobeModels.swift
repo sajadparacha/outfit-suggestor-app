@@ -54,6 +54,36 @@ struct WardrobeItem: Codable, Identifiable {
         created_at = try c.decodeIfPresent(String.self, forKey: .created_at) ?? ""
         updated_at = try c.decodeIfPresent(String.self, forKey: .updated_at) ?? ""
     }
+
+    init(
+        id: Int,
+        category: String,
+        name: String? = nil,
+        description: String? = nil,
+        color: String? = nil,
+        brand: String? = nil,
+        size: String? = nil,
+        image_data: String? = nil,
+        tags: String? = nil,
+        condition: String? = nil,
+        wear_count: Int = 0,
+        created_at: String = "2026-01-01T00:00:00",
+        updated_at: String = "2026-01-01T00:00:00"
+    ) {
+        self.id = id
+        self.category = category
+        self.name = name
+        self.description = description
+        self.color = color
+        self.brand = brand
+        self.size = size
+        self.image_data = image_data
+        self.tags = tags
+        self.condition = condition
+        self.wear_count = wear_count
+        self.created_at = created_at
+        self.updated_at = updated_at
+    }
 }
 
 struct WardrobeSummary: Codable {

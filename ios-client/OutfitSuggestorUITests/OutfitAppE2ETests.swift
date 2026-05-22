@@ -1,0 +1,130 @@
+import XCTest
+
+final class OutfitAppE2ETests: XCTestCase {
+    private var app: XCUIApplication!
+
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+        app = XCUIApplication()
+        app.launchArguments.append("UI_TEST_MODE")
+        app.launchEnvironment["UI_TEST_MODE"] = "1"
+        app.launch()
+    }
+
+    @discardableResult
+    private func waitFor(_ element: XCUIElement, timeout: TimeInterval = 10) -> Bool {
+        element.waitForExistence(timeout: timeout)
+    }
+
+    private func openWardrobe() {
+        XCTAssertTrue(waitFor(app.tabBars.buttons["Wardrobe"]))
+        app.tabBars.buttons["Wardrobe"].tap()
+        XCTAssertTrue(waitFor(app.buttons["wardrobe.chip.all"]))
+    }
+
+    private func openHistory() {
+        XCTAssertTrue(waitFor(app.tabBars.buttons["History"]))
+        app.tabBars.buttons["History"].tap()
+        XCTAssertTrue(waitFor(app.buttons["history.loadAllButton"]))
+    }
+
+    private func addSampleImageOnSuggest() {
+        XCTAssertTrue(waitFor(app.buttons["main.useSampleImageButton"]))
+        app.buttons["main.useSampleImageButton"].tap()
+        XCTAssertTrue(waitFor(app.buttons["main.getSuggestionButton"]))
+    }
+
+    func testWardrobeFilterChipsUpdateVisibleList() {
+        openWardrobe()
+
+        app.buttons["wardrobe.chip.trouser"].tap()
+        XCTAssertTrue(app.staticTexts["wardrobe.row.category.2"].waitForExistence(timeout: 2))
+        XCTAssertFalse(app.staticTexts["wardrobe.row.category.3"].exists)
+
+        app.buttons["wardrobe.chip.shoes"].tap()
+        XCTAssertTrue(app.staticTexts["wardrobe.row.category.3"].waitForExistence(timeout: 2))
+        XCTAssertFalse(app.staticTexts["wardrobe.row.category.2"].exists)
+
+        app.buttons["wardrobe.chip.belt"].tap()
+        XCTAssertTrue(app.staticTexts["wardrobe.row.category.4"].waitForExistence(timeout: 2))
+        XCTAssertFalse(app.staticTexts["wardrobe.row.category.3"].exists)
+
+        app.buttons["wardrobe.chip.other"].tap()
+        XCTAssertTrue(app.staticTexts["wardrobe.row.category.5"].waitForExistence(timeout: 2))
+        XCTAssertFalse(app.staticTexts["wardrobe.row.category.1"].exists)
+
+        app.buttons["wardrobe.chip.all"].tap()
+        XCTAssertTrue(app.staticTexts["wardrobe.row.category.1"].waitForExistence(timeout: 2))
+    }
+
+    func testEmptyCategoryFallsBackToAllAndToastAutoHides() {
+        openWardrobe()
+        app.buttons["wardrobe.chip.blazer"].tap()
+
+        let toastText = app.staticTexts["No items found in Blazer. Showing all wardrobe items."]
+        XCTAssertTrue(toastText.waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["wardrobe.row.category.1"].exists)
+
+        let toastGone = NSPredicate(format: "exists == false")
+        expectation(for: toastGone, evaluatedWith: toastText)
+        waitForExpectations(timeout: 5)
+    }
+
+    func testHistorySearchSortAndLoadAll() {
+        openHistory()
+
+        XCTAssertFalse(app.staticTexts["May 20, 2026, 8:15 AM"].exists)
+        app.buttons["history.loadAllButton"].tap()
+        XCTAssertTrue(app.staticTexts["May 20, 2026, 8:15 AM"].waitForExistence(timeout: 3))
+
+        let searchField = app.textFields["history.searchField"]
+        searchField.tap()
+        searchField.typeText("brogues")
+        app.buttons["history.searchButton"].tap()
+        XCTAssertTrue(app.staticTexts["May 21, 2026, 9:00 AM"].waitForExistence(timeout: 2))
+        XCTAssertFalse(app.staticTexts["May 22, 2026, 10:19 AM"].exists)
+
+        searchField.tap()
+        if let current = searchField.value as? String, !current.isEmpty {
+            let delete = String(repeating: XCUIKeyboardKey.delete.rawValue, count: current.count)
+            searchField.typeText(delete)
+        }
+        app.buttons["history.searchButton"].tap()
+
+        app.buttons["history.sortMenu"].tap()
+        app.buttons["Oldest First"].tap()
+        XCTAssertTrue(app.staticTexts["May 20, 2026, 8:15 AM"].exists)
+    }
+
+    func testSuggestFlowFromSampleImageShowsResultCard() {
+        addSampleImageOnSuggest()
+        app.buttons["main.getSuggestionButton"].tap()
+        XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 6))
+    }
+
+    func testWardrobeActionButtonsNavigateToExpectedPaths() {
+        openWardrobe()
+        XCTAssertTrue(waitFor(app.buttons["Get Suggestion"].firstMatch))
+
+        app.buttons["Get Suggestion"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 6))
+
+        openWardrobe()
+        XCTAssertTrue(app.buttons["Past Suggestions"].firstMatch.waitForExistence(timeout: 2))
+        app.buttons["Past Suggestions"].firstMatch.tap()
+        XCTAssertTrue(app.navigationBars["Past Suggestions"].waitForExistence(timeout: 3))
+
+        app.buttons["Use This"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 4))
+    }
+
+    func testGlobalAppLockAppearsDuringServerCalls() {
+        addSampleImageOnSuggest()
+        app.buttons["main.getSuggestionButton"].tap()
+
+        app.tabBars.buttons["History"].tap()
+        XCTAssertFalse(app.navigationBars["Outfit History"].exists)
+
+        XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 8))
+    }
+}

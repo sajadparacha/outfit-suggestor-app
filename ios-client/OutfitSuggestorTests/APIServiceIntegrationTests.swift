@@ -127,37 +127,6 @@ final class APIServiceIntegrationTests: XCTestCase {
         )
     }
 
-    func testListIntegrationTestsDecodesWrappedResponseShape() async throws {
-        let service = makeService { request in
-            XCTAssertEqual(request.url?.path, "/api/admin/integration-tests")
-            return (
-                HTTPURLResponse(
-                    url: request.url!,
-                    statusCode: 200,
-                    httpVersion: nil,
-                    headerFields: nil
-                )!,
-                """
-                {
-                  "tests": [
-                    {
-                      "id": "api_wardrobe",
-                      "name": "Wardrobe API",
-                      "description": "Checks wardrobe endpoints",
-                      "layer": "backend",
-                      "path": "tests/integration/test_wardrobe.py"
-                    }
-                  ]
-                }
-                """.data(using: .utf8)!
-            )
-        }
-
-        let tests = try await service.listIntegrationTests()
-        XCTAssertEqual(tests.count, 1)
-        XCTAssertEqual(tests.first?.id, "api_wardrobe")
-    }
-
     private func makeService(
         requestHandler: @escaping MockURLProtocol.RequestHandler
     ) -> APIService {

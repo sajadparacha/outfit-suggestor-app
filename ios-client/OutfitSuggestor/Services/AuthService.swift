@@ -20,6 +20,20 @@ class AuthService: ObservableObject {
     private init() {
         self.baseURL = AppConfig.apiBaseURL
         self.session = URLSession.shared
+        if AppConfig.isUITestMode {
+            self.authToken = "ui-test-token"
+            self.currentUser = User(
+                id: 999,
+                email: "ui-test@example.com",
+                full_name: "UI Test Admin",
+                is_active: true,
+                is_admin: true,
+                email_verified: true,
+                created_at: "2026-01-01T00:00:00"
+            )
+            self.isBootstrapping = false
+            return
+        }
         self.authToken = TokenStorage.load()
         if authToken != nil {
             self.isBootstrapping = true
