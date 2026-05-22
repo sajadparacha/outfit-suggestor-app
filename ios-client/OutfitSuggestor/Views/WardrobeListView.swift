@@ -50,6 +50,10 @@ struct WardrobeListView: View {
         }
     }
 
+    private var visibleWardrobeItemIDsLabel: String {
+        filteredItems.map { String($0.id) }.joined(separator: ",")
+    }
+
     var body: some View {
         Group {
             if isLoading {
@@ -84,6 +88,7 @@ struct WardrobeListView: View {
                             Text(categoryInfoMessage)
                                 .font(.footnote)
                                 .foregroundColor(AppTheme.textSecondary)
+                                .accessibilityIdentifier("wardrobe.categoryInfoToastText")
                             Spacer()
                         }
                         .padding(.horizontal)
@@ -115,17 +120,15 @@ struct WardrobeListView: View {
                                         }
                                         .accessibilityIdentifier("wardrobe.getSuggestion.\(item.id)")
                                     }
-                                    if itemHasPastSuggestions(item) {
-                                        WardrobeActionButton(
-                                            title: "Past Suggestions",
-                                            systemImage: "clock.arrow.circlepath",
-                                            isLoading: historyLoadingForItem == item.id
-                                        ) {
-                                            Task { await openHistorySuggestions(for: item) }
-                                        }
-                                        .disabled(historyLoadingForItem == item.id)
-                                        .accessibilityIdentifier("wardrobe.pastSuggestions.\(item.id)")
+                                    WardrobeActionButton(
+                                        title: "Past Suggestions",
+                                        systemImage: "clock.arrow.circlepath",
+                                        isLoading: historyLoadingForItem == item.id
+                                    ) {
+                                        Task { await openHistorySuggestions(for: item) }
                                     }
+                                    .disabled(historyLoadingForItem == item.id)
+                                    .accessibilityIdentifier("wardrobe.pastSuggestions.\(item.id)")
                                 }
                                 .frame(width: 150)
                             }
@@ -138,6 +141,13 @@ struct WardrobeListView: View {
                         }
                     }
                     .accessibilityIdentifier("wardrobe.itemsList")
+                    .overlay(alignment: .topLeading) {
+                        Color.clear
+                            .frame(width: 1, height: 1)
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityIdentifier("wardrobe.visibleItemIDs")
+                            .accessibilityLabel(visibleWardrobeItemIDsLabel)
+                    }
                 }
             }
         }

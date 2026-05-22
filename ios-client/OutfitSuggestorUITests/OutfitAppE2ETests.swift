@@ -20,6 +20,7 @@ final class OutfitAppE2ETests: XCTestCase {
         XCTAssertTrue(waitFor(app.tabBars.buttons["Wardrobe"]))
         app.tabBars.buttons["Wardrobe"].tap()
         XCTAssertTrue(waitFor(app.buttons["wardrobe.chip.all"]))
+        waitForAppUnlocked()
     }
 
     private func openHistory() {
@@ -34,36 +35,53 @@ final class OutfitAppE2ETests: XCTestCase {
         XCTAssertTrue(waitFor(app.buttons["main.getSuggestionButton"]))
     }
 
+    private func waitForAppUnlocked(timeout: TimeInterval = 6) {
+        let lock = app.otherElements["global.loadingLock"]
+        let unlocked = NSPredicate(format: "exists == false")
+        expectation(for: unlocked, evaluatedWith: lock)
+        waitForExpectations(timeout: timeout)
+    }
+
+    private func assertVisibleWardrobeItemIDs(_ expected: String, timeout: TimeInterval = 4) {
+        let marker = app.otherElements["wardrobe.visibleItemIDs"]
+        XCTAssertTrue(waitFor(marker, timeout: timeout))
+        let predicate = NSPredicate(format: "label == %@", expected)
+        expectation(for: predicate, evaluatedWith: marker)
+        waitForExpectations(timeout: timeout)
+    }
+
     func testWardrobeFilterChipsUpdateVisibleList() {
         openWardrobe()
 
+        waitForAppUnlocked()
         app.buttons["wardrobe.chip.trouser"].tap()
-        XCTAssertTrue(app.staticTexts["wardrobe.row.category.2"].waitForExistence(timeout: 2))
-        XCTAssertFalse(app.staticTexts["wardrobe.row.category.3"].exists)
+        assertVisibleWardrobeItemIDs("2")
 
+        waitForAppUnlocked()
         app.buttons["wardrobe.chip.shoes"].tap()
-        XCTAssertTrue(app.staticTexts["wardrobe.row.category.3"].waitForExistence(timeout: 2))
-        XCTAssertFalse(app.staticTexts["wardrobe.row.category.2"].exists)
+        assertVisibleWardrobeItemIDs("3")
 
+        waitForAppUnlocked()
         app.buttons["wardrobe.chip.belt"].tap()
-        XCTAssertTrue(app.staticTexts["wardrobe.row.category.4"].waitForExistence(timeout: 2))
-        XCTAssertFalse(app.staticTexts["wardrobe.row.category.3"].exists)
+        assertVisibleWardrobeItemIDs("4")
 
+        waitForAppUnlocked()
         app.buttons["wardrobe.chip.other"].tap()
-        XCTAssertTrue(app.staticTexts["wardrobe.row.category.5"].waitForExistence(timeout: 2))
-        XCTAssertFalse(app.staticTexts["wardrobe.row.category.1"].exists)
+        assertVisibleWardrobeItemIDs("5")
 
+        waitForAppUnlocked()
         app.buttons["wardrobe.chip.all"].tap()
-        XCTAssertTrue(app.staticTexts["wardrobe.row.category.1"].waitForExistence(timeout: 2))
+        assertVisibleWardrobeItemIDs("1,2,3,4,5")
     }
 
     func testEmptyCategoryFallsBackToAllAndToastAutoHides() {
         openWardrobe()
+        waitForAppUnlocked()
         app.buttons["wardrobe.chip.blazer"].tap()
 
-        let toastText = app.staticTexts["No items found in Blazer. Showing all wardrobe items."]
+        let toastText = app.staticTexts["wardrobe.categoryInfoToastText"]
         XCTAssertTrue(toastText.waitForExistence(timeout: 2))
-        XCTAssertTrue(app.staticTexts["wardrobe.row.category.1"].exists)
+        assertVisibleWardrobeItemIDs("1,2,3,4,5")
 
         let toastGone = NSPredicate(format: "exists == false")
         expectation(for: toastGone, evaluatedWith: toastText)

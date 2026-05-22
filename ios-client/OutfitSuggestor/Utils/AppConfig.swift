@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Combine
 
 enum AppConfig {
     private static let defaultAPIBaseURL = "https://web-production-dfcf8.up.railway.app"
@@ -44,5 +45,22 @@ enum AppConfig {
     static var isUITestMode: Bool {
         let processInfo = ProcessInfo.processInfo
         return processInfo.arguments.contains(uiTestFlag) || processInfo.environment[uiTestFlag] == "1"
+    }
+}
+
+@MainActor
+final class AppRequestActivity: ObservableObject {
+    static let shared = AppRequestActivity()
+
+    @Published private(set) var inFlightCount = 0
+
+    var isBusy: Bool { inFlightCount > 0 }
+
+    func begin() {
+        inFlightCount += 1
+    }
+
+    func end() {
+        inFlightCount = max(0, inFlightCount - 1)
     }
 }

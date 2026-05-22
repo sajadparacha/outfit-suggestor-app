@@ -10,6 +10,7 @@ import SwiftUI
 struct MainTabView: View {
     @StateObject private var viewModel = OutfitViewModel()
     @ObservedObject private var auth = AuthService.shared
+    @ObservedObject private var requestActivity = AppRequestActivity.shared
     @State private var selectedTab = 0
     
     private var isAdmin: Bool { auth.currentUser?.is_admin == true }
@@ -88,9 +89,9 @@ struct MainTabView: View {
                 .tabItem { Label("About", systemImage: "info.circle") }
                 .tag(8)
             }
-            .allowsHitTesting(!viewModel.isLoading)
+            .allowsHitTesting(!requestActivity.isBusy)
 
-            if viewModel.isLoading {
+            if requestActivity.isBusy {
                 Color.black.opacity(0.22)
                     .ignoresSafeArea()
                     .accessibilityElement(children: .ignore)

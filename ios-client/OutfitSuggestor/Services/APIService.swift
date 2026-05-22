@@ -69,6 +69,18 @@ class APIService {
         guard AppConfig.isUITestMode else { return }
         try? await Task.sleep(nanoseconds: 1_800_000_000)
     }
+
+    private func beginRequestActivity() async {
+        await MainActor.run {
+            AppRequestActivity.shared.begin()
+        }
+    }
+
+    private func endRequestActivity() {
+        Task { @MainActor in
+            AppRequestActivity.shared.end()
+        }
+    }
     
     // MARK: - Suggest Outfit
     
@@ -82,6 +94,8 @@ class APIService {
         location: String? = nil,
         previousOutfitText: String? = nil
     ) async throws -> OutfitSuggestion {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
         if AppConfig.isUITestMode {
             await maybeSimulateUITestDelay()
             return uiTestStore.makeSuggestionForUpload(image: image, textInput: textInput)
@@ -151,6 +165,8 @@ class APIService {
         imageModel: String = "dalle3",
         location: String? = nil
     ) async throws -> OutfitSuggestion {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
         if AppConfig.isUITestMode {
             await maybeSimulateUITestDelay()
             return uiTestStore.makeSuggestionFromWardrobeItem(itemId: itemId)
@@ -182,6 +198,8 @@ class APIService {
     // MARK: - Outfit History
     
     func getOutfitHistory(limit: Int = 50) async throws -> [OutfitHistoryEntry] {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
         if AppConfig.isUITestMode {
             await maybeSimulateUITestDelay()
             return uiTestStore.history(limit: limit)
@@ -203,6 +221,8 @@ class APIService {
     }
     
     func deleteOutfitHistory(entryId: Int) async throws {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
         if AppConfig.isUITestMode {
             uiTestStore.deleteHistory(entryId: entryId)
             return
@@ -218,6 +238,8 @@ class APIService {
     // MARK: - Wardrobe
     
     func getWardrobe(category: String? = nil, search: String? = nil, limit: Int = 50, offset: Int = 0) async throws -> WardrobeListResponse {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
         if AppConfig.isUITestMode {
             await maybeSimulateUITestDelay()
             return uiTestStore.wardrobe(category: category, search: search, limit: limit, offset: offset)
@@ -243,6 +265,8 @@ class APIService {
     }
     
     func getWardrobeSummary() async throws -> WardrobeSummary {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
         guard let url = URL(string: "\(baseURL)/api/wardrobe/summary") else { throw APIServiceError.invalidURL }
         var request = URLRequest(url: url)
         setAuthIfNeeded(&request)
@@ -252,6 +276,8 @@ class APIService {
     }
     
     func getWardrobeItem(id: Int) async throws -> WardrobeItem {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
         guard let url = URL(string: "\(baseURL)/api/wardrobe/\(id)") else { throw APIServiceError.invalidURL }
         var request = URLRequest(url: url)
         setAuthIfNeeded(&request)
@@ -265,6 +291,8 @@ class APIService {
     
     /// Check if image is duplicate in user's wardrobe (auth required)
     func checkWardrobeDuplicate(image: UIImage) async throws -> WardrobeDuplicateResponse {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
         guard let url = URL(string: "\(baseURL)/api/wardrobe/check-duplicate") else { throw APIServiceError.invalidURL }
         let boundary = UUID().uuidString
         var request = URLRequest(url: url)
@@ -290,6 +318,8 @@ class APIService {
     
     /// Analyze wardrobe image with AI (BLIP or vit-gpt2) to get category, color, description (auth required)
     func analyzeWardrobeImage(image: UIImage, modelType: String = "blip") async throws -> WardrobeAnalyzeResponse {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
         guard let url = URL(string: "\(baseURL)/api/wardrobe/analyze-image") else { throw APIServiceError.invalidURL }
         let boundary = UUID().uuidString
         var request = URLRequest(url: url)
@@ -319,6 +349,8 @@ class APIService {
     
     /// Add wardrobe item (category, color, description required; image optional)
     func addWardrobeItem(category: String, color: String, description: String, image: UIImage? = nil) async throws -> WardrobeItem {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
         guard let url = URL(string: "\(baseURL)/api/wardrobe") else { throw APIServiceError.invalidURL }
         let boundary = UUID().uuidString
         var request = URLRequest(url: url)
@@ -354,6 +386,8 @@ class APIService {
     
     /// Update wardrobe item (all fields optional; send only what changes)
     func updateWardrobeItem(id: Int, category: String? = nil, color: String? = nil, description: String? = nil, image: UIImage? = nil) async throws -> WardrobeItem {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
         guard let url = URL(string: "\(baseURL)/api/wardrobe/\(id)") else { throw APIServiceError.invalidURL }
         let boundary = UUID().uuidString
         var request = URLRequest(url: url)
@@ -388,6 +422,8 @@ class APIService {
     }
     
     func deleteWardrobeItem(id: Int) async throws {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
         guard let url = URL(string: "\(baseURL)/api/wardrobe/\(id)") else { throw APIServiceError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
@@ -398,6 +434,8 @@ class APIService {
     
     /// Random outfit from wardrobe (auth required)
     func getRandomOutfit(occasion: String = "casual", season: String = "all", style: String = "modern") async throws -> OutfitSuggestion {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
         if AppConfig.isUITestMode {
             await maybeSimulateUITestDelay()
             return uiTestStore.randomSuggestion()
@@ -451,6 +489,8 @@ class APIService {
     }
     
     func getAccessLogs(params: AccessLogsParams = AccessLogsParams()) async throws -> AccessLogsResponse {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
         var comp = URLComponents(string: "\(baseURL)/api/access-logs/")!
         comp.queryItems = [
             URLQueryItem(name: "limit", value: "\(params.limit)"),
@@ -473,6 +513,8 @@ class APIService {
     }
     
     func getAccessLogStats(startDate: String? = nil, endDate: String? = nil) async throws -> AccessLogStatsResponse {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
         var comp = URLComponents(string: "\(baseURL)/api/access-logs/stats")!
         var items: [URLQueryItem] = []
         if let v = startDate, !v.isEmpty { items.append(URLQueryItem(name: "start_date", value: v)) }
@@ -490,6 +532,8 @@ class APIService {
     }
     
     func getAccessLogUsage(startDate: String? = nil, endDate: String? = nil) async throws -> AccessLogUsageResponse {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
         var comp = URLComponents(string: "\(baseURL)/api/access-logs/usage")!
         var items: [URLQueryItem] = []
         if let v = startDate, !v.isEmpty { items.append(URLQueryItem(name: "start_date", value: v)) }
@@ -508,6 +552,8 @@ class APIService {
     
     /// Health check
     func healthCheck() async throws -> Bool {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
         guard let url = URL(string: "\(baseURL)/health") else { throw APIServiceError.invalidURL }
         let (_, response) = try await session.data(from: url)
         guard let http = response as? HTTPURLResponse else { return false }
@@ -518,6 +564,8 @@ class APIService {
     
     /// Check if an image already exists in outfit history (before making a suggestion)
     func checkOutfitDuplicate(image: UIImage) async throws -> OutfitDuplicateResponse {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
         if AppConfig.isUITestMode {
             return OutfitDuplicateResponse(is_duplicate: false, existing_suggestion: nil)
         }
@@ -548,6 +596,8 @@ class APIService {
     
     /// Analyze wardrobe gaps (auth required)
     func analyzeWardrobeGaps(request body: WardrobeGapAnalysisRequest) async throws -> WardrobeGapAnalysisResponse {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
         guard let url = URL(string: "\(baseURL)/api/wardrobe/analyze-gaps") else { throw APIServiceError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
