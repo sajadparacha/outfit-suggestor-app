@@ -8,6 +8,7 @@ import UIKit
 import Foundation
 
 struct HistoryListView: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var entries: [OutfitHistoryEntry] = []
     @State private var isLoading = true
     @State private var errorMessage: String?
@@ -39,6 +40,10 @@ struct HistoryListView: View {
             return sortNewestFirst ? (cmp == .orderedDescending) : (cmp == .orderedAscending)
         }
         return list
+    }
+
+    private var isRegularWidth: Bool {
+        horizontalSizeClass == .regular
     }
     
     var body: some View {
@@ -93,6 +98,7 @@ struct HistoryListView: View {
                         .padding(.horizontal, 14)
                         .padding(.top, 8)
                         .padding(.bottom, 16)
+                        .adaptiveContent(maxWidth: 1060)
                     }
                 }
             }
@@ -144,7 +150,7 @@ struct HistoryListView: View {
     
     private var searchAndSortSection: some View {
         let controlHeight: CGFloat = 52
-        return HStack(spacing: 8) {
+        let searchControl = HStack(spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(AppTheme.textSecondary)
@@ -163,8 +169,9 @@ struct HistoryListView: View {
                     .stroke(AppTheme.border, lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            
-            Button("Search") {
+        }
+
+        let searchButton = Button("Search") {
                 applySearch()
             }
             .font(.subheadline.weight(.semibold))
@@ -174,8 +181,8 @@ struct HistoryListView: View {
             .background(AppTheme.accent)
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .accessibilityIdentifier("history.searchButton")
-            
-            Menu {
+
+        let sortMenu = Menu {
                 Button("Newest First") { sortNewestFirst = true }
                 Button("Oldest First") { sortNewestFirst = false }
             } label: {
@@ -190,7 +197,7 @@ struct HistoryListView: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: controlHeight)
             }
-            .frame(width: 120)
+            .frame(width: isRegularWidth ? 170 : 120)
             .background(AppTheme.surface)
             .overlay(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -198,6 +205,24 @@ struct HistoryListView: View {
             )
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .accessibilityIdentifier("history.sortMenu")
+
+        return Group {
+            if isRegularWidth {
+                HStack(spacing: 8) {
+                    searchControl
+                    searchButton
+                    sortMenu
+                }
+            } else {
+                VStack(spacing: 8) {
+                    searchControl
+                    HStack(spacing: 8) {
+                        searchButton
+                            .frame(maxWidth: .infinity)
+                        sortMenu
+                    }
+                }
+            }
         }
     }
     

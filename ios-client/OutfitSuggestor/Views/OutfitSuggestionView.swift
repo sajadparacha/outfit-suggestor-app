@@ -9,6 +9,7 @@ import SwiftUI
 import UIKit
 
 struct OutfitSuggestionView: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let suggestion: OutfitSuggestion
     var onNext: (() -> Void)?
     var onLike: (() -> Void)?
@@ -22,6 +23,10 @@ struct OutfitSuggestionView: View {
     private var modelImageData: Data? {
         guard let b64 = suggestion.model_image else { return nil }
         return Data(base64Encoded: b64)
+    }
+
+    private var modelPreviewMaxHeight: CGFloat {
+        horizontalSizeClass == .regular ? 320 : 220
     }
     
     /// Shirt thumbnail: use uploaded image only when the upload matched a shirt (upload_matched_category == "shirt"); otherwise first shirt match.
@@ -57,7 +62,7 @@ struct OutfitSuggestionView: View {
                     Image(uiImage: uiImage)
                         .resizable()
                         .scaledToFit()
-                        .frame(maxHeight: 220)
+                        .frame(maxHeight: modelPreviewMaxHeight)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .buttonStyle(.plain)

@@ -11,6 +11,7 @@ struct MainFlowView: View {
     @ObservedObject var viewModel: OutfitViewModel
     var onRequestHistory: (() -> Void)? = nil
     @ObservedObject private var auth = AuthService.shared
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showImagePicker = false
     @State private var showModelGenerationConfirm = false
     @State private var showAddToWardrobeSheet = false
@@ -38,6 +39,10 @@ struct MainFlowView: View {
         viewModel.selectedImage != nil && !viewModel.isLoading
     }
 
+    private var isRegularWidth: Bool {
+        horizontalSizeClass == .regular
+    }
+
     var body: some View {
         ZStack {
             LinearGradient(
@@ -59,7 +64,7 @@ struct MainFlowView: View {
                     Spacer(minLength: 50)
                 }
                 .padding(.vertical)
-                .frame(maxWidth: .infinity)
+                .adaptiveContent(maxWidth: 980)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -202,6 +207,7 @@ struct MainFlowView: View {
                         .disabled(viewModel.isLoading)
                     }
                 }
+                .frame(maxWidth: isRegularWidth ? 680 : .infinity, alignment: .leading)
 
                 primarySuggestionButton
 
@@ -275,6 +281,7 @@ struct MainFlowView: View {
                         .disabled(viewModel.isLoading)
                         .accessibilityIdentifier("main.saveButton")
                     }
+                    .frame(maxWidth: isRegularWidth ? 760 : .infinity)
 
                     Button {
                         showMoreActionsMenu = true

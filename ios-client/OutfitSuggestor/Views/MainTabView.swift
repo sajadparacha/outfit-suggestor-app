@@ -18,7 +18,7 @@ struct MainTabView: View {
     var body: some View {
         ZStack {
             TabView(selection: $selectedTab) {
-                NavigationView {
+                NavigationStack {
                     MainFlowView(
                         viewModel: viewModel,
                         onRequestHistory: auth.isAuthenticated ? { selectedTab = 1 } : nil
@@ -28,7 +28,7 @@ struct MainTabView: View {
                 .tag(0)
                 
                 if auth.isAuthenticated {
-                    NavigationView {
+                    NavigationStack {
                         HistoryListView { entry in
                             viewModel.loadFromHistory(entry)
                             selectedTab = 0
@@ -39,7 +39,7 @@ struct MainTabView: View {
                 }
                 
                 if auth.isAuthenticated {
-                    NavigationView {
+                    NavigationStack {
                         WardrobeListView(
                             onGetSuggestionFromItem: { itemId in
                                 selectedTab = 0
@@ -56,7 +56,7 @@ struct MainTabView: View {
                 }
                 
                 if auth.isAuthenticated {
-                    NavigationView {
+                    NavigationStack {
                         InsightsView()
                     }
                     .tabItem { Label("Insights", systemImage: "chart.bar.xaxis") }
@@ -64,26 +64,26 @@ struct MainTabView: View {
                 }
                 
                 if isAdmin {
-                    NavigationView {
+                    NavigationStack {
                         ReportsView()
                     }
                     .tabItem { Label("Reports", systemImage: "chart.bar") }
                     .tag(4)
                 }
                 
-                NavigationView {
+                NavigationStack {
                     SettingsView()
                 }
                 .tabItem { Label("Settings", systemImage: "gearshape") }
                 .tag(6)
                 
-                NavigationView {
+                NavigationStack {
                     UserGuideView()
                 }
                 .tabItem { Label("Guide", systemImage: "book") }
                 .tag(7)
                 
-                NavigationView {
+                NavigationStack {
                     AboutView()
                 }
                 .tabItem { Label("About", systemImage: "info.circle") }

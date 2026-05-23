@@ -16,16 +16,38 @@ final class OutfitAppE2ETests: XCTestCase {
         element.waitForExistence(timeout: timeout)
     }
 
+    private func tabTarget(_ name: String) -> XCUIElement {
+        let tabBarButton = app.tabBars.buttons[name]
+        if tabBarButton.exists { return tabBarButton }
+
+        let navButton = app.navigationBars.buttons[name]
+        if navButton.exists { return navButton }
+
+        let button = app.buttons[name].firstMatch
+        if button.exists { return button }
+
+        let cell = app.cells[name].firstMatch
+        if cell.exists { return cell }
+
+        return tabBarButton
+    }
+
+    private func openTab(_ name: String, timeout: TimeInterval = 10) {
+        let predicate = NSPredicate(format: "exists == true")
+        let target = tabTarget(name)
+        expectation(for: predicate, evaluatedWith: target)
+        waitForExpectations(timeout: timeout)
+        target.tap()
+    }
+
     private func openWardrobe() {
-        XCTAssertTrue(waitFor(app.tabBars.buttons["Wardrobe"]))
-        app.tabBars.buttons["Wardrobe"].tap()
+        openTab("Wardrobe")
         XCTAssertTrue(waitFor(app.buttons["wardrobe.chip.all"]))
         waitForAppUnlocked()
     }
 
     private func openHistory() {
-        XCTAssertTrue(waitFor(app.tabBars.buttons["History"]))
-        app.tabBars.buttons["History"].tap()
+        openTab("History")
         XCTAssertTrue(waitFor(app.buttons["history.loadAllButton"]))
     }
 
@@ -140,7 +162,7 @@ final class OutfitAppE2ETests: XCTestCase {
         addSampleImageOnSuggest()
         app.buttons["main.getSuggestionButton"].tap()
 
-        app.tabBars.buttons["History"].tap()
+        openTab("History")
         XCTAssertFalse(app.navigationBars["Outfit History"].exists)
 
         XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 8))

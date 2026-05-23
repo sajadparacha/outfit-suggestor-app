@@ -30,8 +30,27 @@ struct GlassCardModifier: ViewModifier {
     }
 }
 
+struct AdaptiveContentWidthModifier: ViewModifier {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    let regularMaxWidth: CGFloat
+
+    private var resolvedMaxWidth: CGFloat {
+        horizontalSizeClass == .regular ? regularMaxWidth : .infinity
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .frame(maxWidth: resolvedMaxWidth, alignment: .center)
+            .frame(maxWidth: .infinity, alignment: .center)
+    }
+}
+
 extension View {
     func glassCard() -> some View {
         modifier(GlassCardModifier())
+    }
+
+    func adaptiveContent(maxWidth regularMaxWidth: CGFloat = 980) -> some View {
+        modifier(AdaptiveContentWidthModifier(regularMaxWidth: regularMaxWidth))
     }
 }

@@ -50,7 +50,7 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
         let viewModel = OutfitViewModel(apiService: mock)
 
         await viewModel.getRandomFromWardrobe()
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        await waitForLoggedOutState()
 
         XCTAssertTrue(viewModel.showError)
         XCTAssertNil(AuthService.shared.authToken)
@@ -94,6 +94,18 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
             email_verified: true,
             created_at: "2026-01-01T00:00:00Z"
         )
+    }
+
+    private func waitForLoggedOutState(timeoutNanoseconds: UInt64 = 2_000_000_000) async {
+        let pollInterval: UInt64 = 50_000_000
+        var elapsed: UInt64 = 0
+        while elapsed < timeoutNanoseconds {
+            if AuthService.shared.authToken == nil, AuthService.shared.currentUser == nil {
+                return
+            }
+            try? await Task.sleep(nanoseconds: pollInterval)
+            elapsed += pollInterval
+        }
     }
 }
 

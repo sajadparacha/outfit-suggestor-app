@@ -9,6 +9,7 @@ import UIKit
 private let wardrobeCategoryOptions = ["All", "shirt", "trouser", "blazer", "shoes", "belt", "other"]
 
 struct WardrobeListView: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var response: WardrobeListResponse?
     @State private var allWardrobeItems: [WardrobeItem] = []
     @State private var categoryCounts: [String: Int] = [:]
@@ -52,6 +53,14 @@ struct WardrobeListView: View {
 
     private var visibleWardrobeItemIDsLabel: String {
         filteredItems.map { String($0.id) }.joined(separator: ",")
+    }
+
+    private var isRegularWidth: Bool {
+        horizontalSizeClass == .regular
+    }
+
+    private var rowActionsWidth: CGFloat {
+        isRegularWidth ? 190 : 150
     }
 
     var body: some View {
@@ -130,7 +139,7 @@ struct WardrobeListView: View {
                                     .disabled(historyLoadingForItem == item.id)
                                     .accessibilityIdentifier("wardrobe.pastSuggestions.\(item.id)")
                                 }
-                                .frame(width: 150)
+                                .frame(width: rowActionsWidth)
                             }
                             .accessibilityIdentifier("wardrobe.row.\(item.id)")
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
@@ -149,6 +158,7 @@ struct WardrobeListView: View {
                             .accessibilityLabel(visibleWardrobeItemIDsLabel)
                     }
                 }
+                .adaptiveContent(maxWidth: 1080)
             }
         }
         .navigationTitle("Wardrobe")
@@ -182,7 +192,7 @@ struct WardrobeListView: View {
                 .font(.subheadline.weight(.semibold))
                 .foregroundColor(AppTheme.textSecondary)
             
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 106), spacing: 10)], alignment: .leading, spacing: 10) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: isRegularWidth ? 130 : 106), spacing: 10)], alignment: .leading, spacing: 10) {
                 ForEach(wardrobeCategoryOptions, id: \.self) { category in
                     let isActive = categoryFilter == category
                     Button {
