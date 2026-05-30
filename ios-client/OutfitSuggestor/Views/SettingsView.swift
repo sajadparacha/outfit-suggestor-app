@@ -13,6 +13,15 @@ struct SettingsView: View {
     @State private var message: String?
     @State private var isSuccess = false
     @State private var isLoading = false
+    @State private var showRelaunchConfirmation = false
+
+    private var canShowRelaunchButton: Bool {
+#if DEBUG
+        true
+#else
+        false
+#endif
+    }
     
     var body: some View {
         Form {
@@ -42,8 +51,24 @@ struct SettingsView: View {
                         .foregroundColor(.secondary)
                 }
             }
+
+            if canShowRelaunchButton {
+                Section("App") {
+                    Button(role: .destructive, action: { showRelaunchConfirmation = true }) {
+                        Label("Relaunch App", systemImage: "arrow.clockwise.circle")
+                    }
+                }
+            }
         }
         .navigationTitle("Settings")
+        .alert("Relaunch app?", isPresented: $showRelaunchConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Relaunch", role: .destructive) {
+                relaunchApplication()
+            }
+        } message: {
+            Text("This will close the app immediately so you can relaunch fresh.")
+        }
     }
     
     private func changePassword() {
@@ -69,5 +94,12 @@ struct SettingsView: View {
                 }
             }
         }
+    }
+
+    private func relaunchApplication() {
+#if DEBUG
+        // Debug utility for quick simulator/device smoke-check cycles.
+        exit(0)
+#endif
     }
 }

@@ -12,7 +12,8 @@ const categoryOrder = ['shirt', 'trouser', 'blazer', 'shoes', 'belt'];
 
 const prettyLabel = (value: string): string =>
   value
-    .split('_')
+    .split(/[_\s]+/)
+    .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
 
@@ -43,7 +44,12 @@ const renderMissingSearchChips = (
   category: string,
   items: string[],
   emptyLabel: string,
-  itemType: 'color' | 'style'
+  itemType: 'color' | 'style',
+  options: {
+    preferredStyle?: string;
+    missingColors?: string[];
+    missingStyles?: string[];
+  } = {}
 ) => {
   if (items.length === 0) {
     return <span className="text-xs text-slate-400">{emptyLabel}</span>;
@@ -51,9 +57,36 @@ const renderMissingSearchChips = (
 
   const toneClass = 'bg-amber-500/15 text-amber-200 border-amber-300/25 hover:bg-amber-500/25';
 
+  const categoryForSearch = (rawCategory: string): string => {
+    const normalized = rawCategory.trim().toLowerCase();
+    if (normalized === 'shirt') return 'shirts';
+    if (normalized === 'trouser') return 'trousers';
+    if (normalized === 'shoe') return 'shoes';
+    if (normalized === 'blazer' || normalized === 'belt') return `${normalized}s`;
+    return normalized;
+  };
+
+  const cleanValue = (value?: string): string | null => {
+    if (!value) return null;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  };
+
   const handleClick = (value: string) => {
-    const query = `men ${value} ${prettyLabel(category)} outfit menswear`;
-    const url = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(query)}`;
+    const selectedStyle =
+      itemType === 'style'
+        ? cleanValue(value)
+        : cleanValue(options.missingStyles?.[0]) || cleanValue(options.preferredStyle) || 'classic';
+
+    const selectedColor =
+      itemType === 'color'
+        ? cleanValue(value)
+        : cleanValue(options.missingColors?.[0]) || 'neutral';
+
+    const query = `Show me men ${categoryForSearch(category)} in ${prettyLabel(
+      selectedStyle || 'classic'
+    )} style and ${prettyLabel(selectedColor || 'neutral')} color`;
+    const url = `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(query)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
@@ -65,8 +98,8 @@ const renderMissingSearchChips = (
           type="button"
           onClick={() => handleClick(value)}
           className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${toneClass}`}
-          title="Click to search Google Images"
-          aria-label={`Click to search images for ${prettyLabel(value)} ${prettyLabel(category)} ${itemType}`}
+          title="Click to search Google Shopping"
+          aria-label={`Click to search shopping for ${prettyLabel(value)} ${prettyLabel(category)} ${itemType}`}
         >
           {prettyLabel(value)}
         </button>
@@ -271,18 +304,26 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
                       <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">
                         Top missing colors
                       </p>
-                      {renderMissingSearchChips(entry.category, topMissingColors, 'Color coverage looks good.', 'color')}
+                      {renderMissingSearchChips(entry.category, topMissingColors, 'Color coverage looks good.', 'color', {
+                        preferredStyle: result.style,
+                        missingColors: entry.missing_colors,
+                        missingStyles: entry.missing_styles,
+                      })}
                       {topMissingColors.length > 0 && (
-                        <p className="mt-1 text-[11px] text-amber-300/80">Click a color chip to open image search.</p>
+                        <p className="mt-1 text-[11px] text-amber-300/80">Click a color chip to open Google Shopping search.</p>
                       )}
                     </div>
                     <div>
                       <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">
                         Top missing styles
                       </p>
-                      {renderMissingSearchChips(entry.category, topMissingStyles, 'Style coverage looks good.', 'style')}
+                      {renderMissingSearchChips(entry.category, topMissingStyles, 'Style coverage looks good.', 'style', {
+                        preferredStyle: result.style,
+                        missingColors: entry.missing_colors,
+                        missingStyles: entry.missing_styles,
+                      })}
                       {topMissingStyles.length > 0 && (
-                        <p className="mt-1 text-[11px] text-amber-300/80">Click a style chip to open image search.</p>
+                        <p className="mt-1 text-[11px] text-amber-300/80">Click a style chip to open Google Shopping search.</p>
                       )}
                     </div>
                     <div>
@@ -314,9 +355,13 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
                         </div>
                         <div>
                           <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">Missing Colors</p>
-                          {renderMissingSearchChips(entry.category, entry.missing_colors, 'Color coverage looks good.', 'color')}
+                          {renderMissingSearchChips(entry.category, entry.missing_colors, 'Color coverage looks good.', 'color', {
+                            preferredStyle: result.style,
+                            missingColors: entry.missing_colors,
+                            missingStyles: entry.missing_styles,
+                          })}
                           {entry.missing_colors.length > 0 && (
-                            <p className="mt-1 text-[11px] text-amber-300/80">Click a color chip to open image search.</p>
+                            <p className="mt-1 text-[11px] text-amber-300/80">Click a color chip to open Google Shopping search.</p>
                           )}
                         </div>
                         <div>
@@ -325,9 +370,13 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
                         </div>
                         <div>
                           <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">Missing Styles</p>
-                          {renderMissingSearchChips(entry.category, entry.missing_styles, 'Style coverage looks good.', 'style')}
+                          {renderMissingSearchChips(entry.category, entry.missing_styles, 'Style coverage looks good.', 'style', {
+                            preferredStyle: result.style,
+                            missingColors: entry.missing_colors,
+                            missingStyles: entry.missing_styles,
+                          })}
                           {entry.missing_styles.length > 0 && (
-                            <p className="mt-1 text-[11px] text-amber-300/80">Click a style chip to open image search.</p>
+                            <p className="mt-1 text-[11px] text-amber-300/80">Click a style chip to open Google Shopping search.</p>
                           )}
                         </div>
                       </div>

@@ -82,7 +82,7 @@ describe('WardrobeGapAnalysis', () => {
     expect(screen.getByText(/Admin diagnostics/i)).toBeInTheDocument();
   });
 
-  it('toggles category details and opens men-focused image search on click', () => {
+  it('toggles category details and opens Google Shopping search on chip click', () => {
     const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
     const result: WardrobeGapAnalysisResponse = {
       occasion: 'casual',
@@ -111,24 +111,24 @@ describe('WardrobeGapAnalysis', () => {
     expect(screen.getByText(/Owned Colors/i)).toBeInTheDocument();
 
     const missingColorChip = screen.getAllByRole('button', {
-      name: /click to search images for Pastel Pink Shirt color/i,
+      name: /click to search shopping for Pastel Pink Shirt color/i,
     })[0];
     fireEvent.click(missingColorChip);
 
     expect(openSpy).toHaveBeenCalledTimes(1);
     const colorUrl = String(openSpy.mock.calls[0][0]);
-    expect(colorUrl).toContain('tbm=isch');
-    expect(colorUrl).toContain(encodeURIComponent('men pastel pink Shirt outfit menswear'));
+    expect(colorUrl).toContain('tbm=shop');
+    expect(colorUrl).toContain(encodeURIComponent('Show me men shirts in Linen style and Pastel Pink color'));
 
     const missingStyleChip = screen.getAllByRole('button', {
-      name: /click to search images for Linen Shirt style/i,
+      name: /click to search shopping for Linen Shirt style/i,
     })[0];
     fireEvent.click(missingStyleChip);
 
     expect(openSpy).toHaveBeenCalledTimes(2);
     const styleUrl = String(openSpy.mock.calls[1][0]);
-    expect(styleUrl).toContain('tbm=isch');
-    expect(styleUrl).toContain(encodeURIComponent('men linen Shirt outfit menswear'));
+    expect(styleUrl).toContain('tbm=shop');
+    expect(styleUrl).toContain(encodeURIComponent('Show me men shirts in Linen style and Pastel Pink color'));
 
     openSpy.mockRestore();
   });
