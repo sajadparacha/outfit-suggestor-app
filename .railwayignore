@@ -1,0 +1,27 @@
+.git
+.github
+.cursor
+mcps
+assets
+
+# Local environment and caches
+**/.env
+**/.venv
+**/venv
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+
+# Frontend artifacts (not needed for backend service deploy)
+frontend
+
+# iOS artifacts and project files (not needed for backend service deploy)
+ios-client
+
+# Build outputs
+build
+build-*
+**/build
+**/build-*
+**/*.xcresult
+**/*.xcuserdata
