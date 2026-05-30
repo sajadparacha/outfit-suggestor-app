@@ -7,6 +7,7 @@ import SwiftUI
 
 struct LoginView: View {
     @ObservedObject var auth = AuthService.shared
+    @Environment(\.dismiss) private var dismiss
     @State private var email = ""
     @State private var password = ""
     @State private var errorMessage: String?
@@ -36,6 +37,11 @@ struct LoginView: View {
             }
         }
         .navigationTitle("Login")
+        .onChange(of: auth.isAuthenticated) { isAuthenticated in
+            if isAuthenticated {
+                dismiss()
+            }
+        }
     }
     
     private func doLogin() {
@@ -44,7 +50,10 @@ struct LoginView: View {
         Task {
             do {
                 _ = try await auth.login(email: email, password: password)
-                await MainActor.run { isLoading = false }
+                await MainActor.run {
+                    isLoading = false
+                    dismiss()
+                }
             } catch {
                 await MainActor.run {
                     isLoading = false

@@ -102,7 +102,9 @@ struct MainTabView: View {
         .tint(AppTheme.accent)
         .preferredColorScheme(.dark)
         .onChange(of: auth.isAuthenticated) { isAuthenticated in
-            if !isAuthenticated && selectedTab != 0 && selectedTab != 6 && selectedTab != 7 && selectedTab != 8 {
+            if isAuthenticated {
+                selectedTab = 0
+            } else if selectedTab != 0 && selectedTab != 6 && selectedTab != 7 && selectedTab != 8 {
                 selectedTab = 0
             }
         }

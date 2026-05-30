@@ -7,6 +7,7 @@ import SwiftUI
 
 struct RegisterView: View {
     @ObservedObject var auth = AuthService.shared
+    @Environment(\.dismiss) private var dismiss
     @State private var email = ""
     @State private var password = ""
     @State private var fullName = ""
@@ -41,9 +42,16 @@ struct RegisterView: View {
         }
         .navigationTitle("Sign Up")
         .alert("Account created", isPresented: $showSuccessMessage) {
-            Button("OK", role: .cancel) { }
+            Button("OK", role: .cancel) {
+                dismiss()
+            }
         } message: {
             Text("If email activation is enabled, check your inbox to activate. You can use the app now.")
+        }
+        .onChange(of: auth.isAuthenticated) { isAuthenticated in
+            if isAuthenticated {
+                dismiss()
+            }
         }
     }
     

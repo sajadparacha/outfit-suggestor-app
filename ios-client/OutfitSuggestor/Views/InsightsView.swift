@@ -275,6 +275,7 @@ struct CategoryGapCard: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(Color(UIColor.secondarySystemBackground))
         .cornerRadius(12)

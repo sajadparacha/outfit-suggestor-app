@@ -35,20 +35,11 @@ struct SettingsView: View {
                     }
                     .disabled(currentPassword.isEmpty || newPassword.isEmpty || newPassword != confirmPassword || isLoading)
                 }
-                Section {
-                    Button("Log out", role: .destructive) { auth.logout() }
-                }
             } else {
-                Section("Sign in to unlock more") {
+                Section("Guest mode") {
                     Text("You can still get outfit suggestions as a guest. Log in to use History, Wardrobe, Random picks, and Insights.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
-                    NavigationLink("Log in") {
-                        LoginView()
-                    }
-                    NavigationLink("Sign up") {
-                        RegisterView()
-                    }
                 }
             }
         }

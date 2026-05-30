@@ -54,6 +54,7 @@ struct MainFlowView: View {
             ScrollView(.vertical, showsIndicators: true) {
                 VStack(spacing: 20) {
                     HeroView()
+                    accountAccessSection
 
                     if screenState == .creation {
                         creationSection
@@ -235,6 +236,58 @@ struct MainFlowView: View {
             .glassCard()
             .padding(.horizontal)
         }
+    }
+
+    private var accountAccessSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if auth.isAuthenticated {
+                let userName = auth.currentUser?.full_name?.trimmingCharacters(in: .whitespacesAndNewlines)
+                let displayName = (userName?.isEmpty == false) ? userName! : (auth.currentUser?.email ?? "User")
+
+                HStack(alignment: .center, spacing: 10) {
+                    Image(systemName: "person.crop.circle.fill")
+                        .foregroundColor(AppTheme.accent)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Signed in as \(displayName)")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(AppTheme.textPrimary)
+                        if let email = auth.currentUser?.email, email != displayName {
+                            Text(email)
+                                .font(.caption)
+                                .foregroundColor(AppTheme.textSecondary)
+                        }
+                    }
+                    Spacer()
+                    Button("Log out", role: .destructive) {
+                        auth.logout()
+                    }
+                    .buttonStyle(.bordered)
+                }
+            } else {
+                Text("Sign in to save history and manage wardrobe")
+                    .font(.subheadline)
+                    .foregroundColor(AppTheme.textSecondary)
+
+                HStack(spacing: 10) {
+                    NavigationLink(destination: LoginView()) {
+                        Label("Log in", systemImage: "person.crop.circle.badge.checkmark")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(AppTheme.accent)
+
+                    NavigationLink(destination: RegisterView()) {
+                        Label("Sign up", systemImage: "person.badge.plus")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 12)
+        .glassCard()
+        .padding(.horizontal)
     }
 
     private var resultSection: some View {
