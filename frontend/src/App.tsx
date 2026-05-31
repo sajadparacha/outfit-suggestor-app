@@ -765,8 +765,8 @@ function App() {
                       aria-label="Select style for wardrobe insights"
                     >
                       <option value="">Select style</option>
-                      <option value="Businees Casual">Business Casual</option>
-                      <option value="Casual">Casual</option>
+                      <option value="business casual">Business Casual</option>
+                      <option value="casual">Casual</option>
                       <option value="modern">Modern</option>
                       <option value="classic">Classic</option>
                       <option value="trendy">Trendy</option>
@@ -1301,9 +1301,9 @@ function App() {
                   }}
                   className="w-full rounded-xl border border-emerald-300/30 bg-emerald-500/15 px-4 py-3 text-left transition hover:bg-emerald-500/25"
                 >
-                  <div className="text-sm font-semibold text-emerald-100">Free Analysis (Current)</div>
+                  <div className="text-sm font-semibold text-emerald-100">Basic Analysis</div>
                   <div className="text-xs text-emerald-200/90 mt-1">
-                    Rules-based analysis on our backend. No external AI cost.
+                    Fast wardrobe insight with practical buy-next guidance.
                   </div>
                 </button>
                 <button
@@ -1315,7 +1315,7 @@ function App() {
                 >
                   <div className="text-sm font-semibold text-indigo-100">Premium Analysis</div>
                   <div className="text-xs text-indigo-200/90 mt-1">
-                    ChatGPT-powered deep fashion analysis and recommendations.
+                    Deeper outfit-matching insights and richer recommendation detail.
                   </div>
                 </button>
               </div>

@@ -140,6 +140,32 @@ struct WardrobeGapAnalysisCost: Codable {
     let output_tokens: Int?
 }
 
+struct WardrobePriorityShoppingItem: Codable, Identifiable {
+    let rank: Int
+    let itemName: String
+    let category: String
+    let priority: String
+    let recommendedColors: [String]
+    let recommendedStyles: [String]
+    let reason: String
+    let outfitImpact: String
+    let actions: [String]
+
+    var id: String { "\(rank)-\(category)-\(itemName)" }
+}
+
+struct WardrobeCategoryInsight: Codable, Identifiable {
+    let category: String
+    let missingColors: [String]
+    let missingStyles: [String]
+    let priority: String
+    let whyThisMatters: String
+    let recommendation: String
+    let suggestedActions: [String]
+
+    var id: String { category }
+}
+
 struct WardrobeGapAnalysisResponse: Codable {
     let occasion: String
     let season: String
@@ -147,6 +173,10 @@ struct WardrobeGapAnalysisResponse: Codable {
     let analysis_mode: String?
     let analysis_by_category: [String: WardrobeCategoryGap]
     let overall_summary: String
+    let summaryText: String?
+    let analysisDepth: String?
+    let priorityShoppingList: [WardrobePriorityShoppingItem]?
+    let categoryInsights: [WardrobeCategoryInsight]?
     let ai_prompt: String?
     let ai_raw_response: String?
     let cost: WardrobeGapAnalysisCost?

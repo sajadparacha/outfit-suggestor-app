@@ -483,6 +483,8 @@ class WardrobeController:
                     fallback["overall_summary"] = (
                         "Premium analysis is temporarily unavailable. Showing free rules-based analysis."
                     )
+                    fallback["summaryText"] = fallback["overall_summary"]
+                    fallback["analysisDepth"] = "Basic"
                     return WardrobeGapAnalysisResponse(**fallback)
 
             analysis = self.wardrobe_service.analyze_wardrobe_gaps(

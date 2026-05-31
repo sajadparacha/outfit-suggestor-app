@@ -1,5 +1,10 @@
 import React from 'react';
-import { WardrobeGapAnalysisResponse } from '../../models/WardrobeModels';
+import {
+  WardrobeCategoryGap,
+  WardrobeCategoryInsight,
+  WardrobeGapAnalysisResponse,
+  WardrobePriorityShoppingItem,
+} from '../../models/WardrobeModels';
 
 interface WardrobeGapAnalysisProps {
   result: WardrobeGapAnalysisResponse | null;
@@ -17,95 +22,131 @@ const prettyLabel = (value: string): string =>
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
 
-const renderChips = (items: string[], emptyLabel: string, tone: 'neutral' | 'danger' | 'success' = 'neutral') => {
-  if (items.length === 0) {
-    return <span className="text-xs text-slate-400">{emptyLabel}</span>;
-  }
+const getColorSwatchValue = (colorName: string): string => {
+  const normalized = colorName.trim().toLowerCase();
+  const map: Record<string, string> = {
+    black: '#111827',
+    white: '#f8fafc',
+    brown: '#8b5a2b',
+    tan: '#d2b48c',
+    beige: '#d6c6a8',
+    blue: '#2563eb',
+    navy: '#1e3a8a',
+    gray: '#6b7280',
+    grey: '#6b7280',
+    green: '#15803d',
+    olive: '#556b2f',
+    burgundy: '#7f1d1d',
+    red: '#b91c1c',
+    purple: '#6d28d9',
+    pink: '#db2777',
+    yellow: '#ca8a04',
+  };
+  return map[normalized] || '#334155';
+};
 
-  const toneClass =
-    tone === 'danger'
-      ? 'bg-amber-500/15 text-amber-200 border-amber-300/25'
-      : tone === 'success'
-        ? 'bg-emerald-500/20 text-emerald-100 border-emerald-300/30'
-        : 'bg-slate-700/30 text-slate-200 border-white/15';
+const categoryForSearch = (rawCategory: string): string => {
+  const normalized = rawCategory.trim().toLowerCase();
+  if (normalized === 'shirt') return 'shirts';
+  if (normalized === 'trouser') return 'trousers';
+  if (normalized === 'shoe') return 'shoes';
+  if (normalized === 'blazer' || normalized === 'belt') return `${normalized}s`;
+  return normalized;
+};
 
+const openShoppingSearch = (category: string, style: string, color: string) => {
+  const query = `Show me men ${categoryForSearch(category)} in ${prettyLabel(style)} style and ${prettyLabel(
+    color
+  )} color`;
+  const url = `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(query)}`;
+  window.open(url, '_blank', 'noopener,noreferrer');
+};
+
+const renderStyleChips = (category: string, items: string[], emptyLabel: string, missingColors: string[]) => {
+  if (items.length === 0) return <p className="text-xs text-slate-400">{emptyLabel}</p>;
   return (
     <div className="flex flex-wrap gap-2">
-      {items.map((item) => (
-        <span key={item} className={`rounded-full border px-2.5 py-1 text-xs ${toneClass}`}>
-          {prettyLabel(item)}
-        </span>
+      {items.map((style) => (
+        <button
+          key={style}
+          type="button"
+          onClick={() => openShoppingSearch(category, style, missingColors[0] || 'neutral')}
+          className="rounded-full border border-cyan-300/25 bg-cyan-500/10 px-2.5 py-1 text-xs text-cyan-100 transition-colors hover:bg-cyan-500/20"
+          aria-label={`Find similar items for ${prettyLabel(style)}`}
+        >
+          {prettyLabel(style)}
+        </button>
       ))}
     </div>
   );
 };
 
-const renderMissingSearchChips = (
-  category: string,
-  items: string[],
-  emptyLabel: string,
-  itemType: 'color' | 'style',
-  options: {
-    preferredStyle?: string;
-    missingColors?: string[];
-    missingStyles?: string[];
-  } = {}
-) => {
-  if (items.length === 0) {
-    return <span className="text-xs text-slate-400">{emptyLabel}</span>;
-  }
-
-  const toneClass = 'bg-amber-500/15 text-amber-200 border-amber-300/25 hover:bg-amber-500/25';
-
-  const categoryForSearch = (rawCategory: string): string => {
-    const normalized = rawCategory.trim().toLowerCase();
-    if (normalized === 'shirt') return 'shirts';
-    if (normalized === 'trouser') return 'trousers';
-    if (normalized === 'shoe') return 'shoes';
-    if (normalized === 'blazer' || normalized === 'belt') return `${normalized}s`;
-    return normalized;
-  };
-
-  const cleanValue = (value?: string): string | null => {
-    if (!value) return null;
-    const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed : null;
-  };
-
-  const handleClick = (value: string) => {
-    const selectedStyle =
-      itemType === 'style'
-        ? cleanValue(value)
-        : cleanValue(options.missingStyles?.[0]) || cleanValue(options.preferredStyle) || 'classic';
-
-    const selectedColor =
-      itemType === 'color'
-        ? cleanValue(value)
-        : cleanValue(options.missingColors?.[0]) || 'neutral';
-
-    const query = `Show me men ${categoryForSearch(category)} in ${prettyLabel(
-      selectedStyle || 'classic'
-    )} style and ${prettyLabel(selectedColor || 'neutral')} color`;
-    const url = `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(query)}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
-
+const renderColorSwatches = (colors: string[], emptyLabel: string) => {
+  if (colors.length === 0) return <p className="text-xs text-slate-400">{emptyLabel}</p>;
   return (
     <div className="flex flex-wrap gap-2">
-      {items.map((value) => (
-        <button
-          key={value}
-          type="button"
-          onClick={() => handleClick(value)}
-          className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${toneClass}`}
-          title="Click to search Google Shopping"
-          aria-label={`Click to search shopping for ${prettyLabel(value)} ${prettyLabel(category)} ${itemType}`}
-        >
-          {prettyLabel(value)}
-        </button>
-      ))}
+      {colors.map((color) => {
+        const swatch = getColorSwatchValue(color);
+        const needsBorder = ['#f8fafc', '#d6c6a8', '#d2b48c'].includes(swatch);
+        return (
+          <span
+            key={color}
+            className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-slate-900/50 px-2.5 py-1 text-xs text-slate-100"
+          >
+            <span
+              className={`h-3.5 w-3.5 rounded-full ${needsBorder ? 'border border-slate-500' : 'border border-transparent'}`}
+              style={{ backgroundColor: swatch }}
+            />
+            {prettyLabel(color)}
+          </span>
+        );
+      })}
     </div>
   );
+};
+
+const derivePriorityList = (result: WardrobeGapAnalysisResponse, orderedCategories: string[]): WardrobePriorityShoppingItem[] => {
+  if (result.priorityShoppingList?.length) return result.priorityShoppingList.slice(0, 3);
+  type RankedPriority = WardrobePriorityShoppingItem & { score: number };
+  const ranked: RankedPriority[] = orderedCategories
+    .map<RankedPriority>((category) => {
+      const entry = result.analysis_by_category[category];
+      const score = (entry.missing_colors.length * 2) + (entry.missing_styles.length * 2) + (entry.item_count === 0 ? 2 : 0);
+      const priority: WardrobePriorityShoppingItem['priority'] = score >= 8 ? 'High' : score >= 4 ? 'Medium' : 'Low';
+      return {
+        score,
+        rank: 0,
+        itemName: `${entry.missing_colors[0] || 'core'} ${entry.missing_styles[0] || category} ${category}`,
+        category,
+        priority,
+        recommendedColors: entry.missing_colors.slice(0, 3),
+        recommendedStyles: entry.missing_styles.slice(0, 3),
+        reason: `Improves your ${result.style} ${result.occasion} options for ${result.season}.`,
+        outfitImpact: `Unlocks more complete looks in ${prettyLabel(category)}.`,
+        actions: ['Add to shopping list', 'Show outfit examples'],
+      };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3);
+  return ranked.map(({ score: _score, ...item }, idx): WardrobePriorityShoppingItem => ({ ...item, rank: idx + 1 }));
+};
+
+const deriveCategoryInsights = (result: WardrobeGapAnalysisResponse, orderedCategories: string[]): WardrobeCategoryInsight[] => {
+  if (result.categoryInsights?.length) return result.categoryInsights;
+  return orderedCategories.map((category) => {
+    const entry = result.analysis_by_category[category];
+    const score = (entry.missing_colors.length * 2) + (entry.missing_styles.length * 2) + (entry.item_count === 0 ? 2 : 0);
+    const priority = score >= 8 ? 'High' : score >= 4 ? 'Medium' : 'Low';
+    return {
+      category,
+      missingColors: entry.missing_colors,
+      missingStyles: entry.missing_styles,
+      priority,
+      whyThisMatters: `Adding these ${prettyLabel(category)} options makes more ${prettyLabel(result.style)} ${prettyLabel(result.occasion)} combinations possible.`,
+      recommendation: entry.recommended_purchases[0] || `Add one versatile ${prettyLabel(category)} option first.`,
+      suggestedActions: ['Add to shopping list', 'Show outfit examples'],
+    };
+  });
 };
 
 const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
@@ -146,9 +187,10 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
       missingColors += entry.missing_colors.length;
       missingStyles += entry.missing_styles.length;
 
-      if (entry.recommended_purchases.length > topBuyNextCount) {
+      const weightedBuyScore = entry.recommended_purchases.length * 3 + entry.missing_colors.length + entry.missing_styles.length * 2;
+      if (weightedBuyScore > topBuyNextCount) {
         topBuyNextCategory = entry.category;
-        topBuyNextCount = entry.recommended_purchases.length;
+        topBuyNextCount = weightedBuyScore;
       }
     }
 
@@ -159,6 +201,24 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
       topBuyNextCategory: topBuyNextCount > 0 ? prettyLabel(topBuyNextCategory) : 'None',
     };
   }, [result, orderedCategories]);
+
+  const priorityShoppingList = React.useMemo(
+    () => (result ? derivePriorityList(result, orderedCategories) : []),
+    [result, orderedCategories]
+  );
+
+  const categoryInsights = React.useMemo(
+    () => (result ? deriveCategoryInsights(result, orderedCategories) : []),
+    [result, orderedCategories]
+  );
+
+  const analysisDepthLabel = React.useMemo(() => {
+    if (!result) return '';
+    if (result.analysisDepth) return result.analysisDepth;
+    return (result.analysis_mode || 'free') === 'premium' ? 'Premium' : 'Basic';
+  }, [result]);
+
+  const topSummary = result?.summaryText || result?.overall_summary || '';
 
   const toggleCategory = (category: string) => {
     setExpandedCategories((prev) => ({ ...prev, [category]: !prev[category] }));
@@ -192,17 +252,62 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
       )}
 
       {!loading && !error && result && (
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-            <p className="text-sm text-slate-200">
+        <div className="space-y-5">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+            <p className="text-sm text-slate-200 mb-2">
               Context: <span className="font-medium text-white">{prettyLabel(result.occasion)}</span> •{' '}
               <span className="font-medium text-white">{prettyLabel(result.season)}</span> •{' '}
               <span className="font-medium text-white">{prettyLabel(result.style)}</span>
             </p>
-            <p className="mt-2 text-xs text-slate-400">
-              Mode used: <span className="font-medium text-slate-200">{prettyLabel(result.analysis_mode || 'free')}</span>
+            <p className="text-xs text-slate-400">
+              Analysis depth: <span className="font-medium text-slate-200">{analysisDepthLabel}</span>
             </p>
-            <p className="mt-2 text-sm text-slate-300">{result.overall_summary}</p>
+            <p className="mt-3 text-sm text-slate-200">{topSummary}</p>
+          </div>
+
+          <div className="rounded-2xl border border-teal-400/25 bg-teal-500/10 p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <h4 className="text-base font-semibold text-white">Priority Shopping List</h4>
+              <p className="text-xs text-teal-100/90">Buy these first to unlock the most outfit combinations.</p>
+            </div>
+            <div className="space-y-3">
+              {priorityShoppingList.length === 0 ? (
+                <p className="text-sm text-slate-200">
+                  Your wardrobe has strong coverage for this style. No urgent purchase is needed, but optional additions can increase flexibility.
+                </p>
+              ) : (
+                priorityShoppingList.map((item) => (
+                  <article key={`${item.rank}-${item.category}`} className="rounded-xl border border-white/15 bg-slate-900/45 p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-semibold text-white">#{item.rank}</span>
+                      <h5 className="text-sm font-semibold text-white">{prettyLabel(item.itemName)}</h5>
+                      <span className="rounded-full border border-indigo-300/30 bg-indigo-500/15 px-2 py-0.5 text-xs text-indigo-100">
+                        {item.priority} Priority
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs text-slate-200">{item.reason}</p>
+                    <p className="mt-1 text-xs text-slate-400">{item.outfitImpact}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className="rounded-lg bg-teal-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-600"
+                      >
+                        Add to shopping list
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openShoppingSearch(item.category, item.recommendedStyles[0] || result.style, item.recommendedColors[0] || 'neutral')
+                        }
+                        className="rounded-lg border border-white/20 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-100 hover:bg-white/10"
+                      >
+                        Show outfit examples
+                      </button>
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
           </div>
 
           {snapshot && (
@@ -283,100 +388,95 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
             </details>
           )}
 
-          <div className="grid gap-4 md:grid-cols-2">
-            {orderedCategories.map((category) => {
-              const entry = result.analysis_by_category[category];
-              const topMissingColors = entry.missing_colors.slice(0, 2);
-              const topMissingStyles = entry.missing_styles.slice(0, 2);
-              const topBuyNext = entry.recommended_purchases.slice(0, 2);
-              const isExpanded = !!expandedCategories[category];
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {categoryInsights.map((insight) => {
+              const entry: WardrobeCategoryGap = result.analysis_by_category[insight.category];
+              const isExpanded = !!expandedCategories[insight.category];
 
               return (
-                <article key={category} className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+                <article key={insight.category} className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
                   <div className="mb-3 flex items-center justify-between">
                     <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-100">
-                      {prettyLabel(entry.category)}
+                      {prettyLabel(insight.category)}
                     </h4>
+                    <span className="rounded-full border border-indigo-300/30 bg-indigo-500/15 px-2 py-0.5 text-xs text-indigo-100">
+                      {insight.priority}
+                    </span>
                   </div>
 
                   <div className="space-y-3">
                     <div>
                       <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">
-                        Top missing colors
+                        Missing colors
                       </p>
-                      {renderMissingSearchChips(entry.category, topMissingColors, 'Color coverage looks good.', 'color', {
-                        preferredStyle: result.style,
-                        missingColors: entry.missing_colors,
-                        missingStyles: entry.missing_styles,
-                      })}
-                      {topMissingColors.length > 0 && (
-                        <p className="mt-1 text-[11px] text-amber-300/80">Click a color chip to open Google Shopping search.</p>
-                      )}
+                      {renderColorSwatches(insight.missingColors, 'You already have enough core colors in this category.')}
                     </div>
                     <div>
-                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">
-                        Top missing styles
-                      </p>
-                      {renderMissingSearchChips(entry.category, topMissingStyles, 'Style coverage looks good.', 'style', {
-                        preferredStyle: result.style,
-                        missingColors: entry.missing_colors,
-                        missingStyles: entry.missing_styles,
-                      })}
-                      {topMissingStyles.length > 0 && (
-                        <p className="mt-1 text-[11px] text-amber-300/80">Click a style chip to open Google Shopping search.</p>
-                      )}
+                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">Missing styles</p>
+                      {renderStyleChips(insight.category, insight.missingStyles, 'Your style coverage looks balanced for this category.', insight.missingColors)}
                     </div>
                     <div>
-                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">Buy next</p>
-                      {topBuyNext.length > 0 ? (
-                        <ul className="space-y-1 text-sm text-slate-200">
-                          {topBuyNext.map((recommendation) => (
-                            <li key={recommendation}>- {recommendation}</li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="text-xs text-slate-400">No immediate purchases needed.</p>
-                      )}
+                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">Why this matters</p>
+                      <p className="text-xs text-slate-200">{insight.whyThisMatters}</p>
+                    </div>
+                    <div>
+                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">Recommended next step</p>
+                      <p className="text-xs text-slate-300">{insight.recommendation}</p>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => toggleCategory(category)}
-                      className="text-xs text-indigo-300 hover:text-indigo-200 transition-colors"
-                    >
-                      {isExpanded ? 'Hide details' : 'View details'}
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openShoppingSearch(insight.category, insight.missingStyles[0] || result.style, insight.missingColors[0] || 'neutral')
+                        }
+                        className="rounded-lg border border-white/20 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-100 hover:bg-white/10"
+                      >
+                        Show outfit examples
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-lg bg-teal-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-600"
+                      >
+                        Add to shopping list
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleCategory(insight.category)}
+                        className="rounded-lg border border-indigo-300/30 bg-indigo-500/10 px-3 py-1.5 text-xs font-medium text-indigo-100 hover:bg-indigo-500/20"
+                      >
+                        {isExpanded ? 'Why this matters' : 'Find similar items'}
+                      </button>
+                    </div>
 
                     {isExpanded && (
                       <div className="space-y-3 rounded-xl border border-white/10 bg-slate-900/35 p-3">
                         <div>
                           <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">Owned Colors</p>
-                          {renderChips(entry.owned_colors, 'No colors detected yet.', 'success')}
+                          {renderColorSwatches(entry.owned_colors, 'No colors detected yet.')}
                         </div>
                         <div>
                           <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">Missing Colors</p>
-                          {renderMissingSearchChips(entry.category, entry.missing_colors, 'Color coverage looks good.', 'color', {
-                            preferredStyle: result.style,
-                            missingColors: entry.missing_colors,
-                            missingStyles: entry.missing_styles,
-                          })}
-                          {entry.missing_colors.length > 0 && (
-                            <p className="mt-1 text-[11px] text-amber-300/80">Click a color chip to open Google Shopping search.</p>
-                          )}
+                          {renderColorSwatches(entry.missing_colors, 'You already have enough core colors in this category.')}
                         </div>
                         <div>
                           <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">Owned Styles</p>
-                          {renderChips(entry.owned_styles, 'No style keywords detected yet.')}
+                          {renderStyleChips(entry.category, entry.owned_styles, 'No style keywords detected yet.', entry.missing_colors)}
                         </div>
                         <div>
                           <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">Missing Styles</p>
-                          {renderMissingSearchChips(entry.category, entry.missing_styles, 'Style coverage looks good.', 'style', {
-                            preferredStyle: result.style,
-                            missingColors: entry.missing_colors,
-                            missingStyles: entry.missing_styles,
-                          })}
-                          {entry.missing_styles.length > 0 && (
-                            <p className="mt-1 text-[11px] text-amber-300/80">Click a style chip to open Google Shopping search.</p>
+                          {renderStyleChips(entry.category, entry.missing_styles, 'Your style coverage looks balanced for this category.', entry.missing_colors)}
+                        </div>
+                        <div>
+                          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">Buy-next guidance</p>
+                          {entry.recommended_purchases.length === 0 ? (
+                            <p className="text-xs text-slate-400">No urgent purchase is needed in this category.</p>
+                          ) : (
+                            <ul className="space-y-1 text-xs text-slate-200">
+                              {entry.recommended_purchases.map((line) => (
+                                <li key={line}>- {line}</li>
+                              ))}
+                            </ul>
                           )}
                         </div>
                       </div>

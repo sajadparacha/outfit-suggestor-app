@@ -74,6 +74,30 @@ class WardrobeCategoryGapResponse(BaseModel):
     item_count: int
 
 
+class WardrobePriorityItemResponse(BaseModel):
+    """Ranked shopping recommendation item."""
+    rank: int
+    itemName: str
+    category: str
+    priority: Literal["High", "Medium", "Low"]
+    recommendedColors: List[str]
+    recommendedStyles: List[str]
+    reason: str
+    outfitImpact: str
+    actions: List[str]
+
+
+class WardrobeCategoryInsightResponse(BaseModel):
+    """User-friendly category level insight."""
+    category: str
+    missingColors: List[str]
+    missingStyles: List[str]
+    priority: Literal["High", "Medium", "Low"]
+    whyThisMatters: str
+    recommendation: str
+    suggestedActions: List[str]
+
+
 class WardrobeGapAnalysisResponse(BaseModel):
     """Wardrobe gap analysis response."""
     occasion: str
@@ -82,6 +106,10 @@ class WardrobeGapAnalysisResponse(BaseModel):
     analysis_mode: str = "free"
     analysis_by_category: Dict[str, WardrobeCategoryGapResponse]
     overall_summary: str
+    summaryText: Optional[str] = None
+    analysisDepth: Optional[Literal["Basic", "Advanced", "Premium"]] = None
+    priorityShoppingList: Optional[List[WardrobePriorityItemResponse]] = None
+    categoryInsights: Optional[List[WardrobeCategoryInsightResponse]] = None
     ai_prompt: Optional[str] = None
     ai_raw_response: Optional[str] = None
     cost: Optional[dict] = None

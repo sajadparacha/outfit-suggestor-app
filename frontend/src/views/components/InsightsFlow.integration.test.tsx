@@ -81,13 +81,13 @@ describe('Insights flow integration', () => {
       expect(screen.getByText(/Choose Analysis Mode/i)).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Free Analysis \(Current\)/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Basic Analysis/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/You should add brighter shirts/i)).toBeInTheDocument();
       expect(screen.getByText(/Categories analyzed/i)).toBeInTheDocument();
       expect(screen.getByText(/Top buy-next category/i)).toBeInTheDocument();
-      expect(screen.getByRole('heading', { name: /Shirt/i })).toBeInTheDocument();
+      expect(screen.getAllByText(/Shirt/i).length).toBeGreaterThan(0);
     });
   });
 });

@@ -68,6 +68,28 @@ export interface WardrobeCategoryGap {
   item_count: number;
 }
 
+export interface WardrobePriorityShoppingItem {
+  rank: number;
+  itemName: string;
+  category: string;
+  priority: 'High' | 'Medium' | 'Low';
+  recommendedColors: string[];
+  recommendedStyles: string[];
+  reason: string;
+  outfitImpact: string;
+  actions: string[];
+}
+
+export interface WardrobeCategoryInsight {
+  category: string;
+  missingColors: string[];
+  missingStyles: string[];
+  priority: 'High' | 'Medium' | 'Low';
+  whyThisMatters: string;
+  recommendation: string;
+  suggestedActions: string[];
+}
+
 export interface WardrobeGapAnalysisResponse {
   occasion: string;
   season: string;
@@ -75,6 +97,10 @@ export interface WardrobeGapAnalysisResponse {
   analysis_mode?: 'free' | 'premium' | string;
   analysis_by_category: Record<string, WardrobeCategoryGap>;
   overall_summary: string;
+  summaryText?: string;
+  analysisDepth?: 'Basic' | 'Advanced' | 'Premium' | string;
+  priorityShoppingList?: WardrobePriorityShoppingItem[];
+  categoryInsights?: WardrobeCategoryInsight[];
   ai_prompt?: string | null;
   ai_raw_response?: string | null;
   cost?: WardrobeAnalysisCost;

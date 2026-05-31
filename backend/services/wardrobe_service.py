@@ -1,6 +1,6 @@
 """Wardrobe Service - Business logic for wardrobe operations"""
 import random
-from typing import Optional, List, Dict, Any, Set
+from typing import Optional, List, Dict, Any, Set, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
 from datetime import datetime
@@ -17,6 +17,43 @@ DEFAULT_IMAGE_SIMILARITY_THRESHOLD = 5
 
 
 class WardrobeService:
+    STYLE_LIBRARY: Dict[str, List[str]] = {
+        "shirt": ["oxford", "linen", "textured", "smart casual", "overshirt"],
+        "trouser": ["chino", "slim-fit", "relaxed-fit", "tailored", "straight-leg"],
+        "blazer": ["unstructured", "lightweight", "casual blazer", "linen blazer", "soft shoulder"],
+        "shoes": ["loafers", "clean sneakers", "derby shoes", "driving shoes", "minimal leather sneakers"],
+        "belt": ["leather", "braided", "reversible", "formal leather", "casual leather"],
+    }
+
+    STYLE_ALIASES: Dict[str, List[str]] = {
+        "oxford": ["oxford"],
+        "linen": ["linen"],
+        "textured": ["textured", "herringbone", "waffle", "twill texture"],
+        "smart casual": ["smart casual", "smart-casual"],
+        "overshirt": ["overshirt", "shirt jacket"],
+        "chino": ["chino", "chinos"],
+        "slim-fit": ["slim fit", "slim-fit", "slim"],
+        "relaxed-fit": ["relaxed fit", "relaxed-fit", "relaxed"],
+        "tailored": ["tailored"],
+        "straight-leg": ["straight leg", "straight-leg"],
+        "unstructured": ["unstructured"],
+        "lightweight": ["lightweight", "light weight"],
+        "casual blazer": ["casual blazer", "sport coat", "sportcoat"],
+        "linen blazer": ["linen blazer"],
+        "soft shoulder": ["soft shoulder"],
+        "loafers": ["loafer", "loafers"],
+        "clean sneakers": ["clean sneakers", "minimal sneakers", "minimal sneaker"],
+        "derby shoes": ["derby", "derby shoes"],
+        "driving shoes": ["driving shoes", "driving loafers"],
+        "minimal leather sneakers": ["leather sneakers", "leather sneaker"],
+        "leather": ["leather"],
+        "braided": ["braided", "woven"],
+        "reversible": ["reversible"],
+        "formal leather": ["formal leather", "dress leather"],
+        "casual leather": ["casual leather"],
+        "trendy": ["trendy", "fashion-forward", "statement"],
+    }
+
     """Service for wardrobe-related business logic"""
     
     def add_wardrobe_item(
@@ -658,13 +695,15 @@ class WardrobeService:
             "solid": ["solid", "plain"],
             "athleisure": ["athleisure", "sport", "performance", "stretch"],
             "minimalist": ["minimal", "minimalist", "clean look"],
-            "trendy": ["trendy", "fashion-forward", "statement"],
             "classic": ["classic", "timeless", "traditional"],
         }
         tags: Set[str] = set()
         for tag, keywords in style_keywords.items():
             if any(keyword in text for keyword in keywords):
                 tags.add(tag)
+        for style_name, keywords in self.STYLE_ALIASES.items():
+            if any(keyword in text for keyword in keywords):
+                tags.add(style_name)
         return tags
 
     def _target_colors(self, category: str, occasion: str, season: str, style: str) -> List[str]:
@@ -703,34 +742,112 @@ class WardrobeService:
         return ordered
 
     def _target_styles(self, category: str, occasion: str, style: str) -> List[str]:
-        category_defaults = {
-            "shirt": ["casual", "formal", "solid", "regular fit"],
-            "trouser": ["casual", "business", "regular fit"],
-            "blazer": ["business", "formal", "classic"],
-            "shoes": ["casual", "formal"],
-            "belt": ["casual", "formal"],
-        }.get(category, ["casual"])
-
+        defaults = list(self.STYLE_LIBRARY.get(category, ["smart casual"]))
         if occasion == "business":
-            category_defaults.extend(["business", "classic"])
+            defaults.extend(["tailored", "formal leather"] if category in {"trouser", "belt"} else ["smart casual"])
         elif occasion == "formal":
-            category_defaults.extend(["formal", "classic"])
+            defaults.extend(["tailored", "formal leather"])
         elif occasion == "party":
-            category_defaults.extend(["trendy", "patterned"])
+            defaults.extend(["textured", "unstructured"])
+        elif occasion == "casual":
+            defaults.extend(["relaxed-fit", "clean sneakers"])
 
-        if style in {"modern", "trendy", "bold"}:
-            category_defaults.append("trendy")
         if style in {"classic", "minimalist"}:
-            category_defaults.extend(["classic", "solid"])
+            defaults.extend(["oxford", "tailored"])
+        elif style in {"bold", "trendy"}:
+            defaults.extend(["textured", "driving shoes"])
 
-        seen = set()
-        ordered = []
-        for style_tag in category_defaults:
+        seen: Set[str] = set()
+        ordered: List[str] = []
+        for style_tag in defaults:
             tag = style_tag.strip().lower()
             if tag and tag not in seen:
                 seen.add(tag)
                 ordered.append(tag)
         return ordered
+
+    def _priority_label(self, score: int) -> str:
+        if score >= 8:
+            return "High"
+        if score >= 4:
+            return "Medium"
+        return "Low"
+
+    def _format_item_name(self, category: str, colors: List[str], styles: List[str]) -> str:
+        lead_color = colors[0] if colors else "core"
+        second_color = colors[1] if len(colors) > 1 else None
+        lead_style = styles[0] if styles else category
+        if second_color:
+            return f"{lead_color} or {second_color} {lead_style} {category}"
+        return f"{lead_color} {lead_style} {category}"
+
+    def _generate_why_this_matters(
+        self,
+        category: str,
+        missing_colors: List[str],
+        missing_styles: List[str],
+        occasion: str,
+        season: str,
+        style: str,
+    ) -> str:
+        if not missing_colors and not missing_styles:
+            return f"Your {category} options are already balanced for {occasion} and {season} dressing."
+
+        color_text = ", ".join(missing_colors[:2]) if missing_colors else "core neutral tones"
+        style_text = ", ".join(missing_styles[:2]) if missing_styles else "versatile cuts"
+        return (
+            f"Adding {color_text} and {style_text} in {category} gives you more {style} {occasion} combinations for {season}."
+        )
+
+    def _recommendation_line(self, category: str, missing_colors: List[str], missing_styles: List[str], occasion: str) -> str:
+        if not missing_colors and not missing_styles:
+            return f"No urgent {category} purchase is needed right now."
+        lead_style = missing_styles[0] if missing_styles else category
+        if missing_colors:
+            if len(missing_colors) > 1:
+                return (
+                    f"Add a {lead_style} {category} in {missing_colors[0]} or {missing_colors[1]} to improve {occasion} outfit options."
+                )
+            return f"Add a {missing_colors[0]} {lead_style} {category} to improve {occasion} outfit options."
+        return f"Add a {lead_style} {category} to improve {occasion} outfit options."
+
+    def _generate_priority_shopping_list(
+        self,
+        category_analysis: Dict[str, Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        ranked: List[Tuple[str, int]] = []
+        for category, entry in category_analysis.items():
+            score = (len(entry["missing_colors"]) * 2) + (len(entry["missing_styles"]) * 2) + (2 if entry["item_count"] == 0 else 0)
+            ranked.append((category, score))
+        ranked.sort(key=lambda item: item[1], reverse=True)
+
+        shopping_list: List[Dict[str, Any]] = []
+        for idx, (category, score) in enumerate(ranked[:3], start=1):
+            entry = category_analysis[category]
+            priority = self._priority_label(score)
+            item_name = self._format_item_name(category, entry["missing_colors"], entry["missing_styles"])
+            reason = self._generate_why_this_matters(
+                category=category,
+                missing_colors=entry["missing_colors"],
+                missing_styles=entry["missing_styles"],
+                occasion=entry["occasion"],
+                season=entry["season"],
+                style=entry["style"],
+            )
+            shopping_list.append(
+                {
+                    "rank": idx,
+                    "itemName": item_name,
+                    "category": category,
+                    "priority": priority,
+                    "recommendedColors": entry["missing_colors"][:3],
+                    "recommendedStyles": entry["missing_styles"][:3],
+                    "reason": reason,
+                    "outfitImpact": f"Unlocks more combinations in {category} for {entry['occasion']} looks.",
+                    "actions": ["Add to shopping list", "Show outfit examples"],
+                }
+            )
+        return shopping_list
 
     def analyze_wardrobe_gaps(
         self,
@@ -761,6 +878,7 @@ class WardrobeService:
                 by_category[normalized_category].append(item)
 
         analysis_by_category: Dict[str, Dict[str, Any]] = {}
+        category_insights: List[Dict[str, Any]] = []
         for category in categories:
             items = by_category[category]
             owned_colors = sorted({
@@ -780,21 +898,23 @@ class WardrobeService:
             missing_styles = [style_tag for style_tag in target_styles if style_tag not in owned_styles]
 
             recommendations: List[str] = []
+            recommendation_line = self._recommendation_line(category, missing_colors, missing_styles, occasion)
+            recommendations.append(recommendation_line)
+            why_this_matters = self._generate_why_this_matters(
+                category=category,
+                missing_colors=missing_colors,
+                missing_styles=missing_styles,
+                occasion=occasion,
+                season=season,
+                style=style,
+            )
             if missing_colors:
                 recommendations.append(
-                    f"Add a {missing_colors[0]} {category} for better {occasion} coverage."
-                )
-            if len(missing_colors) > 1:
-                recommendations.append(
-                    f"Consider {', '.join(missing_colors[1:3])} tones to expand seasonal flexibility."
+                    f"{missing_colors[0].capitalize()} tones can pair well with your most-used {category} outfits."
                 )
             if missing_styles:
                 recommendations.append(
-                    f"Try a {missing_styles[0]} {category} style to balance your current collection."
-                )
-            if not recommendations:
-                recommendations.append(
-                    f"Your {category} options are well covered for {occasion}/{season}; focus on replacing worn-out pieces."
+                    f"Prioritize {missing_styles[0]} pieces for more mix-and-match options."
                 )
 
             analysis_by_category[category] = {
@@ -805,25 +925,53 @@ class WardrobeService:
                 "missing_styles": missing_styles[:5],
                 "recommended_purchases": recommendations[:3],
                 "item_count": len(items),
+                "occasion": occasion,
+                "season": season,
+                "style": style,
             }
+            score = (len(missing_colors) * 2) + (len(missing_styles) * 2) + (2 if len(items) == 0 else 0)
+            category_insights.append(
+                {
+                    "category": category,
+                    "missingColors": missing_colors[:5],
+                    "missingStyles": missing_styles[:5],
+                    "priority": self._priority_label(score),
+                    "whyThisMatters": why_this_matters,
+                    "recommendation": recommendation_line,
+                    "suggestedActions": ["Add to shopping list", "Show outfit examples"],
+                }
+            )
 
-        missing_counts = {
-            category: len(analysis["missing_colors"]) + len(analysis["missing_styles"])
-            for category, analysis in analysis_by_category.items()
-        }
-        top_missing = sorted(missing_counts.items(), key=lambda item: item[1], reverse=True)[:2]
-        focus_categories = [category for category, count in top_missing if count > 0]
-        if focus_categories:
+        for entry in analysis_by_category.values():
+            entry.pop("occasion", None)
+            entry.pop("season", None)
+            entry.pop("style", None)
+
+        priority_shopping_list = self._generate_priority_shopping_list(
+            {
+                key: {
+                    **value,
+                    "occasion": occasion,
+                    "season": season,
+                    "style": style,
+                }
+                for key, value in analysis_by_category.items()
+            }
+        )
+
+        if priority_shopping_list:
+            top_items = ", ".join(item["itemName"] for item in priority_shopping_list[:3])
             summary = (
-                f"Best next purchases are in {', '.join(focus_categories)} for {occasion}/{season} "
-                f"with a {style} dressing preference."
+                f"Your wardrobe is close to complete for {occasion} in {season}. "
+                f"Start with {top_items} to unlock the most {style} outfit combinations."
             )
         else:
             summary = (
-                f"Your wardrobe already has strong coverage for {occasion}/{season} with {style} style preferences."
+                f"Your wardrobe has strong coverage for {occasion}, {season}, and {style}. "
+                "No urgent purchase is needed right now."
             )
         if text_input.strip():
-            summary += " Recommendations also considered your extra notes."
+            summary += " Your extra notes were included in the recommendation priorities."
 
         return {
             "occasion": occasion,
@@ -832,4 +980,8 @@ class WardrobeService:
             "analysis_mode": "free",
             "analysis_by_category": analysis_by_category,
             "overall_summary": summary,
+            "summaryText": summary,
+            "analysisDepth": "Basic",
+            "priorityShoppingList": priority_shopping_list,
+            "categoryInsights": category_insights,
         }

@@ -353,6 +353,9 @@ class TestWardrobeEndpoints:
         assert isinstance(shirt_analysis["missing_colors"], list)
         assert isinstance(shirt_analysis["recommended_purchases"], list)
         assert "overall_summary" in payload
+        assert payload["analysisDepth"] == "Basic"
+        assert isinstance(payload["priorityShoppingList"], list)
+        assert isinstance(payload["categoryInsights"], list)
 
     def test_analyze_wardrobe_gaps_premium_success(self, client, auth_headers, db, test_user, monkeypatch):
         """Premium mode uses ChatGPT analysis path and returns structured response."""
@@ -376,6 +379,32 @@ class TestWardrobeEndpoints:
                     "season": season,
                     "style": style,
                     "analysis_mode": "premium",
+                    "analysisDepth": "Premium",
+                    "summaryText": "Premium summary",
+                    "priorityShoppingList": [
+                        {
+                            "rank": 1,
+                            "itemName": "white formal shirt",
+                            "category": "shirt",
+                            "priority": "High",
+                            "recommendedColors": ["white"],
+                            "recommendedStyles": ["formal"],
+                            "reason": "Helps complete formal outfit combinations.",
+                            "outfitImpact": "Unlocks the most office-ready combinations.",
+                            "actions": ["Add to shopping list", "Show outfit examples"],
+                        }
+                    ],
+                    "categoryInsights": [
+                        {
+                            "category": "shirt",
+                            "missingColors": ["white"],
+                            "missingStyles": ["formal"],
+                            "priority": "High",
+                            "whyThisMatters": "Missing a formal white shirt limits office combinations.",
+                            "recommendation": "Add a crisp white shirt first.",
+                            "suggestedActions": ["Add to shopping list", "Show outfit examples"],
+                        }
+                    ],
                     "analysis_by_category": {
                         "shirt": {
                             "category": "shirt",
@@ -420,6 +449,10 @@ class TestWardrobeEndpoints:
         payload = response.json()
         assert payload["analysis_by_category"]["shirt"]["recommended_purchases"] == ["Add a white shirt."]
         assert payload["analysis_mode"] == "premium"
+        assert payload["analysisDepth"] == "Premium"
+        assert payload["summaryText"] == "Premium summary"
+        assert payload["priorityShoppingList"][0]["category"] == "shirt"
+        assert payload["categoryInsights"][0]["category"] == "shirt"
         assert payload["ai_prompt"] == "mock premium prompt"
         assert payload["ai_raw_response"] == "{\"mock\":true}"
         assert payload["cost"]["total_cost"] == 0.0012
@@ -460,4 +493,6 @@ class TestWardrobeEndpoints:
         payload = response.json()
         assert payload["analysis_mode"] == "free"
         assert "temporarily unavailable" in payload["overall_summary"].lower()
+        assert payload["analysisDepth"] == "Basic"
+        assert payload["summaryText"] == payload["overall_summary"]
         assert "analysis_by_category" in payload

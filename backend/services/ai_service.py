@@ -3,7 +3,7 @@ import json
 import base64
 import io
 import re
-from typing import Optional, Tuple, Literal, Dict, List
+from typing import Optional, Tuple, Literal, Dict, List, Any
 
 import openai
 from fastapi import HTTPException
@@ -57,7 +57,7 @@ class AIService:
         wardrobe_items: Optional[dict] = None,
         wardrobe_only: bool = False,
         previous_outfit_text: Optional[str] = None,
-    ) -> Tuple[OutfitSuggestion, Dict[str, any]]:
+    ) -> Tuple[OutfitSuggestion, Dict[str, Any]]:
         """
         Get outfit suggestion from OpenAI based on image analysis
         
@@ -142,7 +142,7 @@ class AIService:
         text_input: str = "",
         wardrobe_items: Optional[dict] = None,
         wardrobe_only: bool = True
-    ) -> Tuple[OutfitSuggestion, Dict[str, any]]:
+    ) -> Tuple[OutfitSuggestion, Dict[str, Any]]:
         """
         Get outfit suggestion from OpenAI using ONLY text (no uploaded image).
         Typically used for wardrobe-only suggestions based on the user's saved items.
@@ -241,12 +241,39 @@ Rules:
    - item_count
 3) Be practical and fashion-aware for the provided context.
 4) Return STRICT JSON only, no markdown, no extra prose.
+5) Avoid repeating generic style words like "trendy" across every category.
 
 Required JSON shape:
 {{
   "occasion": "string",
   "season": "string",
   "style": "string",
+  "summaryText": "string",
+  "analysisDepth": "Premium",
+  "priorityShoppingList": [
+    {{
+      "rank": 1,
+      "itemName": "string",
+      "category": "string",
+      "priority": "High",
+      "recommendedColors": ["..."],
+      "recommendedStyles": ["..."],
+      "reason": "string",
+      "outfitImpact": "string",
+      "actions": ["Add to shopping list", "Show outfit examples"]
+    }}
+  ],
+  "categoryInsights": [
+    {{
+      "category": "shirt",
+      "missingColors": ["..."],
+      "missingStyles": ["..."],
+      "priority": "High",
+      "whyThisMatters": "string",
+      "recommendation": "string",
+      "suggestedActions": ["Add to shopping list", "Show outfit examples"]
+    }}
+  ],
   "analysis_by_category": {{
     "shirt": {{
       "category": "shirt",
@@ -302,13 +329,25 @@ Required JSON shape:
                     "item_count": entry.get("item_count", 0) if isinstance(entry, dict) else 0,
                 }
 
+            summary_text = str(parsed.get("summaryText", parsed.get("overall_summary", "Premium wardrobe analysis completed.")))
+            priority_shopping_list = parsed.get("priorityShoppingList")
+            category_insights = parsed.get("categoryInsights")
+            if not isinstance(priority_shopping_list, list):
+                priority_shopping_list = self._build_priority_shopping_list(categories, occasion, season, style)
+            if not isinstance(category_insights, list):
+                category_insights = self._build_category_insights(categories, occasion, season, style)
+
             return {
                 "occasion": str(parsed.get("occasion", occasion)),
                 "season": str(parsed.get("season", season)),
                 "style": str(parsed.get("style", style)),
                 "analysis_mode": "premium",
                 "analysis_by_category": categories,
-                "overall_summary": str(parsed.get("overall_summary", "Premium wardrobe analysis completed.")),
+                "overall_summary": str(parsed.get("overall_summary", summary_text)),
+                "summaryText": summary_text,
+                "analysisDepth": str(parsed.get("analysisDepth", "Premium")),
+                "priorityShoppingList": priority_shopping_list,
+                "categoryInsights": category_insights,
                 "ai_prompt": prompt,
                 "ai_raw_response": content,
                 "cost": {
@@ -324,6 +363,73 @@ Required JSON shape:
                 status_code=500,
                 detail=f"Error calling OpenAI API for premium wardrobe analysis: {str(e)}",
             )
+
+    def _priority_label(self, score: int) -> str:
+        if score >= 8:
+            return "High"
+        if score >= 4:
+            return "Medium"
+        return "Low"
+
+    def _build_priority_shopping_list(
+        self,
+        categories: Dict[str, Dict[str, Any]],
+        occasion: str,
+        season: str,
+        style: str,
+    ) -> List[Dict[str, Any]]:
+        scored: List[Tuple[str, int]] = []
+        for category, entry in categories.items():
+            score = (len(entry.get("missing_colors", [])) * 2) + (len(entry.get("missing_styles", [])) * 2) + (2 if entry.get("item_count", 0) == 0 else 0)
+            scored.append((category, score))
+        scored.sort(key=lambda pair: pair[1], reverse=True)
+
+        rows: List[Dict[str, Any]] = []
+        for rank, (category, score) in enumerate(scored[:3], start=1):
+            entry = categories[category]
+            colors = entry.get("missing_colors", [])[:3]
+            styles = entry.get("missing_styles", [])[:3]
+            lead_color = colors[0] if colors else "core"
+            lead_style = styles[0] if styles else category
+            rows.append(
+                {
+                    "rank": rank,
+                    "itemName": f"{lead_color} {lead_style} {category}",
+                    "category": category,
+                    "priority": self._priority_label(score),
+                    "recommendedColors": colors,
+                    "recommendedStyles": styles,
+                    "reason": f"Improves your {style} {occasion} combinations for {season}.",
+                    "outfitImpact": f"Unlocks more complete outfit options in {category}.",
+                    "actions": ["Add to shopping list", "Show outfit examples"],
+                }
+            )
+        return rows
+
+    def _build_category_insights(
+        self,
+        categories: Dict[str, Dict[str, Any]],
+        occasion: str,
+        season: str,
+        style: str,
+    ) -> List[Dict[str, Any]]:
+        insights: List[Dict[str, Any]] = []
+        for category, entry in categories.items():
+            missing_colors = entry.get("missing_colors", [])[:5]
+            missing_styles = entry.get("missing_styles", [])[:5]
+            score = (len(missing_colors) * 2) + (len(missing_styles) * 2) + (2 if entry.get("item_count", 0) == 0 else 0)
+            insights.append(
+                {
+                    "category": category,
+                    "missingColors": missing_colors,
+                    "missingStyles": missing_styles,
+                    "priority": self._priority_label(score),
+                    "whyThisMatters": f"These gaps limit your {style} {occasion} outfits in {season}.",
+                    "recommendation": f"Add one {category} option in the top missing color/style first.",
+                    "suggestedActions": ["Add to shopping list", "Show outfit examples"],
+                }
+            )
+        return insights
 
     def _safe_parse_json_object(self, content: str) -> dict:
         """

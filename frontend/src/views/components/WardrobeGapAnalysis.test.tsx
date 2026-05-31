@@ -31,7 +31,7 @@ describe('WardrobeGapAnalysis', () => {
     render(<WardrobeGapAnalysis result={result} loading={false} error={null} />);
     expect(screen.getByText(/Wardrobe Gap Analysis/i)).toBeInTheDocument();
     expect(screen.getByText(/Best next purchases are in blazer and shoes/i)).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Shirt/i })).toBeInTheDocument();
+    expect(screen.getAllByText(/Missing colors/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Add a black shirt for better office coverage/i)).toBeInTheDocument();
     expect(screen.getByText(/Categories analyzed/i)).toBeInTheDocument();
     expect(screen.getAllByText(/^1$/).length).toBeGreaterThan(0);
@@ -104,26 +104,16 @@ describe('WardrobeGapAnalysis', () => {
 
     render(<WardrobeGapAnalysis result={result} loading={false} error={null} />);
 
-    // Details are initially hidden.
     expect(screen.queryByText(/Owned Colors/i)).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /view details/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Find similar items$/i }));
     expect(screen.getByText(/Owned Colors/i)).toBeInTheDocument();
-
-    const missingColorChip = screen.getAllByRole('button', {
-      name: /click to search shopping for Pastel Pink Shirt color/i,
-    })[0];
-    fireEvent.click(missingColorChip);
+    fireEvent.click(screen.getAllByRole('button', { name: /Find similar items for Linen/i })[0]);
 
     expect(openSpy).toHaveBeenCalledTimes(1);
     const colorUrl = String(openSpy.mock.calls[0][0]);
     expect(colorUrl).toContain('tbm=shop');
     expect(colorUrl).toContain(encodeURIComponent('Show me men shirts in Linen style and Pastel Pink color'));
-
-    const missingStyleChip = screen.getAllByRole('button', {
-      name: /click to search shopping for Linen Shirt style/i,
-    })[0];
-    fireEvent.click(missingStyleChip);
+    fireEvent.click(screen.getAllByRole('button', { name: /Show outfit examples/i })[0]);
 
     expect(openSpy).toHaveBeenCalledTimes(2);
     const styleUrl = String(openSpy.mock.calls[1][0]);

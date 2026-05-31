@@ -3,7 +3,6 @@
 //  OutfitSuggestor
 //
 //  Wardrobe Gap Analysis / Insights view
-//  Analyzes what colors, styles, and items are missing from the user's wardrobe
 //
 
 import SwiftUI
@@ -28,13 +27,13 @@ struct InsightsView: View {
             VStack(spacing: 20) {
                 // Header
                 VStack(spacing: 8) {
-                    Image(systemName: "chart.bar.xaxis")
+                    Image(systemName: "bag.badge.plus")
                         .font(.largeTitle)
                         .foregroundColor(AppTheme.accent)
-                    Text("Wardrobe Insights")
+                    Text("Wardrobe Gap Analysis")
                         .font(.title2)
                         .fontWeight(.bold)
-                    Text("Analyze your wardrobe to find gaps in colors, styles, and see what to buy next.")
+                    Text("Get a ranked shopping list based on what unlocks the most outfit combinations.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -62,7 +61,7 @@ struct InsightsView: View {
                 
                 // Analysis mode
                 Picker("Analysis Mode", selection: $analysisMode) {
-                    Text("Free (Rules-based)").tag("free")
+                    Text("Basic").tag("free")
                     Text("Premium (ChatGPT)").tag("premium")
                 }
                 .pickerStyle(.segmented)
@@ -169,13 +168,82 @@ struct GapAnalysisResultView: View {
         return top.0.capitalized
     }
 
+    private var summaryText: String {
+        result.summaryText ?? result.overall_summary
+    }
+
+    private var analysisDepth: String {
+        if let depth = result.analysisDepth, !depth.isEmpty { return depth }
+        return result.analysis_mode == "premium" ? "Premium" : "Basic"
+    }
+
+    private var priorityShoppingList: [WardrobePriorityShoppingItem] {
+        if let list = result.priorityShoppingList, !list.isEmpty {
+            return Array(list.prefix(3))
+        }
+        let derived: [WardrobePriorityShoppingItem] = orderedCategories.compactMap { category in
+            guard let entry = result.analysis_by_category[category] else { return nil }
+            let score = (entry.missing_colors.count * 2) + (entry.missing_styles.count * 2) + (entry.item_count == 0 ? 2 : 0)
+            let priority = score >= 8 ? "High" : (score >= 4 ? "Medium" : "Low")
+            return WardrobePriorityShoppingItem(
+                rank: 0,
+                itemName: "\(entry.missing_colors.first ?? "core") \(entry.missing_styles.first ?? category) \(category)",
+                category: category,
+                priority: priority,
+                recommendedColors: Array(entry.missing_colors.prefix(3)),
+                recommendedStyles: Array(entry.missing_styles.prefix(3)),
+                reason: "Improves your \(result.style) \(result.occasion) options for \(result.season).",
+                outfitImpact: "Unlocks more complete looks in \(category).",
+                actions: ["Add to shopping list", "Show outfit examples"]
+            )
+        }
+        .sorted { left, right in
+            let leftScore = (left.recommendedColors.count * 2) + (left.recommendedStyles.count * 2)
+            let rightScore = (right.recommendedColors.count * 2) + (right.recommendedStyles.count * 2)
+            return leftScore > rightScore
+        }
+        return Array(derived.prefix(3)).enumerated().map { idx, item in
+            WardrobePriorityShoppingItem(
+                rank: idx + 1,
+                itemName: item.itemName,
+                category: item.category,
+                priority: item.priority,
+                recommendedColors: item.recommendedColors,
+                recommendedStyles: item.recommendedStyles,
+                reason: item.reason,
+                outfitImpact: item.outfitImpact,
+                actions: item.actions
+            )
+        }
+    }
+
+    private var categoryInsights: [WardrobeCategoryInsight] {
+        if let insights = result.categoryInsights, !insights.isEmpty {
+            return insights
+        }
+        return orderedCategories.compactMap { category in
+            guard let entry = result.analysis_by_category[category] else { return nil }
+            let score = (entry.missing_colors.count * 2) + (entry.missing_styles.count * 2) + (entry.item_count == 0 ? 2 : 0)
+            let priority = score >= 8 ? "High" : (score >= 4 ? "Medium" : "Low")
+            return WardrobeCategoryInsight(
+                category: category,
+                missingColors: entry.missing_colors,
+                missingStyles: entry.missing_styles,
+                priority: priority,
+                whyThisMatters: "Adding these \(category) options gives you more \(result.style) \(result.occasion) combinations.",
+                recommendation: entry.recommended_purchases.first ?? "Add one versatile \(category) item first.",
+                suggestedActions: ["Add to shopping list", "Show outfit examples"]
+            )
+        }
+    }
+
     var body: some View {
         VStack(spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Wardrobe Gap Analysis")
+                Text("Wardrobe Shopping Assistant")
                     .font(.title3.weight(.bold))
                     .foregroundColor(AppTheme.textPrimary)
-                Text("See what you already own and what to buy next for your selected occasion, season, and style.")
+                Text("Buy these items next because they unlock the most outfit combinations.")
                     .font(.subheadline)
                     .foregroundColor(AppTheme.textSecondary)
             }
@@ -204,19 +272,47 @@ struct GapAnalysisResultView: View {
                         .cornerRadius(8)
                 }
 
-                if let mode = result.analysis_mode {
-                    Text("Mode Used: \(mode.capitalized)")
-                        .font(.caption)
-                        .foregroundColor(AppTheme.textSecondary)
-                }
+                Text("Analysis depth: \(analysisDepth)")
+                    .font(.caption)
+                    .foregroundColor(AppTheme.textSecondary)
 
-                Text(result.overall_summary)
+                Text(summaryText)
                     .font(.subheadline)
                     .foregroundColor(AppTheme.textPrimary)
             }
             .padding()
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(AppTheme.surface)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(AppTheme.border, lineWidth: 1)
+            )
+            .cornerRadius(12)
+            .padding(.horizontal)
+
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text("Priority Shopping List")
+                        .font(.headline)
+                        .foregroundColor(AppTheme.textPrimary)
+                    Spacer()
+                    Text("Top 3")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(AppTheme.textSecondary)
+                }
+
+                if priorityShoppingList.isEmpty {
+                    Text("Your wardrobe has strong coverage for this style. No urgent purchase is needed, but optional additions can increase flexibility.")
+                        .font(.subheadline)
+                        .foregroundColor(AppTheme.textSecondary)
+                } else {
+                    ForEach(priorityShoppingList) { item in
+                        PriorityShoppingItemCard(item: item)
+                    }
+                }
+            }
+            .padding()
+            .background(AppTheme.accentSoft)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(AppTheme.border, lineWidth: 1)
@@ -233,17 +329,18 @@ struct GapAnalysisResultView: View {
             .padding(.horizontal)
 
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 320), spacing: 12, alignment: .top)], spacing: 12) {
-                ForEach(orderedCategories, id: \.self) { category in
-                    if let entry = result.analysis_by_category[category] {
+                ForEach(categoryInsights) { insight in
+                    if let entry = result.analysis_by_category[insight.category] {
                         CategoryGapCard(
                             entry: entry,
+                            insight: insight,
                             defaultStyle: result.style,
-                            isExpanded: expandedCategories.contains(category),
+                            isExpanded: expandedCategories.contains(insight.category),
                             onToggleDetails: {
-                                if expandedCategories.contains(category) {
-                                    expandedCategories.remove(category)
+                                if expandedCategories.contains(insight.category) {
+                                    expandedCategories.remove(insight.category)
                                 } else {
-                                    expandedCategories.insert(category)
+                                    expandedCategories.insert(insight.category)
                                 }
                             }
                         )
@@ -319,6 +416,7 @@ struct GapAnalysisResultView: View {
 
 struct CategoryGapCard: View {
     let entry: WardrobeCategoryGap
+    let insight: WardrobeCategoryInsight
     let defaultStyle: String
     let isExpanded: Bool
     let onToggleDetails: () -> Void
@@ -329,38 +427,26 @@ struct CategoryGapCard: View {
             HStack {
                 Text(entry.category.capitalized)
                     .font(.headline)
+                Spacer()
+                Text(insight.priority)
+                    .font(.caption.weight(.semibold))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.indigo.opacity(0.2))
+                    .cornerRadius(8)
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Top Missing Colors")
+                Text("Missing Colors")
                     .font(.caption.weight(.semibold))
                     .foregroundColor(AppTheme.textSecondary)
                     .textCase(.uppercase)
 
-                if entry.missing_colors.isEmpty {
-                    Text("Color coverage looks good.")
-                        .font(.subheadline)
-                        .foregroundColor(AppTheme.textSecondary)
-                } else {
-                    FlowLayout(spacing: 6) {
-                        ForEach(Array(entry.missing_colors.prefix(3)), id: \.self) { color in
-                            Button(action: { openGoogleImagesForSuggestion(color: color, style: nil) }) {
-                                Text(color.capitalized)
-                                    .font(.caption)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(Color.red.opacity(0.15))
-                                    .foregroundColor(.red)
-                                    .cornerRadius(8)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
+                ColorSwatchRow(colors: Array(entry.missing_colors.prefix(4)))
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Top Missing Styles")
+                Text("Missing Styles")
                     .font(.caption.weight(.semibold))
                     .foregroundColor(AppTheme.textSecondary)
                     .textCase(.uppercase)
@@ -384,36 +470,49 @@ struct CategoryGapCard: View {
                             .buttonStyle(.plain)
                         }
                     }
-                    Text("Use these styles to guide image search.")
-                        .font(.caption)
-                        .foregroundColor(AppTheme.textSecondary)
                 }
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Buy Next")
+                Text("Why this matters")
                     .font(.caption.weight(.semibold))
                     .foregroundColor(AppTheme.textSecondary)
                     .textCase(.uppercase)
-
-                if entry.recommended_purchases.isEmpty {
-                    Text("No urgent purchases for this category.")
-                        .font(.subheadline)
-                        .foregroundColor(AppTheme.textSecondary)
-                } else {
-                    ForEach(Array(entry.recommended_purchases.prefix(2)), id: \.self) { rec in
-                        HStack(alignment: .top, spacing: 6) {
-                            Text("•")
-                                .foregroundColor(AppTheme.textPrimary)
-                            Text(rec)
-                                .font(.subheadline)
-                                .foregroundColor(AppTheme.textPrimary)
-                        }
-                    }
-                }
+                Text(insight.whyThisMatters)
+                    .font(.subheadline)
+                    .foregroundColor(AppTheme.textPrimary)
             }
 
-            Button(isExpanded ? "Hide details" : "View details") {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Recommended next step")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(AppTheme.textSecondary)
+                    .textCase(.uppercase)
+                Text(insight.recommendation)
+                    .font(.subheadline)
+                    .foregroundColor(AppTheme.textPrimary)
+            }
+
+            HStack(spacing: 8) {
+                Button("Show outfit examples") {
+                    openGoogleImagesForSuggestion(color: entry.missing_colors.first, style: entry.missing_styles.first)
+                }
+                .font(.caption.weight(.semibold))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(AppTheme.accent.opacity(0.2))
+                .cornerRadius(8)
+
+                Button("Add to shopping list") {}
+                    .font(.caption.weight(.semibold))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(Color.white.opacity(0.08))
+                    .cornerRadius(8)
+            }
+            .buttonStyle(.plain)
+
+            Button(isExpanded ? "Why this matters" : "Find similar items") {
                 onToggleDetails()
             }
             .font(.subheadline.weight(.semibold))
@@ -424,15 +523,10 @@ struct CategoryGapCard: View {
                 Divider().overlay(AppTheme.border)
 
                 if !entry.owned_colors.isEmpty {
-                    ChipSection(title: "Owned Colors", items: entry.owned_colors, color: .green)
+                    ColorSwatchRow(title: "Owned Colors", colors: entry.owned_colors)
                 }
                 if !entry.missing_colors.isEmpty {
-                    ChipSection(
-                        title: "Missing Colors",
-                        items: entry.missing_colors,
-                        color: .red,
-                        onTap: { color in openGoogleImagesForSuggestion(color: color, style: nil) }
-                    )
+                    ColorSwatchRow(title: "Missing Colors", colors: entry.missing_colors)
                 }
                 if !entry.owned_styles.isEmpty {
                     ChipSection(title: "Owned Styles", items: entry.owned_styles, color: .blue)
@@ -444,6 +538,23 @@ struct CategoryGapCard: View {
                         color: .orange,
                         onTap: { style in openGoogleImagesForSuggestion(color: nil, style: style) }
                     )
+                }
+                if entry.recommended_purchases.isEmpty {
+                    Text("No urgent purchase is needed in this category.")
+                        .font(.caption)
+                        .foregroundColor(AppTheme.textSecondary)
+                } else {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Buy-Next Guidance")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(AppTheme.textSecondary)
+                            .textCase(.uppercase)
+                        ForEach(entry.recommended_purchases, id: \.self) { rec in
+                            Text("• \(rec)")
+                                .font(.caption)
+                                .foregroundColor(AppTheme.textPrimary)
+                        }
+                    }
                 }
             }
         }
@@ -489,6 +600,44 @@ struct CategoryGapCard: View {
         case "blazer", "shirt", "belt": return "\(lower)s"
         default: return lower
         }
+    }
+}
+
+private struct PriorityShoppingItemCard: View {
+    let item: WardrobePriorityShoppingItem
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .center, spacing: 8) {
+                Text("#\(item.rank)")
+                    .font(.caption.weight(.bold))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.white.opacity(0.12))
+                    .cornerRadius(8)
+                Text(item.itemName.capitalized)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(AppTheme.textPrimary)
+                Spacer()
+                Text(item.priority)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(AppTheme.textPrimary)
+            }
+
+            Text(item.reason)
+                .font(.caption)
+                .foregroundColor(AppTheme.textSecondary)
+            Text(item.outfitImpact)
+                .font(.caption2)
+                .foregroundColor(AppTheme.textSecondary)
+        }
+        .padding(10)
+        .background(AppTheme.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(AppTheme.border, lineWidth: 1)
+        )
+        .cornerRadius(10)
     }
 }
 
@@ -559,6 +708,76 @@ private func formatCost(_ value: Double) -> String {
     if value < 0.01 { return String(format: "$%.4f", value) }
     if value < 0.1 { return String(format: "$%.3f", value) }
     return String(format: "$%.2f", value)
+}
+
+struct ColorSwatchRow: View {
+    var title: String? = nil
+    let colors: [String]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if let title = title {
+                Text(title)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .textCase(.uppercase)
+            }
+            if colors.isEmpty {
+                Text("You already have enough core colors in this category.")
+                    .font(.subheadline)
+                    .foregroundColor(AppTheme.textSecondary)
+            } else {
+                FlowLayout(spacing: 6) {
+                    ForEach(colors, id: \.self) { color in
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(Color(hex: colorHexValue(color)))
+                                .frame(width: 12, height: 12)
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color.white.opacity(0.35), lineWidth: needsLightBorder(color) ? 1 : 0)
+                                )
+                            Text(color.capitalized)
+                                .font(.caption)
+                                .foregroundColor(AppTheme.textPrimary)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.white.opacity(0.06))
+                        .cornerRadius(8)
+                    }
+                }
+            }
+        }
+    }
+
+    private func colorHexValue(_ color: String) -> String {
+        let normalized = color.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let map: [String: String] = [
+            "black": "#111827",
+            "white": "#F8FAFC",
+            "brown": "#8B5A2B",
+            "tan": "#D2B48C",
+            "beige": "#D6C6A8",
+            "blue": "#2563EB",
+            "navy": "#1E3A8A",
+            "gray": "#6B7280",
+            "grey": "#6B7280",
+            "green": "#15803D",
+            "olive": "#556B2F",
+            "burgundy": "#7F1D1D",
+            "red": "#B91C1C",
+            "purple": "#6D28D9",
+            "pink": "#DB2777",
+            "yellow": "#CA8A04"
+        ]
+        return map[normalized] ?? "#334155"
+    }
+
+    private func needsLightBorder(_ color: String) -> Bool {
+        let normalized = color.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return normalized == "white" || normalized == "beige" || normalized == "tan"
+    }
 }
 
 struct ChipSection: View {
@@ -651,5 +870,32 @@ struct FlowLayout: Layout {
         }
         
         return (offsets, CGSize(width: totalWidth, height: totalHeight))
+    }
+}
+
+extension Color {
+    init(hex: String) {
+        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: hex).scanHexInt64(&int)
+        let a, r, g, b: UInt64
+        switch hex.count {
+        case 3:
+            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
+        case 6:
+            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
+        case 8:
+            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
+        default:
+            (a, r, g, b) = (255, 51, 65, 85)
+        }
+
+        self.init(
+            .sRGB,
+            red: Double(r) / 255,
+            green: Double(g) / 255,
+            blue: Double(b) / 255,
+            opacity: Double(a) / 255
+        )
     }
 }
