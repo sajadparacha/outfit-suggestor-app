@@ -123,7 +123,7 @@ const derivePriorityList = (result: WardrobeGapAnalysisResponse, orderedCategori
         recommendedStyles: entry.missing_styles.slice(0, 3),
         reason: `Improves your ${result.style} ${result.occasion} options for ${result.season}.`,
         outfitImpact: `Unlocks more complete looks in ${prettyLabel(category)}.`,
-        actions: ['Add to shopping list', 'Show outfit examples'],
+        actions: ['Show outfit examples'],
       };
     })
     .sort((a, b) => b.score - a.score)
@@ -144,7 +144,7 @@ const deriveCategoryInsights = (result: WardrobeGapAnalysisResponse, orderedCate
       priority,
       whyThisMatters: `Adding these ${prettyLabel(category)} options makes more ${prettyLabel(result.style)} ${prettyLabel(result.occasion)} combinations possible.`,
       recommendation: entry.recommended_purchases[0] || `Add one versatile ${prettyLabel(category)} option first.`,
-      suggestedActions: ['Add to shopping list', 'Show outfit examples'],
+      suggestedActions: ['Show outfit examples', 'Find similar items'],
     };
   });
 };
@@ -290,12 +290,6 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
                     <div className="mt-3 flex flex-wrap gap-2">
                       <button
                         type="button"
-                        className="rounded-lg bg-teal-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-600"
-                      >
-                        Add to shopping list
-                      </button>
-                      <button
-                        type="button"
                         onClick={() =>
                           openShoppingSearch(item.category, item.recommendedStyles[0] || result.style, item.recommendedColors[0] || 'neutral')
                         }
@@ -433,12 +427,6 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
                         className="rounded-lg border border-white/20 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-100 hover:bg-white/10"
                       >
                         Show outfit examples
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-lg bg-teal-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-600"
-                      >
-                        Add to shopping list
                       </button>
                       <button
                         type="button"

@@ -194,7 +194,7 @@ struct GapAnalysisResultView: View {
                 recommendedStyles: Array(entry.missing_styles.prefix(3)),
                 reason: "Improves your \(result.style) \(result.occasion) options for \(result.season).",
                 outfitImpact: "Unlocks more complete looks in \(category).",
-                actions: ["Add to shopping list", "Show outfit examples"]
+                actions: ["Show outfit examples"]
             )
         }
         .sorted { left, right in
@@ -232,7 +232,7 @@ struct GapAnalysisResultView: View {
                 priority: priority,
                 whyThisMatters: "Adding these \(category) options gives you more \(result.style) \(result.occasion) combinations.",
                 recommendation: entry.recommended_purchases.first ?? "Add one versatile \(category) item first.",
-                suggestedActions: ["Add to shopping list", "Show outfit examples"]
+                suggestedActions: ["Show outfit examples", "Find similar items"]
             )
         }
     }
@@ -502,13 +502,6 @@ struct CategoryGapCard: View {
                 .padding(.vertical, 8)
                 .background(AppTheme.accent.opacity(0.2))
                 .cornerRadius(8)
-
-                Button("Add to shopping list") {}
-                    .font(.caption.weight(.semibold))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
-                    .background(Color.white.opacity(0.08))
-                    .cornerRadius(8)
             }
             .buttonStyle(.plain)
 
