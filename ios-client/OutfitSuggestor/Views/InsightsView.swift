@@ -442,7 +442,12 @@ struct CategoryGapCard: View {
                     .foregroundColor(AppTheme.textSecondary)
                     .textCase(.uppercase)
 
-                ColorSwatchRow(colors: Array(entry.missing_colors.prefix(4)))
+                ColorSwatchRow(
+                    colors: Array(entry.missing_colors.prefix(4)),
+                    onTap: { color in
+                        openGoogleImagesForSuggestion(color: color, style: entry.missing_styles.first)
+                    }
+                )
             }
 
             VStack(alignment: .leading, spacing: 4) {
@@ -519,7 +524,13 @@ struct CategoryGapCard: View {
                     ColorSwatchRow(title: "Owned Colors", colors: entry.owned_colors)
                 }
                 if !entry.missing_colors.isEmpty {
-                    ColorSwatchRow(title: "Missing Colors", colors: entry.missing_colors)
+                    ColorSwatchRow(
+                        title: "Missing Colors",
+                        colors: entry.missing_colors,
+                        onTap: { color in
+                            openGoogleImagesForSuggestion(color: color, style: entry.missing_styles.first)
+                        }
+                    )
                 }
                 if !entry.owned_styles.isEmpty {
                     ChipSection(title: "Owned Styles", items: entry.owned_styles, color: .blue)
@@ -706,6 +717,7 @@ private func formatCost(_ value: Double) -> String {
 struct ColorSwatchRow: View {
     var title: String? = nil
     let colors: [String]
+    var onTap: ((String) -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -722,26 +734,38 @@ struct ColorSwatchRow: View {
             } else {
                 FlowLayout(spacing: 6) {
                     ForEach(colors, id: \.self) { color in
-                        HStack(spacing: 6) {
-                            Circle()
-                                .fill(Color(hex: colorHexValue(color)))
-                                .frame(width: 12, height: 12)
-                                .overlay(
-                                    Circle()
-                                        .stroke(Color.white.opacity(0.35), lineWidth: needsLightBorder(color) ? 1 : 0)
-                                )
-                            Text(color.capitalized)
-                                .font(.caption)
-                                .foregroundColor(AppTheme.textPrimary)
+                        if let onTap {
+                            Button(action: { onTap(color) }) {
+                                swatchContent(for: color)
+                            }
+                            .buttonStyle(.plain)
+                        } else {
+                            swatchContent(for: color)
                         }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.white.opacity(0.06))
-                        .cornerRadius(8)
                     }
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private func swatchContent(for color: String) -> some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(Color(hex: colorHexValue(color)))
+                .frame(width: 12, height: 12)
+                .overlay(
+                    Circle()
+                        .stroke(Color.white.opacity(0.35), lineWidth: needsLightBorder(color) ? 1 : 0)
+                )
+            Text(color.capitalized)
+                .font(.caption)
+                .foregroundColor(AppTheme.textPrimary)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color.white.opacity(0.06))
+        .cornerRadius(8)
     }
 
     private func colorHexValue(_ color: String) -> String {

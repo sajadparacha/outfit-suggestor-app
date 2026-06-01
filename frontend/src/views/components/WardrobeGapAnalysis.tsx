@@ -81,23 +81,47 @@ const renderStyleChips = (category: string, items: string[], emptyLabel: string,
   );
 };
 
-const renderColorSwatches = (colors: string[], emptyLabel: string) => {
+const renderColorSwatches = (
+  colors: string[],
+  emptyLabel: string,
+  options?: {
+    onColorClick?: (color: string) => void;
+    ariaPrefix?: string;
+  }
+) => {
   if (colors.length === 0) return <p className="text-xs text-slate-400">{emptyLabel}</p>;
   return (
     <div className="flex flex-wrap gap-2">
       {colors.map((color) => {
         const swatch = getColorSwatchValue(color);
         const needsBorder = ['#f8fafc', '#d6c6a8', '#d2b48c'].includes(swatch);
-        return (
-          <span
-            key={color}
-            className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-slate-900/50 px-2.5 py-1 text-xs text-slate-100"
-          >
+        const content = (
+          <>
             <span
               className={`h-3.5 w-3.5 rounded-full ${needsBorder ? 'border border-slate-500' : 'border border-transparent'}`}
               style={{ backgroundColor: swatch }}
             />
             {prettyLabel(color)}
+          </>
+        );
+
+        if (options?.onColorClick) {
+          return (
+            <button
+              key={color}
+              type="button"
+              onClick={() => options.onColorClick?.(color)}
+              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-slate-900/50 px-2.5 py-1 text-xs text-slate-100 hover:bg-slate-800/70"
+              aria-label={`${options.ariaPrefix || 'Find similar items for'} ${prettyLabel(color)}`}
+            >
+              {content}
+            </button>
+          );
+        }
+
+        return (
+          <span key={color} className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-slate-900/50 px-2.5 py-1 text-xs text-slate-100">
+            {content}
           </span>
         );
       })}
@@ -403,7 +427,15 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
                       <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">
                         Missing colors
                       </p>
-                      {renderColorSwatches(insight.missingColors, 'You already have enough core colors in this category.')}
+                      {renderColorSwatches(
+                        insight.missingColors,
+                        'You already have enough core colors in this category.',
+                        {
+                          onColorClick: (color) =>
+                            openShoppingSearch(insight.category, insight.missingStyles[0] || result.style, color),
+                          ariaPrefix: 'Find similar items for',
+                        }
+                      )}
                     </div>
                     <div>
                       <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">Missing styles</p>
@@ -445,7 +477,15 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
                         </div>
                         <div>
                           <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">Missing Colors</p>
-                          {renderColorSwatches(entry.missing_colors, 'You already have enough core colors in this category.')}
+                          {renderColorSwatches(
+                            entry.missing_colors,
+                            'You already have enough core colors in this category.',
+                            {
+                              onColorClick: (color) =>
+                                openShoppingSearch(entry.category, entry.missing_styles[0] || result.style, color),
+                              ariaPrefix: 'Find similar items for',
+                            }
+                          )}
                         </div>
                         <div>
                           <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">Owned Styles</p>
