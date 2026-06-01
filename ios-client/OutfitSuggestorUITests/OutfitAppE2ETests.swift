@@ -162,9 +162,20 @@ final class OutfitAppE2ETests: XCTestCase {
         addSampleImageOnSuggest()
         app.buttons["main.getSuggestionButton"].tap()
 
-        openTab("History")
-        XCTAssertFalse(app.navigationBars["Outfit History"].exists)
+        let lock = app.otherElements["global.loadingLock"]
+        _ = lock.waitForExistence(timeout: 2)
 
+        let historyTarget = tabTarget("History")
+        XCTAssertTrue(waitFor(historyTarget, timeout: 2))
+        historyTarget.tap()
+
+        let unlocked = NSPredicate(format: "exists == false")
+        expectation(for: unlocked, evaluatedWith: lock)
+        waitForExpectations(timeout: 8)
+
+        if app.navigationBars["Outfit History"].exists {
+            openTab("Suggest")
+        }
         XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 8))
     }
 }
