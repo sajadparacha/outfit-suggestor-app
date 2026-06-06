@@ -350,12 +350,15 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
           )}
 
           {isAdmin && (
-            <details className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 sm:p-5">
+            <details open className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 sm:p-5" data-testid="admin-diagnostics">
               <summary className="cursor-pointer list-none text-sm font-semibold text-slate-200">
                 Admin diagnostics
               </summary>
+              <p className="mt-3 text-xs text-slate-400">
+                Prompt, response, and cost details appear for Premium analysis runs. Basic analysis shows placeholders below.
+              </p>
               <div className="mt-4 space-y-4">
-                <div className="rounded-xl border border-teal-400/20 bg-teal-500/10 p-4">
+                <div className="rounded-xl border border-teal-400/20 bg-teal-500/10 p-4" data-testid="analysis-cost">
                   {result.cost ? (
                     <div className="flex items-center justify-between">
                       <div>
@@ -388,13 +391,13 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
                 <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 sm:p-5">
                   <h3 className="mb-4 font-semibold text-white">AI Prompt & Response (Admin)</h3>
                   <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                    <div className="rounded-lg border border-white/10 bg-slate-900/40 p-3">
+                    <div className="rounded-lg border border-white/10 bg-slate-900/40 p-3" data-testid="input-prompt">
                       <div className="mb-2 text-xs uppercase tracking-wide text-slate-400">Input Prompt</div>
                       <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-words text-sm text-slate-200">
                         {result.ai_prompt || 'Prompt is unavailable for this run (likely free-mode or premium fallback).'}
                       </pre>
                     </div>
-                    <div className="rounded-lg border border-white/10 bg-slate-900/40 p-3">
+                    <div className="rounded-lg border border-white/10 bg-slate-900/40 p-3" data-testid="ai-response">
                       <div className="mb-2 text-xs uppercase tracking-wide text-slate-400">AI Response</div>
                       <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-words text-sm text-slate-200">
                         {result.ai_raw_response || 'Response is unavailable for this run (likely free-mode or premium fallback).'}

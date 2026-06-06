@@ -66,6 +66,7 @@ struct InsightsView: View {
                 }
                 .pickerStyle(.segmented)
                 .padding(.horizontal)
+                .accessibilityIdentifier("insights.analysisMode")
                 
                 // Analyze button
                 Button(action: { Task { await analyze() } }) {
@@ -84,6 +85,7 @@ struct InsightsView: View {
                 .cornerRadius(12)
                 .padding(.horizontal)
                 .disabled(isLoading)
+                .accessibilityIdentifier("insights.analyzeButton")
                 
                 if let error = errorMessage {
                     Text(error)
@@ -370,8 +372,14 @@ struct GapAnalysisResultView: View {
                         .cornerRadius(12)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("insights.adminDiagnostics")
 
                     if isAdminDiagnosticsExpanded {
+                        Text("Prompt, response, and cost details appear for Premium analysis runs. Basic analysis shows placeholders below.")
+                            .font(.caption)
+                            .foregroundColor(AppTheme.textSecondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
                         if let cost = result.cost {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Analysis Cost")
@@ -398,14 +406,36 @@ struct GapAnalysisResultView: View {
                             .padding()
                             .background(AppTheme.accentSoft)
                             .cornerRadius(12)
+                            .accessibilityIdentifier("insights.analysisCost")
+                        } else {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Analysis Cost")
+                                    .font(.headline)
+                                    .foregroundColor(AppTheme.textPrimary)
+                                Text("Cost details are unavailable for this run (likely Basic analysis or premium fallback).")
+                                    .font(.subheadline)
+                                    .foregroundColor(AppTheme.textSecondary)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding()
+                            .background(AppTheme.accentSoft)
+                            .cornerRadius(12)
                         }
 
-                        if let prompt = result.ai_prompt, !prompt.isEmpty {
-                            AdminInsightsPanel(title: "Input Prompt", content: prompt)
-                        }
-                        if let raw = result.ai_raw_response, !raw.isEmpty {
-                            AdminInsightsPanel(title: "AI Response", content: raw)
-                        }
+                        AdminInsightsPanel(
+                            title: "Input Prompt",
+                            content: result.ai_prompt?.isEmpty == false
+                                ? (result.ai_prompt ?? "")
+                                : "Prompt is unavailable for this run (likely Basic analysis or premium fallback).",
+                            accessibilityIdentifier: "insights.inputPrompt"
+                        )
+                        AdminInsightsPanel(
+                            title: "AI Response",
+                            content: result.ai_raw_response?.isEmpty == false
+                                ? (result.ai_raw_response ?? "")
+                                : "Response is unavailable for this run (likely Basic analysis or premium fallback).",
+                            accessibilityIdentifier: "insights.aiResponse"
+                        )
                     }
                 }
                 .padding(.horizontal)
@@ -677,6 +707,7 @@ private struct SummaryStatCard: View {
 private struct AdminInsightsPanel: View {
     let title: String
     let content: String
+    var accessibilityIdentifier: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -705,6 +736,7 @@ private struct AdminInsightsPanel: View {
                 .stroke(AppTheme.border, lineWidth: 1)
         )
         .cornerRadius(12)
+        .accessibilityIdentifier(accessibilityIdentifier ?? title)
     }
 }
 

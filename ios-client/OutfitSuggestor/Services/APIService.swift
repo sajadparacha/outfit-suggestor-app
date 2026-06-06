@@ -598,6 +598,9 @@ class APIService {
     func analyzeWardrobeGaps(request body: WardrobeGapAnalysisRequest) async throws -> WardrobeGapAnalysisResponse {
         await beginRequestActivity()
         defer { endRequestActivity() }
+        if AppConfig.isUITestMode {
+            return uiTestStore.makeGapAnalysis(for: body)
+        }
         guard let url = URL(string: "\(baseURL)/api/wardrobe/analyze-gaps") else { throw APIServiceError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -823,6 +826,51 @@ final class UITestDataStore {
             shoes: "Brown derby shoes",
             belt: "Brown textured belt",
             reasoning: "Randomly selected from your test wardrobe profile."
+        )
+    }
+
+    func makeGapAnalysis(for request: WardrobeGapAnalysisRequest) -> WardrobeGapAnalysisResponse {
+        let categories = ["shirt", "trouser", "blazer", "shoes", "belt"]
+        var analysisByCategory: [String: WardrobeCategoryGap] = [:]
+        for category in categories {
+            analysisByCategory[category] = WardrobeCategoryGap(
+                category: category,
+                owned_colors: ["white"],
+                owned_styles: ["solid"],
+                missing_colors: ["navy"],
+                missing_styles: ["linen"],
+                recommended_purchases: ["Add a versatile \(category) option"],
+                item_count: category == "shirt" ? 1 : 0
+            )
+        }
+
+        let isPremium = request.analysis_mode == "premium"
+        return WardrobeGapAnalysisResponse(
+            occasion: request.occasion,
+            season: request.season,
+            style: request.style,
+            analysis_mode: isPremium ? "premium" : "free",
+            analysis_by_category: analysisByCategory,
+            overall_summary: isPremium
+                ? "Premium wardrobe analysis completed for UI testing."
+                : "Basic wardrobe analysis completed for UI testing.",
+            summaryText: isPremium
+                ? "Premium wardrobe analysis completed for UI testing."
+                : "Basic wardrobe analysis completed for UI testing.",
+            analysisDepth: isPremium ? "Premium" : "Basic",
+            priorityShoppingList: nil,
+            categoryInsights: nil,
+            ai_prompt: isPremium ? "ui-test-premium-prompt" : nil,
+            ai_raw_response: isPremium ? "{\"analysis\":\"ui-test-premium-response\"}" : nil,
+            cost: isPremium
+                ? WardrobeGapAnalysisCost(
+                    gpt4_cost: 0.0123,
+                    model_image_cost: 0.0,
+                    total_cost: 0.0123,
+                    input_tokens: 120,
+                    output_tokens: 220
+                )
+                : nil
         )
     }
 

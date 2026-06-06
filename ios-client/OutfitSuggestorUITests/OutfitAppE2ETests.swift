@@ -178,4 +178,46 @@ final class OutfitAppE2ETests: XCTestCase {
         }
         XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 8))
     }
+
+    func testAdminPremiumInsightsShowsCostPromptAndResponse() {
+        openTab("Insights")
+        XCTAssertTrue(waitFor(app.buttons["insights.analyzeButton"]))
+        XCTAssertTrue(app.staticTexts["Wardrobe Gap Analysis"].waitForExistence(timeout: 4))
+
+        let premiumSegment = app.segmentedControls["insights.analysisMode"].buttons.element(boundBy: 1)
+        if premiumSegment.waitForExistence(timeout: 2) {
+            premiumSegment.tap()
+        } else if app.buttons["Premium (ChatGPT)"].waitForExistence(timeout: 2) {
+            app.buttons["Premium (ChatGPT)"].tap()
+        }
+
+        app.buttons["insights.analyzeButton"].tap()
+        waitForAppUnlocked(timeout: 8)
+
+        let summary = app.staticTexts.containing(
+            NSPredicate(format: "label CONTAINS %@", "Premium wardrobe analysis completed")
+        ).firstMatch
+        XCTAssertTrue(summary.waitForExistence(timeout: 8))
+
+        let scrollView = app.scrollViews.firstMatch
+        for _ in 0..<4 where !app.staticTexts["Analysis Cost"].exists {
+            if scrollView.exists {
+                scrollView.swipeUp()
+            } else {
+                app.swipeUp()
+            }
+        }
+
+        XCTAssertTrue(app.buttons["insights.adminDiagnostics"].waitForExistence(timeout: 4))
+        XCTAssertTrue(app.staticTexts["Analysis Cost"].waitForExistence(timeout: 4))
+        XCTAssertTrue(
+            app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "$0.012")).firstMatch.exists
+        )
+        XCTAssertTrue(
+            app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "ui-test-premium-prompt")).firstMatch.exists
+        )
+        XCTAssertTrue(
+            app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "ui-test-premium-response")).firstMatch.exists
+        )
+    }
 }

@@ -138,11 +138,13 @@ else
   CMD+=(test)
 fi
 
-for test_filter in "${ONLY_TESTING[@]}"; do
-  CMD+=("-only-testing:$test_filter")
-done
+if ((${#ONLY_TESTING[@]} > 0)); then
+  for test_filter in "${ONLY_TESTING[@]}"; do
+    CMD+=("-only-testing:$test_filter")
+  done
+fi
 
-if [[ ${#ONLY_TESTING[@]} -gt 0 ]]; then
+if ((${#ONLY_TESTING[@]} > 0)); then
   echo "  Filters:"
   for test_filter in "${ONLY_TESTING[@]}"; do
     echo "    - $test_filter"
