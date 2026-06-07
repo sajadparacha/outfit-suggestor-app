@@ -16,7 +16,7 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ isLoading, message = 'G
       <div className="bg-white rounded-lg p-8 shadow-2xl max-w-md w-full mx-4 flex flex-col items-center">
         <div className="mb-4">
           <svg
-            className="animate-spin h-12 w-12 text-teal-600"
+            className="animate-spin h-12 w-12 text-brand-blue"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"

@@ -6,9 +6,9 @@ interface TagBadgeProps {
 }
 
 const toneClassMap: Record<NonNullable<TagBadgeProps['tone']>, string> = {
-  wardrobe: 'bg-emerald-500/15 text-emerald-200 border-emerald-400/30',
+  wardrobe: 'bg-brand-purple/15 text-brand-purple border-brand-purple/30',
   ai: 'bg-sky-500/15 text-sky-200 border-sky-400/30',
-  accent: 'bg-teal-500/20 text-teal-100 border-teal-400/40',
+  accent: 'bg-brand-gradient-soft text-slate-200 border-brand-blue/40',
 };
 
 const TagBadge: React.FC<TagBadgeProps> = ({ label, tone = 'accent' }) => {

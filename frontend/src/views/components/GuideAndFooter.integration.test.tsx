@@ -25,6 +25,12 @@ describe('Guide and footer navigation (App)', () => {
     render(<App />);
 
     await waitFor(() => {
+      expect(screen.getByRole('button', { name: /More options/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /More options/i }));
+
+    await waitFor(() => {
       expect(screen.getByRole('button', { name: /About the app and creator/i })).toBeInTheDocument();
     });
 
@@ -38,6 +44,12 @@ describe('Guide and footer navigation (App)', () => {
 
   it('opens User guide from footer link', async () => {
     render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /More options/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /More options/i }));
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Open user guide/i })).toBeInTheDocument();

@@ -38,28 +38,18 @@ describe('PreferencesClear integration', () => {
   it('clears all preferences (dropdowns + free-text)', () => {
     render(<SidebarWithState />);
 
-    // Open the "Preferences" details panel
-    const prefsSummary = screen.getByText('Preferences').closest('summary') as HTMLElement;
-    fireEvent.click(prefsSummary);
+    // Verify initial state via sr-only tooltip summary
+    const tooltip = screen.getByRole('tooltip');
+    expect(tooltip.textContent).toMatch(/Occasion: Business/);
+    expect(tooltip.textContent).toMatch(/Season: Winter/);
+    expect(tooltip.textContent).toMatch(/Style: Classic/);
+    expect(tooltip.textContent).toMatch(/Notes: no sneakers/);
 
-    const occasionSelect = screen.getByLabelText('Select occasion') as HTMLSelectElement;
-    const seasonSelect = screen.getByLabelText('Select season') as HTMLSelectElement;
-    const styleSelect = screen.getByLabelText('Select style preference') as HTMLSelectElement;
-    const prefTextarea = screen.getByPlaceholderText(/e\.g\., Smart casual/i) as HTMLTextAreaElement;
-
-    // Ensure we start non-empty
-    expect(occasionSelect.value).not.toBe('');
-    expect(seasonSelect.value).not.toBe('');
-    expect(styleSelect.value).not.toBe('');
-    expect(prefTextarea.value).toBe('no sneakers');
-
-    // Click clear button
     fireEvent.click(screen.getByRole('button', { name: /clear preferences/i }));
 
-    expect(occasionSelect.value).toBe('');
-    expect(seasonSelect.value).toBe('');
-    expect(styleSelect.value).toBe('');
-    expect(prefTextarea.value).toBe('');
+    expect(tooltip.textContent).toMatch(/Occasion: Casual/);
+    expect(tooltip.textContent).toMatch(/Season: All Seasons/);
+    expect(tooltip.textContent).toMatch(/Style: Modern/);
+    expect(tooltip.textContent).toMatch(/Notes: \(none\)/);
   });
 });
-

@@ -34,8 +34,8 @@ const UploadBox: React.FC<UploadBoxProps> = ({
       onClick={onClick}
       className={`w-full cursor-pointer rounded-2xl border-2 border-dashed px-4 py-8 text-center transition-all duration-200 ${
         isDragging
-          ? 'border-teal-300 bg-gradient-to-b from-teal-400/20 to-cyan-400/10'
-          : 'border-slate-500/40 bg-gradient-to-b from-slate-800/70 to-slate-900/40 hover:border-teal-400/70 hover:from-slate-700/70 hover:to-slate-900/50'
+          ? 'border-brand-blue bg-brand-gradient-soft'
+          : 'border-slate-500/40 bg-gradient-to-b from-slate-800/70 to-slate-900/40 hover:border-brand-blue/70 hover:from-slate-700/70 hover:to-slate-900/50'
       }`}
       role="button"
       tabIndex={0}
@@ -52,7 +52,7 @@ const UploadBox: React.FC<UploadBoxProps> = ({
               e.stopPropagation();
               onPreviewClick();
             }}
-            className="block w-full overflow-hidden rounded-xl border border-white/15 bg-slate-900/70 transition hover:border-teal-300/70 focus:outline-none focus:ring-2 focus:ring-teal-400"
+            className="block w-full overflow-hidden rounded-xl border border-white/15 bg-slate-900/70 transition hover:border-brand-blue/70 focus:outline-none focus:ring-2 focus:ring-brand-blue"
             aria-label="View full size image"
           >
             <img src={imagePreviewUrl} alt="Uploaded clothing" className="h-40 w-full object-contain" />

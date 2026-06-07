@@ -4,20 +4,20 @@ const Hero: React.FC = () => {
   return (
     <section className="relative overflow-hidden bg-slate-950 text-white">
       <div className="absolute inset-0 opacity-40 pointer-events-none">
-        <div className="absolute -top-32 -left-24 h-72 w-72 rounded-full bg-indigo-500 blur-3xl" />
-        <div className="absolute -bottom-24 right-0 h-72 w-72 rounded-full bg-teal-400 blur-3xl" />
+        <div className="absolute -top-32 -left-24 h-72 w-72 rounded-full bg-brand-blue blur-3xl" />
+        <div className="absolute -bottom-24 right-0 h-72 w-72 rounded-full bg-brand-purple blur-3xl" />
       </div>
 
       <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-6">
         <div className="flex flex-col lg:flex-row items-center lg:items-start gap-4 lg:gap-8">
           {/* Text column */}
           <div className="flex-1 text-center lg:text-left space-y-3 sm:space-y-4">
-            <p className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-teal-100 ring-1 ring-white/15">
+            <p className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-slate-200 ring-1 ring-white/15">
               <span className="mr-1">✨</span> Smart outfits for real life
             </p>
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight">
               Look good in every
-              <span className="text-teal-300"> moment</span>.
+              <span className="text-brand-blue"> moment</span>.
             </h1>
             <p className="text-sm sm:text-base md:text-lg text-slate-200 max-w-xl mx-auto lg:mx-0">
               Upload a piece from your wardrobe and let AI build a complete outfit around it&mdash;
@@ -42,7 +42,7 @@ const Hero: React.FC = () => {
             <div className="rounded-3xl bg-white/5 border border-white/10 p-4 sm:p-5 shadow-2xl backdrop-blur">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-teal-400 to-indigo-500 flex items-center justify-center text-sm font-semibold">
+                  <div className="h-8 w-8 rounded-full bg-brand-gradient flex items-center justify-center text-sm font-semibold">
                     AI
                   </div>
                   <div>
@@ -50,7 +50,7 @@ const Hero: React.FC = () => {
                     <p className="text-[11px] text-slate-300">Curated just for you</p>
                   </div>
                 </div>
-                <span className="rounded-full bg-emerald-500/20 px-2.5 py-1 text-[11px] font-medium text-emerald-200">
+                <span className="rounded-full bg-brand-purple/20 px-2.5 py-1 text-[11px] font-medium text-brand-purple">
                   Free beta
                 </span>
               </div>

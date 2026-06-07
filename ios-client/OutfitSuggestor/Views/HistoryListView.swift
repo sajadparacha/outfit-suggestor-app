@@ -103,7 +103,7 @@ struct HistoryListView: View {
                 }
             }
         }
-        .navigationTitle("Outfit History")
+        .navigationTitle("Looks")
         .onAppear {
             guard !hasLoaded else { return }
             hasLoaded = true

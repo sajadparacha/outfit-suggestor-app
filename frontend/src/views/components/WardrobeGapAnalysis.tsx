@@ -71,7 +71,7 @@ const renderStyleChips = (category: string, items: string[], emptyLabel: string,
           key={style}
           type="button"
           onClick={() => openShoppingSearch(category, style, missingColors[0] || 'neutral')}
-          className="rounded-full border border-cyan-300/25 bg-cyan-500/10 px-2.5 py-1 text-xs text-cyan-100 transition-colors hover:bg-cyan-500/20"
+          className="rounded-full border border-brand-blue/25 bg-brand-blue/10 px-2.5 py-1 text-xs text-brand-blue/90 transition-colors hover:bg-brand-blue/20"
           aria-label={`Find similar items for ${prettyLabel(style)}`}
         >
           {prettyLabel(style)}
@@ -289,10 +289,10 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
             <p className="mt-3 text-sm text-slate-200">{topSummary}</p>
           </div>
 
-          <div className="rounded-2xl border border-teal-400/25 bg-teal-500/10 p-5">
+          <div className="rounded-2xl border border-brand-blue/25 bg-brand-blue/10 p-5">
             <div className="mb-3 flex items-center justify-between">
               <h4 className="text-base font-semibold text-white">Priority Shopping List</h4>
-              <p className="text-xs text-teal-100/90">Buy these first to unlock the most outfit combinations.</p>
+              <p className="text-xs text-slate-200/90">Buy these first to unlock the most outfit combinations.</p>
             </div>
             <div className="space-y-3">
               {priorityShoppingList.length === 0 ? (
@@ -305,7 +305,7 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-semibold text-white">#{item.rank}</span>
                       <h5 className="text-sm font-semibold text-white">{prettyLabel(item.itemName)}</h5>
-                      <span className="rounded-full border border-indigo-300/30 bg-indigo-500/15 px-2 py-0.5 text-xs text-indigo-100">
+                      <span className="rounded-full border border-brand-blue/30 bg-brand-purple/15 px-2 py-0.5 text-xs text-brand-purple/90">
                         {item.priority} Priority
                       </span>
                     </div>
@@ -342,9 +342,9 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
                 <p className="text-xs uppercase tracking-wide text-amber-200/80">Missing styles</p>
                 <p className="mt-1 text-xl font-semibold text-amber-100">{snapshot.missingStyles}</p>
               </div>
-              <div className="rounded-xl border border-indigo-400/20 bg-indigo-500/10 p-3">
-                <p className="text-xs uppercase tracking-wide text-indigo-200/80">Top buy-next category</p>
-                <p className="mt-1 text-sm font-semibold text-indigo-100">{snapshot.topBuyNextCategory}</p>
+              <div className="rounded-xl border border-brand-purple/20 bg-brand-purple/10 p-3">
+                <p className="text-xs uppercase tracking-wide text-brand-purple/80">Top buy-next category</p>
+                <p className="mt-1 text-sm font-semibold text-brand-purple/90">{snapshot.topBuyNextCategory}</p>
               </div>
             </div>
           )}
@@ -358,11 +358,11 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
                 Prompt, response, and cost details appear for Premium analysis runs. Basic analysis shows placeholders below.
               </p>
               <div className="mt-4 space-y-4">
-                <div className="rounded-xl border border-teal-400/20 bg-teal-500/10 p-4" data-testid="analysis-cost">
+                <div className="rounded-xl border border-brand-blue/20 bg-brand-blue/10 p-4" data-testid="analysis-cost">
                   {result.cost ? (
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="font-semibold text-teal-200 mb-1">Analysis Cost</h3>
+                        <h3 className="font-semibold text-brand-blue mb-1">Analysis Cost</h3>
                         <div className="text-sm text-slate-200 space-y-1">
                           <div>ChatGPT: {formatCost(result.cost.gpt4_cost)}</div>
                           {result.cost.input_tokens !== undefined && (
@@ -375,12 +375,12 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
                       </div>
                       <div className="text-right">
                         <div className="text-2xl font-bold text-white">{formatCost(result.cost.total_cost)}</div>
-                        <div className="text-xs text-teal-300">Total</div>
+                        <div className="text-xs text-brand-blue">Total</div>
                       </div>
                     </div>
                   ) : (
                     <div>
-                      <h3 className="font-semibold text-teal-200 mb-1">Analysis Cost</h3>
+                      <h3 className="font-semibold text-brand-blue mb-1">Analysis Cost</h3>
                       <p className="text-sm text-slate-200">
                         Cost details are unavailable for this run (likely free-mode or premium fallback).
                       </p>
@@ -420,7 +420,7 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
                     <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-100">
                       {prettyLabel(insight.category)}
                     </h4>
-                    <span className="rounded-full border border-indigo-300/30 bg-indigo-500/15 px-2 py-0.5 text-xs text-indigo-100">
+                    <span className="rounded-full border border-brand-blue/30 bg-brand-purple/15 px-2 py-0.5 text-xs text-brand-purple/90">
                       {insight.priority}
                     </span>
                   </div>
@@ -466,7 +466,7 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
                       <button
                         type="button"
                         onClick={() => toggleCategory(insight.category)}
-                        className="rounded-lg border border-indigo-300/30 bg-indigo-500/10 px-3 py-1.5 text-xs font-medium text-indigo-100 hover:bg-indigo-500/20"
+                        className="rounded-lg border border-brand-blue/30 bg-brand-purple/10 px-3 py-1.5 text-xs font-medium text-brand-purple/90 hover:bg-brand-purple/20"
                       >
                         {isExpanded ? 'Why this matters' : 'Find similar items'}
                       </button>

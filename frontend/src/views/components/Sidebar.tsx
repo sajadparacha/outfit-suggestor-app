@@ -1,7 +1,6 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { isValidImageSize, formatFileSize, createImagePreviewUrl, revokeImagePreviewUrl } from '../../utils/imageUtils';
 import { CLIENT_MAX_SIZE_MB } from '../../constants/imageLimits';
-import UploadBox from './suggestion/UploadBox';
 import ModernSwitch from './suggestion/ModernSwitch';
 
 interface Filters {
@@ -19,7 +18,7 @@ function occasionDisplay(v: string): string {
     date: 'Date Night',
     sports: 'Sports/Active',
   };
-  return v ? m[v] || v : 'Not set';
+  return v ? m[v] || v : 'Casual';
 }
 
 function seasonDisplay(v: string): string {
@@ -30,7 +29,7 @@ function seasonDisplay(v: string): string {
     fall: 'Fall',
     winter: 'Winter',
   };
-  return v ? m[v] || v : 'Not set';
+  return v ? m[v] || v : 'All Seasons';
 }
 
 function styleDisplay(v: string): string {
@@ -44,7 +43,7 @@ function styleDisplay(v: string): string {
     Casual: 'Casual',
     'Businees Casual': 'Business Casual',
   };
-  return v ? m[v] || v : 'Not set';
+  return v ? m[v] || v : 'Modern';
 }
 
 function preferenceSelectionSummary(filters: Filters, preferenceText: string): string {
@@ -57,19 +56,56 @@ function preferenceSelectionSummary(filters: Filters, preferenceText: string): s
   return lines.join('\n');
 }
 
-function SectionTitle({ icon, title, subtitle }: { icon: string; title: string; subtitle: string }) {
-  return (
-    <div className="mb-3 flex items-start justify-between">
-      <div>
-        <p className="text-xs uppercase tracking-[0.18em] text-slate-400">{title}</p>
-        <p className="mt-1 text-xs text-slate-500">{subtitle}</p>
-      </div>
-      <span className="text-slate-400" aria-hidden>
-        {icon}
-      </span>
-    </div>
-  );
+interface FilterSelectProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  ariaLabel: string;
+  children: React.ReactNode;
 }
+
+const FilterSelect: React.FC<FilterSelectProps> = ({ label, value, onChange, ariaLabel, children }) => (
+  <div className="rounded-2xl border border-white/15 bg-white/[0.04] px-3 py-2.5 transition hover:border-brand-blue/40">
+    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</label>
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full min-h-[28px] cursor-pointer appearance-none bg-transparent pr-5 text-sm font-medium text-white focus:outline-none focus:ring-0"
+        aria-label={ariaLabel}
+      >
+        {children}
+      </select>
+      <svg
+        className="pointer-events-none absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-500"
+        viewBox="0 0 12 12"
+        fill="none"
+        aria-hidden
+      >
+        <path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    </div>
+  </div>
+);
+
+const UploadIcon = () => (
+  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+  </svg>
+);
+
+const CameraIcon = () => (
+  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+  </svg>
+);
+
+const SparkleIcon = () => (
+  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <path d="M12 2l1.5 5.5L19 9l-5.5 1.5L12 16l-1.5-5.5L5 9l5.5-1.5L12 2z" />
+  </svg>
+);
 
 interface SidebarProps {
   filters: Filters;
@@ -124,7 +160,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   addingToWardrobe = false,
   onFileReject,
   showAiPromptResponse = true,
-  setShowAiPromptResponse
+  setShowAiPromptResponse,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -134,8 +170,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [showCamera, setShowCamera] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [showEnlargeImage, setShowEnlargeImage] = useState(false);
+  const [showNotesModal, setShowNotesModal] = useState(false);
+  const [notesDraft, setNotesDraft] = useState(preferenceText);
+  const [colorPreference] = useState('No Preference');
 
-  // Object URL for uploaded image thumbnail (revoke on cleanup)
   const imagePreviewUrl = useMemo(() => (image ? createImagePreviewUrl(image) : null), [image]);
   useEffect(() => {
     return () => {
@@ -143,26 +181,21 @@ const Sidebar: React.FC<SidebarProps> = ({
     };
   }, [imagePreviewUrl]);
 
-  // Check if device has camera on mount
   useEffect(() => {
     const checkCamera = async () => {
       try {
         const devices = await navigator.mediaDevices.enumerateDevices();
-        const hasVideoDevice = devices.some(device => device.kind === 'videoinput');
-        setHasCamera(hasVideoDevice);
-      } catch (error) {
+        setHasCamera(devices.some((device) => device.kind === 'videoinput'));
+      } catch {
         setHasCamera(false);
       }
     };
     checkCamera();
   }, []);
 
-  // Cleanup camera stream on unmount
   useEffect(() => {
     return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
+      if (stream) stream.getTracks().forEach((track) => track.stop());
     };
   }, [stream]);
 
@@ -183,11 +216,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const handleClearPreferences = () => {
-    setFilters({
-      occasion: '',
-      season: '',
-      style: '',
-    });
+    setFilters({ occasion: 'casual', season: 'all', style: 'modern' });
     setPreferenceText('');
   };
 
@@ -212,9 +241,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-
     const files = e.dataTransfer.files;
-    if (files && files.length > 0) {
+    if (files?.length > 0) {
       const file = files[0];
       if (file.type.startsWith('image/')) {
         if (!isValidImageSize(file, CLIENT_MAX_SIZE_MB)) {
@@ -229,23 +257,14 @@ const Sidebar: React.FC<SidebarProps> = ({
   const openCamera = async () => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
       });
       setStream(mediaStream);
       setShowCamera(true);
-      
-      // Wait for video element to be ready
       setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
-        }
+        if (videoRef.current) videoRef.current.srcObject = mediaStream;
       }, 100);
-    } catch (error) {
-      console.error('Error accessing camera:', error);
+    } catch {
       alert('Unable to access camera. Please check permissions.');
     }
   };
@@ -255,16 +274,13 @@ const Sidebar: React.FC<SidebarProps> = ({
       const canvas = canvasRef.current;
       const video = videoRef.current;
       const context = canvas.getContext('2d');
-      
       if (context) {
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
         canvas.toBlob((blob) => {
           if (blob) {
-            const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
-            setImage(file);
+            setImage(new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' }));
             closeCamera();
           }
         }, 'image/jpeg', 0.9);
@@ -274,7 +290,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const closeCamera = () => {
     if (stream) {
-      stream.getTracks().forEach(track => track.stop());
+      stream.getTracks().forEach((track) => track.stop());
       setStream(null);
     }
     setShowCamera(false);
@@ -283,11 +299,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const wardrobeHoverTitle = useMemo(() => {
     const lines: string[] = [];
     if (onAddToWardrobe) {
-      lines.push(
-        image
-          ? `Add to wardrobe: ready — ${image.name}`
-          : 'Add to wardrobe: upload a photo first'
-      );
+      lines.push(image ? `Add to wardrobe: ready — ${image.name}` : 'Add to wardrobe: upload a photo first');
     }
     if (setUseWardrobeOnly) {
       lines.push(
@@ -308,138 +320,215 @@ const Sidebar: React.FC<SidebarProps> = ({
   }, [filters, preferenceText, isAdmin, setShowAiPromptResponse, showAiPromptResponse]);
 
   const randomPicksHoverTitle = useMemo(() => {
-    const parts = [
+    return [
       'Random from Wardrobe uses the occasion, season, style, and notes in Preferences.',
       'Random from History loads a past saved suggestion.',
       '---',
       preferenceSelectionSummary(filters, preferenceText),
-    ];
-    return parts.join('\n');
+    ].join('\n');
   }, [filters, preferenceText]);
 
+  const notesLabel = preferenceText.trim() ? 'Has notes' : 'Add notes';
+
+  const selectClass =
+    'w-full rounded-lg border border-white/15 bg-slate-800/80 px-3 py-2 text-sm text-white focus:border-brand-blue focus:outline-none focus:ring-1 focus:ring-brand-blue';
+
   return (
-    <div className="rounded-3xl border border-white/10 bg-slate-950/70 shadow-[0_18px_50px_rgba(2,8,23,0.55)] backdrop-blur p-4 sm:p-6 lg:sticky lg:top-6">
-      <div className="mb-4">
-        <h2 className="text-lg font-semibold text-white">Stylist Controls</h2>
-        <p className="mt-1 text-sm text-slate-400">Upload, tune preferences, and generate your next look.</p>
-      </div>
+    <div
+      className="lg:sticky lg:top-20"
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {/* Hero copy */}
+      <span className="inline-block rounded-full border border-brand-blue/30 bg-brand-gradient-soft px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-blue">
+        AI-Powered Style
+      </span>
+      <h1 className="mt-4 text-3xl font-bold leading-tight text-white sm:text-4xl lg:text-[2.75rem]">
+        Dress Better.{' '}
+        <span className="text-brand-gradient">Every Day.</span>
+      </h1>
+      <p className="mt-3 max-w-lg text-sm leading-relaxed text-slate-400 sm:text-base">
+        Upload a clothing item and get complete outfit suggestions tailored to you.
+      </p>
 
-      <div className="mb-6 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
-        <SectionTitle icon="↥" title="Upload" subtitle="Drag and drop your clothing photo" />
-        <UploadBox
-          isDragging={isDragging}
-          imagePreviewUrl={imagePreviewUrl}
-          imageName={image?.name ?? null}
-          maxSizeMb={CLIENT_MAX_SIZE_MB}
+      {/* Image preview when uploaded */}
+      {imagePreviewUrl && (
+        <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+          <button
+            type="button"
+            onClick={() => setShowEnlargeImage(true)}
+            className="block w-full overflow-hidden rounded-xl"
+            aria-label="View full size image"
+          >
+            <img src={imagePreviewUrl} alt="Uploaded clothing" className="mx-auto max-h-36 object-contain" />
+          </button>
+          <p className="mt-2 truncate text-center text-xs text-slate-400">{image?.name}</p>
+          <p className="sr-only">JPG, PNG, WebP up to {CLIENT_MAX_SIZE_MB}MB</p>
+        </div>
+      )}
+
+      {/* Action cards */}
+      <div className="mt-5 grid grid-cols-2 gap-3">
+        <button
+          type="button"
           onClick={() => fileInputRef.current?.click()}
-          onPreviewClick={() => setShowEnlargeImage(true)}
-          onDragEnter={handleDragEnter}
-          onDragLeave={handleDragLeave}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-        />
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/jpg,image/png,image/webp"
-          onChange={handleFileSelect}
-          className="hidden"
-          aria-label="File input for clothing photo"
-        />
+          className={`flex flex-col items-center gap-2 rounded-2xl border p-4 transition touch-manipulation ${
+            isDragging
+              ? 'border-brand-blue/60 bg-brand-gradient-soft'
+              : 'border-white/10 bg-white/[0.03] hover:border-brand-blue/40 hover:bg-white/[0.05]'
+          }`}
+          aria-label="Upload clothing photo - click or drag and drop"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradient-soft text-brand-blue">
+            <UploadIcon />
+          </div>
+          <span className="text-sm font-medium text-white">Upload Item</span>
+        </button>
 
-        {hasCamera && (
-          <div className="mt-3 grid">
-            <button
-              onClick={openCamera}
-              className="w-full rounded-xl border border-white/15 bg-transparent px-4 py-2.5 text-sm font-medium text-slate-200 transition duration-200 hover:border-teal-300/60 hover:bg-white/5"
-              aria-label="Take photo with camera"
-            >
-              Take Photo
-            </button>
+        {hasCamera ? (
+          <button
+            type="button"
+            onClick={openCamera}
+            className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-brand-blue/40 hover:bg-white/[0.05] touch-manipulation"
+            aria-label="Take photo with camera"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradient-soft text-brand-blue">
+              <CameraIcon />
+            </div>
+            <span className="text-sm font-medium text-white">Take Photo</span>
+          </button>
+        ) : (
+          <div
+            className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.02] p-4 opacity-50"
+            aria-hidden
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-slate-500">
+              <CameraIcon />
+            </div>
+            <span className="text-sm font-medium text-slate-500">Take Photo</span>
           </div>
         )}
       </div>
 
-      {/* Camera Modal */}
-      {showCamera && (
-        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
-          <div className="rounded-2xl bg-slate-900 border border-white/10 max-w-2xl w-full shadow-2xl backdrop-blur">
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
-              <h3 className="text-lg font-semibold text-white">📷 Take Photo</h3>
-              <button
-                onClick={closeCamera}
-                aria-label="Close camera"
-                className="p-2 rounded hover:bg-white/10 text-slate-300"
-              >
-                ✖
-              </button>
-            </div>
-            
-            <div className="p-4">
-              <div className="relative bg-black rounded-lg overflow-hidden">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  className="w-full h-[400px] object-cover"
-                />
-                <canvas ref={canvasRef} className="hidden" />
-              </div>
-            </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/jpg,image/png,image/webp"
+        onChange={handleFileSelect}
+        className="hidden"
+        aria-label="File input for clothing photo"
+      />
 
-            <div className="p-4 border-t border-white/10 flex gap-3">
-              <button
-                onClick={capturePhoto}
-                className="flex-1 px-6 py-3 bg-teal-500 text-white rounded-full font-medium hover:bg-teal-600 transition-colors flex items-center justify-center space-x-2"
-              >
-                <span>📸</span>
-                <span>Capture Photo</span>
-              </button>
-              <button
-                onClick={closeCamera}
-                className="px-6 py-3 bg-white/10 text-slate-200 rounded-full font-medium hover:bg-white/20 transition-colors border border-white/15"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <p className="mt-2 text-center text-xs text-slate-500">
+        JPG, PNG, WebP up to {CLIENT_MAX_SIZE_MB}MB
+      </p>
 
-      {/* Enlarge uploaded image modal */}
-      {showEnlargeImage && imagePreviewUrl && (
-        <div
-          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 cursor-pointer"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Uploaded image full size"
-          onClick={() => setShowEnlargeImage(false)}
+      {/* Preference filters — visible combo boxes with current values */}
+      <div
+        className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5"
+        role="group"
+        aria-label="Outfit preferences"
+      >
+        <FilterSelect
+          label="Occasion"
+          value={filters.occasion || 'casual'}
+          onChange={(value) => handleFilterChange('occasion', value)}
+          ariaLabel="Select occasion"
         >
-          <button
-            type="button"
-            onClick={() => setShowEnlargeImage(false)}
-            aria-label="Close full image"
-            className="absolute top-4 right-4 p-3 bg-white/20 hover:bg-white/30 rounded-full text-white text-xl transition-colors z-10"
-          >
-            ✕
-          </button>
-          <img
-            src={imagePreviewUrl}
-            alt="Uploaded clothing - full size"
-            className="max-w-full max-h-full object-contain"
-            onClick={(e) => e.stopPropagation()}
-          />
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-4 py-2 rounded-full text-sm">
-            Click anywhere to close
-          </div>
-        </div>
-      )}
+          <option value="casual">Casual</option>
+          <option value="business">Business</option>
+          <option value="formal">Formal</option>
+          <option value="party">Party</option>
+          <option value="date">Date Night</option>
+          <option value="sports">Sports/Active</option>
+        </FilterSelect>
 
+        <FilterSelect
+          label="Season"
+          value={filters.season || 'all'}
+          onChange={(value) => handleFilterChange('season', value)}
+          ariaLabel="Select season"
+        >
+          <option value="all">All Seasons</option>
+          <option value="spring">Spring</option>
+          <option value="summer">Summer</option>
+          <option value="fall">Fall</option>
+          <option value="winter">Winter</option>
+        </FilterSelect>
+
+        <FilterSelect
+          label="Style"
+          value={filters.style || 'modern'}
+          onChange={(value) => handleFilterChange('style', value)}
+          ariaLabel="Select style preference"
+        >
+          <option value="modern">Modern</option>
+          <option value="Businees Casual">Business Casual</option>
+          <option value="Casual">Casual</option>
+          <option value="classic">Classic</option>
+          <option value="trendy">Trendy</option>
+          <option value="minimalist">Minimalist</option>
+          <option value="bold">Bold</option>
+          <option value="vintage">Vintage</option>
+        </FilterSelect>
+
+        <div className="rounded-2xl border border-white/15 bg-white/[0.04] px-3 py-2.5">
+          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Colors</span>
+          <p className="text-sm font-medium text-white">{colorPreference}</p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setNotesDraft(preferenceText);
+            setShowNotesModal(true);
+          }}
+          className="rounded-2xl border border-white/15 bg-white/[0.04] px-3 py-2.5 text-left transition hover:border-brand-blue/40 touch-manipulation"
+        >
+          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Notes</span>
+          <span className="block text-sm font-medium text-white">{notesLabel}</span>
+        </button>
+      </div>
+
+      {/* Generate button */}
+      <button
+        onClick={onGetSuggestion}
+        disabled={!image || loading}
+        className={`mt-5 flex w-full min-h-[48px] touch-manipulation items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-semibold text-white transition-all duration-200 ${
+          !image || loading
+            ? 'cursor-not-allowed bg-white/10 text-slate-500'
+            : 'btn-brand'
+        }`}
+        aria-label="Get AI outfit suggestion"
+      >
+        {loading ? (
+          <>
+            <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            Styling your outfit...
+          </>
+        ) : (
+          <>
+            <SparkleIcon />
+            Generate Outfit
+          </>
+        )}
+      </button>
+
+      <p className="mt-3 text-center text-xs text-slate-500">
+        Your images are private and secure.
+      </p>
+
+      {/* Advanced options — preserve existing functionality */}
       {isAuthenticated && (onAddToWardrobe || setUseWardrobeOnly) && (
-        <details className="group mb-4 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]" open>
-          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-slate-200 [&::-webkit-details-marker]:hidden">
+        <details className="group mt-5 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-slate-300 [&::-webkit-details-marker]:hidden">
             <span>Wardrobe</span>
-            <span className="text-slate-400 transition-transform group-open:rotate-180">▼</span>
+            <span className="text-slate-500 transition-transform group-open:rotate-180">▼</span>
           </summary>
           <div className="space-y-4 border-t border-white/10 px-4 py-4">
             {onAddToWardrobe && (
@@ -450,15 +539,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                   className={`w-full rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${
                     !image || loading || addingToWardrobe
                       ? 'cursor-not-allowed border border-white/10 bg-white/10 text-slate-500'
-                      : 'border border-white/15 bg-white/5 text-slate-100 hover:border-teal-300/60 hover:bg-teal-500/10'
+                      : 'border border-white/15 bg-white/5 text-slate-100 hover:border-brand-blue/40 hover:bg-brand-blue/10'
                   }`}
                   aria-label="Add current image to wardrobe"
-                  title={!image ? 'Upload an image first' : addingToWardrobe ? 'Adding to wardrobe...' : 'Add this item to your wardrobe'}
                 >
                   {addingToWardrobe ? 'Adding...' : 'Add to Wardrobe'}
                 </button>
-                {!image && <p className="text-xs text-slate-400">Upload an image to enable this action.</p>}
-                {addingToWardrobe && <p className="text-xs text-teal-300">Analyzing and preparing wardrobe item...</p>}
               </div>
             )}
             {setUseWardrobeOnly && (
@@ -474,105 +560,11 @@ const Sidebar: React.FC<SidebarProps> = ({
         </details>
       )}
 
-      <details className="group mb-4 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]" open>
-        <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-slate-200 [&::-webkit-details-marker]:hidden">
-          <span>Preferences</span>
-          <span className="text-slate-400 transition-transform group-open:rotate-180">▼</span>
-        </summary>
-        <div className="space-y-4 border-t border-white/10 px-4 py-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-200 mb-2">Occasion</label>
-            <select
-              value={filters.occasion}
-              onChange={(e) => handleFilterChange('occasion', e.target.value)}
-              className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
-              aria-label="Select occasion"
-            >
-              <option value="">Select occasion</option>
-              <option value="casual">Casual</option>
-              <option value="business">Business</option>
-              <option value="formal">Formal</option>
-              <option value="party">Party</option>
-              <option value="date">Date Night</option>
-              <option value="sports">Sports/Active</option>
-            </select>
-          </div>
-          {/* Season */}
-          <div>
-            <label className="block text-sm font-medium text-slate-200 mb-2">Season</label>
-            <select
-              value={filters.season}
-              onChange={(e) => handleFilterChange('season', e.target.value)}
-              className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
-              aria-label="Select season"
-            >
-              <option value="">Select season</option>
-              <option value="all">All Seasons</option>
-              <option value="spring">Spring</option>
-              <option value="summer">Summer</option>
-              <option value="fall">Fall</option>
-              <option value="winter">Winter</option>
-            </select>
-          </div>
-          {/* Style */}
-          <div>
-            <label className="block text-sm font-medium text-slate-200 mb-2">Style</label>
-            <select
-              value={filters.style}
-              onChange={(e) => handleFilterChange('style', e.target.value)}
-              className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
-              aria-label="Select style preference"
-            >
-              <option value="">Select style</option>
-              <option value="Businees Casual">Businees Casual</option>
-              <option value="Casual">Casual</option>
-              <option value="modern">Modern</option>
-              <option value="classic">Classic</option>
-              <option value="trendy">Trendy</option>
-              <option value="minimalist">Minimalist</option>
-              <option value="bold">Bold</option>
-              <option value="vintage">Vintage</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-200 mb-2">Extra Notes</label>
-            <label htmlFor="free-text-pref" className="sr-only">Preference text</label>
-            <textarea
-              id="free-text-pref"
-              value={preferenceText}
-              onChange={(e) => setPreferenceText(e.target.value)}
-              placeholder="e.g., Smart casual, navy and brown, no sneakers."
-              className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all resize-none"
-              rows={2}
-            />
-          </div>
-          <div>
-            <button
-              type="button"
-              onClick={handleClearPreferences}
-              className="w-full py-2.5 px-4 rounded-xl font-medium transition-all text-sm bg-white/10 text-slate-200 hover:bg-white/20 border border-white/15"
-              aria-label="Clear preferences"
-            >
-              Clear Preferences
-            </button>
-          </div>
-          {isAdmin && setShowAiPromptResponse && (
-            <ModernSwitch
-              id="ai-prompt-response-toggle"
-              checked={showAiPromptResponse}
-              onChange={(value) => setShowAiPromptResponse(value)}
-              label="Show AI Prompt & Response"
-              description="Toggle full AI input/output panel."
-            />
-          )}
-        </div>
-      </details>
-
       {modelGenerationEnabled && (
-        <details className="group mb-4 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
-          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-slate-200 [&::-webkit-details-marker]:hidden">
+        <details className="group mt-3 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-slate-300 [&::-webkit-details-marker]:hidden">
             <span>Display Options</span>
-            <span className="text-slate-400 transition-transform group-open:rotate-180">▼</span>
+            <span className="text-slate-500 transition-transform group-open:rotate-180">▼</span>
           </summary>
           <div className="space-y-4 border-t border-white/10 px-4 py-4">
             <ModernSwitch
@@ -588,7 +580,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <select
                   value={imageModel}
                   onChange={(e) => setImageModel(e.target.value)}
-                  className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                  className={selectClass}
                   aria-label="Select image generation model"
                 >
                   <option value="dalle3">DALL-E 3 (OpenAI)</option>
@@ -602,10 +594,10 @@ const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       {(isAuthenticated && (onGetRandomSuggestion || onGetRandomFromHistory)) && (
-        <details className="group mb-5 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
-          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-slate-200 [&::-webkit-details-marker]:hidden">
+        <details className="group mt-3 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-slate-300 [&::-webkit-details-marker]:hidden">
             <span>Quick Picks</span>
-            <span className="text-slate-400 transition-transform group-open:rotate-180">▼</span>
+            <span className="text-slate-500 transition-transform group-open:rotate-180">▼</span>
           </summary>
           <div className="space-y-2 border-t border-white/10 px-4 py-4">
             {onGetRandomSuggestion && (
@@ -615,7 +607,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 className={`w-full rounded-xl px-4 py-2.5 text-sm font-medium transition ${
                   loading
                     ? 'cursor-not-allowed border border-white/10 bg-white/10 text-slate-500'
-                    : 'border border-white/15 bg-white/5 text-slate-200 hover:border-amber-300/60 hover:bg-amber-500/10'
+                    : 'border border-white/15 bg-white/5 text-slate-200 hover:border-brand-purple/40 hover:bg-brand-purple/10'
                 }`}
                 aria-label="Get random outfit from wardrobe"
               >
@@ -629,7 +621,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 className={`w-full rounded-xl px-4 py-2.5 text-sm font-medium transition ${
                   loading
                     ? 'cursor-not-allowed border border-white/10 bg-white/10 text-slate-500'
-                    : 'border border-white/15 bg-white/5 text-slate-200 hover:border-indigo-300/60 hover:bg-indigo-500/10'
+                    : 'border border-white/15 bg-white/5 text-slate-200 hover:border-brand-blue/40 hover:bg-brand-blue/10'
                 }`}
                 aria-label="Show random outfit from your history"
               >
@@ -640,45 +632,133 @@ const Sidebar: React.FC<SidebarProps> = ({
         </details>
       )}
 
-      <div className="border-t border-white/10 pt-4">
-        <button
-          onClick={onGetSuggestion}
-          disabled={!image || loading}
-          className={`w-full min-h-[48px] touch-manipulation rounded-xl px-4 py-3 text-sm font-semibold text-white transition-all duration-200 ${
-            !image || loading
-              ? 'cursor-not-allowed border border-white/10 bg-white/10 text-slate-500'
-              : 'bg-gradient-to-r from-teal-500 to-cyan-500 shadow-lg shadow-cyan-500/20 hover:from-teal-400 hover:to-cyan-400'
-          }`}
-          aria-label="Get AI outfit suggestion"
-        >
-          {loading ? (
-            <span className="inline-flex items-center justify-center">
-              <svg className="mr-2 h-4 w-4 animate-spin" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              Styling your outfit...
-            </span>
-          ) : (
-            'Get AI Suggestion'
-          )}
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={handleClearPreferences}
+        className="mt-3 w-full py-2 text-xs text-slate-500 transition hover:text-slate-300"
+        aria-label="Clear preferences"
+      >
+        Clear preferences
+      </button>
+
       {isAuthenticated && onOpenInsights && (
         <button
           type="button"
           onClick={onOpenInsights}
-          className="mt-3 w-full text-center text-xs text-slate-400 hover:text-teal-300 transition-colors"
+          className="mt-1 w-full text-center text-xs text-slate-500 transition hover:text-brand-blue"
           aria-label="Open insights for wardrobe analysis"
         >
           Need closet insights? Open Insights →
         </button>
       )}
-      <p className="mt-3 text-center text-xs text-slate-500">
-        {preferencesHoverTitle.split('\n')[0]} • {wardrobeHoverTitle.split('\n')[0]}
-      </p>
 
-      {/* Test compatibility: preserve semantic tooltip summaries used by unit tests */}
+      {isAdmin && setShowAiPromptResponse && (
+        <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
+          <ModernSwitch
+            id="ai-prompt-response-toggle"
+            checked={showAiPromptResponse}
+            onChange={(value) => setShowAiPromptResponse(value)}
+            label="Show AI Prompt & Response"
+            description="Toggle full AI input/output panel."
+          />
+        </div>
+      )}
+
+      {/* Camera Modal */}
+      {showCamera && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4" role="dialog" aria-modal="true">
+          <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-slate-900 shadow-2xl backdrop-blur">
+            <div className="flex items-center justify-between border-b border-white/10 p-4">
+              <h3 className="text-lg font-semibold text-white">Take Photo</h3>
+              <button onClick={closeCamera} aria-label="Close camera" className="rounded p-2 text-slate-300 hover:bg-white/10">
+                ✖
+              </button>
+            </div>
+            <div className="p-4">
+              <div className="relative overflow-hidden rounded-lg bg-black">
+                <video ref={videoRef} autoPlay playsInline className="h-[400px] w-full object-cover" />
+                <canvas ref={canvasRef} className="hidden" />
+              </div>
+            </div>
+            <div className="flex gap-3 border-t border-white/10 p-4">
+              <button
+                onClick={capturePhoto}
+                className="btn-brand flex flex-1 items-center justify-center gap-2 rounded-full px-6 py-3 font-medium"
+              >
+                Capture Photo
+              </button>
+              <button
+                onClick={closeCamera}
+                className="rounded-full border border-white/15 bg-white/10 px-6 py-3 font-medium text-slate-200"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEnlargeImage && imagePreviewUrl && (
+        <div
+          className="fixed inset-0 z-50 flex cursor-pointer items-center justify-center bg-black/90 p-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setShowEnlargeImage(false)}
+        >
+          <button
+            type="button"
+            onClick={() => setShowEnlargeImage(false)}
+            aria-label="Close full image"
+            className="absolute right-4 top-4 z-10 rounded-full bg-white/20 p-3 text-xl text-white"
+          >
+            ✕
+          </button>
+          <img
+            src={imagePreviewUrl}
+            alt="Uploaded clothing - full size"
+            className="max-h-full max-w-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+
+      {/* Notes modal */}
+      {showNotesModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-5 shadow-2xl backdrop-blur">
+            <h3 className="text-lg font-semibold text-white">Extra Notes</h3>
+            <textarea
+              value={notesDraft}
+              onChange={(e) => setNotesDraft(e.target.value)}
+              placeholder="e.g., Smart casual, navy and brown, no sneakers."
+              className="mt-3 w-full resize-none rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-white placeholder-slate-500 focus:border-brand-blue focus:outline-none"
+              rows={4}
+              aria-label="Preference text"
+            />
+            <div className="mt-4 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowNotesModal(false)}
+                className="flex-1 rounded-xl border border-white/15 py-2.5 text-sm text-slate-300"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPreferenceText(notesDraft);
+                  setShowNotesModal(false);
+                }}
+                className="btn-brand flex-1 rounded-xl py-2.5 text-sm font-semibold"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Test compatibility tooltips */}
       <div role="tooltip" className="sr-only">
         {preferencesHoverTitle}
       </div>
@@ -697,4 +777,3 @@ const Sidebar: React.FC<SidebarProps> = ({
 };
 
 export default Sidebar;
-

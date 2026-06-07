@@ -96,7 +96,7 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
     return (
       <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-8">
         <div className="flex flex-col items-center justify-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-400"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-blue"></div>
           <p className="text-slate-200">Loading history...</p>
         </div>
       </div>
@@ -112,7 +112,7 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
           <p className="text-slate-200 mb-4">{error}</p>
           <button
             onClick={onRefresh}
-            className="px-6 py-2 bg-teal-500 text-white rounded-full hover:bg-teal-600 transition-colors"
+            className="px-6 py-2 btn-brand rounded-full transition-colors"
           >
             Try Again
           </button>
@@ -143,7 +143,7 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
         {history.length > 0 && (
           <button
             onClick={onRefresh}
-            className="px-4 py-2 text-teal-300 hover:bg-white/10 rounded-xl transition-colors flex items-center space-x-2 border border-white/10"
+            className="px-4 py-2 text-brand-blue hover:bg-white/10 rounded-xl transition-colors flex items-center space-x-2 border border-white/10"
           >
             <span>🔄</span>
             <span>{isFullView ? 'Refresh' : 'Load All'}</span>
@@ -163,13 +163,13 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyPress={handleKeyPress}
-                className="w-full px-4 py-2 pl-10 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                className="w-full px-4 py-2 pl-10 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-brand-blue focus:border-brand-blue"
               />
               <span className="absolute left-3 top-2.5 text-slate-400">🔍</span>
             </div>
             <button
               onClick={handleSearch}
-              className="px-6 py-2 bg-teal-500 text-white rounded-xl hover:bg-teal-600 transition-colors font-medium"
+              className="px-6 py-2 btn-brand rounded-xl transition-colors font-medium"
             >
               Search
             </button>
@@ -180,7 +180,7 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as 'newest' | 'oldest')}
-              className="w-full px-4 py-2 border border-white/20 rounded-xl bg-white/5 text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+              className="w-full px-4 py-2 border border-white/20 rounded-xl bg-white/5 text-white focus:ring-2 focus:ring-brand-blue focus:border-brand-blue"
             >
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
@@ -230,7 +230,7 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
             </p>
             <button
               onClick={handleClearSearch}
-              className="px-4 py-2 bg-teal-500 text-white rounded-full hover:bg-teal-600 transition-colors"
+              className="px-4 py-2 btn-brand rounded-full transition-colors"
             >
               Clear Search
             </button>
@@ -308,7 +308,7 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
                 </span>
                 <div className="flex items-center gap-2">
                   {entry.text_input && (
-                    <span className="text-xs bg-white/10 text-teal-200 px-2 py-1 rounded-full border border-white/15">
+                    <span className="text-xs bg-white/10 text-brand-blue px-2 py-1 rounded-full border border-white/15">
                       Custom
                     </span>
                   )}

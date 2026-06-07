@@ -172,22 +172,15 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
 
   if (loading) {
     return (
-      <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-4 sm:p-6 lg:p-8">
-        {/* Skeleton Loader */}
+      <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 shadow-xl backdrop-blur sm:p-6 lg:p-8">
         <div className="animate-pulse space-y-6">
-          <div className="bg-white/10 h-96 rounded-xl"></div>
-          <div className="h-4 bg-white/10 rounded w-3/4"></div>
-          <div className="h-4 bg-white/10 rounded w-1/2"></div>
-          <div className="grid grid-cols-4 gap-4">
-            <div className="h-12 bg-white/10 rounded"></div>
-            <div className="h-12 bg-white/10 rounded"></div>
-            <div className="h-12 bg-white/10 rounded"></div>
-            <div className="h-12 bg-white/10 rounded"></div>
-          </div>
+          <div className="h-80 rounded-2xl bg-white/10 md:h-96"></div>
+          <div className="h-4 rounded bg-white/10 w-3/4"></div>
+          <div className="h-4 rounded bg-white/10 w-1/2"></div>
         </div>
         <div className="mt-6 text-center">
-          <div className="inline-flex items-center text-teal-300">
-            <svg className="animate-spin h-6 w-6 mr-3" viewBox="0 0 24 24">
+          <div className="inline-flex items-center text-brand-blue">
+            <svg className="mr-3 h-6 w-6 animate-spin" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
             </svg>
@@ -207,7 +200,7 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
           <p className="text-slate-200 mb-6">{error}</p>
           <button
             onClick={onNext}
-            className="px-6 py-3 bg-teal-500 text-white rounded-full hover:bg-teal-600 transition-colors"
+            className="btn-brand rounded-full px-6 py-3"
           >
             Try Again
           </button>
@@ -218,17 +211,19 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
 
   if (!suggestion) {
     return (
-      <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-6 sm:p-8 lg:p-12">
-        <div className="text-center">
-          <div className="text-6xl sm:text-8xl mb-4 sm:mb-6">👔</div>
-          <h3 className="text-xl sm:text-2xl font-semibold text-white mb-3">Ready for Style Magic?</h3>
-          <p className="text-slate-200 mb-6 sm:mb-8 max-w-md mx-auto text-sm sm:text-base">
-            Upload a photo of your clothing and let our AI create the perfect outfit combination for you!
-          </p>
-          <div className="flex items-center justify-center flex-wrap gap-x-2 gap-y-1 text-sm text-slate-400 px-2">
-            <span>👈</span>
-            <span>Start by uploading a photo on the left</span>
+      <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] shadow-xl backdrop-blur">
+        <div className="relative flex min-h-[320px] flex-col items-center justify-center bg-hero-flatlay p-6 sm:min-h-[400px] sm:p-8 lg:min-h-[480px] lg:p-12">
+          <div className="absolute inset-0 bg-brand-gradient-soft opacity-30" aria-hidden />
+          <div className="relative flex flex-wrap items-center justify-center gap-4 sm:gap-6">
+            <span className="text-5xl drop-shadow-lg sm:text-6xl" role="img" aria-label="Shirt">👔</span>
+            <span className="text-4xl drop-shadow-lg sm:text-5xl" role="img" aria-label="Shoes">👞</span>
+            <span className="text-4xl drop-shadow-lg sm:text-5xl" role="img" aria-label="Jacket">🧥</span>
+            <span className="text-4xl drop-shadow-lg sm:text-5xl" role="img" aria-label="Jeans">👖</span>
           </div>
+          <p className="relative mt-8 text-center text-sm text-slate-400 sm:text-base">
+            Your AI-styled outfit preview will appear here
+          </p>
+          <p className="sr-only">Ready for Style Magic?</p>
         </div>
       </div>
     );
@@ -248,7 +243,7 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
               onClick={() => setShowFullImage(true)}
               className="relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/80 text-left"
             >
-              <span className="absolute left-3 top-3 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 px-3 py-1 text-xs font-semibold text-white">AI model preview</span>
+              <span className="absolute left-3 top-3 rounded-full bg-brand-gradient px-3 py-1 text-xs font-semibold text-white">AI model preview</span>
               <img
                 src={`data:image/png;base64,${suggestion.model_image}`}
                 alt="AI generated model wearing recommended outfit"
@@ -266,7 +261,7 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
             onClick={() => setShowFullImage(true)}
             className="relative flex min-h-[360px] w-full items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-left"
           >
-            <span className="absolute left-3 top-3 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 px-3 py-1 text-xs font-semibold text-white">AI model preview</span>
+            <span className="absolute left-3 top-3 rounded-full bg-brand-gradient px-3 py-1 text-xs font-semibold text-white">AI model preview</span>
             <img
               src={`data:image/png;base64,${suggestion.model_image}`}
               alt="AI generated model wearing recommended outfit"
@@ -290,7 +285,7 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
       <div className="mt-6">
         <h2 className="text-2xl font-bold text-white sm:text-3xl">AI Styled Outfit</h2>
         <p className="sr-only">Your Perfect Outfit</p>
-        <p className="mt-1 text-sm text-teal-200">{confidenceLine}</p>
+        <p className="mt-1 text-sm text-brand-blue">{confidenceLine}</p>
         {process.env.NODE_ENV !== 'production' && (
           <p className="mt-2 inline-flex items-center rounded-full border border-sky-300/30 bg-sky-500/10 px-2.5 py-1 text-[11px] text-sky-200">
             Debug: upload matched category = {suggestion.upload_matched_category || 'none'}
@@ -340,10 +335,10 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
       </div>
 
       {isAdmin && suggestion.cost && (
-        <div className="mt-5 rounded-xl border border-teal-400/20 bg-teal-500/10 p-4">
+        <div className="mt-5 rounded-xl border border-brand-blue/20 bg-brand-gradient-soft p-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold text-teal-200 mb-1">AI Suggestion Cost</h3>
+              <h3 className="mb-1 font-semibold text-brand-blue">AI Suggestion Cost</h3>
               <div className="text-sm text-slate-200 space-y-1">
                 <div>GPT-4 Vision: {formatCost(suggestion.cost.gpt4_cost)}</div>
                 {suggestion.cost.model_image_cost !== undefined && suggestion.cost.model_image_cost > 0 && (
@@ -353,7 +348,7 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
             </div>
             <div className="text-right">
               <div className="text-2xl font-bold text-white">{formatCost(suggestion.cost.total_cost)}</div>
-              <div className="text-xs text-teal-300">Total</div>
+              <div className="text-xs text-brand-purple">Total</div>
             </div>
           </div>
         </div>
@@ -381,7 +376,7 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
           disabled={!hasImage}
           className={`min-h-[48px] touch-manipulation rounded-xl px-4 py-3 text-sm font-semibold transition-all ${
             hasImage
-              ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-lg shadow-cyan-500/20 hover:from-teal-400 hover:to-cyan-400'
+              ? 'btn-brand'
               : 'cursor-not-allowed border border-white/10 bg-white/10 text-slate-500'
           }`}
           aria-label="Get next suggestion"
@@ -394,7 +389,7 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
           disabled={!hasImage}
           className={`min-h-[48px] touch-manipulation rounded-xl px-4 py-3 text-sm font-medium transition-all ${
             hasImage
-              ? 'border border-white/20 bg-white/5 text-slate-100 hover:border-emerald-300/60 hover:bg-emerald-500/10'
+              ? 'border border-white/20 bg-white/5 text-slate-100 hover:border-brand-purple/60 hover:bg-brand-purple/10'
               : 'cursor-not-allowed border border-white/10 bg-white/10 text-slate-500'
           }`}
           aria-label="Like this outfit"
@@ -423,7 +418,7 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
             key={chip}
             onClick={onNext}
             disabled={!hasImage}
-            className="rounded-full border border-white/15 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-teal-300/60 hover:bg-teal-500/10"
+            className="rounded-full border border-white/15 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-brand-blue/60 hover:bg-brand-blue/10"
           >
             {chip}
           </button>
@@ -446,7 +441,7 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
             disabled={!hasImage}
             className={`min-h-[48px] touch-manipulation rounded-xl px-5 py-3 text-sm font-medium transition-all ${
               hasImage
-                ? 'border border-white/15 bg-white/5 text-slate-200 hover:border-indigo-300/60 hover:bg-indigo-500/10'
+                ? 'border border-white/15 bg-white/5 text-slate-200 hover:border-brand-purple/60 hover:bg-brand-purple/10'
                 : 'cursor-not-allowed border border-white/10 bg-white/10 text-slate-500'
             }`}
             aria-label="Add new item to your wardrobe"
@@ -461,7 +456,7 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
           <button
             onClick={onNext}
             disabled={!hasImage}
-            className="flex-1 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+            className="btn-brand flex-1 rounded-xl px-3 py-2 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-40"
           >
             Regenerate
           </button>

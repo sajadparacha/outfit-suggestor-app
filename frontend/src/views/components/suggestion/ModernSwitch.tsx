@@ -28,7 +28,7 @@ const ModernSwitch: React.FC<ModernSwitchProps> = ({
         id={id}
         onClick={() => onChange(!checked)}
         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
-          checked ? 'bg-gradient-to-r from-teal-500 to-cyan-500' : 'bg-white/20'
+          checked ? 'bg-brand-gradient' : 'bg-white/20'
         }`}
         role="switch"
         aria-checked={checked}

@@ -66,7 +66,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             </button>
             <button
               onClick={onConfirm}
-              className="flex-1 px-4 py-2 bg-teal-500 text-white rounded-full hover:bg-teal-600 transition-colors font-medium"
+              className="flex-1 px-4 py-2 btn-brand rounded-full transition-colors font-medium"
             >
               {confirmText}
             </button>

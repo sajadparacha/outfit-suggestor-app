@@ -138,7 +138,7 @@ export default function AdminIntegrationTestRunner({ user }: AdminIntegrationTes
               type="button"
               onClick={handleRunAllTests}
               disabled={loadingTests || !!runningTestId || runningAll || tests.length === 0}
-              className="px-4 py-2.5 bg-teal-500 text-white rounded-xl font-semibold hover:bg-teal-600 disabled:opacity-50"
+              className="px-4 py-2.5 btn-brand rounded-xl font-semibold disabled:opacity-50"
             >
               {runningAll ? 'Running All...' : 'Run All Tests'}
             </button>
@@ -176,7 +176,7 @@ export default function AdminIntegrationTestRunner({ user }: AdminIntegrationTes
                         type="button"
                         onClick={() => handleRunTest(testCase.id)}
                         disabled={!!runningTestId || runningAll}
-                        className="px-3 py-1.5 bg-teal-500 text-white rounded-lg text-xs font-semibold hover:bg-teal-600 disabled:opacity-50"
+                        className="btn-brand px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50"
                       >
                         {runningTestId === testCase.id ? 'Running...' : 'Run'}
                       </button>
@@ -218,7 +218,7 @@ export default function AdminIntegrationTestRunner({ user }: AdminIntegrationTes
                   <tr key={result.test_id} className="border-b border-white/5 last:border-b-0">
                     <td className="py-2 pr-4 text-slate-100">{result.name}</td>
                     <td className="py-2 pr-4 text-slate-300">{result.description}</td>
-                    <td className={`py-2 pr-4 font-semibold ${result.status === 'passed' ? 'text-emerald-300' : 'text-rose-300'}`}>
+                    <td className={`py-2 pr-4 font-semibold ${result.status === 'passed' ? 'text-brand-blue' : 'text-rose-300'}`}>
                       {result.status.toUpperCase()}
                     </td>
                     <td className="py-2 pr-4 text-slate-300">
@@ -275,7 +275,7 @@ export default function AdminIntegrationTestRunner({ user }: AdminIntegrationTes
                     <td
                       className={`py-2 pr-4 font-semibold ${
                         testCase.status === 'passed'
-                          ? 'text-emerald-300'
+                          ? 'text-brand-blue'
                           : testCase.status === 'failed'
                             ? 'text-rose-300'
                             : 'text-amber-300'

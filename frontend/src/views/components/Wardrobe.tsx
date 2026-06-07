@@ -223,7 +223,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
       <>
         {parts.map((part, index) => 
           regex.test(part) ? (
-            <mark key={index} className="bg-teal-500/40 text-teal-100 font-medium px-0.5 rounded">
+            <mark key={index} className="bg-brand-blue/30 text-slate-200 font-medium px-0.5 rounded">
               {part}
             </mark>
           ) : (
@@ -585,7 +585,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                   className={`px-4 py-3 rounded-xl font-semibold transition-all shadow-md ${
                     analyzingWardrobe
                       ? 'cursor-not-allowed bg-white/10 text-slate-400 border border-white/10'
-                      : 'bg-indigo-500 text-white hover:bg-indigo-600'
+                      : 'btn-brand'
                   }`}
                   aria-label="Analyze my wardrobe gaps"
                 >
@@ -594,7 +594,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
               )}
               <button
                 onClick={() => setShowAddModal(true)}
-                className="px-6 py-3 bg-teal-500 text-white rounded-xl font-semibold hover:bg-teal-600 transition-all shadow-md"
+                className="px-6 py-3 btn-brand rounded-xl font-semibold transition-all shadow-md"
               >
                 + Add Item
               </button>
@@ -609,7 +609,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                 onClick={() => handleCategoryFilter(null)}
                 className={`px-4 py-2 rounded-xl font-medium transition-all ${
                   selectedCategory === null
-                    ? 'bg-teal-500 text-white shadow-md'
+                    ? 'btn-brand'
                     : 'bg-white/10 text-slate-200 hover:bg-white/20 border border-white/10'
                 }`}
               >
@@ -621,7 +621,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                   onClick={() => handleCategoryFilter(category)}
                   className={`px-4 py-2 rounded-xl font-medium transition-all capitalize ${
                     selectedCategory === category
-                      ? 'bg-teal-500 text-white shadow-md'
+                      ? 'btn-brand'
                       : 'bg-white/10 text-slate-200 hover:bg-white/20 border border-white/10'
                   }`}
                 >
@@ -643,11 +643,11 @@ const Wardrobe: React.FC<WardrobeProps> = ({
               value={localSearchQuery}
               onChange={(e) => setLocalSearchQuery(e.target.value)}
               placeholder="Search by description, color, or name..."
-              className="flex-1 px-4 py-3 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+              className="flex-1 px-4 py-3 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-brand-blue focus:border-brand-blue transition-colors"
             />
             <button
               type="submit"
-              className="px-6 py-3 bg-teal-500 text-white rounded-xl font-medium hover:bg-teal-600 transition-colors"
+              className="px-6 py-3 btn-brand rounded-xl font-medium transition-colors"
             >
               🔍 Search
             </button>
@@ -695,7 +695,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
         {/* Wardrobe Items List */}
         {loading ? (
           <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-teal-400"></div>
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-brand-blue"></div>
             <p className="mt-4 text-slate-200">Loading wardrobe...</p>
           </div>
         ) : !wardrobeItems || (Array.isArray(wardrobeItems) && wardrobeItems.length === 0) ? (
@@ -705,7 +705,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
             <p className="text-slate-300 mb-6">Add items to get personalized outfit suggestions!</p>
             <button
               onClick={() => setShowAddModal(true)}
-              className="px-6 py-3 bg-teal-500 text-white rounded-xl font-semibold hover:bg-teal-600 transition-all"
+              className="px-6 py-3 btn-brand rounded-xl font-semibold transition-all"
             >
               Add Your First Item
             </button>
@@ -716,7 +716,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
               <div key={item.id} className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-4 flex items-center gap-4 hover:shadow-2xl transition-shadow">
                 {item.image_data && (
                   <div 
-                    className="w-32 h-32 bg-slate-800/80 rounded-xl overflow-hidden flex-shrink-0 cursor-pointer hover:ring-2 ring-teal-500 transition-all border border-white/10"
+                    className="w-32 h-32 bg-slate-800/80 rounded-xl overflow-hidden flex-shrink-0 cursor-pointer hover:ring-2 ring-brand-blue transition-all border border-white/10"
                     onClick={() => handleViewImage(item.image_data!)}
                     title="Click to view full size"
                   >
@@ -759,7 +759,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                         <button
                           onClick={() => handleGetAISuggestion(item)}
                           disabled={suggestionLoading === item.id || (outfitController?.loading ?? false)}
-                          className="px-4 py-2 bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
+                          className="px-4 py-2 btn-brand rounded-xl font-medium transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
                           title="Get AI outfit suggestion for this item"
                         >
                           {suggestionLoading === item.id || (outfitController?.loading ?? false) ? (
@@ -778,7 +778,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                         <button
                           onClick={() => handleOpenHistorySuggestions(item)}
                           disabled={historyLoadingForItem === item.id}
-                          className="px-4 py-2 bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
+                          className="px-4 py-2 btn-brand rounded-xl font-medium transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
                           title="Show past suggestions for this item"
                         >
                           {historyLoadingForItem === item.id ? (
@@ -793,7 +793,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                       )}
                       <button
                         onClick={() => handleEditItem(item)}
-                        className="text-teal-400 hover:text-teal-300 text-xl"
+                        className="text-brand-blue hover:text-brand-blue text-xl"
                         title="Edit item"
                       >
                         ✏️
@@ -851,7 +851,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                         disabled={loading}
                         className={`px-3 py-2 rounded-xl font-medium transition-colors ${
                           currentPage === pageNum
-                            ? 'bg-teal-500 text-white'
+                            ? 'btn-brand'
                             : 'bg-white/10 text-slate-200 hover:bg-white/20 border border-white/10'
                         } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
@@ -895,7 +895,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
 
                 {analyzing ? (
                   <div className="text-center py-12">
-                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-teal-400 mb-4"></div>
+                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-brand-blue mb-4"></div>
                     <p className="text-slate-200 font-medium">🤖 AI is analyzing your item...</p>
                     <p className="text-sm text-slate-400 mt-2">Please wait while we extract details from your image</p>
                   </div>
@@ -917,7 +917,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                       </label>
                       <div
                         onClick={() => fileInputRef.current?.click()}
-                        className="border-2 border-dashed border-white/20 rounded-xl p-8 text-center cursor-pointer hover:border-teal-500 bg-white/5 transition-colors"
+                        className="border-2 border-dashed border-white/20 rounded-xl p-8 text-center cursor-pointer hover:border-brand-blue bg-white/5 transition-colors"
                       >
                         <div className="text-4xl mb-2">📸</div>
                         <p className="text-slate-200 font-medium">Click to upload</p>
@@ -945,7 +945,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                       <select
                         value={formData.category}
                         onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                        className="w-full px-3 py-2 border border-white/20 rounded-xl bg-white/5 text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                        className="w-full px-3 py-2 border border-white/20 rounded-xl bg-white/5 text-white focus:ring-2 focus:ring-brand-blue focus:border-brand-blue"
                         required
                       >
                         {categories.map((cat) => (
@@ -964,7 +964,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                         type="text"
                         value={formData.color}
                         onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                        className="w-full px-3 py-2 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                        className="w-full px-3 py-2 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-brand-blue focus:border-brand-blue"
                         placeholder="e.g., Navy blue, Black"
                         required
                       />
@@ -977,7 +977,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                       <textarea
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        className="w-full px-3 py-2 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                        className="w-full px-3 py-2 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-brand-blue focus:border-brand-blue"
                         rows={3}
                         placeholder="e.g., Classic fit, casual style"
                         required
@@ -995,7 +995,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                       <button
                         type="submit"
                         disabled={loading}
-                        className="flex-1 px-6 py-3 bg-teal-500 text-white rounded-full font-semibold hover:bg-teal-600 transition-all disabled:opacity-50"
+                        className="flex-1 px-6 py-3 btn-brand rounded-full font-semibold transition-all disabled:opacity-50"
                       >
                         {loading ? 'Adding...' : '✅ Save Item'}
                       </button>
@@ -1023,15 +1023,15 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                                 setAnalyzing(true);
                                 handleImageUpload(imageFile!);
                               }}
-                              className="text-sm text-teal-300 underline"
+                              className="text-sm text-brand-blue underline"
                             >
                               Try analyzing again
                             </button>
                           </div>
                         )}
                         {!analysisError && imagePreview && (
-                          <div className="bg-teal-500/20 border border-teal-400/30 rounded-xl p-3 mb-4">
-                            <p className="text-sm text-teal-100">
+                          <div className="bg-brand-gradient-soft border border-brand-blue/30 rounded-xl p-3 mb-4">
+                            <p className="text-sm text-slate-200">
                               ✨ <strong>AI Analysis Complete!</strong> Review and edit the extracted details below before saving.
                             </p>
                           </div>
@@ -1044,7 +1044,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                             <select
                               value={formData.category}
                               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                              className="w-full px-3 py-2 border border-white/20 rounded-xl bg-white/5 text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                              className="w-full px-3 py-2 border border-white/20 rounded-xl bg-white/5 text-white focus:ring-2 focus:ring-brand-blue focus:border-brand-blue"
                               required
                             >
                               {categories.map((cat) => (
@@ -1063,7 +1063,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                               type="text"
                               value={formData.color}
                               onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                              className="w-full px-3 py-2 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                              className="w-full px-3 py-2 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-brand-blue focus:border-brand-blue"
                               placeholder="e.g., Navy blue, Black"
                               required
                             />
@@ -1076,7 +1076,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                             <textarea
                               value={formData.description}
                               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                              className="w-full px-3 py-2 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                              className="w-full px-3 py-2 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-brand-blue focus:border-brand-blue"
                               rows={3}
                               placeholder="e.g., Classic fit, casual style"
                               required
@@ -1101,7 +1101,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                             <button
                               type="submit"
                               disabled={loading}
-                              className="flex-1 px-6 py-3 bg-teal-500 text-white rounded-full font-semibold hover:bg-teal-600 transition-all disabled:opacity-50"
+                              className="flex-1 px-6 py-3 btn-brand rounded-full font-semibold transition-all disabled:opacity-50"
                             >
                               {loading ? 'Adding...' : '✅ Save Item'}
                             </button>
@@ -1112,7 +1112,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                       <div className="space-y-4">
                         <div
                           onClick={() => fileInputRef.current?.click()}
-                          className="border-2 border-dashed border-white/20 rounded-xl p-12 text-center cursor-pointer hover:border-teal-500 bg-white/5 transition-colors"
+                          className="border-2 border-dashed border-white/20 rounded-xl p-12 text-center cursor-pointer hover:border-brand-blue bg-white/5 transition-colors"
                         >
                           <div className="text-6xl mb-4">📸</div>
                           <p className="text-slate-200 font-medium">Click to upload or drag and drop</p>
@@ -1165,7 +1165,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
 
                 {editAnalyzing ? (
                   <div className="text-center py-12">
-                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-teal-400 mb-4"></div>
+                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-brand-blue mb-4"></div>
                     <p className="text-slate-200 font-medium">🤖 AI is analyzing your image...</p>
                   </div>
                 ) : (
@@ -1189,7 +1189,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                             <select
                               value={editFormData.category}
                               onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value })}
-                              className="w-full px-3 py-2 border border-white/20 rounded-xl bg-white/5 text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                              className="w-full px-3 py-2 border border-white/20 rounded-xl bg-white/5 text-white focus:ring-2 focus:ring-brand-blue focus:border-brand-blue"
                               required
                             >
                               {categories.map((cat) => (
@@ -1208,7 +1208,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                               type="text"
                               value={editFormData.color}
                               onChange={(e) => setEditFormData({ ...editFormData, color: e.target.value })}
-                              className="w-full px-3 py-2 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                              className="w-full px-3 py-2 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-brand-blue focus:border-brand-blue"
                               placeholder="e.g., Navy blue, Black"
                               required
                             />
@@ -1221,7 +1221,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                             <textarea
                               value={editFormData.description}
                               onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
-                              className="w-full px-3 py-2 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                              className="w-full px-3 py-2 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-brand-blue focus:border-brand-blue"
                               rows={3}
                               placeholder="e.g., Classic fit, casual style"
                               required
@@ -1234,7 +1234,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                             </label>
                             <div
                               onClick={() => editFileInputRef.current?.click()}
-                              className="border-2 border-dashed border-white/20 rounded-xl p-4 text-center cursor-pointer hover:border-teal-500 bg-white/5 transition-colors"
+                              className="border-2 border-dashed border-white/20 rounded-xl p-4 text-center cursor-pointer hover:border-brand-blue bg-white/5 transition-colors"
                             >
                               <div className="text-2xl mb-2">📸</div>
                               <p className="text-slate-300 text-sm">Click to upload new image</p>
@@ -1264,7 +1264,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                             <button
                               type="submit"
                               disabled={loading}
-                              className="flex-1 px-6 py-3 bg-teal-500 text-white rounded-full font-semibold hover:bg-teal-600 transition-all disabled:opacity-50"
+                              className="flex-1 px-6 py-3 btn-brand rounded-full font-semibold transition-all disabled:opacity-50"
                             >
                               {loading ? 'Updating...' : '✅ Update Item'}
                             </button>
@@ -1280,7 +1280,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                           <select
                             value={editFormData.category}
                             onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value })}
-                            className="w-full px-3 py-2 border border-white/20 rounded-xl bg-white/5 text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                            className="w-full px-3 py-2 border border-white/20 rounded-xl bg-white/5 text-white focus:ring-2 focus:ring-brand-blue focus:border-brand-blue"
                             required
                           >
                             {categories.map((cat) => (
@@ -1299,7 +1299,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                             type="text"
                             value={editFormData.color}
                             onChange={(e) => setEditFormData({ ...editFormData, color: e.target.value })}
-                            className="w-full px-3 py-2 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                            className="w-full px-3 py-2 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-brand-blue focus:border-brand-blue"
                             placeholder="e.g., Navy blue, Black"
                             required
                           />
@@ -1312,7 +1312,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                           <textarea
                             value={editFormData.description}
                             onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
-                            className="w-full px-3 py-2 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                            className="w-full px-3 py-2 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-brand-blue focus:border-brand-blue"
                             rows={3}
                             placeholder="e.g., Classic fit, casual style"
                             required
@@ -1325,7 +1325,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                           </label>
                           <div
                             onClick={() => editFileInputRef.current?.click()}
-                            className="border-2 border-dashed border-white/20 rounded-xl p-4 text-center cursor-pointer hover:border-teal-500 bg-white/5 transition-colors"
+                            className="border-2 border-dashed border-white/20 rounded-xl p-4 text-center cursor-pointer hover:border-brand-blue bg-white/5 transition-colors"
                           >
                             <div className="text-2xl mb-2">📸</div>
                             <p className="text-slate-300 text-sm">Click to upload image</p>
@@ -1355,7 +1355,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                           <button
                             type="submit"
                             disabled={loading}
-                            className="flex-1 px-6 py-3 bg-teal-500 text-white rounded-full font-semibold hover:bg-teal-600 transition-all disabled:opacity-50"
+                            className="flex-1 px-6 py-3 btn-brand rounded-full font-semibold transition-all disabled:opacity-50"
                           >
                             {loading ? 'Updating...' : '✅ Update Item'}
                           </button>
@@ -1512,14 +1512,14 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                               </div>
                             </div>
 
-                            <div className="mt-3 rounded-lg border border-teal-400/20 bg-teal-500/5 p-3">
-                              <p className="text-xs uppercase tracking-wide text-teal-300 mb-1">Why This Works</p>
+                            <div className="mt-3 rounded-lg border border-brand-blue/20 bg-brand-blue/5 p-3">
+                              <p className="text-xs uppercase tracking-wide text-brand-blue mb-1">Why This Works</p>
                               <p className="text-sm text-slate-200 line-clamp-3">{entry.reasoning}</p>
                             </div>
                           </div>
                           <button
                             onClick={() => handleSelectHistorySuggestion(entry)}
-                            className="px-4 py-2 bg-teal-500 text-white rounded-xl font-semibold hover:bg-teal-600 transition-colors whitespace-nowrap"
+                            className="px-4 py-2 btn-brand rounded-xl font-semibold transition-colors whitespace-nowrap"
                           >
                             Use This
                           </button>

@@ -6,6 +6,9 @@
 
 import React, { useState } from 'react';
 import Hero from './views/components/Hero';
+import NavBar from './views/components/NavBar';
+import HowItWorksStepper from './views/components/HowItWorksStepper';
+import RecentLooksSection from './views/components/RecentLooksSection';
 import Sidebar from './views/components/Sidebar';
 import OutfitPreview from './views/components/OutfitPreview';
 import OutfitHistory from './views/components/OutfitHistory';
@@ -329,9 +332,9 @@ function App() {
   // Show loading state while checking authentication
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 md:bg-slate-950">
+      <div className="min-h-screen flex items-center justify-center bg-brand-navy">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-400 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-blue mx-auto"></div>
           <p className="mt-4 text-slate-200">Loading...</p>
         </div>
       </div>
@@ -346,153 +349,28 @@ function App() {
 
   return (
     <div 
-      className="min-h-screen bg-slate-900 md:bg-slate-950 text-white relative"
+      className="min-h-screen bg-brand-navy text-white relative"
       style={{ pointerEvents: appBusy ? 'none' : 'auto' }}
     >
-      {/* Subtle gradient orbs – lighter on mobile for daytime use */}
-      <div className="fixed inset-0 opacity-20 md:opacity-30 pointer-events-none overflow-hidden">
-        <div className="absolute -top-32 -left-24 h-72 w-72 rounded-full bg-indigo-500 blur-3xl" />
-        <div className="absolute -bottom-24 right-0 h-72 w-72 rounded-full bg-teal-400 blur-3xl" />
+      {/* Subtle gradient orbs */}
+      <div className="fixed inset-0 opacity-20 md:opacity-25 pointer-events-none overflow-hidden">
+        <div className="absolute -top-32 -left-24 h-72 w-72 rounded-full bg-brand-blue blur-3xl" />
+        <div className="absolute -bottom-24 right-0 h-72 w-72 rounded-full bg-brand-purple blur-3xl" />
       </div>
-      <div className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl">
-        <div className="container mx-auto px-3 sm:px-4 py-2.5">
-          <div className="flex min-h-[48px] items-center justify-between gap-2">
-            <div className="flex flex-1 min-w-0 overflow-x-auto overflow-y-hidden scrollbar-none -mx-1 px-1 sm:mx-0 sm:px-0">
-              <div className="flex items-center gap-1.5 sm:gap-2 flex-nowrap mx-auto sm:mx-0">
-                <button
-                  onClick={() => setCurrentView('main')}
-                  className={`inline-flex items-center rounded-full px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
-                    currentView === 'main'
-                      ? 'bg-white/95 text-slate-900 shadow-sm'
-                      : 'text-slate-300 hover:bg-white/5 hover:text-white'
-                  }`}
-                >
-                  <span className="mr-1.5 text-[10px] text-teal-300">●</span>
-                  <span>Get Suggestion</span>
-                </button>
-                {isAuthenticated && (
-                  <>
-                    <button
-                      onClick={() => setCurrentView('history')}
-                      className={`inline-flex items-center rounded-full px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
-                        currentView === 'history'
-                          ? 'bg-white/95 text-slate-900 shadow-sm'
-                          : 'text-slate-300 hover:bg-white/5 hover:text-white'
-                      }`}
-                    >
-                      <span>History</span>
-                    </button>
-                    <button
-                      onClick={() => setCurrentView('wardrobe')}
-                      className={`inline-flex items-center rounded-full px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
-                        currentView === 'wardrobe'
-                          ? 'bg-white/95 text-slate-900 shadow-sm'
-                          : 'text-slate-300 hover:bg-white/5 hover:text-white'
-                      }`}
-                    >
-                      <span>Wardrobe</span>
-                    </button>
-                    <button
-                      onClick={() => setCurrentView('insights')}
-                      className={`inline-flex items-center rounded-full px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
-                        currentView === 'insights'
-                          ? 'bg-white/95 text-slate-900 shadow-sm'
-                          : 'text-slate-300 hover:bg-white/5 hover:text-white'
-                      }`}
-                    >
-                      <span>Insights</span>
-                    </button>
-                    {user?.is_admin && (
-                      <>
-                        <button
-                          onClick={() => setCurrentView('reports')}
-                          className={`inline-flex items-center rounded-full px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
-                            currentView === 'reports'
-                              ? 'bg-white/95 text-slate-900 shadow-sm'
-                              : 'text-slate-300 hover:bg-white/5 hover:text-white'
-                          }`}
-                        >
-                          <span>Reports</span>
-                        </button>
-                        {testRunnerEnabled && (
-                          <button
-                            onClick={() => setCurrentView('integration-tests')}
-                            className={`inline-flex items-center rounded-full px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
-                              currentView === 'integration-tests'
-                                ? 'bg-white/95 text-slate-900 shadow-sm'
-                                : 'text-slate-300 hover:bg-white/5 hover:text-white'
-                            }`}
-                          >
-                            <span>Test Runner</span>
-                          </button>
-                        )}
-                      </>
-                    )}
-                    <button
-                      onClick={() => setCurrentView('settings')}
-                      className={`inline-flex items-center rounded-full px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
-                        currentView === 'settings'
-                          ? 'bg-white/95 text-slate-900 shadow-sm'
-                          : 'text-slate-300 hover:bg-white/5 hover:text-white'
-                      }`}
-                    >
-                      <span>Settings</span>
-                    </button>
-                  </>
-                )}
-                <button
-                  onClick={() => setCurrentView('guide')}
-                  className={`inline-flex items-center rounded-full px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors touch-manipulation ${
-                    currentView === 'guide'
-                      ? 'bg-white/95 text-slate-900 shadow-sm'
-                      : 'text-slate-300 hover:bg-white/5 hover:text-white'
-                  }`}
-                  aria-current={currentView === 'guide' ? 'page' : undefined}
-                >
-                  <span>Guide</span>
-                </button>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {isAuthenticated ? (
-                <div className="flex items-center gap-2">
-                  <div
-                    className="h-9 w-9 rounded-full bg-gradient-to-br from-teal-400 to-cyan-500 text-sm font-semibold text-slate-900 flex items-center justify-center"
-                    aria-label="User avatar"
-                    title={user?.full_name || user?.email || 'User'}
-                  >
-                    {(user?.full_name || user?.email || 'U').charAt(0).toUpperCase()}
-                  </div>
-                  <button
-                    onClick={handleLogout}
-                    className="min-h-[36px] rounded-full border border-white/15 bg-white/[0.03] px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-100 transition hover:bg-white/10"
-                  >
-                    Logout
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <button
-                    onClick={() => setShowRegister(true)}
-                    className="min-h-[36px] rounded-full border border-indigo-400/50 bg-transparent px-3 py-1.5 text-xs sm:text-sm font-medium text-indigo-200 transition-colors hover:bg-indigo-500/20 touch-manipulation"
-                  >
-                    Sign Up
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowRegister(false);
-                      setShowLoginModal(true);
-                    }}
-                    className="min-h-[36px] rounded-full bg-white px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-900 transition-colors hover:bg-slate-100 touch-manipulation"
-                  >
-                    Login
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+
+      <NavBar
+        currentView={currentView}
+        onNavigate={setCurrentView}
+        isAuthenticated={isAuthenticated}
+        user={user}
+        testRunnerEnabled={testRunnerEnabled}
+        onLogin={() => {
+          setShowRegister(false);
+          setShowLoginModal(true);
+        }}
+        onSignUp={() => setShowRegister(true)}
+        onLogout={handleLogout}
+      />
 
       {/* Main Content */}
       <div 
@@ -500,9 +378,9 @@ function App() {
         style={{ pointerEvents: appBusy ? 'none' : 'auto' }}
       >
         {currentView === 'main' && (
-          <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:gap-8 xl:grid-cols-12">
-            {/* Left Sidebar */}
-            <div className="lg:col-span-3">
+          <>
+            {/* Hero section — 2 columns on desktop */}
+            <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-2 lg:gap-12">
               <Sidebar
                 filters={filters}
                 setFilters={setFilters}
@@ -534,18 +412,14 @@ function App() {
                   }
 
                   if (addingToWardrobe || wardrobeLoading) {
-                    return; // Prevent multiple clicks
+                    return;
                   }
 
                   setAddingToWardrobe(true);
                   try {
-                    console.log('🔍 Checking for duplicate...');
-                    
-                    // Check for duplicate FIRST before AI analysis
                     const duplicateCheck = await ApiService.checkWardrobeDuplicate(image);
                     
                     if (duplicateCheck.is_duplicate && duplicateCheck.existing_item) {
-                      // Show duplicate notification immediately
                       setDuplicateWardrobeItem(duplicateCheck.existing_item);
                       setWardrobeImageToAdd(image);
                       setShowWardrobeDuplicateModal(true);
@@ -553,14 +427,8 @@ function App() {
                       return;
                     }
                     
-                    console.log('✅ No duplicate found, proceeding with AI analysis...');
-                    
-                    // No duplicate found, proceed with AI analysis
-                    console.log('📸 Analyzing image with AI...');
                     const properties = await analyzeImage(image, 'blip');
-                    console.log('✅ Analysis complete:', properties);
                     
-                    // Show form modal with extracted data for user to review/edit
                     setWardrobeFormData({
                       category: properties.category || 'shirt',
                       color: properties.color || '',
@@ -569,7 +437,6 @@ function App() {
                     setWardrobeImageToAdd(image);
                     setShowAddWardrobeModal(true);
                   } catch (err) {
-                    console.error('❌ Error:', err);
                     const errorMessage = err instanceof Error ? err.message : 'Failed to process image';
                     showToast(errorMessage, 'error');
                   } finally {
@@ -578,10 +445,7 @@ function App() {
                 }}
                 addingToWardrobe={addingToWardrobe}
               />
-            </div>
 
-            {/* Main Content Area */}
-            <div className="xl:col-span-9">
               <OutfitPreview
                 suggestion={currentSuggestion}
                 loading={loading}
@@ -605,13 +469,9 @@ function App() {
 
                   setAddingToWardrobe(true);
                   try {
-                    console.log('🔍 Checking for duplicate...');
-                    
-                    // Check for duplicate FIRST before AI analysis
                     const duplicateCheck = await ApiService.checkWardrobeDuplicate(image);
                     
                     if (duplicateCheck.is_duplicate && duplicateCheck.existing_item) {
-                      // Show duplicate notification immediately
                       setDuplicateWardrobeItem(duplicateCheck.existing_item);
                       setWardrobeImageToAdd(image);
                       setShowWardrobeDuplicateModal(true);
@@ -619,12 +479,8 @@ function App() {
                       return;
                     }
                     
-                    console.log('✅ No duplicate found, proceeding with AI analysis...');
-                    
-                    // No duplicate found, proceed with AI analysis
                     const properties = await analyzeImage(image, 'blip');
                     
-                    // Show form modal with extracted data for user to review/edit
                     setWardrobeFormData({
                       category: properties.category || 'shirt',
                       color: properties.color || '',
@@ -635,7 +491,6 @@ function App() {
                   } catch (err) {
                     const errorMessage = err instanceof Error ? err.message : 'Failed to process image';
                     showToast(errorMessage, 'error');
-                    console.error('Failed to process image:', err);
                   } finally {
                     setAddingToWardrobe(false);
                   }
@@ -643,7 +498,14 @@ function App() {
               />
             </div>
 
-          </div>
+            <HowItWorksStepper />
+            <RecentLooksSection
+              history={history}
+              loading={historyLoading}
+              isAuthenticated={isAuthenticated}
+              onViewAll={() => setCurrentView('history')}
+            />
+          </>
         )}
 
         {currentView === 'wardrobe' && (
@@ -686,7 +548,7 @@ function App() {
                   setShowRegister(false);
                   setShowLoginModal(true);
                 }}
-                className="px-6 py-3 bg-teal-500 text-white rounded-full font-semibold hover:bg-teal-600 transition-colors"
+                className="px-6 py-3 btn-brand rounded-full font-semibold transition-colors"
               >
                 Login to Continue
               </button>
@@ -726,7 +588,7 @@ function App() {
                     <select
                       value={filters.occasion}
                       onChange={(e) => handleInsightsFilterChange('occasion', e.target.value)}
-                      className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
+                      className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-brand-blue focus:border-brand-blue transition-all"
                       aria-label="Select occasion for wardrobe insights"
                     >
                       <option value="">Select occasion</option>
@@ -744,7 +606,7 @@ function App() {
                     <select
                       value={filters.season}
                       onChange={(e) => handleInsightsFilterChange('season', e.target.value)}
-                      className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
+                      className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-brand-blue focus:border-brand-blue transition-all"
                       aria-label="Select season for wardrobe insights"
                     >
                       <option value="">Select season</option>
@@ -761,7 +623,7 @@ function App() {
                     <select
                       value={filters.style}
                       onChange={(e) => handleInsightsFilterChange('style', e.target.value)}
-                      className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
+                      className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-brand-blue focus:border-brand-blue transition-all"
                       aria-label="Select style for wardrobe insights"
                     >
                       <option value="">Select style</option>
@@ -783,7 +645,7 @@ function App() {
                     value={preferenceText}
                     onChange={(e) => setPreferenceText(e.target.value)}
                     placeholder="e.g., Smart casual, navy and brown, no sneakers."
-                    className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all resize-none"
+                    className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-brand-blue focus:border-brand-blue transition-all resize-none"
                     rows={3}
                     aria-label="Extra notes for wardrobe insights"
                   />
@@ -803,7 +665,7 @@ function App() {
                     className={`px-4 py-2.5 rounded-xl font-semibold transition-all ${
                       wardrobeGapLoading
                         ? 'cursor-not-allowed bg-white/10 text-slate-500 border border-white/10'
-                        : 'bg-indigo-500 text-white hover:bg-indigo-600'
+                        : 'btn-brand'
                     }`}
                   >
                     {wardrobeGapLoading ? 'Analyzing...' : 'Analyze My Wardrobe'}
@@ -824,7 +686,7 @@ function App() {
               <p className="text-slate-200 mb-6">Please log in to analyze your wardrobe and view insights.</p>
               <button
                 onClick={() => setShowLoginModal(true)}
-                className="px-6 py-2 bg-teal-500 text-white rounded-full hover:bg-teal-600 transition-colors"
+                className="px-6 py-2 btn-brand rounded-full transition-colors"
               >
                 Login
               </button>
@@ -883,7 +745,7 @@ function App() {
               <p className="text-slate-200 mb-6">Please log in to view your outfit history.</p>
               <button
                 onClick={() => setShowLoginModal(true)}
-                className="px-6 py-2 bg-teal-500 text-white rounded-full hover:bg-teal-600 transition-colors"
+                className="px-6 py-2 btn-brand rounded-full transition-colors"
               >
                 Login
               </button>
@@ -925,7 +787,7 @@ function App() {
                   ) : (
                     <button
                       onClick={() => setShowChangePassword(true)}
-                      className="px-4 py-2 bg-teal-500 text-white rounded-full hover:bg-teal-600"
+                      className="px-4 py-2 btn-brand rounded-full"
                     >
                       Change Password
                     </button>
@@ -952,7 +814,7 @@ function App() {
               <p className="text-slate-200 mb-6">Please log in to access your account settings.</p>
               <button
                 onClick={() => setShowLoginModal(true)}
-                className="px-6 py-2 bg-teal-500 text-white rounded-full hover:bg-teal-600 transition-colors"
+                className="px-6 py-2 btn-brand rounded-full transition-colors"
               >
                 Login
               </button>
@@ -968,7 +830,7 @@ function App() {
             <button
               type="button"
               onClick={() => setShowIntroOverlay(false)}
-              className="absolute top-3 right-3 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white text-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+              className="absolute top-3 right-3 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white text-sm hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue"
               aria-label="Close intro"
             >
               ✕
@@ -1145,7 +1007,7 @@ function App() {
                   <select
                     value={wardrobeFormData.category}
                     onChange={(e) => setWardrobeFormData({ ...wardrobeFormData, category: e.target.value })}
-                    className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                    className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-brand-blue focus:border-brand-blue"
                     required
                   >
                     <option value="shirt">Shirt</option>
@@ -1166,7 +1028,7 @@ function App() {
                     type="text"
                     value={wardrobeFormData.color}
                     onChange={(e) => setWardrobeFormData({ ...wardrobeFormData, color: e.target.value })}
-                    className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                    className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-brand-blue focus:border-brand-blue"
                     placeholder="e.g., Navy blue, Black"
                     required
                   />
@@ -1180,15 +1042,15 @@ function App() {
                   <textarea
                     value={wardrobeFormData.description}
                     onChange={(e) => setWardrobeFormData({ ...wardrobeFormData, description: e.target.value })}
-                    className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                    className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-brand-blue focus:border-brand-blue"
                     rows={3}
                     placeholder="e.g., Classic fit, casual style"
                     required
                   />
                 </div>
 
-                <div className="bg-teal-500/20 border border-teal-400/30 rounded-lg p-3 mb-4">
-                  <p className="text-sm text-teal-100">
+                <div className="bg-brand-gradient-soft border border-brand-blue/30 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-slate-200">
                     ✨ <strong>AI Analysis Complete!</strong> Review and edit the extracted details above before saving.
                   </p>
                 </div>
@@ -1208,7 +1070,7 @@ function App() {
                   <button
                     type="submit"
                     disabled={addingToWardrobe || wardrobeLoading}
-                    className="flex-1 px-6 py-3 bg-teal-500 text-white rounded-full font-semibold hover:bg-teal-600 transition-all disabled:opacity-50"
+                    className="flex-1 px-6 py-3 btn-brand rounded-full font-semibold transition-all disabled:opacity-50"
                   >
                     {addingToWardrobe || wardrobeLoading ? 'Adding...' : '✅ Save to Wardrobe'}
                   </button>
@@ -1299,10 +1161,10 @@ function App() {
                     setShowWardrobeAnalysisModeModal(false);
                     await runWardrobeAnalysis('free');
                   }}
-                  className="w-full rounded-xl border border-emerald-300/30 bg-emerald-500/15 px-4 py-3 text-left transition hover:bg-emerald-500/25"
+                  className="w-full rounded-xl border border-brand-blue/30 bg-brand-blue/10 px-4 py-3 text-left transition hover:bg-brand-blue/20"
                 >
-                  <div className="text-sm font-semibold text-emerald-100">Basic Analysis</div>
-                  <div className="text-xs text-emerald-200/90 mt-1">
+                  <div className="text-sm font-semibold text-brand-blue">Basic Analysis</div>
+                  <div className="text-xs text-slate-300 mt-1">
                     Fast wardrobe insight with practical buy-next guidance.
                   </div>
                 </button>
@@ -1311,10 +1173,10 @@ function App() {
                     setShowWardrobeAnalysisModeModal(false);
                     await runWardrobeAnalysis('premium');
                   }}
-                  className="w-full rounded-xl border border-indigo-300/30 bg-indigo-500/15 px-4 py-3 text-left transition hover:bg-indigo-500/25"
+                  className="w-full rounded-xl border border-brand-blue/30 bg-brand-purple/15 px-4 py-3 text-left transition hover:bg-brand-purple/25"
                 >
-                  <div className="text-sm font-semibold text-indigo-100">Premium Analysis</div>
-                  <div className="text-xs text-indigo-200/90 mt-1">
+                  <div className="text-sm font-semibold text-brand-purple/90">Premium Analysis</div>
+                  <div className="text-xs text-brand-purple/90 mt-1">
                     Deeper outfit-matching insights and richer recommendation detail.
                   </div>
                 </button>

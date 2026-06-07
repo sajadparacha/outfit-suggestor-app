@@ -135,37 +135,37 @@ export default function AdminReports({ user }: AdminReportsProps) {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             <input
-              className="px-4 py-3 border border-white/20 rounded-xl bg-white/5 text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+              className="px-4 py-3 border border-white/20 rounded-xl bg-white/5 text-white focus:ring-2 focus:ring-brand-blue focus:border-brand-blue"
               type="date"
               value={draftFilters.start_date}
               onChange={(e) => setDraftFilters((p) => ({ ...p, start_date: e.target.value }))}
             />
             <input
-              className="px-4 py-3 border border-white/20 rounded-xl bg-white/5 text-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+              className="px-4 py-3 border border-white/20 rounded-xl bg-white/5 text-white focus:ring-2 focus:ring-brand-blue focus:border-brand-blue"
               type="date"
               value={draftFilters.end_date}
               onChange={(e) => setDraftFilters((p) => ({ ...p, end_date: e.target.value }))}
             />
             <input
-              className="px-4 py-3 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+              className="px-4 py-3 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-brand-blue focus:border-brand-blue"
               placeholder="User name/email contains"
               value={draftFilters.user}
               onChange={(e) => setDraftFilters((p) => ({ ...p, user: e.target.value }))}
             />
             <input
-              className="px-4 py-3 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+              className="px-4 py-3 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-brand-blue focus:border-brand-blue"
               placeholder="Country"
               value={draftFilters.country}
               onChange={(e) => setDraftFilters((p) => ({ ...p, country: e.target.value }))}
             />
             <input
-              className="px-4 py-3 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+              className="px-4 py-3 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-brand-blue focus:border-brand-blue"
               placeholder="Operation type"
               value={draftFilters.operation_type}
               onChange={(e) => setDraftFilters((p) => ({ ...p, operation_type: e.target.value }))}
             />
             <input
-              className="px-4 py-3 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+              className="px-4 py-3 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-brand-blue focus:border-brand-blue"
               placeholder="Endpoint contains"
               value={draftFilters.endpoint}
               onChange={(e) => setDraftFilters((p) => ({ ...p, endpoint: e.target.value }))}
@@ -192,7 +192,7 @@ export default function AdminReports({ user }: AdminReportsProps) {
               type="button"
               onClick={handleRefresh}
               disabled={loading}
-              className="px-5 py-2.5 bg-teal-500 text-white rounded-xl font-semibold hover:bg-teal-600 transition-colors disabled:opacity-50"
+              className="px-5 py-2.5 btn-brand rounded-xl font-semibold transition-colors disabled:opacity-50"
             >
               {loading ? 'Searching…' : 'Search'}
             </button>
@@ -257,7 +257,7 @@ export default function AdminReports({ user }: AdminReportsProps) {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
             <div className="flex-1">
               <input
-                className="w-full px-4 py-2.5 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                className="w-full px-4 py-2.5 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-brand-blue focus:border-brand-blue"
                 placeholder="Filter table rows (user, endpoint, op, status, country, city…)"
                 value={tableFilter}
                 onChange={(e) => setTableFilter(e.target.value)}

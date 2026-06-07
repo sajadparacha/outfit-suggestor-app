@@ -10,7 +10,7 @@ function StepList({ items }: { items: string[] }) {
       {items.map((text, i) => (
         <li key={text} className="flex gap-4">
           <span
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500/25 to-indigo-500/25 text-sm font-bold text-teal-200 ring-1 ring-white/10"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-blue/25 to-brand-purple/25 text-sm font-bold text-brand-blue ring-1 ring-white/10"
             aria-hidden
           >
             {i + 1}
@@ -45,12 +45,12 @@ function SectionCard({
   icon: string;
   title: string;
   subtitle?: string;
-  accent: 'teal' | 'indigo' | 'violet' | 'rose';
+  accent: 'blue' | 'purple' | 'violet' | 'rose';
   children: React.ReactNode;
 }) {
   const accents = {
-    teal: 'from-teal-500/20 to-teal-600/5 ring-teal-400/20',
-    indigo: 'from-indigo-500/20 to-indigo-600/5 ring-indigo-400/20',
+    blue: 'from-brand-blue/20 to-brand-blue/5 ring-brand-blue/20',
+    purple: 'from-brand-purple/20 to-brand-purple/5 ring-brand-purple/20',
     violet: 'from-violet-500/20 to-violet-600/5 ring-violet-400/20',
     rose: 'from-rose-500/15 to-rose-600/5 ring-rose-400/20',
   };
@@ -80,16 +80,16 @@ function TocChip({ href, icon, label }: { href: string; icon: string; label: str
   return (
     <a
       href={href}
-      className="group flex items-center gap-2.5 rounded-2xl border border-white/10 bg-slate-900/40 px-4 py-3 text-left text-sm font-medium text-slate-200 transition-all hover:border-teal-400/35 hover:bg-teal-500/10 hover:text-white hover:shadow-md hover:shadow-teal-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+      className="group flex items-center gap-2.5 rounded-2xl border border-white/10 bg-slate-900/40 px-4 py-3 text-left text-sm font-medium text-slate-200 transition-all hover:border-brand-blue/35 hover:bg-brand-blue/10 hover:text-white hover:shadow-md hover:shadow-brand-blue/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
     >
       <span
-        className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 text-lg transition-colors group-hover:bg-teal-500/20"
+        className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 text-lg transition-colors group-hover:bg-brand-gradient-soft"
         aria-hidden
       >
         {icon}
       </span>
       <span className="flex-1 leading-snug">{label}</span>
-      <span className="text-slate-500 transition-transform group-hover:translate-x-0.5 group-hover:text-teal-300" aria-hidden>
+      <span className="text-slate-500 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-blue" aria-hidden>
         →
       </span>
     </a>
@@ -113,16 +113,16 @@ const UserGuide: React.FC = () => {
     <div className="max-w-5xl mx-auto pb-8">
       {/* Hero */}
       <div className="relative mb-8 sm:mb-10 overflow-hidden rounded-3xl border border-white/10 bg-slate-900/80 shadow-2xl">
-        <div className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-teal-500/25 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 -left-16 h-56 w-56 rounded-full bg-indigo-500/20 blur-3xl" />
+        <div className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-brand-blue/25 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-20 -left-16 h-56 w-56 rounded-full bg-brand-purple/20 blur-3xl" />
         <div className="relative px-6 py-12 sm:px-10 sm:py-14 text-center">
-          <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-teal-200/90 mb-6">
+          <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-brand-blue/90 mb-6">
             <span aria-hidden>✨</span>
             Friendly walkthrough
           </p>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white tracking-tight mb-4">
             How to use{' '}
-            <span className="bg-gradient-to-r from-teal-300 to-indigo-300 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-brand-blue to-brand-purple bg-clip-text text-transparent">
               AI Outfit Suggestor
             </span>
           </h1>
@@ -160,18 +160,18 @@ const UserGuide: React.FC = () => {
           icon="🚀"
           title="Quick start"
           subtitle="Try it now, or sign in for the full experience."
-          accent="teal"
+          accent="blue"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-5 ring-1 ring-white/5">
-              <p className="text-xs font-bold uppercase tracking-wider text-teal-400/90 mb-2">No account needed</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-brand-blue/90 mb-2">No account needed</p>
               <p className="text-slate-300">
                 Upload a clothing photo and tap <span className="text-white font-medium">Get AI outfit suggestion</span>.
                 You will get a full outfit idea right away.
               </p>
             </div>
-            <div className="rounded-2xl border border-indigo-400/20 bg-indigo-500/10 p-5 ring-1 ring-indigo-400/10">
-              <p className="text-xs font-bold uppercase tracking-wider text-indigo-200 mb-2">With a free account</p>
+            <div className="rounded-2xl border border-brand-purple/20 bg-brand-purple/10 p-5 ring-1 ring-brand-purple/10">
+              <p className="text-xs font-bold uppercase tracking-wider text-brand-purple mb-2">With a free account</p>
               <p className="text-slate-200">
                 Save a <span className="text-white font-medium">wardrobe</span>, browse{' '}
                 <span className="text-white font-medium">history</span>, use{' '}
@@ -186,7 +186,7 @@ const UserGuide: React.FC = () => {
           icon="🎯"
           title="Get outfit suggestions"
           subtitle="Six simple steps from photo to polished look."
-          accent="indigo"
+          accent="purple"
         >
           <StepList
             items={[
@@ -213,20 +213,20 @@ const UserGuide: React.FC = () => {
         >
           <ul className="space-y-4">
             <li className="flex gap-3">
-              <span className="text-teal-400 font-bold shrink-0">•</span>
+              <span className="text-brand-blue font-bold shrink-0">•</span>
               <span>
                 You will see <strong className="text-white">shirt, trousers, blazer, shoes, and belt</strong> with short
                 descriptions. Small images may show your upload, items from your wardrobe, or an AI-only suggestion.
               </span>
             </li>
             <li className="flex gap-3">
-              <span className="text-teal-400 font-bold shrink-0">•</span>
+              <span className="text-brand-blue font-bold shrink-0">•</span>
               <span>
                 <strong className="text-white">Why this works</strong> summarizes the styling logic in friendly language.
               </span>
             </li>
             <li className="flex gap-3">
-              <span className="text-teal-400 font-bold shrink-0">•</span>
+              <span className="text-brand-blue font-bold shrink-0">•</span>
               <span>
                 <strong className="text-white">Like</strong>, <strong className="text-white">Dislike</strong>, and{' '}
                 <strong className="text-white">Next suggestion</strong> work when you started from an uploaded photo.
@@ -234,7 +234,7 @@ const UserGuide: React.FC = () => {
               </span>
             </li>
             <li className="flex gap-3">
-              <span className="text-teal-400 font-bold shrink-0">•</span>
+              <span className="text-brand-blue font-bold shrink-0">•</span>
               <span>
                 Admins can toggle <strong className="text-white">Show AI Prompt &amp; Response</strong> in the sidebar
                 to peek at technical details on outfit suggestions. Wardrobe analysis also surfaces admin diagnostics
@@ -249,7 +249,7 @@ const UserGuide: React.FC = () => {
           icon="🧠"
           title="Analyze My Wardrobe"
           subtitle="Find what you own, what you miss, and what to buy next."
-          accent="indigo"
+          accent="purple"
         >
           <StepList
             items={[
@@ -272,7 +272,7 @@ const UserGuide: React.FC = () => {
           icon="👔"
           title="Your digital wardrobe"
           subtitle="For signed-in users—organize clothes the AI can actually use."
-          accent="teal"
+          accent="blue"
         >
           <StepList
             items={[
@@ -323,7 +323,7 @@ const UserGuide: React.FC = () => {
           icon="⚙️"
           title="Account & navigation"
           subtitle="Where to find settings and extras."
-          accent="indigo"
+          accent="purple"
         >
           <div className="grid gap-3 sm:grid-cols-2">
             {[
@@ -337,7 +337,7 @@ const UserGuide: React.FC = () => {
                 key={row.k}
                 className="flex gap-3 rounded-xl border border-white/10 bg-slate-950/40 px-4 py-3"
               >
-                <span className="font-semibold text-teal-300 shrink-0 w-24">{row.k}</span>
+                <span className="font-semibold text-brand-blue shrink-0 w-24">{row.k}</span>
                 <span className="text-slate-400 text-sm">{row.d}</span>
               </div>
             ))}
@@ -364,7 +364,7 @@ const UserGuide: React.FC = () => {
           icon="💡"
           title="Tips & troubleshooting"
           subtitle="Small habits that improve your results."
-          accent="teal"
+          accent="blue"
         >
           <ul className="space-y-3">
             {[
@@ -382,7 +382,7 @@ const UserGuide: React.FC = () => {
                   <>
                     Errors after tapping suggest? Check Wi‑Fi or data and that the backend is reachable. Custom sites
                     need{' '}
-                    <code className="rounded-md bg-slate-800 px-1.5 py-0.5 text-xs text-teal-200">
+                    <code className="rounded-md bg-slate-800 px-1.5 py-0.5 text-xs text-brand-blue">
                       REACT_APP_API_URL
                     </code>{' '}
                     set when you build the frontend.
@@ -402,7 +402,7 @@ const UserGuide: React.FC = () => {
                 key={row.key}
                 className="flex gap-3 rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3"
               >
-                <span className="text-emerald-400 shrink-0" aria-hidden>
+                <span className="text-brand-blue shrink-0" aria-hidden>
                   ✓
                 </span>
                 <span>{row.body}</span>

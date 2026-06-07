@@ -47,7 +47,7 @@ final class OutfitAppE2ETests: XCTestCase {
     }
 
     private func openHistory() {
-        openTab("History")
+        openTab("Looks")
         XCTAssertTrue(waitFor(app.buttons["history.loadAllButton"]))
     }
 
@@ -165,7 +165,7 @@ final class OutfitAppE2ETests: XCTestCase {
         let lock = app.otherElements["global.loadingLock"]
         _ = lock.waitForExistence(timeout: 2)
 
-        let historyTarget = tabTarget("History")
+        let historyTarget = tabTarget("Looks")
         XCTAssertTrue(waitFor(historyTarget, timeout: 2))
         historyTarget.tap()
 
@@ -173,14 +173,16 @@ final class OutfitAppE2ETests: XCTestCase {
         expectation(for: unlocked, evaluatedWith: lock)
         waitForExpectations(timeout: 8)
 
-        if app.navigationBars["Outfit History"].exists {
+        if app.navigationBars["Looks"].exists {
             openTab("Suggest")
         }
         XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 8))
     }
 
     func testAdminPremiumInsightsShowsCostPromptAndResponse() {
-        openTab("Insights")
+        openTab("Profile")
+        XCTAssertTrue(waitFor(app.buttons["profile.insightsLink"]))
+        app.buttons["profile.insightsLink"].tap()
         XCTAssertTrue(waitFor(app.buttons["insights.analyzeButton"]))
         XCTAssertTrue(app.staticTexts["Wardrobe Gap Analysis"].waitForExistence(timeout: 4))
 

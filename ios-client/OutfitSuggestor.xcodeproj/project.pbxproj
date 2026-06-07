@@ -41,6 +41,8 @@
 		E4EBFCF3A8E4ECF596229B62 /* WardrobeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAD5EBF0712C9529021C41B8 /* WardrobeModels.swift */; };
 		F68C6A553BEF575A09AD033F /* HistoryListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CBF29F94D7782AC11CB81D9 /* HistoryListView.swift */; };
 		F88BE9025293974B0251B9F9 /* HeroView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D48E9D66A6647B473956314 /* HeroView.swift */; };
+		1A2B3C4D5E6F708192A3B4C6 /* HomeHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F708192A3B4C5 /* HomeHeaderView.swift */; };
+		5E6F708192A3B4C5D6E7F80A /* RecentLooksSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E6F708192A3B4C5D6E7F809 /* RecentLooksSection.swift */; };
 		FA023D9F55B7FB5B4FF54BED /* TokenStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E8D18B61E9EF222656069F /* TokenStorage.swift */; };
 		FD933F9E2EC6AC064C14756F /* AppConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 969C61A8446536869AAFE1CD /* AppConfigTests.swift */; };
 /* End PBXBuildFile section */
@@ -86,6 +88,8 @@
 		777166D6A9515B3BA3538439 /* InsightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsView.swift; sourceTree = "<group>"; };
 		79B25D4D09B5BB781246B0DF /* LocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationService.swift; sourceTree = "<group>"; };
 		7D48E9D66A6647B473956314 /* HeroView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeroView.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F708192A3B4C5 /* HomeHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeHeaderView.swift; sourceTree = "<group>"; };
+		5E6F708192A3B4C5D6E7F809 /* RecentLooksSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentLooksSection.swift; sourceTree = "<group>"; };
 		7E8840F40CF3A5119424E263 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		8E0406F4D345CC73138185B9 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		969C61A8446536869AAFE1CD /* AppConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfigTests.swift; sourceTree = "<group>"; };
@@ -131,6 +135,8 @@
 				7E8840F40CF3A5119424E263 /* ContentView.swift */,
 				2602BE97B13F02079895BAEB /* FiltersView.swift */,
 				7D48E9D66A6647B473956314 /* HeroView.swift */,
+				1A2B3C4D5E6F708192A3B4C5 /* HomeHeaderView.swift */,
+				5E6F708192A3B4C5D6E7F809 /* RecentLooksSection.swift */,
 				4CBF29F94D7782AC11CB81D9 /* HistoryListView.swift */,
 				977BD13092DD8A2D98C4471D /* ImageUploadView.swift */,
 				777166D6A9515B3BA3538439 /* InsightsView.swift */,
@@ -364,6 +370,8 @@
 				219CC1A4A5BDD78FC15E6D32 /* ContentView.swift in Sources */,
 				383DA19CACB3651B2D0FC6C9 /* FiltersView.swift in Sources */,
 				F88BE9025293974B0251B9F9 /* HeroView.swift in Sources */,
+				1A2B3C4D5E6F708192A3B4C6 /* HomeHeaderView.swift in Sources */,
+				5E6F708192A3B4C5D6E7F80A /* RecentLooksSection.swift in Sources */,
 				F68C6A553BEF575A09AD033F /* HistoryListView.swift in Sources */,
 				AA245C6D61B794ED24A4FB23 /* HistoryModels.swift in Sources */,
 				A963F0085A29335578FB7847 /* ImagePicker.swift in Sources */,

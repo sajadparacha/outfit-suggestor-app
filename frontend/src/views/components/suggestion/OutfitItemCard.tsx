@@ -23,13 +23,13 @@ const OutfitItemCard: React.FC<OutfitItemCardProps> = ({
   legacyHint,
 }) => {
   return (
-    <article className="group flex h-full flex-col rounded-2xl border border-white/10 bg-slate-900/70 p-4 transition-all duration-300 hover:-translate-y-1 hover:border-teal-300/50 hover:shadow-[0_0_30px_rgba(56,189,248,0.16)]">
+    <article className="group flex h-full flex-col rounded-2xl border border-white/10 bg-slate-900/70 p-4 transition-all duration-300 hover:-translate-y-1 hover:border-brand-blue/50 hover:shadow-[0_0_30px_rgba(79, 172, 254, 0.16)]">
       <div className="mb-3 overflow-hidden rounded-xl border border-white/10 bg-slate-800/80">
         {imageSrc ? (
           <button
             type="button"
             onClick={onImageClick}
-            className="block h-36 w-full focus:outline-none focus:ring-2 focus:ring-teal-400"
+            className="block h-36 w-full focus:outline-none focus:ring-2 focus:ring-brand-blue"
             aria-label={`View ${imageAlt} full size`}
             title="View full image"
           >

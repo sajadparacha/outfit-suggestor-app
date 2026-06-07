@@ -123,13 +123,29 @@ struct OutfitSuggestion: Codable, Identifiable {
 }
 
 // MARK: - Filters
+
+enum ColorPreference: String, CaseIterable {
+    case noPreference = "No Preference"
+    case neutral = "Neutral"
+    case black = "Black"
+    case white = "White"
+    case navy = "Navy"
+    case earthTones = "Earth Tones"
+    case bold = "Bold Colors"
+}
+
 struct OutfitFilters {
     var occasion: String = "casual"
     var season: String = "all"
     var style: String = "modern"
-    
+    var colorPreference: String = ColorPreference.noPreference.rawValue
+
     var description: String {
-        "Occasion: \(occasion), Season: \(season), Style: \(style)"
+        var parts = ["Occasion: \(occasion)", "Season: \(season)", "Style: \(style)"]
+        if colorPreference != ColorPreference.noPreference.rawValue {
+            parts.append("Colors: \(colorPreference)")
+        }
+        return parts.joined(separator: ", ")
     }
 }
 

@@ -51,23 +51,23 @@ describe('Random from History integration', () => {
   it('displays random outfit from history when button is clicked', async () => {
     render(<App />);
 
-    // Wait for app to load and Random from History button to appear
+    // Wait for app to load and expand Quick Picks for Random from History
     await waitFor(() => {
-      expect(screen.getByText(/Get Suggestion/i)).toBeInTheDocument();
-      expect(
-        screen.getByRole('button', { name: /show random outfit from your history/i })
-      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^Suggest$/ })).toBeInTheDocument();
+      expect(screen.getByText('Quick Picks')).toBeInTheDocument();
     });
 
-    const randomFromHistoryBtn = screen.getByRole('button', {
+    fireEvent.click(screen.getByText('Quick Picks'));
+
+    const randomFromHistoryBtn = await screen.findByRole('button', {
       name: /show random outfit from your history/i,
     });
     fireEvent.click(randomFromHistoryBtn);
 
-    // Verify suggestion from history is displayed
+    // Verify suggestion from history is displayed in outfit preview
     await waitFor(() => {
       expect(screen.getByText(/Your Perfect Outfit/i)).toBeInTheDocument();
-      expect(screen.getByText('Blue casual shirt')).toBeInTheDocument();
+      expect(screen.getAllByText('Blue casual shirt').length).toBeGreaterThan(0);
       expect(screen.getByText('Khaki pants')).toBeInTheDocument();
       expect(screen.getByText('No blazer needed')).toBeInTheDocument();
       expect(screen.getByText('White sneakers')).toBeInTheDocument();
@@ -86,12 +86,12 @@ describe('Random from History integration', () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: /show random outfit from your history/i })
-      ).toBeInTheDocument();
+      expect(screen.getByText('Quick Picks')).toBeInTheDocument();
     });
 
-    const randomFromHistoryBtn = screen.getByRole('button', {
+    fireEvent.click(screen.getByText('Quick Picks'));
+
+    const randomFromHistoryBtn = await screen.findByRole('button', {
       name: /show random outfit from your history/i,
     });
     fireEvent.click(randomFromHistoryBtn);

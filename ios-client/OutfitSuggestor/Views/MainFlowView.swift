@@ -6,16 +6,19 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct MainFlowView: View {
     @ObservedObject var viewModel: OutfitViewModel
     var onRequestHistory: (() -> Void)? = nil
+    var onNavigateToProfile: (() -> Void)? = nil
     @ObservedObject private var auth = AuthService.shared
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showImagePicker = false
+    @State private var pickerSourceType: UIImagePickerController.SourceType = .photoLibrary
     @State private var showModelGenerationConfirm = false
     @State private var showAddToWardrobeSheet = false
-    @State private var showCustomizeSheet = false
+    @State private var showAdvancedSheet = false
     @State private var showRandomPicksDialog = false
     @State private var showMoreActionsMenu = false
     @State private var transientMessage: String?
@@ -51,10 +54,12 @@ struct MainFlowView: View {
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
+
             ScrollView(.vertical, showsIndicators: true) {
-                VStack(spacing: 20) {
-                    HeroView()
-                    accountAccessSection
+                VStack(spacing: 22) {
+                    HomeHeaderView {
+                        onNavigateToProfile?()
+                    }
 
                     if screenState == .creation {
                         creationSection
@@ -64,7 +69,7 @@ struct MainFlowView: View {
 
                     Spacer(minLength: 50)
                 }
-                .padding(.vertical)
+                .padding(.vertical, 8)
                 .adaptiveContent(maxWidth: 980)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -106,13 +111,12 @@ struct MainFlowView: View {
                 .transition(.opacity)
             }
         }
-        .navigationTitle("AI Outfit Suggestor")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarHidden(true)
         .sheet(isPresented: $showImagePicker) {
-            ImagePicker(selectedImage: $viewModel.selectedImage)
+            ImagePicker(selectedImage: $viewModel.selectedImage, sourceType: pickerSourceType)
         }
-        .sheet(isPresented: $showCustomizeSheet) {
-            customizeSheet
+        .sheet(isPresented: $showAdvancedSheet) {
+            advancedSheet
         }
         .sheet(isPresented: $showAddToWardrobeSheet) {
             WardrobeFormView(
@@ -146,13 +150,14 @@ struct MainFlowView: View {
                 showRandomPicksDialog = true
             }
             .disabled(!viewModel.isAuthenticated || viewModel.isLoading)
-            Button("Customize Preferences") {
-                showCustomizeSheet = true
+            Button("Advanced Options") {
+                showAdvancedSheet = true
             }
-            Button("View History") {
-                onRequestHistory?()
+            if auth.isAuthenticated, let onRequestHistory {
+                Button("View Looks") {
+                    onRequestHistory()
+                }
             }
-            .disabled(!viewModel.isAuthenticated || onRequestHistory == nil)
             Button("Cancel", role: .cancel) { }
         }
         .alert("Error", isPresented: $viewModel.showError) {
@@ -176,118 +181,64 @@ struct MainFlowView: View {
     }
 
     private var creationSection: some View {
-        VStack(spacing: 16) {
-            ImageUploadView(selectedImage: $viewModel.selectedImage, showImagePicker: $showImagePicker)
-                .padding(.horizontal)
+        VStack(spacing: 22) {
+            HeroView()
 
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Ready when you are")
-                    .font(.headline)
-                    .foregroundColor(AppTheme.textPrimary)
-                Text("Upload a photo, then get an outfit suggestion in one tap.")
-                    .font(.subheadline)
-                    .foregroundColor(AppTheme.textSecondary)
+            ImageUploadView(
+                selectedImage: $viewModel.selectedImage,
+                showImagePicker: $showImagePicker,
+                pickerSourceType: $pickerSourceType
+            )
 
-                HStack(spacing: 12) {
-                    Button {
-                        showCustomizeSheet = true
-                    } label: {
-                        Label("Customize", systemImage: "slider.horizontal.3")
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(AppTheme.accent)
+            FiltersView(
+                filters: $viewModel.filters,
+                preferenceText: $viewModel.preferenceText,
+                layout: .grid
+            )
 
-                    if auth.isAuthenticated {
-                        Button {
-                            showRandomPicksDialog = true
-                        } label: {
-                            Label("Random Pick", systemImage: "shuffle")
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(AppTheme.accent)
-                        .disabled(viewModel.isLoading)
+            VStack(spacing: 10) {
+                Button(action: handleGetSuggestionTap) {
+                    if viewModel.isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    } else {
+                        Text("Generate Outfit")
                     }
                 }
-                .frame(maxWidth: isRegularWidth ? 680 : .infinity, alignment: .leading)
-
-                primarySuggestionButton
+                .buttonStyle(GradientButtonStyle(isEnabled: canRequestSuggestion))
+                .disabled(!canRequestSuggestion)
+                .accessibilityIdentifier("main.getSuggestionButton")
 
                 if !canRequestSuggestion {
                     Text("Add a photo to enable outfit suggestions.")
                         .font(.caption)
                         .foregroundColor(AppTheme.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
                 }
 
-                if auth.isAuthenticated, let onRequestHistory {
+                HStack {
+                    Spacer()
                     Button {
-                        onRequestHistory()
+                        showAdvancedSheet = true
                     } label: {
-                        Label("View History", systemImage: "clock.arrow.circlepath")
-                            .font(.subheadline.weight(.semibold))
+                        Label("Advanced", systemImage: "slider.horizontal.3")
+                            .font(.caption.weight(.semibold))
                     }
                     .buttonStyle(.plain)
-                    .foregroundColor(AppTheme.accent)
-                    .disabled(viewModel.isLoading)
-                    .accessibilityIdentifier("main.viewHistoryButton")
+                    .foregroundColor(AppTheme.gradientStart)
                 }
             }
             .padding(.horizontal)
-            .padding(.vertical, 12)
-            .glassCard()
-            .padding(.horizontal)
-        }
-    }
 
-    private var accountAccessSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if auth.isAuthenticated {
-                let userName = auth.currentUser?.full_name?.trimmingCharacters(in: .whitespacesAndNewlines)
-                let displayName = (userName?.isEmpty == false) ? userName! : (auth.currentUser?.email ?? "User")
-
-                HStack(alignment: .center, spacing: 10) {
-                    Image(systemName: "person.crop.circle.fill")
-                        .foregroundColor(AppTheme.accent)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Signed in as \(displayName)")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(AppTheme.textPrimary)
-                        if let email = auth.currentUser?.email, email != displayName {
-                            Text(email)
-                                .font(.caption)
-                                .foregroundColor(AppTheme.textSecondary)
-                        }
-                    }
-                    Spacer()
-                    Button("Log out", role: .destructive) {
-                        auth.logout()
-                    }
-                    .buttonStyle(.bordered)
+            RecentLooksSection(
+                onSelectEntry: { entry in
+                    viewModel.loadFromHistory(entry)
+                },
+                onViewAll: {
+                    onRequestHistory?()
                 }
-            } else {
-                Text("Sign in to save history and manage wardrobe")
-                    .font(.subheadline)
-                    .foregroundColor(AppTheme.textSecondary)
-
-                HStack(spacing: 10) {
-                    NavigationLink(destination: LoginView()) {
-                        Label("Log in", systemImage: "person.crop.circle.badge.checkmark")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(AppTheme.accent)
-
-                    NavigationLink(destination: RegisterView()) {
-                        Label("Sign up", systemImage: "person.badge.plus")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                }
-            }
+            )
         }
-        .padding(.horizontal)
-        .padding(.vertical, 12)
-        .glassCard()
-        .padding(.horizontal)
     }
 
     private var resultSection: some View {
@@ -337,6 +288,15 @@ struct MainFlowView: View {
                     .frame(maxWidth: isRegularWidth ? 760 : .infinity)
 
                     Button {
+                        viewModel.currentSuggestion = nil
+                        viewModel.selectedImage = nil
+                    } label: {
+                        Label("Start Over", systemImage: "arrow.counterclockwise")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button {
                         showMoreActionsMenu = true
                     } label: {
                         Label("More", systemImage: "ellipsis.circle")
@@ -365,36 +325,30 @@ struct MainFlowView: View {
         }
     }
 
-    private var primarySuggestionButton: some View {
-        Button(action: handleGetSuggestionTap) {
-            if viewModel.isLoading {
-                ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-            } else {
-                Text("Get Outfit Suggestion")
-                    .fontWeight(.semibold)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding()
-        .background(canRequestSuggestion ? AppTheme.accent : Color.gray.opacity(0.6))
-        .foregroundColor(.white)
-        .cornerRadius(12)
-        .disabled(!canRequestSuggestion)
-        .accessibilityIdentifier("main.getSuggestionButton")
-    }
-
-    private var customizeSheet: some View {
+    private var advancedSheet: some View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 16) {
-                    FiltersView(filters: $viewModel.filters, preferenceText: $viewModel.preferenceText)
+                    FiltersView(
+                        filters: $viewModel.filters,
+                        preferenceText: $viewModel.preferenceText,
+                        layout: .form
+                    )
 
                     DisclosureGroup("Advanced Options") {
                         VStack(spacing: 14) {
                             if auth.isAuthenticated {
                                 Toggle("Use wardrobe only", isOn: $viewModel.useWardrobeOnly)
                                     .tint(AppTheme.accent)
+
+                                Button {
+                                    showAdvancedSheet = false
+                                    showRandomPicksDialog = true
+                                } label: {
+                                    Label("Random Pick", systemImage: "shuffle")
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .disabled(viewModel.isLoading)
                             }
 
                             Toggle("Generate model preview", isOn: $viewModel.generateModelImage)
@@ -423,11 +377,11 @@ struct MainFlowView: View {
                 )
                 .ignoresSafeArea()
             )
-            .navigationTitle("Customize")
+            .navigationTitle("Advanced")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { showCustomizeSheet = false }
+                    Button("Done") { showAdvancedSheet = false }
                 }
             }
         }

@@ -76,7 +76,7 @@ describe('OutfitPreview', () => {
         />
       );
       expect(screen.getByText(/Ready for Style Magic?/i)).toBeInTheDocument();
-      expect(screen.getByText(/Start by uploading a photo on the left/i)).toBeInTheDocument();
+      expect(screen.getByText(/Your AI-styled outfit preview will appear here/i)).toBeInTheDocument();
     });
   });
 

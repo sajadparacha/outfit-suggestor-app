@@ -18,7 +18,6 @@ const ActivateAccount: React.FC<ActivateAccountProps> = ({ token, onActivateComp
         setError(null);
         await ApiService.activateAccount(token);
         setSuccess(true);
-        // Call onActivateComplete after a short delay to show success message
         setTimeout(() => {
           onActivateComplete();
         }, 2000);
@@ -34,61 +33,42 @@ const ActivateAccount: React.FC<ActivateAccountProps> = ({ token, onActivateComp
   }, [token, onActivateComplete]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-lg">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Activate Your Account
-          </h2>
-        </div>
+    <div className="min-h-screen flex items-center justify-center bg-brand-navy px-4 py-12">
+      <div className="w-full max-w-md space-y-8 rounded-2xl border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur">
+        <h2 className="text-center text-3xl font-bold text-white">Activate Your Account</h2>
 
         {loading && (
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Activating your account...</p>
+            <div className="spinner-brand mx-auto h-12 w-12" />
+            <p className="mt-4 text-slate-300">Activating your account...</p>
           </div>
         )}
 
         {success && (
           <div className="text-center">
-            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
-              <svg
-                className="h-6 w-6 text-green-600"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path d="M5 13l4 4L19 7"></path>
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-blue/20">
+              <svg className="h-6 w-6 text-brand-blue" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <p className="mt-4 text-green-600 font-medium">Account activated successfully!</p>
-            <p className="mt-2 text-gray-600">Redirecting to login...</p>
+            <p className="mt-4 font-medium text-brand-blue">Account activated successfully!</p>
+            <p className="mt-2 text-slate-400">Redirecting to login...</p>
           </div>
         )}
 
         {error && (
           <div className="text-center">
-            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
-              <svg
-                className="h-6 w-6 text-red-600"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path d="M6 18L18 6M6 6l12 12"></path>
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-500/20">
+              <svg className="h-6 w-6 text-red-300" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </div>
-            <p className="mt-4 text-red-600 font-medium">Activation Failed</p>
-            <p className="mt-2 text-gray-600">{error}</p>
+            <p className="mt-4 font-medium text-red-300">Activation Failed</p>
+            <p className="mt-2 text-slate-400">{error}</p>
             <button
-              onClick={() => window.location.href = '/'}
-              className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+              type="button"
+              onClick={() => { window.location.href = '/'; }}
+              className="btn-brand mt-4 rounded-xl px-4 py-2 text-sm"
             >
               Go to Login
             </button>

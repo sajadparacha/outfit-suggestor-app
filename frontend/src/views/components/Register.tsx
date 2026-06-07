@@ -16,11 +16,11 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onSwitchToLogin, loadin
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (password !== confirmPassword) {
       return;
     }
-    
+
     try {
       await onRegister({ email, password, full_name: fullName || undefined });
     } catch (err) {
@@ -29,79 +29,60 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onSwitchToLogin, loadin
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-lg">
+    <div className="p-6 sm:p-8">
+      <div className="space-y-6">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Create your account
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <h2 className="text-center text-2xl font-bold text-white">Create your account</h2>
+          <p className="mt-2 text-center text-sm text-slate-400">
             Or{' '}
             <button
+              type="button"
               onClick={onSwitchToLogin}
-              className="font-medium text-primary-600 hover:text-primary-500"
+              className="font-medium text-brand-blue transition hover:text-brand-purple"
             >
               sign in to your existing account
             </button>
           </p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="space-y-5" onSubmit={handleSubmit}>
           {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <div className="text-sm text-red-800">{error}</div>
+            <div className="rounded-xl border border-red-400/30 bg-red-500/10 p-4">
+              <div className="text-sm text-red-200">{error}</div>
             </div>
           )}
-          <div className="rounded-md shadow-sm space-y-4">
+          <div className="space-y-3">
+            <input
+              id="full-name"
+              name="fullName"
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              className="input-brand w-full rounded-xl px-3 py-2.5 text-sm placeholder-slate-500"
+              placeholder="Full Name (Optional)"
+            />
+            <input
+              id="email-address"
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="input-brand w-full rounded-xl px-3 py-2.5 text-sm placeholder-slate-500"
+              placeholder="Email address"
+            />
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="new-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="input-brand w-full rounded-xl px-3 py-2.5 text-sm placeholder-slate-500"
+              placeholder="Password"
+            />
             <div>
-              <label htmlFor="full-name" className="sr-only">
-                Full Name
-              </label>
-              <input
-                id="full-name"
-                name="fullName"
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
-                placeholder="Full Name (Optional)"
-              />
-            </div>
-            <div>
-              <label htmlFor="email-address" className="sr-only">
-                Email address
-              </label>
-              <input
-                id="email-address"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
-                placeholder="Email address"
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
-              />
-            </div>
-            <div>
-              <label htmlFor="confirm-password" className="sr-only">
-                Confirm Password
-              </label>
               <input
                 id="confirm-password"
                 name="confirmPassword"
@@ -110,26 +91,24 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onSwitchToLogin, loadin
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
+                className="input-brand w-full rounded-xl px-3 py-2.5 text-sm placeholder-slate-500"
                 placeholder="Confirm Password"
               />
               {password && confirmPassword && password !== confirmPassword && (
-                <p className="mt-1 text-sm text-red-600">Passwords do not match</p>
+                <p className="mt-1 text-sm text-red-400">Passwords do not match</p>
               )}
             </div>
           </div>
 
-          <div>
-            <button
-              type="submit"
-              disabled={loading || (password !== confirmPassword && confirmPassword !== '')}
-              className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 ${
-                loading || (password !== confirmPassword && confirmPassword !== '') ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              {loading ? 'Creating account...' : 'Create account'}
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={loading || (password !== confirmPassword && confirmPassword !== '')}
+            className={`btn-brand w-full rounded-xl py-2.5 text-sm font-semibold ${
+              loading || (password !== confirmPassword && confirmPassword !== '') ? 'cursor-not-allowed opacity-50' : ''
+            }`}
+          >
+            {loading ? 'Creating account...' : 'Create account'}
+          </button>
         </form>
       </div>
     </div>
@@ -137,15 +116,3 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onSwitchToLogin, loadin
 };
 
 export default Register;
-
-
-
-
-
-
-
-
-
-
-
-

@@ -40,22 +40,22 @@ code {
   animation: slide-in 0.3s ease-out;
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar — dark theme */
 ::-webkit-scrollbar {
   width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: #1e293b;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #00B3A4;
+  background: linear-gradient(135deg, #4facfe, #c471ed);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #009688;
+  background: linear-gradient(135deg, #3d9be8, #b060e0);
 }
 
 /* Line clamp utilities */
@@ -74,4 +74,70 @@ code {
 }
 .scrollbar-none::-webkit-scrollbar {
   display: none;
+}
+
+@layer utilities {
+  .text-brand-gradient {
+    background: linear-gradient(135deg, #4facfe 0%, #c471ed 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .bg-brand-gradient {
+    background-color: #4facfe;
+    background-image: linear-gradient(135deg, #4facfe 0%, #c471ed 100%);
+  }
+
+  .border-brand-gradient {
+    border-image: linear-gradient(135deg, #4facfe, #c471ed) 1;
+  }
+
+  .shadow-brand {
+    box-shadow: 0 8px 32px rgba(79, 172, 254, 0.25), 0 4px 16px rgba(196, 113, 237, 0.15);
+  }
+}
+
+@layer components {
+  .btn-brand {
+    color: #fff;
+    background-color: #4facfe;
+    background-image: linear-gradient(135deg, #4facfe 0%, #c471ed 100%);
+    box-shadow: 0 8px 32px rgba(79, 172, 254, 0.25), 0 4px 16px rgba(196, 113, 237, 0.15);
+    transition: opacity 0.2s ease;
+  }
+
+  .btn-brand:hover {
+    opacity: 0.9;
+  }
+
+  .btn-brand:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-brand-outline {
+    @apply border border-brand-blue/40 bg-brand-blue/10 text-brand-blue transition-all hover:bg-brand-blue/20;
+  }
+
+  .input-brand {
+    @apply border border-white/20 bg-white/5 text-white transition-all focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue;
+  }
+
+  .card-brand-accent {
+    @apply border border-brand-blue/25 bg-brand-gradient-soft;
+  }
+
+  .text-accent {
+    @apply text-brand-blue;
+  }
+
+  .spinner-brand {
+    @apply animate-spin rounded-full border-b-2 border-brand-blue;
+  }
+
+  select option {
+    background-color: #0f172a;
+    color: #fff;
+  }
 }

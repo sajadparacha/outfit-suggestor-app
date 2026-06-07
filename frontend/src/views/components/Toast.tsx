@@ -20,7 +20,7 @@ const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
       <div
         className={`px-6 py-4 rounded-lg shadow-2xl flex items-center space-x-3 max-w-md ${
           type === 'success'
-            ? 'bg-green-500 text-white'
+            ? 'btn-brand'
             : 'bg-red-500 text-white'
         }`}
         role="alert"

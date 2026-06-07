@@ -24,7 +24,6 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ onSuccess, onCancel }) 
     setError(null);
     setSuccess(false);
 
-    // Validation
     if (!currentPassword || !newPassword || !confirmPassword) {
       setError('All fields are required');
       return;
@@ -53,8 +52,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ onSuccess, onCancel }) 
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      
-      // Call success callback after a delay
+
       if (onSuccess) {
         setTimeout(() => {
           onSuccess();
@@ -69,37 +67,32 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ onSuccess, onCancel }) 
 
   if (success) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6 max-w-md mx-auto">
-        <div className="text-center">
-          <div className="text-6xl mb-4">✅</div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Password Changed!</h2>
-          <p className="text-gray-600 mb-4">Your password has been successfully changed.</p>
-          {onCancel && (
-            <button
-              onClick={onCancel}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-            >
-              Close
-            </button>
-          )}
-        </div>
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
+        <div className="text-5xl mb-4">✅</div>
+        <h2 className="text-xl font-bold text-white mb-2">Password Changed!</h2>
+        <p className="text-slate-300 mb-4">Your password has been successfully changed.</p>
+        {onCancel && (
+          <button type="button" onClick={onCancel} className="btn-brand rounded-xl px-4 py-2 text-sm">
+            Close
+          </button>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 max-w-md mx-auto">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Change Password</h2>
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+      <h2 className="text-xl font-bold text-white mb-6">Change Password</h2>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-          <p className="text-sm text-red-800">{error}</p>
+        <div className="mb-4 rounded-xl border border-red-400/30 bg-red-500/10 p-3">
+          <p className="text-sm text-red-200">{error}</p>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="current-password" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="current-password" className="mb-1 block text-sm font-medium text-slate-200">
             Current Password
           </label>
           <input
@@ -107,14 +100,14 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ onSuccess, onCancel }) 
             type="password"
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="input-brand w-full rounded-xl px-3 py-2"
             required
             disabled={loading}
           />
         </div>
 
         <div>
-          <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="new-password" className="mb-1 block text-sm font-medium text-slate-200">
             New Password
           </label>
           <input
@@ -122,16 +115,16 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ onSuccess, onCancel }) 
             type="password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="input-brand w-full rounded-xl px-3 py-2"
             required
             minLength={6}
             disabled={loading}
           />
-          <p className="mt-1 text-xs text-gray-500">Must be at least 6 characters long</p>
+          <p className="mt-1 text-xs text-slate-500">Must be at least 6 characters long</p>
         </div>
 
         <div>
-          <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="confirm-password" className="mb-1 block text-sm font-medium text-slate-200">
             Confirm New Password
           </label>
           <input
@@ -139,22 +132,20 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ onSuccess, onCancel }) 
             type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="input-brand w-full rounded-xl px-3 py-2"
             required
             disabled={loading}
           />
           {newPassword && confirmPassword && newPassword !== confirmPassword && (
-            <p className="mt-1 text-xs text-red-600">Passwords do not match</p>
+            <p className="mt-1 text-xs text-red-400">Passwords do not match</p>
           )}
         </div>
 
-        <div className="flex space-x-3 pt-4">
+        <div className="flex gap-3 pt-2">
           <button
             type="submit"
             disabled={loading}
-            className={`flex-1 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-              loading ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
+            className={`btn-brand flex-1 rounded-xl px-4 py-2 text-sm ${loading ? 'cursor-not-allowed opacity-50' : ''}`}
           >
             {loading ? 'Changing Password...' : 'Change Password'}
           </button>
@@ -163,7 +154,7 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ onSuccess, onCancel }) 
               type="button"
               onClick={onCancel}
               disabled={loading}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500"
+              className="rounded-xl border border-white/15 px-4 py-2 text-sm text-slate-300 transition hover:bg-white/10"
             >
               Cancel
             </button>
@@ -175,14 +166,3 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ onSuccess, onCancel }) 
 };
 
 export default ChangePassword;
-
-
-
-
-
-
-
-
-
-
-
