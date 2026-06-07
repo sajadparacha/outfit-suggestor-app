@@ -567,34 +567,48 @@ const Wardrobe: React.FC<WardrobeProps> = ({
     }
   };
 
+  const filterChipClass = (active: boolean) =>
+    `min-h-[40px] touch-manipulation px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-sm font-medium transition-all ${
+      active
+        ? 'btn-brand'
+        : 'bg-white/10 text-slate-200 hover:bg-white/20 border border-white/10'
+    }`;
+
   return (
-    <div className="py-8 px-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="overflow-x-hidden py-4 px-3 sm:py-8 sm:px-4">
+      <div className="mx-auto w-full max-w-4xl">
         {/* Header */}
-        <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-6 mb-6">
-          <div className="flex items-center justify-between mb-4 gap-3">
-            <div>
-              <h1 className="text-3xl font-bold text-white mb-2">👔 My Wardrobe</h1>
-              <p className="text-slate-300">Add items to get personalized outfit suggestions</p>
+        <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 shadow-xl backdrop-blur sm:mb-6 sm:p-6">
+          <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <h1 className="mb-2 text-2xl font-bold text-white sm:text-3xl">👔 My Wardrobe</h1>
+              <p className="text-sm text-slate-300 sm:text-base">Add items to get personalized outfit suggestions</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:flex-shrink-0">
               {onAnalyzeWardrobe && (
                 <button
                   onClick={onAnalyzeWardrobe}
                   disabled={analyzingWardrobe}
-                  className={`px-4 py-3 rounded-xl font-semibold transition-all shadow-md ${
+                  className={`min-h-[44px] w-full touch-manipulation rounded-xl px-4 py-3 text-sm font-semibold transition-all shadow-md sm:w-auto sm:text-base ${
                     analyzingWardrobe
-                      ? 'cursor-not-allowed bg-white/10 text-slate-400 border border-white/10'
+                      ? 'cursor-not-allowed border border-white/10 bg-white/10 text-slate-400'
                       : 'btn-brand'
                   }`}
                   aria-label="Analyze my wardrobe gaps"
                 >
-                  {analyzingWardrobe ? 'Analyzing...' : 'Analyze My Wardrobe'}
+                  {analyzingWardrobe ? (
+                    'Analyzing...'
+                  ) : (
+                    <>
+                      <span className="sm:hidden">Analyze Wardrobe</span>
+                      <span className="hidden sm:inline">Analyze My Wardrobe</span>
+                    </>
+                  )}
                 </button>
               )}
               <button
                 onClick={() => setShowAddModal(true)}
-                className="px-6 py-3 btn-brand rounded-xl font-semibold transition-all shadow-md"
+                className="min-h-[44px] w-full touch-manipulation rounded-xl px-6 py-3 text-sm font-semibold shadow-md btn-brand transition-all sm:w-auto sm:text-base"
               >
                 + Add Item
               </button>
@@ -602,16 +616,12 @@ const Wardrobe: React.FC<WardrobeProps> = ({
           </div>
 
           {/* Category Filters */}
-          <div className="border-t border-white/10 pt-4 mt-4">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-medium text-slate-300 mr-2">Filter by:</span>
+          <div className="mt-4 border-t border-white/10 pt-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="mb-1 w-full text-sm font-medium text-slate-300 sm:mb-0 sm:w-auto sm:mr-2">Filter by:</span>
               <button
                 onClick={() => handleCategoryFilter(null)}
-                className={`px-4 py-2 rounded-xl font-medium transition-all ${
-                  selectedCategory === null
-                    ? 'btn-brand'
-                    : 'bg-white/10 text-slate-200 hover:bg-white/20 border border-white/10'
-                }`}
+                className={filterChipClass(selectedCategory === null)}
               >
                 All <span className="ml-1 font-semibold">({summary ? summary.total_items || 0 : 0})</span>
               </button>
@@ -619,11 +629,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                 <button
                   key={category}
                   onClick={() => handleCategoryFilter(category)}
-                  className={`px-4 py-2 rounded-xl font-medium transition-all capitalize ${
-                    selectedCategory === category
-                      ? 'btn-brand'
-                      : 'bg-white/10 text-slate-200 hover:bg-white/20 border border-white/10'
-                  }`}
+                  className={`${filterChipClass(selectedCategory === category)} capitalize`}
                 >
                   {category === 'trouser' ? 'Trousers' : category.charAt(0).toUpperCase() + category.slice(1)}
                   <span className="ml-1 font-semibold">
@@ -636,34 +642,36 @@ const Wardrobe: React.FC<WardrobeProps> = ({
         </div>
 
         {/* Search Bar */}
-        <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-6 mb-6">
-          <form onSubmit={handleSearch} className="flex gap-3">
+        <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 shadow-xl backdrop-blur sm:mb-6 sm:p-6">
+          <form onSubmit={handleSearch} className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
             <input
               type="text"
               value={localSearchQuery}
               onChange={(e) => setLocalSearchQuery(e.target.value)}
-              placeholder="Search by description, color, or name..."
-              className="flex-1 px-4 py-3 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-brand-blue focus:border-brand-blue transition-colors"
+              placeholder="Search description, color, name..."
+              className="min-h-[44px] w-full min-w-0 flex-1 rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-slate-400 transition-colors focus:border-brand-blue focus:ring-2 focus:ring-brand-blue"
             />
-            <button
-              type="submit"
-              className="px-6 py-3 btn-brand rounded-xl font-medium transition-colors"
-            >
-              🔍 Search
-            </button>
-            {searchQuery && (
+            <div className="flex gap-2 sm:flex-shrink-0">
               <button
-                type="button"
-                onClick={() => {
-                  setLocalSearchQuery('');
-                  setSearchQuery('');
-                  loadWardrobe(selectedCategory || undefined, undefined, 1);
-                }}
-                className="px-4 py-3 bg-white/10 text-slate-200 rounded-xl font-medium hover:bg-white/20 border border-white/15 transition-colors"
+                type="submit"
+                className="min-h-[44px] min-w-0 flex-1 touch-manipulation rounded-xl px-4 py-3 text-sm font-medium transition-colors btn-brand sm:flex-none sm:px-6"
               >
-                Clear
+                🔍 Search
               </button>
-            )}
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLocalSearchQuery('');
+                    setSearchQuery('');
+                    loadWardrobe(selectedCategory || undefined, undefined, 1);
+                  }}
+                  className="min-h-[44px] flex-1 touch-manipulation rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-medium text-slate-200 transition-colors hover:bg-white/20 sm:flex-none"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
           </form>
           {searchQuery && (
             <p className="text-sm text-slate-300 mt-2">
@@ -713,99 +721,108 @@ const Wardrobe: React.FC<WardrobeProps> = ({
         ) : (
           <div className="space-y-4">
             {wardrobeItems && Array.isArray(wardrobeItems) && wardrobeItems.map((item) => (
-              <div key={item.id} className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-4 flex items-center gap-4 hover:shadow-2xl transition-shadow">
-                {item.image_data && (
-                  <div 
-                    className="w-32 h-32 bg-slate-800/80 rounded-xl overflow-hidden flex-shrink-0 cursor-pointer hover:ring-2 ring-brand-blue transition-all border border-white/10"
-                    onClick={() => handleViewImage(item.image_data!)}
-                    title="Click to view full size"
-                  >
-                    <img
-                      src={`data:image/jpeg;base64,${item.image_data}`}
-                      alt={item.category}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-                {!item.image_data && (
-                  <div className="w-32 h-32 bg-slate-800/80 rounded-xl flex-shrink-0 flex items-center justify-center border border-white/10">
-                    <span className="text-slate-400 text-4xl">📷</span>
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-bold text-white capitalize text-lg">{item.category}</h3>
-                      {item.color && (
-                        <p className="text-sm text-slate-300 mt-1">
-                          <span className="font-medium text-slate-200">Color:</span>{' '}
-                          {searchQuery ? highlightSearchTerm(item.color, searchQuery) : item.color}
-                        </p>
-                      )}
-                      {item.description && (
-                        <p className="text-sm text-slate-400 mt-1 line-clamp-2">
-                          {searchQuery ? highlightSearchTerm(item.description, searchQuery) : item.description}
-                        </p>
-                      )}
-                      {item.name && (
-                        <p className="text-sm text-slate-300 mt-1">
-                          <span className="font-medium text-slate-200">Name:</span>{' '}
-                          {searchQuery ? highlightSearchTerm(item.name, searchQuery) : item.name}
-                        </p>
-                      )}
+              <div
+                key={item.id}
+                className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-3 shadow-xl backdrop-blur transition-shadow hover:shadow-2xl sm:p-4"
+              >
+                <div className="flex gap-3 sm:gap-4">
+                  {item.image_data ? (
+                    <div
+                      className="h-20 w-20 flex-shrink-0 cursor-pointer overflow-hidden rounded-xl border border-white/10 bg-slate-800/80 transition-all hover:ring-2 ring-brand-blue sm:h-32 sm:w-32"
+                      onClick={() => handleViewImage(item.image_data!)}
+                      title="Click to view full size"
+                    >
+                      <img
+                        src={`data:image/jpeg;base64,${item.image_data}`}
+                        alt={item.category}
+                        className="h-full w-full object-cover"
+                      />
                     </div>
-                    <div className="flex items-center gap-2 ml-4 flex-shrink-0">
-                      {item.image_data && (
-                        <button
-                          onClick={() => handleGetAISuggestion(item)}
-                          disabled={suggestionLoading === item.id || (outfitController?.loading ?? false)}
-                          className="px-4 py-2 btn-brand rounded-xl font-medium transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
-                          title="Get AI outfit suggestion for this item"
-                        >
-                          {suggestionLoading === item.id || (outfitController?.loading ?? false) ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                              Getting...
-                            </>
-                          ) : (
-                            <>
-                              ✨ Get AI Suggestion
-                            </>
-                          )}
-                        </button>
-                      )}
-                      {(historyItemIdIndex.has(item.id) || (!!item.image_data && historyImageIndex.has(item.image_data))) && (
-                        <button
-                          onClick={() => handleOpenHistorySuggestions(item)}
-                          disabled={historyLoadingForItem === item.id}
-                          className="px-4 py-2 btn-brand rounded-xl font-medium transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
-                          title="Show past suggestions for this item"
-                        >
-                          {historyLoadingForItem === item.id ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                              Loading...
-                            </>
-                          ) : (
-                            <>📚 Past Suggestions</>
-                          )}
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleEditItem(item)}
-                        className="text-brand-blue hover:text-brand-blue text-xl"
-                        title="Edit item"
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        onClick={() => handleDeleteItem(item.id)}
-                        className="text-red-400 hover:text-red-300 text-xl"
-                        title="Delete item"
-                      >
-                        🗑️
-                      </button>
+                  ) : (
+                    <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-slate-800/80 sm:h-32 sm:w-32">
+                      <span className="text-3xl text-slate-400 sm:text-4xl">📷</span>
                     </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-base font-bold capitalize text-white sm:text-lg">{item.category}</h3>
+                    {item.color && (
+                      <p className="mt-1 text-sm text-slate-300">
+                        <span className="font-medium text-slate-200">Color:</span>{' '}
+                        {searchQuery ? highlightSearchTerm(item.color, searchQuery) : item.color}
+                      </p>
+                    )}
+                    {item.description && (
+                      <p className="mt-1 line-clamp-2 text-sm text-slate-400">
+                        {searchQuery ? highlightSearchTerm(item.description, searchQuery) : item.description}
+                      </p>
+                    )}
+                    {item.name && (
+                      <p className="mt-1 text-sm text-slate-300">
+                        <span className="font-medium text-slate-200">Name:</span>{' '}
+                        {searchQuery ? highlightSearchTerm(item.name, searchQuery) : item.name}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-white/10 pt-3 sm:mt-4">
+                  {item.image_data && (
+                    <button
+                      onClick={() => handleGetAISuggestion(item)}
+                      disabled={suggestionLoading === item.id || (outfitController?.loading ?? false)}
+                      className="flex min-h-[44px] min-w-0 flex-1 touch-manipulation items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium shadow-sm btn-brand transition-all disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none sm:px-4"
+                      title="Get AI outfit suggestion for this item"
+                    >
+                      {suggestionLoading === item.id || (outfitController?.loading ?? false) ? (
+                        <>
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                          Getting...
+                        </>
+                      ) : (
+                        <>
+                          <span className="sm:hidden">✨ AI Suggest</span>
+                          <span className="hidden sm:inline">✨ Get AI Suggestion</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                  {(historyItemIdIndex.has(item.id) || (!!item.image_data && historyImageIndex.has(item.image_data))) && (
+                    <button
+                      onClick={() => handleOpenHistorySuggestions(item)}
+                      disabled={historyLoadingForItem === item.id}
+                      className="flex min-h-[44px] min-w-0 flex-1 touch-manipulation items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium shadow-sm btn-brand transition-all disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none sm:px-4"
+                      title="Show past suggestions for this item"
+                    >
+                      {historyLoadingForItem === item.id ? (
+                        <>
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          <span className="sm:hidden">📚 History</span>
+                          <span className="hidden sm:inline">📚 Past Suggestions</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                  <div className="ml-auto flex items-center gap-1 sm:ml-0">
+                    <button
+                      onClick={() => handleEditItem(item)}
+                      className="flex h-11 w-11 touch-manipulation items-center justify-center rounded-xl text-xl text-brand-blue transition-colors hover:bg-white/10"
+                      title="Edit item"
+                      aria-label="Edit item"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={() => handleDeleteItem(item.id)}
+                      className="flex h-11 w-11 touch-manipulation items-center justify-center rounded-xl text-xl text-red-400 transition-colors hover:bg-white/10 hover:text-red-300"
+                      title="Delete item"
+                      aria-label="Delete item"
+                    >
+                      🗑️
+                    </button>
                   </div>
                 </div>
               </div>
@@ -815,12 +832,12 @@ const Wardrobe: React.FC<WardrobeProps> = ({
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-6 mt-6">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-slate-300">
+          <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 shadow-xl backdrop-blur sm:mt-6 sm:p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-center text-sm text-slate-300 sm:text-left">
                 Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount} items
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center justify-center gap-2">
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1 || loading}

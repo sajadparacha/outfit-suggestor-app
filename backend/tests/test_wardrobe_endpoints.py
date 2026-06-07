@@ -456,6 +456,157 @@ class TestWardrobeEndpoints:
         assert payload["ai_prompt"] == "mock premium prompt"
         assert payload["ai_raw_response"] == "{\"mock\":true}"
         assert payload["cost"]["total_cost"] == 0.0012
+        assert "temporarily unavailable" not in payload["overall_summary"].lower()
+
+    def test_analyze_wardrobe_gaps_premium_empty_wardrobe_succeeds(self, client, auth_headers, monkeypatch):
+        """Premium analysis must succeed even when the user has no wardrobe items."""
+        import config as app_config
+
+        class _MockPremiumAI:
+            def analyze_wardrobe_gaps_with_chatgpt(self, wardrobe_items, occasion, season, style, text_input=""):
+                assert wardrobe_items == []
+                return {
+                    "occasion": occasion,
+                    "season": season,
+                    "style": style,
+                    "analysis_mode": "premium",
+                    "analysisDepth": "Premium",
+                    "summaryText": "Start with core summer casual pieces.",
+                    "priorityShoppingList": [
+                        {
+                            "rank": 1,
+                            "itemName": "white linen shirt",
+                            "category": "shirt",
+                            "priority": "High",
+                            "recommendedColors": ["white"],
+                            "recommendedStyles": ["linen"],
+                            "reason": "Foundational summer top.",
+                            "outfitImpact": "Unlocks most casual combinations.",
+                            "actions": ["Add to shopping list", "Show outfit examples"],
+                        }
+                    ],
+                    "categoryInsights": [
+                        {
+                            "category": "shirt",
+                            "missingColors": ["white"],
+                            "missingStyles": ["linen"],
+                            "priority": "High",
+                            "whyThisMatters": "No shirts yet.",
+                            "recommendation": "Buy one white linen shirt first.",
+                            "suggestedActions": ["Add to shopping list", "Show outfit examples"],
+                        }
+                    ],
+                    "analysis_by_category": {
+                        "shirt": {
+                            "category": "shirt",
+                            "owned_colors": [],
+                            "owned_styles": [],
+                            "missing_colors": ["white"],
+                            "missing_styles": ["linen"],
+                            "recommended_purchases": ["White linen shirt"],
+                            "item_count": 0,
+                        },
+                        "trouser": {"category": "trouser", "owned_colors": [], "owned_styles": [], "missing_colors": [], "missing_styles": [], "recommended_purchases": [], "item_count": 0},
+                        "blazer": {"category": "blazer", "owned_colors": [], "owned_styles": [], "missing_colors": [], "missing_styles": [], "recommended_purchases": [], "item_count": 0},
+                        "shoes": {"category": "shoes", "owned_colors": [], "owned_styles": [], "missing_colors": [], "missing_styles": [], "recommended_purchases": [], "item_count": 0},
+                        "belt": {"category": "belt", "owned_colors": [], "owned_styles": [], "missing_colors": [], "missing_styles": [], "recommended_purchases": [], "item_count": 0},
+                    },
+                    "overall_summary": "Start with core summer casual pieces.",
+                    "ai_prompt": "mock premium prompt",
+                    "ai_raw_response": "{\"mock\":true}",
+                    "cost": {
+                        "gpt4_cost": 0.0012,
+                        "model_image_cost": 0.0,
+                        "total_cost": 0.0012,
+                        "input_tokens": 100,
+                        "output_tokens": 120,
+                    },
+                }
+
+        monkeypatch.setattr(app_config, "get_ai_service", lambda: _MockPremiumAI())
+
+        response = client.post(
+            "/api/wardrobe/analyze-gaps",
+            headers=auth_headers,
+            json={
+                "occasion": "casual",
+                "season": "summer",
+                "style": "casual",
+                "analysis_mode": "premium",
+            },
+        )
+        assert response.status_code == status.HTTP_200_OK
+        payload = response.json()
+        assert payload["analysis_mode"] == "premium"
+        assert payload["analysisDepth"] == "Premium"
+        assert "temporarily unavailable" not in payload["overall_summary"].lower()
+
+    def test_analyze_wardrobe_gaps_premium_uses_ai_service_token_budget(self, client, auth_headers, monkeypatch):
+        """Endpoint premium path must call AIService, which owns the high token budget."""
+        import config as app_config
+        from services.ai_service import AIService
+
+        class _RecordingPremiumAI(AIService):
+            def __init__(self):
+                super().__init__(api_key="test-key")
+                self.captured_max_tokens = None
+
+            def analyze_wardrobe_gaps_with_chatgpt(self, wardrobe_items, occasion, season, style, text_input=""):
+                captured = {}
+
+                def fake_create(**kwargs):
+                    captured["max_tokens"] = kwargs.get("max_tokens")
+                    content = (
+                        '{"occasion":"casual","season":"summer","style":"casual",'
+                        '"summaryText":"Premium summary","analysisDepth":"Premium",'
+                        '"analysis_by_category":{"shirt":{"category":"shirt","owned_colors":[],'
+                        '"owned_styles":[],"missing_colors":["white"],"missing_styles":["linen"],'
+                        '"recommended_purchases":["White linen shirt"],"item_count":0}},'
+                        '"overall_summary":"Premium summary"}'
+                    )
+                    from types import SimpleNamespace
+
+                    return SimpleNamespace(
+                        choices=[
+                            SimpleNamespace(
+                                message=SimpleNamespace(content=content),
+                                finish_reason="stop",
+                            )
+                        ],
+                        usage=SimpleNamespace(prompt_tokens=100, completion_tokens=120),
+                    )
+
+                self.client.chat.completions.create = fake_create  # type: ignore[method-assign]
+                result = super().analyze_wardrobe_gaps_with_chatgpt(
+                    wardrobe_items=wardrobe_items,
+                    occasion=occasion,
+                    season=season,
+                    style=style,
+                    text_input=text_input,
+                )
+                self.captured_max_tokens = captured.get("max_tokens")
+                return result
+
+        recording_ai = _RecordingPremiumAI()
+        monkeypatch.setattr(app_config, "get_ai_service", lambda: recording_ai)
+
+        response = client.post(
+            "/api/wardrobe/analyze-gaps",
+            headers=auth_headers,
+            json={
+                "occasion": "casual",
+                "season": "summer",
+                "style": "casual",
+                "analysis_mode": "premium",
+            },
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        payload = response.json()
+        assert payload["analysis_mode"] == "premium"
+        assert payload["analysisDepth"] == "Premium"
+        assert recording_ai.captured_max_tokens == recording_ai.wardrobe_gap_max_tokens
+        assert recording_ai.captured_max_tokens >= 2500
 
     def test_analyze_wardrobe_gaps_premium_falls_back_when_ai_fails(self, client, auth_headers, db, test_user, monkeypatch):
         """Premium mode gracefully falls back to free analysis on provider/parse failures."""

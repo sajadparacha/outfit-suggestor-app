@@ -9,23 +9,26 @@ import App from '../../App';
 import Sidebar from './Sidebar';
 import Hero from './Hero';
 import OutfitPreview from './OutfitPreview';
+import Wardrobe from './Wardrobe';
 import type { OutfitSuggestion } from '../../models/OutfitModels';
 
 describe('Mobile-friendly layout and touch targets', () => {
   describe('Navigation (App)', () => {
-    it('nav tab container has scrollbar-none and overflow-x-auto for horizontal scroll on small screens', async () => {
+    it('nav has horizontal scroll and dedicated mobile row in header grid', async () => {
       render(<App />);
-      await screen.findByRole('button', { name: /^Suggest$/ });
-
-      const scrollContainer = document.querySelector('.scrollbar-none');
-      expect(scrollContainer).toBeInTheDocument();
-      expect(scrollContainer?.getAttribute('class')).toMatch(/overflow-x-auto/);
+      const nav = await screen.findByRole('navigation', { name: 'Main navigation' });
+      const cls = nav.getAttribute('class') ?? '';
+      expect(cls).toMatch(/overflow-x-auto/);
+      expect(cls).toMatch(/scrollbar-none/);
+      expect(cls).toMatch(/col-span-2/);
+      expect(cls).toMatch(/row-start-2/);
     });
 
-    it('nav has minimum height for touch targets', () => {
+    it('header uses responsive grid layout for logo, nav, and auth', () => {
       render(<App />);
-      const navRow = document.querySelector('.min-h-\\[56px\\]');
-      expect(navRow).toBeInTheDocument();
+      const headerGrid = document.querySelector('header .grid');
+      expect(headerGrid).toBeInTheDocument();
+      expect(headerGrid?.getAttribute('class')).toMatch(/md:min-h-\[56px\]/);
     });
 
     it('nav tab buttons have touch-manipulation for responsive tap', () => {
@@ -203,6 +206,27 @@ describe('Mobile-friendly layout and touch targets', () => {
       const cls = addBtn.getAttribute('class') ?? '';
       expect(cls).toMatch(/min-h-\[48px\]/);
       expect(cls).toMatch(/touch-manipulation/);
+    });
+  });
+
+  describe('Wardrobe', () => {
+    it('uses stacked layout classes for header actions and item cards on small screens', async () => {
+      const { container } = render(<Wardrobe />);
+      await screen.findByRole('heading', { name: /My Wardrobe/i });
+      await screen.findByText('Integration test shirt');
+
+      expect(container.querySelector('.flex-col.gap-4.sm\\:flex-row')).toBeInTheDocument();
+      expect(container.querySelector('[class*="flex-wrap"][class*="border-t"]')).toBeInTheDocument();
+      expect(container.querySelector('.min-h-\\[44px\\].touch-manipulation')).toBeInTheDocument();
+    });
+
+    it('search form stacks vertically on mobile', async () => {
+      const { container } = render(<Wardrobe />);
+      await screen.findByRole('heading', { name: /My Wardrobe/i });
+
+      const searchForm = container.querySelector('form');
+      expect(searchForm?.getAttribute('class')).toMatch(/flex-col/);
+      expect(searchForm?.getAttribute('class')).toMatch(/sm:flex-row/);
     });
   });
 

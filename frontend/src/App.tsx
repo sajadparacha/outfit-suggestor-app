@@ -349,7 +349,7 @@ function App() {
 
   return (
     <div 
-      className="min-h-screen bg-brand-navy text-white relative"
+      className="relative min-h-screen overflow-x-hidden bg-brand-navy text-white"
       style={{ pointerEvents: appBusy ? 'none' : 'auto' }}
     >
       {/* Subtle gradient orbs */}

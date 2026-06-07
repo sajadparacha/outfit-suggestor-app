@@ -72,36 +72,35 @@ const NavBar: React.FC<NavBarProps> = ({
 
   return (
     <header className="sticky top-0 z-30 border-b border-white/10 bg-brand-navy/90 backdrop-blur-xl">
-      <div className="container mx-auto px-3 sm:px-4">
-        <div className="flex min-h-[56px] items-center justify-between gap-3">
-          {/* Logo */}
-          <button
-            type="button"
-            onClick={() => onNavigate('main')}
-            className="flex flex-shrink-0 items-center gap-2 touch-manipulation"
-            aria-label="Outfit Suggestor home"
-          >
-            <SparkleIcon />
-            <span className="text-sm font-semibold text-white sm:text-base">Outfit Suggestor</span>
-          </button>
+      <div className="container mx-auto grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 px-3 py-2 sm:px-4 md:grid-cols-[auto_minmax(0,1fr)_auto] md:gap-x-3 md:py-0 md:min-h-[56px]">
+        {/* Logo */}
+        <button
+          type="button"
+          onClick={() => onNavigate('main')}
+          className="col-start-1 row-start-1 flex flex-shrink-0 items-center gap-2 touch-manipulation"
+          aria-label="Outfit Suggestor home"
+        >
+          <SparkleIcon />
+          <span className="text-sm font-semibold text-white sm:text-base">Outfit Suggestor</span>
+        </button>
 
-          {/* Center nav — single list for desktop and mobile */}
-          <nav
-            className="flex min-w-0 flex-1 items-center justify-center gap-0.5 overflow-x-auto scrollbar-none md:gap-1"
-            aria-label="Main navigation"
-          >
-            {mainLinks.map(({ view, label }) => (
-              <NavLink
-                key={view}
-                label={label}
-                active={currentView === view}
-                onClick={() => onNavigate(view)}
-              />
-            ))}
-          </nav>
+        {/* Nav — second row on mobile, centered on desktop */}
+        <nav
+          className="col-span-2 row-start-2 flex min-w-0 items-center gap-0.5 overflow-x-auto border-t border-white/5 pb-1 pt-2 scrollbar-none md:col-span-1 md:col-start-2 md:row-start-1 md:justify-center md:border-t-0 md:pb-0 md:pt-0 md:gap-1"
+          aria-label="Main navigation"
+        >
+          {mainLinks.map(({ view, label }) => (
+            <NavLink
+              key={view}
+              label={label}
+              active={currentView === view}
+              onClick={() => onNavigate(view)}
+            />
+          ))}
+        </nav>
 
-          {/* Right: auth */}
-          <div className="flex flex-shrink-0 items-center gap-2">
+        {/* Right: auth */}
+        <div className="col-start-2 row-start-1 flex flex-shrink-0 items-center gap-1.5 sm:gap-2 md:col-start-3">
             {isAuthenticated ? (
               <div className="flex items-center gap-2">
                 {user?.is_admin && (
@@ -173,7 +172,6 @@ const NavBar: React.FC<NavBarProps> = ({
               </div>
             )}
           </div>
-        </div>
       </div>
     </header>
   );

@@ -43,6 +43,8 @@ class AIService:
         self.client = openai.OpenAI(api_key=api_key)
         self.model = chatgpt_model  # Use configurable model
         self.max_tokens = 1000
+        # Premium wardrobe gap analysis returns a large structured JSON payload.
+        self.wardrobe_gap_max_tokens = 3000
         self.temperature = 0.7
         self.replicate_token = replicate_token
         self.replicate_client = None
@@ -297,11 +299,15 @@ Required JSON shape:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=self.max_tokens,
+                max_tokens=self.wardrobe_gap_max_tokens,
                 temperature=0.2,
                 response_format={"type": "json_object"},
             )
             content = response.choices[0].message.content or "{}"
+            if response.choices[0].finish_reason == "length":
+                raise ValueError(
+                    "Premium wardrobe analysis response was truncated; increase wardrobe_gap_max_tokens."
+                )
             usage = response.usage
             input_tokens = usage.prompt_tokens if usage else 0
             output_tokens = usage.completion_tokens if usage else 0

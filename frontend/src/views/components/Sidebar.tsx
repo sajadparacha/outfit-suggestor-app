@@ -492,38 +492,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </button>
       </div>
 
-      {/* Generate button */}
-      <button
-        onClick={onGetSuggestion}
-        disabled={!image || loading}
-        className={`mt-5 flex w-full min-h-[48px] touch-manipulation items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-semibold text-white transition-all duration-200 ${
-          !image || loading
-            ? 'cursor-not-allowed bg-white/10 text-slate-500'
-            : 'btn-brand'
-        }`}
-        aria-label="Get AI outfit suggestion"
-      >
-        {loading ? (
-          <>
-            <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-            Styling your outfit...
-          </>
-        ) : (
-          <>
-            <SparkleIcon />
-            Generate Outfit
-          </>
-        )}
-      </button>
-
-      <p className="mt-3 text-center text-xs text-slate-500">
-        Your images are private and secure.
-      </p>
-
-      {/* Advanced options — preserve existing functionality */}
+      {/* Wardrobe options — above generate so users set wardrobe mode first */}
       {isAuthenticated && (onAddToWardrobe || setUseWardrobeOnly) && (
         <details className="group mt-5 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
           <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-slate-300 [&::-webkit-details-marker]:hidden">
@@ -559,6 +528,37 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </details>
       )}
+
+      {/* Generate button */}
+      <button
+        onClick={onGetSuggestion}
+        disabled={!image || loading}
+        className={`mt-5 flex w-full min-h-[48px] touch-manipulation items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-semibold text-white transition-all duration-200 ${
+          !image || loading
+            ? 'cursor-not-allowed bg-white/10 text-slate-500'
+            : 'btn-brand'
+        }`}
+        aria-label="Get AI outfit suggestion"
+      >
+        {loading ? (
+          <>
+            <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            Styling your outfit...
+          </>
+        ) : (
+          <>
+            <SparkleIcon />
+            Generate Outfit
+          </>
+        )}
+      </button>
+
+      <p className="mt-3 text-center text-xs text-slate-500">
+        Your images are private and secure.
+      </p>
 
       {modelGenerationEnabled && (
         <details className="group mt-3 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">

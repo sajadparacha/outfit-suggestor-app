@@ -38,6 +38,64 @@ describe('WardrobeGapAnalysis', () => {
     expect(screen.getByText(/Top buy-next category/i)).toBeInTheDocument();
   });
 
+  it('shows Premium depth and no fallback message for successful premium analysis', () => {
+    const result: WardrobeGapAnalysisResponse = {
+      occasion: 'casual',
+      season: 'summer',
+      style: 'casual',
+      analysis_mode: 'premium',
+      analysisDepth: 'Premium',
+      overall_summary: 'Start with breathable shirts and tailored shorts for summer.',
+      analysis_by_category: {
+        shirt: {
+          category: 'shirt',
+          owned_colors: ['navy'],
+          owned_styles: ['cotton'],
+          missing_colors: ['white'],
+          missing_styles: ['linen'],
+          recommended_purchases: ['White linen shirt'],
+          item_count: 1,
+        },
+      },
+    };
+
+    render(<WardrobeGapAnalysis result={result} loading={false} error={null} />);
+
+    expect(screen.getByText(/Analysis depth:/i)).toBeInTheDocument();
+    expect(screen.getByText('Premium')).toBeInTheDocument();
+    expect(screen.queryByText(/temporarily unavailable/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Start with breathable shirts and tailored shorts for summer/i)).toBeInTheDocument();
+  });
+
+  it('shows fallback messaging when premium analysis degraded to basic', () => {
+    const fallbackSummary =
+      'Premium analysis is temporarily unavailable. Showing free rules-based analysis.';
+    const result: WardrobeGapAnalysisResponse = {
+      occasion: 'casual',
+      season: 'summer',
+      style: 'casual',
+      analysis_mode: 'free',
+      analysisDepth: 'Basic',
+      overall_summary: fallbackSummary,
+      analysis_by_category: {
+        shirt: {
+          category: 'shirt',
+          owned_colors: ['navy'],
+          owned_styles: ['cotton'],
+          missing_colors: ['white'],
+          missing_styles: ['linen'],
+          recommended_purchases: ['White linen shirt'],
+          item_count: 1,
+        },
+      },
+    };
+
+    render(<WardrobeGapAnalysis result={result} loading={false} error={null} />);
+
+    expect(screen.getByText('Basic')).toBeInTheDocument();
+    expect(screen.getByText(fallbackSummary)).toBeInTheDocument();
+  });
+
   it('renders admin cost and prompt/response panels when available', () => {
     const result: WardrobeGapAnalysisResponse = {
       occasion: 'business',
