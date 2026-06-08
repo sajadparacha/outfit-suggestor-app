@@ -4,4 +4,5 @@
  */
 
 export * from './OutfitModels';
+export * from './GuestModels';
 

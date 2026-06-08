@@ -5,6 +5,7 @@ import {
   WardrobeGapAnalysisResponse,
   WardrobePriorityShoppingItem,
 } from '../../models/WardrobeModels';
+import { getReviewTypeLabel, INSIGHTS_COPY } from '../../utils/insightsCopy';
 
 interface WardrobeGapAnalysisProps {
   result: WardrobeGapAnalysisResponse | null;
@@ -244,10 +245,9 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
     [result, orderedCategories]
   );
 
-  const analysisDepthLabel = React.useMemo(() => {
+  const reviewTypeLabel = React.useMemo(() => {
     if (!result) return '';
-    if (result.analysisDepth) return result.analysisDepth;
-    return (result.analysis_mode || 'free') === 'premium' ? 'Premium' : 'Basic';
+    return getReviewTypeLabel(result.analysis_mode, result.analysisDepth);
   }, [result]);
 
   const topSummary = result?.summaryText || result?.overall_summary || '';
@@ -259,7 +259,7 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
   return (
     <section className="mt-6 rounded-3xl border border-white/10 bg-slate-950/70 p-4 shadow-[0_12px_40px_rgba(2,8,23,0.45)] backdrop-blur sm:p-6">
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-white">Wardrobe Gap Analysis</h3>
+        <h3 className="text-lg font-semibold text-white">{INSIGHTS_COPY.WHATS_MISSING_TITLE}</h3>
         <p className="mt-1 text-sm text-slate-400">
           See what you already own and what to buy next for your selected occasion, season, and style.
         </p>
@@ -279,7 +279,7 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
 
       {!loading && !error && !result && (
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-300">
-          Run analysis to get category-wise color and style coverage.
+          {INSIGHTS_COPY.EMPTY_STATE}
         </div>
       )}
 
@@ -292,14 +292,15 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
               <span className="font-medium text-white">{prettyLabel(result.style)}</span>
             </p>
             <p className="text-xs text-slate-400">
-              Analysis depth: <span className="font-medium text-slate-200">{analysisDepthLabel}</span>
+              {INSIGHTS_COPY.REVIEW_TYPE_PREFIX}{' '}
+              <span className="font-medium text-slate-200">{reviewTypeLabel}</span>
             </p>
             <p className="mt-3 text-sm text-slate-200">{topSummary}</p>
           </div>
 
           <div className="rounded-2xl border border-brand-blue/25 bg-brand-blue/10 p-5">
             <div className="mb-3 flex items-center justify-between">
-              <h4 className="text-base font-semibold text-white">Priority Shopping List</h4>
+              <h4 className="text-base font-semibold text-white">{INSIGHTS_COPY.WHAT_TO_BUY_NEXT}</h4>
               <p className="text-xs text-slate-200/90">Buy these first to unlock the most outfit combinations.</p>
             </div>
             <div className="space-y-3">
@@ -343,19 +344,19 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
           {snapshot && (
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                <p className="text-xs uppercase tracking-wide text-slate-400">Categories analyzed</p>
+                <p className="text-xs uppercase tracking-wide text-slate-400">{INSIGHTS_COPY.CATEGORIES_CHECKED}</p>
                 <p className="mt-1 text-xl font-semibold text-white">{snapshot.categoriesAnalyzed}</p>
               </div>
               <div className="rounded-xl border border-amber-400/20 bg-amber-500/10 p-3">
-                <p className="text-xs uppercase tracking-wide text-amber-200/80">Missing colors</p>
+                <p className="text-xs uppercase tracking-wide text-amber-200/80">{INSIGHTS_COPY.COLORS_TO_ADD}</p>
                 <p className="mt-1 text-xl font-semibold text-amber-100">{snapshot.missingColors}</p>
               </div>
               <div className="rounded-xl border border-amber-400/20 bg-amber-500/10 p-3">
-                <p className="text-xs uppercase tracking-wide text-amber-200/80">Missing styles</p>
+                <p className="text-xs uppercase tracking-wide text-amber-200/80">{INSIGHTS_COPY.STYLES_TO_TRY}</p>
                 <p className="mt-1 text-xl font-semibold text-amber-100">{snapshot.missingStyles}</p>
               </div>
               <div className="rounded-xl border border-brand-purple/20 bg-brand-purple/10 p-3">
-                <p className="text-xs uppercase tracking-wide text-brand-purple/80">Top buy-next category</p>
+                <p className="text-xs uppercase tracking-wide text-brand-purple/80">{INSIGHTS_COPY.BEST_CATEGORY_TO_SHOP_NEXT}</p>
                 <p className="mt-1 text-sm font-semibold text-brand-purple/90">{snapshot.topBuyNextCategory}</p>
               </div>
             </div>
@@ -440,7 +441,7 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
                   <div className="space-y-3">
                     <div>
                       <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">
-                        Missing colors
+                        {INSIGHTS_COPY.COLORS_TO_ADD}
                       </p>
                       {renderColorSwatches(
                         insight.missingColors,
@@ -457,7 +458,7 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
                       )}
                     </div>
                     <div>
-                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">Missing styles</p>
+                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">{INSIGHTS_COPY.STYLES_TO_TRY}</p>
                       {renderStyleChips(insight.category, insight.missingStyles, 'Your style coverage looks balanced for this category.', insight.missingColors)}
                     </div>
                     <div>
@@ -499,7 +500,7 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
                           {renderColorSwatches(entry.owned_colors, 'No colors detected yet.')}
                         </div>
                         <div>
-                          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">Missing Colors</p>
+                          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">{INSIGHTS_COPY.COLORS_TO_ADD}</p>
                           {renderColorSwatches(
                             entry.missing_colors,
                             'You already have enough core colors in this category.',
@@ -519,7 +520,7 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
                           {renderStyleChips(entry.category, entry.owned_styles, 'No style keywords detected yet.', entry.missing_colors)}
                         </div>
                         <div>
-                          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">Missing Styles</p>
+                          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">{INSIGHTS_COPY.STYLES_TO_TRY}</p>
                           {renderStyleChips(entry.category, entry.missing_styles, 'Your style coverage looks balanced for this category.', entry.missing_colors)}
                         </div>
                         <div>

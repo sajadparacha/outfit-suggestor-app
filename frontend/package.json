@@ -14,15 +14,19 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-dropzone": "^14.3.8",
+    "react-router": "6.28.2",
+    "react-router-dom": "6.28.2",
     "react-scripts": "5.0.1",
     "typescript": "^4.9.5",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "start:https": "HTTPS=true react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
+    "prestart": "node scripts/verify-router-deps.js",
+    "prebuild": "node scripts/verify-router-deps.js",
+    "start": "craco start",
+    "start:https": "HTTPS=true craco start",
+    "build": "craco build",
+    "test": "craco test",
     "eject": "react-scripts eject",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build"
@@ -46,7 +50,13 @@
       "last 1 safari version"
     ]
   },
+  "overrides": {
+    "react-router": "6.28.2",
+    "react-router-dom": "6.28.2",
+    "@remix-run/router": "1.21.1"
+  },
   "devDependencies": {
+    "@craco/craco": "^7.1.0",
     "@types/node": "^24.8.1",
     "autoprefixer": "^10.4.21",
     "gh-pages": "^6.3.0",

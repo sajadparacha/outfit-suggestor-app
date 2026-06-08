@@ -5,7 +5,7 @@
  */
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import App from '../../App';
+import { renderApp } from '../../test/renderWithRouter';
 import Sidebar from './Sidebar';
 import Hero from './Hero';
 import OutfitPreview from './OutfitPreview';
@@ -15,7 +15,7 @@ import type { OutfitSuggestion } from '../../models/OutfitModels';
 describe('Mobile-friendly layout and touch targets', () => {
   describe('Navigation (App)', () => {
     it('nav has horizontal scroll and dedicated mobile row in header grid', async () => {
-      render(<App />);
+      renderApp();
       const nav = await screen.findByRole('navigation', { name: 'Main navigation' });
       const cls = nav.getAttribute('class') ?? '';
       expect(cls).toMatch(/overflow-x-auto/);
@@ -25,36 +25,36 @@ describe('Mobile-friendly layout and touch targets', () => {
     });
 
     it('header uses responsive grid layout for logo, nav, and auth', () => {
-      render(<App />);
+      renderApp();
       const headerGrid = document.querySelector('header .grid');
       expect(headerGrid).toBeInTheDocument();
       expect(headerGrid?.getAttribute('class')).toMatch(/md:min-h-\[56px\]/);
     });
 
-    it('nav tab buttons have touch-manipulation for responsive tap', () => {
-      render(<App />);
-      const suggestTab = screen.getByRole('button', { name: /^Suggest$/i });
+    it('nav tab links have touch-manipulation for responsive tap', () => {
+      renderApp();
+      const suggestTab = screen.getByRole('link', { name: /^Suggest$/i });
       expect(suggestTab.getAttribute('class')).toMatch(/touch-manipulation/);
     });
 
-    it('nav tab buttons have minimum height for touch targets', () => {
-      render(<App />);
-      const suggestTab = screen.getByRole('button', { name: /^Suggest$/i });
+    it('nav tab links have minimum height for touch targets', () => {
+      renderApp();
+      const suggestTab = screen.getByRole('link', { name: /^Suggest$/i });
       const cls = suggestTab.getAttribute('class') ?? '';
       expect(cls).toMatch(/touch-manipulation/);
       expect(cls).toMatch(/min-h-\[44px\]|py-2/);
     });
 
     it('Guide tab is visible and has touch-friendly classes', () => {
-      render(<App />);
-      const guideTab = screen.getByRole('button', { name: 'Guide' });
+      renderApp();
+      const guideTab = screen.getByRole('link', { name: 'Guide' });
       expect(guideTab).toBeInTheDocument();
       expect(guideTab.getAttribute('class')).toMatch(/touch-manipulation/);
     });
 
     it('About is in the footer with touch-friendly classes', async () => {
-      render(<App />);
-      await screen.findByRole('button', { name: /^Suggest$/ });
+      renderApp();
+      await screen.findByRole('link', { name: /^Suggest$/ });
       fireEvent.click(screen.getByRole('button', { name: /More options/i }));
       const aboutFooter = await screen.findByRole('button', { name: /About the app and creator/i });
       expect(aboutFooter).toBeInTheDocument();
@@ -229,7 +229,7 @@ describe('Mobile-friendly layout and touch targets', () => {
 
   describe('Global styles', () => {
     it('scrollbar-none utility is available in document when nav is rendered', () => {
-      render(<App />);
+      renderApp();
       const el = document.querySelector('.scrollbar-none');
       expect(el).toBeInTheDocument();
     });

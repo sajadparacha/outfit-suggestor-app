@@ -63,6 +63,8 @@ class OutfitViewModel: ObservableObject {
     @Published var existingDuplicateSuggestion: OutfitSuggestion?
     @Published var loadingMessage: String?
     @Published var loadingContext: LoadingContext?
+    @Published var guestRemaining: Int?
+    @Published var guestRequiresSignup = false
     
     private let apiService: APIServiceProtocol
     private var cancellables = Set<AnyCancellable>()
@@ -91,6 +93,47 @@ class OutfitViewModel: ObservableObject {
     }
     
     var isAuthenticated: Bool { AuthService.shared.isAuthenticated }
+
+    var isGuestBlocked: Bool {
+        guard !isAuthenticated else { return false }
+        if guestRequiresSignup { return true }
+        if let guestRemaining, guestRemaining <= 0 { return true }
+        return false
+    }
+
+    func refreshGuestUsage() async {
+        guard !isAuthenticated else {
+            guestRemaining = nil
+            guestRequiresSignup = false
+            return
+        }
+        do {
+            let usage = try await APIService.shared.getGuestUsage()
+            guestRemaining = usage.remaining
+            guestRequiresSignup = usage.requires_signup
+        } catch {
+            // Backend enforces limits; silent failure keeps generate enabled until known.
+        }
+    }
+
+    func clearGuestUsageState() {
+        guestRemaining = nil
+        guestRequiresSignup = false
+    }
+
+    private func applyGuestLimitReached() {
+        guestRemaining = 0
+        guestRequiresSignup = true
+    }
+
+    private func guardGuestCanUseAI() -> Bool {
+        guard !isAuthenticated else { return true }
+        if isGuestBlocked {
+            applyGuestLimitReached()
+            return false
+        }
+        return true
+    }
 
     func cancelOperation() {
         activeOperationTask?.cancel()
@@ -161,6 +204,7 @@ class OutfitViewModel: ObservableObject {
             showErrorMessage("Please select an image first")
             return
         }
+        guard guardGuestCanUseAI() else { return }
         isLoading = true
         loadingContext = .suggestion
         loadingMessage = generateModelImage
@@ -218,10 +262,17 @@ class OutfitViewModel: ObservableObject {
             highlightGenerateButton = false
             // Suggestion flow may add new history entries server-side; mark cache stale.
             hasLoadedHistory = false
+            if !isAuthenticated {
+                await refreshGuestUsage()
+            }
         } catch is CancellationError {
             return
         } catch let error as APIServiceError {
-            showErrorMessage(error.errorDescription ?? "An error occurred")
+            if case .guestLimitReached = error {
+                applyGuestLimitReached()
+            } else {
+                showErrorMessage(error.errorDescription ?? "An error occurred")
+            }
         } catch {
             showErrorMessage("An unexpected error occurred: \(error.localizedDescription)")
         }
@@ -249,6 +300,7 @@ class OutfitViewModel: ObservableObject {
             showErrorMessage("No current suggestion to get an alternate for")
             return
         }
+        guard guardGuestCanUseAI() else { return }
         if variation == .wardrobeOnly {
             useWardrobeOnly = true
         }
@@ -301,10 +353,17 @@ class OutfitViewModel: ObservableObject {
             )
             currentSuggestion = suggestion
             hasLoadedHistory = false
+            if !isAuthenticated {
+                await refreshGuestUsage()
+            }
         } catch is CancellationError {
             return
         } catch let error as APIServiceError {
-            showErrorMessage(error.errorDescription ?? "An error occurred")
+            if case .guestLimitReached = error {
+                applyGuestLimitReached()
+            } else {
+                showErrorMessage(error.errorDescription ?? "An error occurred")
+            }
         } catch {
             showErrorMessage(error.localizedDescription)
         }

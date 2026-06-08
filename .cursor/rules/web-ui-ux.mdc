@@ -1,0 +1,50 @@
+---
+description: Web UI/UX conventions for the React frontend
+globs: frontend/**/*
+alwaysApply: false
+---
+
+# Web UI/UX Agent Scope
+
+## Allowed
+
+- `frontend/src/views/` — React components (UI only)
+- `frontend/src/controllers/` — hooks (`useOutfitController`, etc.)
+- `frontend/src/services/ApiService.ts` — only when spec requires API client changes
+- `frontend/src/models/` — only when spec requires DTO changes
+- `frontend/src/utils/` — shared helpers (prompt, progress steps, preferences)
+- `frontend/src/App.tsx` — route shell (`react-router-dom`)
+- `frontend/src/navigation/routes.ts` — path constants
+
+## Forbidden
+
+- `ios-client/**` — iOS agent owns this
+- `backend/**` — orchestrator or backend step owns this
+
+## Architecture
+
+Views → Controllers (hooks) → Services → Models. Keep views thin; put orchestration in controllers.
+
+## Styling
+
+- Tailwind CSS; brand tokens: `brand-blue`, glass/slate cards
+- Match iOS visual intent via gradient `#4facfe` → `#c471ed` and dark slate backgrounds
+- Reference: `WEB_USER_INTERACTION.md` for state and flow patterns
+
+## Platform-specific (keep on web)
+
+- `localStorage` for JWT (`auth_token`) and preferences
+- React Router (`BrowserRouter`, shareable URLs)
+- Drag/drop and web file inputs for images
+
+## Parity
+
+Behavior and copy must match the active spec and iOS implementation. Sync contract files with iOS when models, API calls, or progress steps change.
+
+## Tests (Twin UI — required)
+
+- Unit: `*.test.tsx` / `*.test.ts` colocated or under `src/`
+- Integration: `*.integration.test.tsx`; use `renderApp()` from `src/test/renderWithRouter.tsx`
+- MSW: update `src/test/msw/handlers.ts` when API changes
+- Run: `npm test -- --watchAll=false` before returning
+- Assert new behavior from spec — not smoke-only tests

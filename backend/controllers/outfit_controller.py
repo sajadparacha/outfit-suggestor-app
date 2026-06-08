@@ -9,8 +9,10 @@ from models.outfit import OutfitSuggestion
 from models.outfit_history import OutfitHistory
 from models.user import User
 from models.wardrobe import WardrobeItem
+from exceptions import GuestLimitReachedException
 from services.ai_service import AIService
 from services.outfit_service import OutfitService
+from services.guest_usage_service import GuestUsageService
 from services.wardrobe_matcher import WardrobeMatcher
 from utils.image_processor import encode_image, validate_image
 
@@ -167,7 +169,9 @@ class OutfitController:
         source_wardrobe_item_id: Optional[int] = None,
         previous_outfit_text: Optional[str] = None,
         db: Session = None,
-        current_user: Optional[User] = None
+        current_user: Optional[User] = None,
+        guest_session_id: Optional[str] = None,
+        guest_usage_service: Optional[GuestUsageService] = None,
     ) -> OutfitSuggestion:
         """
         Handle outfit suggestion request
@@ -189,6 +193,9 @@ class OutfitController:
         try:
             # Validate image
             validate_image(image)
+
+            if current_user is None and guest_session_id and guest_usage_service:
+                guest_usage_service.assert_can_use_ai(db, guest_session_id)
             
             # Encode image to base64
             image_base64 = encode_image(image.file)
@@ -311,6 +318,9 @@ class OutfitController:
                 cost_info["model_image_cost"] = 0.0
             if "total_cost" not in cost_info or cost_info["total_cost"] == cost_info.get("gpt4_cost", 0):
                 cost_info["total_cost"] = cost_info.get("gpt4_cost", 0) + cost_info.get("model_image_cost", 0)
+
+            if current_user is None and guest_session_id and guest_usage_service:
+                guest_usage_service.record_successful_ai_call(db, guest_session_id)
             
             # Add cost information to suggestion
             if hasattr(suggestion, 'model_dump'):
@@ -323,6 +333,8 @@ class OutfitController:
                 return suggestion
             
         except HTTPException:
+            raise
+        except GuestLimitReachedException:
             raise
         except Exception as e:
             db.rollback()

@@ -15,7 +15,7 @@ struct SettingsView: View {
     @State private var isLoading = false
     @State private var showRelaunchConfirmation = false
 
-    private var isAdmin: Bool { auth.currentUser?.is_admin == true }
+    private var isAdmin: Bool { AdminVisibility.isAdmin(user: auth.currentUser) }
 
     private var canShowRelaunchButton: Bool {
 #if DEBUG
@@ -68,23 +68,29 @@ struct SettingsView: View {
             Section("Discover") {
                 if auth.isAuthenticated {
                     NavigationLink(destination: InsightsView()) {
-                        Label("Insights", systemImage: "chart.bar.xaxis")
+                        VStack(alignment: .leading, spacing: 2) {
+                            Label("Insights", systemImage: "chart.bar.xaxis")
+                            Text(MicroHelpCopy.insights)
+                                .font(.caption)
+                                .foregroundColor(AppTheme.textSecondary)
+                        }
                     }
                     .accessibilityIdentifier("profile.insightsLink")
                 }
-                NavigationLink(destination: UserGuideView()) {
+                NavigationLink(destination: UserGuideView(isAdmin: isAdmin)) {
                     Label("Guide", systemImage: "book")
                 }
-                NavigationLink(destination: AboutView()) {
+                NavigationLink(destination: AboutView(isAdmin: isAdmin)) {
                     Label("About", systemImage: "info.circle")
                 }
             }
 
-            if isAdmin {
+            if AdminVisibility.shouldShowSettingsAdminSection(for: auth.currentUser) {
                 Section("Admin") {
                     NavigationLink(destination: ReportsView()) {
                         Label("Reports", systemImage: "chart.bar")
                     }
+                    .accessibilityIdentifier("profile.reportsLink")
                 }
             }
 

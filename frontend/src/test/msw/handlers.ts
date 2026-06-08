@@ -8,6 +8,17 @@ export const handlers = [
     return res(ctx.json([]));
   }),
 
+  rest.get(`${API_BASE}/api/guest-usage`, (_req, res, ctx) => {
+    return res(
+      ctx.json({
+        limit: 3,
+        used: 0,
+        remaining: 3,
+        requires_signup: false,
+      })
+    );
+  }),
+
   rest.get(`${API_BASE}/api/wardrobe/summary`, (_req, res, ctx) => {
     return res(
       ctx.json({

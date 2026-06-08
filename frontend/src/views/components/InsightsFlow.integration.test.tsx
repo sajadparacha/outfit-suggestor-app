@@ -1,8 +1,8 @@
-import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { rest } from 'msw';
-import App from '../../App';
+import { renderApp } from '../../test/renderWithRouter';
 import { server } from '../../test/msw/server';
+import { INSIGHTS_COPY } from '../../utils/insightsCopy';
 
 const API_BASE = 'http://localhost:8001';
 
@@ -62,13 +62,13 @@ describe('Insights flow integration', () => {
   });
 
   it('opens insights, runs free analysis, and renders snapshot metrics', async () => {
-    render(<App />);
+    renderApp();
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Insights' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Insights' })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Insights' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Insights' }));
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /Wardrobe Insights/i })).toBeInTheDocument();
@@ -78,15 +78,16 @@ describe('Insights flow integration', () => {
     fireEvent.click(screen.getByRole('button', { name: /Analyze My Wardrobe/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Choose Analysis Mode/i)).toBeInTheDocument();
+      expect(screen.getByText(INSIGHTS_COPY.MODE_PICKER_TITLE)).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Basic Analysis/i }));
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(INSIGHTS_COPY.QUICK_WARDROBE_CHECK, 'i') }));
 
     await waitFor(() => {
       expect(screen.getByText(/You should add brighter shirts/i)).toBeInTheDocument();
-      expect(screen.getByText(/Categories analyzed/i)).toBeInTheDocument();
-      expect(screen.getByText(/Top buy-next category/i)).toBeInTheDocument();
+      expect(screen.getByText(INSIGHTS_COPY.CATEGORIES_CHECKED)).toBeInTheDocument();
+      expect(screen.getByText(INSIGHTS_COPY.BEST_CATEGORY_TO_SHOP_NEXT)).toBeInTheDocument();
+      expect(screen.getByText(INSIGHTS_COPY.WHATS_MISSING_TITLE)).toBeInTheDocument();
       expect(screen.getAllByText(/Shirt/i).length).toBeGreaterThan(0);
     });
   });

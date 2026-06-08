@@ -12,7 +12,10 @@ import SwiftUI
 struct OutfitSuggestorApp: App {
     var body: some Scene {
         WindowGroup {
-            RootView()  // Login/Register first, then main app when authenticated
+            RootView()
+                .onOpenURL { url in
+                    RouteCoordinator.shared.handleOpenURL(url)
+                }
         }
     }
 }

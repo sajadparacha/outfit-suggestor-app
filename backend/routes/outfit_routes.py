@@ -1,5 +1,5 @@
 """Outfit suggestion API routes - Thin HTTP layer using controllers"""
-from fastapi import APIRouter, File, UploadFile, Form, Depends, Body
+from fastapi import APIRouter, File, UploadFile, Form, Depends, Body, Request
 from typing import Optional, List
 from sqlalchemy.orm import Session
 
@@ -9,13 +9,26 @@ from models.database import get_db
 from controllers.outfit_controller import OutfitController
 from config import get_outfit_controller
 from dependencies import get_optional_user
+from services.guest_usage_service import GuestUsageService
 
 
 router = APIRouter(prefix="/api", tags=["outfit"])
+guest_usage_service = GuestUsageService()
+
+
+@router.get("/guest-usage")
+async def get_guest_usage(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Return remaining free AI calls for an anonymous guest session."""
+    guest_session_id = guest_usage_service.resolve_guest_session_id(request)
+    return guest_usage_service.get_usage(db, guest_session_id)
 
 
 @router.post("/suggest-outfit", response_model=OutfitSuggestion)
 async def suggest_outfit(
+    request: Request,
     image: UploadFile = File(...),
     text_input: str = Form(""),
     location: str = Form(None),
@@ -48,6 +61,9 @@ async def suggest_outfit(
     """
     use_wardrobe_only_bool = use_wardrobe_only.lower() in ('true', '1', 'yes', 'on')
     prev = (previous_outfit_text or "").strip() or None
+    guest_session_id = None
+    if current_user is None:
+        guest_session_id = guest_usage_service.resolve_guest_session_id(request)
     return await outfit_controller.suggest_outfit(
         image=image,
         text_input=text_input,
@@ -58,7 +74,9 @@ async def suggest_outfit(
         source_wardrobe_item_id=source_wardrobe_item_id,
         previous_outfit_text=prev,
         db=db,
-        current_user=current_user
+        current_user=current_user,
+        guest_session_id=guest_session_id,
+        guest_usage_service=guest_usage_service,
     )
 
 

@@ -2,7 +2,7 @@
  * Unit tests for OutfitHistory - load, display, search, delete
  */
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import OutfitHistory from './OutfitHistory';
 import type { OutfitHistoryEntry } from '../../models/OutfitModels';
 
@@ -25,15 +25,8 @@ describe('OutfitHistory', () => {
     reasoning: 'Classic combination for a professional look.',
   };
 
-  const originalConfirm = window.confirm;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    window.confirm = jest.fn(() => true);
-  });
-
-  afterEach(() => {
-    window.confirm = originalConfirm;
   });
 
   describe('loading state', () => {
@@ -192,8 +185,7 @@ describe('OutfitHistory', () => {
   });
 
   describe('delete entry', () => {
-    it('calls onDelete when delete button is clicked and user confirms', async () => {
-      (window.confirm as jest.Mock).mockReturnValue(true);
+    it('opens confirmation modal when delete button is clicked', () => {
       render(
         <OutfitHistory
           history={[baseEntry]}
@@ -207,13 +199,14 @@ describe('OutfitHistory', () => {
       );
       const deleteBtn = screen.getByTitle(/Delete this entry/i);
       fireEvent.click(deleteBtn);
-      expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to delete this outfit history entry?');
-      await new Promise((r) => setTimeout(r, 0));
-      expect(mockOnDelete).toHaveBeenCalledWith(1);
+      expect(screen.getByText('Delete history entry?')).toBeInTheDocument();
+      expect(
+        screen.getByText('This outfit suggestion will be removed from your history.')
+      ).toBeInTheDocument();
+      expect(mockOnDelete).not.toHaveBeenCalled();
     });
 
-    it('does not call onDelete when user cancels confirm', async () => {
-      (window.confirm as jest.Mock).mockReturnValue(false);
+    it('calls onDelete when user confirms delete in modal', async () => {
       render(
         <OutfitHistory
           history={[baseEntry]}
@@ -225,9 +218,29 @@ describe('OutfitHistory', () => {
           onDelete={mockOnDelete}
         />
       );
-      const deleteBtn = screen.getByTitle(/Delete this entry/i);
-      fireEvent.click(deleteBtn);
+      fireEvent.click(screen.getByTitle(/Delete this entry/i));
+      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+      await waitFor(() => {
+        expect(mockOnDelete).toHaveBeenCalledWith(1);
+      });
+    });
+
+    it('does not call onDelete when user cancels delete in modal', () => {
+      render(
+        <OutfitHistory
+          history={[baseEntry]}
+          loading={false}
+          error={null}
+          isFullView={true}
+          onRefresh={mockOnRefresh}
+          onEnsureFullHistory={mockOnEnsureFullHistory}
+          onDelete={mockOnDelete}
+        />
+      );
+      fireEvent.click(screen.getByTitle(/Delete this entry/i));
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
       expect(mockOnDelete).not.toHaveBeenCalled();
+      expect(screen.queryByText('Delete history entry?')).not.toBeInTheDocument();
     });
   });
 });

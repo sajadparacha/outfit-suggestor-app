@@ -6,9 +6,18 @@ interface LoginProps {
   onSwitchToRegister: () => void;
   loading: boolean;
   error: string | null;
+  headline?: string;
+  subheadline?: string;
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister, loading, error }) => {
+const Login: React.FC<LoginProps> = ({
+  onLogin,
+  onSwitchToRegister,
+  loading,
+  error,
+  headline,
+  subheadline,
+}) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -25,8 +34,13 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister, loading, err
     <div className="p-6 sm:p-8">
       <div className="space-y-6">
         <div>
-          <h2 className="text-center text-2xl font-bold text-white">Sign in to your account</h2>
-          <p className="mt-2 text-center text-sm text-slate-400">
+          <h2 className="text-center text-2xl font-bold text-white">
+            {headline ?? 'Sign in to your account'}
+          </h2>
+          {subheadline ? (
+            <p className="mt-2 text-center text-sm text-slate-300">{subheadline}</p>
+          ) : null}
+          <p className={`text-center text-sm text-slate-400 ${subheadline ? 'mt-3' : 'mt-2'}`}>
             Or{' '}
             <button
               type="button"

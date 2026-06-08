@@ -19,6 +19,7 @@ struct HistoryListView: View {
     @State private var sortNewestFirst = true
     @State private var hasLoadedAll = false
     @State private var fullScreenImage: UIImage?
+    @State private var pendingDeleteEntry: OutfitHistoryEntry?
     var onSelectEntry: (OutfitHistoryEntry) -> Void
     
     private var filteredAndSorted: [OutfitHistoryEntry] {
@@ -88,7 +89,7 @@ struct HistoryListView: View {
                                     WebStyleHistoryCardView(
                                         entry: entry,
                                         onSelect: { onSelectEntry(entry) },
-                                        onDelete: { delete(entry) },
+                                        onDelete: { pendingDeleteEntry = entry },
                                         onViewImage: { image in fullScreenImage = image }
                                     )
                                     .accessibilityIdentifier("history.card.index.\(index)")
@@ -115,6 +116,29 @@ struct HistoryListView: View {
                     fullScreenImage = nil
                 }
             }
+        }
+        .confirmationDialog(
+            "Delete history entry?",
+            isPresented: Binding(
+                get: { pendingDeleteEntry != nil },
+                set: { if !$0 { pendingDeleteEntry = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                if let entry = pendingDeleteEntry {
+                    delete(entry)
+                }
+                pendingDeleteEntry = nil
+            }
+            .accessibilityIdentifier("history.deleteConfirmButton")
+            Button("Cancel", role: .cancel) {
+                pendingDeleteEntry = nil
+            }
+            .accessibilityIdentifier("history.deleteCancelButton")
+        } message: {
+            Text("This outfit suggestion will be removed from your history.")
+                .accessibilityIdentifier("history.deleteConfirmDialog")
         }
     }
     

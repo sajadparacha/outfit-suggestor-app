@@ -22,6 +22,10 @@ from models.user import User  # noqa: F401
 from models.outfit_history import OutfitHistory  # noqa: F401
 from models.wardrobe import WardrobeItem  # noqa: F401
 from models.access_log import AccessLog  # noqa: F401
+from models.guest_usage import GuestUsage  # noqa: F401
+from exceptions import GuestLimitReachedException
+from fastapi.responses import JSONResponse
+from fastapi import Request
 
 # Startup logging
 print("=" * 50)
@@ -64,6 +68,17 @@ except ImportError:
 
 # Create database tables (simple auto-migration for now)
 Base.metadata.create_all(bind=engine)
+
+
+@app.exception_handler(GuestLimitReachedException)
+async def guest_limit_reached_handler(_request: Request, _exc: GuestLimitReachedException):
+    return JSONResponse(
+        status_code=403,
+        content={
+            "detail": GuestLimitReachedException.message,
+            "code": GuestLimitReachedException.code,
+        },
+    )
 
 # Include routers
 app.include_router(auth_router)

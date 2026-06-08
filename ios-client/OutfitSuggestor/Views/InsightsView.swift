@@ -25,10 +25,10 @@ struct InsightsView: View {
                     Image(systemName: "bag.badge.plus")
                         .font(.largeTitle)
                         .foregroundColor(AppTheme.accent)
-                    Text("Wardrobe Gap Analysis")
+                    Text(InsightsCopy.pageTitle)
                         .font(.title2)
                         .fontWeight(.bold)
-                    Text("Get a ranked shopping list based on what unlocks the most outfit combinations.")
+                    Text(MicroHelpCopy.insights)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -50,11 +50,19 @@ struct InsightsView: View {
                 }
                 
                 // Analysis mode
-                Picker("Analysis Mode", selection: $analysisMode) {
-                    Text("Basic").tag("free")
-                    Text("Premium (ChatGPT)").tag("premium")
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(InsightsCopy.modePickerTitle)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(AppTheme.textPrimary)
+                    Text(InsightsCopy.modePickerSubtitle)
+                        .font(.caption)
+                        .foregroundColor(AppTheme.textSecondary)
+                    Picker(InsightsCopy.modePickerTitle, selection: $analysisMode) {
+                        Text(InsightsCopy.quickCheckSegmentLabel).tag("free")
+                        Text(InsightsCopy.aiStylistSegmentLabel).tag("premium")
+                    }
+                    .pickerStyle(.segmented)
                 }
-                .pickerStyle(.segmented)
                 .padding(.horizontal)
                 .accessibilityIdentifier("insights.analysisMode")
                 
@@ -109,9 +117,7 @@ struct InsightsView: View {
     }
 
     private var analysisLoadingMessage: String {
-        analysisMode == "premium"
-            ? "Running Premium Analysis with ChatGPT..."
-            : "Analyzing your wardrobe with free rules..."
+        InsightsCopy.loadingMessage(forAnalysisMode: analysisMode)
     }
 
     private func cancelAnalysis() {
@@ -301,7 +307,7 @@ struct GapAnalysisResultView: View {
                         .cornerRadius(8)
                 }
 
-                Text("Analysis depth: \(analysisDepth)")
+                Text(InsightsCopy.reviewTypeDisplay(forAnalysisDepth: analysisDepth))
                     .font(.caption)
                     .foregroundColor(AppTheme.textSecondary)
 
@@ -321,7 +327,7 @@ struct GapAnalysisResultView: View {
 
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    Text("Priority Shopping List")
+                    Text(InsightsCopy.shoppingSectionTitle)
                         .font(.headline)
                         .foregroundColor(AppTheme.textPrimary)
                     Spacer()
@@ -352,10 +358,10 @@ struct GapAnalysisResultView: View {
             .padding(.horizontal)
 
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 10)], spacing: 10) {
-                SummaryStatCard(title: "Categories Analyzed", value: "\(orderedCategories.count)")
-                SummaryStatCard(title: "Missing Colors", value: "\(missingColorsCount)")
-                SummaryStatCard(title: "Missing Styles", value: "\(missingStylesCount)")
-                SummaryStatCard(title: "Top Buy-Next Category", value: topBuyNextCategory)
+                SummaryStatCard(title: InsightsCopy.categoriesCheckedLabel, value: "\(orderedCategories.count)")
+                SummaryStatCard(title: InsightsCopy.colorsToAddLabel, value: "\(missingColorsCount)")
+                SummaryStatCard(title: InsightsCopy.stylesToTryLabel, value: "\(missingStylesCount)")
+                SummaryStatCard(title: InsightsCopy.bestCategoryToShopNextLabel, value: topBuyNextCategory)
             }
             .padding(.horizontal)
 
@@ -496,7 +502,7 @@ struct CategoryGapCard: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Missing Colors")
+                Text(InsightsCopy.colorsToAddLabel)
                     .font(.caption.weight(.semibold))
                     .foregroundColor(AppTheme.textSecondary)
                     .textCase(.uppercase)
@@ -510,7 +516,7 @@ struct CategoryGapCard: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Missing Styles")
+                Text(InsightsCopy.stylesToTryLabel)
                     .font(.caption.weight(.semibold))
                     .foregroundColor(AppTheme.textSecondary)
                     .textCase(.uppercase)
@@ -584,7 +590,7 @@ struct CategoryGapCard: View {
                 }
                 if !entry.missing_colors.isEmpty {
                     ColorSwatchRow(
-                        title: "Missing Colors",
+                        title: InsightsCopy.colorsToAddLabel,
                         colors: entry.missing_colors,
                         onTap: { color in
                             openGoogleImagesForSuggestion(color: color, style: entry.missing_styles.first)
@@ -596,7 +602,7 @@ struct CategoryGapCard: View {
                 }
                 if !entry.missing_styles.isEmpty {
                     ChipSection(
-                        title: "Missing Styles",
+                        title: InsightsCopy.stylesToTryLabel,
                         items: entry.missing_styles,
                         color: .orange,
                         onTap: { style in openGoogleImagesForSuggestion(color: nil, style: style) }

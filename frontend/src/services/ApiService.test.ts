@@ -2,12 +2,13 @@
  * Unit tests for ApiService — request shape for recent outfit API fields.
  */
 import apiService from './ApiService';
+import { GuestLimitReachedError } from '../models/GuestModels';
 
 describe('ApiService.getSuggestion', () => {
   const originalFetch = global.fetch;
 
-  function mockJsonResponse() {
-    const body = {
+  function mockJsonResponse(body?: object, status = 200, ok = true) {
+    const responseBody = body ?? {
       shirt: 'x',
       trouser: 'x',
       blazer: 'x',
@@ -16,10 +17,10 @@ describe('ApiService.getSuggestion', () => {
       reasoning: 'x',
     };
     const res = {
-      ok: true,
-      status: 200,
+      ok,
+      status,
       headers: { get: (h: string) => (h === 'content-type' ? 'application/json' : null) },
-      json: async () => body,
+      json: async () => responseBody,
       clone() {
         return res;
       },
@@ -28,6 +29,8 @@ describe('ApiService.getSuggestion', () => {
   }
 
   beforeEach(() => {
+    localStorage.clear();
+    apiService.setAuthToken(null);
     jest.spyOn(console, 'log').mockImplementation(() => {});
     global.fetch = jest.fn().mockResolvedValue(mockJsonResponse()) as unknown as typeof fetch;
   });
@@ -73,6 +76,70 @@ describe('ApiService.getSuggestion', () => {
     const init = (global.fetch as jest.Mock).mock.calls[0][1] as RequestInit;
     const fd = init.body as FormData;
     expect(fd.get('previous_outfit_text')).toBe('Shirt: white\nTrousers: navy');
+  });
+
+  it('sends X-Guest-Session-Id when unauthenticated', async () => {
+    localStorage.setItem('guest_session_id', 'test-guest-uuid');
+    const file = new File(['x'], 'photo.jpg', { type: 'image/jpeg' });
+    await apiService.getSuggestion(file);
+
+    const init = (global.fetch as jest.Mock).mock.calls[0][1] as RequestInit;
+    expect((init.headers as Record<string, string>)['X-Guest-Session-Id']).toBe('test-guest-uuid');
+    expect((init.headers as Record<string, string>)['Authorization']).toBeUndefined();
+  });
+
+  it('throws GuestLimitReachedError on 403 guest_limit_reached', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      mockJsonResponse(
+        {
+          detail:
+            "You've used your 3 free AI outfit suggestions. Create an account to keep using the app.",
+          code: 'guest_limit_reached',
+        },
+        403,
+        false
+      )
+    ) as unknown as typeof fetch;
+
+    const file = new File(['x'], 'photo.jpg', { type: 'image/jpeg' });
+    await expect(apiService.getSuggestion(file)).rejects.toBeInstanceOf(GuestLimitReachedError);
+  });
+});
+
+describe('ApiService.getGuestUsage', () => {
+  const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem('guest_session_id', 'guest-123');
+    apiService.setAuthToken(null);
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    jest.restoreAllMocks();
+  });
+
+  it('fetches guest usage with X-Guest-Session-Id header', async () => {
+    const usage = { limit: 3, used: 1, remaining: 2, requires_signup: false };
+    const res = {
+      ok: true,
+      status: 200,
+      headers: { get: (h: string) => (h === 'content-type' ? 'application/json' : null) },
+      json: async () => usage,
+      clone() {
+        return res;
+      },
+    };
+    global.fetch = jest.fn().mockResolvedValue(res) as unknown as typeof fetch;
+
+    const result = await apiService.getGuestUsage();
+
+    expect(result).toEqual(usage);
+    const [url, init] = (global.fetch as jest.Mock).mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/api/guest-usage');
+    expect((init.headers as Record<string, string>)['X-Guest-Session-Id']).toBe('guest-123');
   });
 });
 

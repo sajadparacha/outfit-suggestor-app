@@ -79,6 +79,25 @@ describe('Login', () => {
     expect(screen.getByText(/Invalid credentials/)).toBeInTheDocument();
   });
 
+  it('renders contextual headline and subheadline when provided', () => {
+    render(
+      <Login
+        onLogin={mockOnLogin}
+        onSwitchToRegister={mockOnSwitchToRegister}
+        loading={false}
+        error={null}
+        headline="Sign in to save favorites."
+        subheadline="Your liked outfits stay with you across devices."
+      />
+    );
+    expect(
+      screen.getByRole('heading', { name: /Sign in to save favorites/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Your liked outfits stay with you across devices/i)
+    ).toBeInTheDocument();
+  });
+
   it('disables submit button and shows Signing in... when loading', () => {
     render(
       <Login

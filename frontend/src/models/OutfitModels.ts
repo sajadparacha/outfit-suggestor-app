@@ -99,6 +99,7 @@ export interface OutfitResponse {
 export interface ApiError {
   detail: string;
   status?: number;
+  code?: string;
 }
 
 export interface OutfitHistoryEntry {

@@ -21,12 +21,12 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 | **Random from history** | ✅ | ✅ | Button on Main; client picks from history |
 | **Duplicate detection** | ✅ | ✅ | Check before suggestion; use cached or force new |
 | **Next / Alternate outfit** | ✅ | ✅ | Button after suggestion; requests a different outfit |
-| **Wardrobe Insights** | ✅ | ✅ | Gap analysis by category (free/premium mode) |
+| **Wardrobe Insights** | ✅ | ✅ | Wardrobe gap analysis by category; user-facing modes **Quick Wardrobe Check** (free) and **AI Stylist Review** (premium); results use fashion-assistant copy (e.g. *What's Missing From My Wardrobe?*, *What to Buy Next*) |
 | **User Guide** | ✅ | ✅ | In-app documentation with feature walkthroughs |
 | **Integration Tests (Admin)** | ✅ | ✅ | Admin-only test runner (list/run/run-all) |
 | **Settings** | ✅ | ✅ | Change password, account info, logout |
 | **About** | ✅ | ✅ | App info, links |
-| **Admin reports** | ✅ | ✅ | Reports tab (admin only); access logs list + stats |
+| **Admin UX gating** | ✅ | ✅ | Non-admins never see prompts/cost/diagnostics/model selector/reports/tests; Guide/About admin sections hidden; web admin routes redirect silently |
 
 ---
 

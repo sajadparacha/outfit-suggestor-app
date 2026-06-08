@@ -6,6 +6,8 @@
 import SwiftUI
 
 struct AboutView: View {
+    var isAdmin: Bool = false
+
     var body: some View {
         ScrollView(.vertical, showsIndicators: true) {
             VStack(alignment: .leading, spacing: 16) {
@@ -15,7 +17,7 @@ struct AboutView: View {
                     .foregroundColor(.secondary)
                 Text("Upload a photo of any clothing item and get outfit recommendations. When logged in, manage your wardrobe, view history, and use Random from Wardrobe or Random from History.")
                     .padding(.vertical, 8)
-                Text("Built with React (web), SwiftUI (iOS), FastAPI, OpenAI GPT-4 Vision, and more.")
+                Text(AboutCopy.techStackDescription(isAdmin: isAdmin))
                     .font(.caption)
                     .foregroundColor(.secondary)
                 Divider()

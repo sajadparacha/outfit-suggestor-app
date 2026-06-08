@@ -2,10 +2,9 @@
  * Integration tests for post-result outfit actions:
  * Generate Another Look, Make it more formal/casual, Use wardrobe items only, Change occasion.
  */
-import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { screen, waitFor, fireEvent } from '@testing-library/react';
 import { rest } from 'msw';
-import App from '../../App';
+import { renderApp } from '../../test/renderWithRouter';
 import ApiService from '../../services/ApiService';
 import { server } from '../../test/msw/server';
 import { OUTFIT_VARIATION_MODIFIERS } from '../../utils/outfitPromptUtils';
@@ -93,7 +92,7 @@ describe('Outfit result actions (App integration)', () => {
   });
 
   const uploadAndGenerateFirstSuggestion = async () => {
-    render(<App />);
+    renderApp();
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Get AI outfit suggestion/i })).toBeInTheDocument();

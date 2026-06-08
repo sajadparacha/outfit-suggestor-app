@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { OutfitHistoryEntry } from '../../models/OutfitModels';
 import { useHistorySearchController } from '../../controllers/useHistorySearchController';
+import ConfirmationModal from './ConfirmationModal';
 
 interface OutfitHistoryProps {
   history: OutfitHistoryEntry[];
@@ -54,6 +55,7 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
   // Image viewer state
   const [viewingImage, setViewingImage] = useState<string | null>(null);
   const [viewingImageType, setViewingImageType] = useState<'model' | 'upload' | null>(null);
+  const [pendingDeleteEntryId, setPendingDeleteEntryId] = useState<number | null>(null);
 
   const handleViewImage = (imageData: string, type: 'model' | 'upload') => {
     if (type === 'model') {
@@ -64,14 +66,23 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
     setViewingImageType(type);
   };
 
-  const handleDeleteEntry = async (entryId: number) => {
-    if (window.confirm('Are you sure you want to delete this outfit history entry?')) {
-      try {
-        await onDelete(entryId);
-      } catch (err) {
-        console.error('Error deleting history entry:', err);
-        // Error is handled by controller
-      }
+  const handleDeleteClick = (entryId: number) => {
+    setPendingDeleteEntryId(entryId);
+  };
+
+  const handleCancelDelete = () => {
+    setPendingDeleteEntryId(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (pendingDeleteEntryId === null) return;
+    const entryId = pendingDeleteEntryId;
+    setPendingDeleteEntryId(null);
+    try {
+      await onDelete(entryId);
+    } catch (err) {
+      console.error('Error deleting history entry:', err);
+      // Error is handled by controller
     }
   };
 
@@ -315,7 +326,7 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDeleteEntry(entry.id);
+                      handleDeleteClick(entry.id);
                     }}
                     className="text-red-400 hover:text-red-300 text-xl transition-colors"
                     title="Delete this entry"
@@ -401,6 +412,16 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
           })}
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={pendingDeleteEntryId !== null}
+        title="Delete history entry?"
+        message="This outfit suggestion will be removed from your history."
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+      />
 
       {/* Image Viewer Modal */}
       {viewingImage && (

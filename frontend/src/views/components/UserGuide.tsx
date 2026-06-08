@@ -96,7 +96,7 @@ function TocChip({ href, icon, label }: { href: string; icon: string; label: str
   );
 }
 
-const UserGuide: React.FC = () => {
+const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
   const toc = [
     { id: 'quick-start', label: 'Quick start', icon: '🚀' },
     { id: 'suggestion-flow', label: 'Get outfit suggestions', icon: '🎯' },
@@ -233,14 +233,16 @@ const UserGuide: React.FC = () => {
                 occasion in Preferences. Image-based actions require an uploaded photo.
               </span>
             </li>
-            <li className="flex gap-3">
-              <span className="text-brand-blue font-bold shrink-0">•</span>
-              <span>
-                Admins can toggle <strong className="text-white">Show AI Prompt &amp; Response</strong> in the sidebar
-                to peek at technical details on outfit suggestions. Wardrobe analysis also surfaces admin diagnostics
-                when premium metadata is available.
-              </span>
-            </li>
+            {isAdmin && (
+              <li className="flex gap-3">
+                <span className="text-brand-blue font-bold shrink-0">•</span>
+                <span>
+                  Admins can toggle <strong className="text-white">Show AI Prompt &amp; Response</strong> in the sidebar
+                  to peek at technical details on outfit suggestions. Wardrobe analysis also surfaces admin diagnostics
+                  when premium metadata is available.
+                </span>
+              </li>
+            )}
           </ul>
         </SectionCard>
 
@@ -256,15 +258,17 @@ const UserGuide: React.FC = () => {
               'Open the Insights tab to use the dedicated wardrobe analysis workspace.',
               'Set occasion, season, style, and optional notes in Analysis Preferences.',
               'You can also start from Wardrobe by clicking Analyze My Wardrobe in the header.',
-              'Choose Free Analysis (rules-based) or Premium Analysis (ChatGPT-powered).',
+              'Choose Quick Wardrobe Check (rules-based) or AI Stylist Review (deeper AI styling advice).',
               'The app locks during analysis and shows a progress message, similar to Get AI Suggestion.',
-              'Review category cards for owned colors/styles, missing colors/styles, and buy-next recommendations.',
+              'Review category cards for owned colors/styles, colors to add, styles to try, and buy-next recommendations.',
             ]}
           />
-          <TipBox>
-            <strong className="text-white">Admin users:</strong> premium runs can include mode used, cost, full AI
-            prompt, and full AI response inside the analysis panel.
-          </TipBox>
+          {isAdmin && (
+            <TipBox>
+              <strong className="text-white">Admin users:</strong> premium runs can include mode used, cost, full AI
+              prompt, and full AI response inside the analysis panel.
+            </TipBox>
+          )}
         </SectionCard>
 
         <SectionCard
@@ -332,7 +336,9 @@ const UserGuide: React.FC = () => {
               { k: 'Insights', d: 'Dedicated wardrobe gap analysis page with category recommendations.' },
               { k: 'Guide', d: 'Step-by-step help and tips (this page).' },
               { k: 'About', d: 'Product story, features, and creator links—open from the page footer.' },
-              { k: 'Reports', d: 'Admins only—usage and access insights.' },
+              ...(isAdmin
+                ? [{ k: 'Reports', d: 'Admins only—usage and access insights.' }]
+                : []),
             ].map((row) => (
               <div
                 key={row.k}
@@ -396,7 +402,7 @@ const UserGuide: React.FC = () => {
               },
               {
                 key: 'premium',
-                body: 'If Premium Analysis cannot complete, the system may safely fall back to Free Analysis. Check the "Mode used" line in results.',
+                body: 'If AI Stylist Review cannot complete, the system may safely fall back to Quick Wardrobe Check. Check the review type line in results.',
               },
             ].map((row) => (
               <li

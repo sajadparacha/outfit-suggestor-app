@@ -5,6 +5,7 @@ import { CLIENT_MAX_SIZE_MB } from '../../constants/imageLimits';
 import ModernSwitch from './suggestion/ModernSwitch';
 import AnalysisPreferences from './AnalysisPreferences';
 import { DEFAULT_FILTERS } from '../../utils/outfitPreferences';
+import { MICRO_HELP } from '../../utils/microHelpCopy';
 
 interface Filters {
   occasion: string;
@@ -109,6 +110,8 @@ interface SidebarProps {
   highlightGenerateButton?: boolean;
   onChangeWardrobeItem?: () => void;
   onClearSourceWardrobeItem?: () => void;
+  guestRemaining?: number | null;
+  guestLimitReached?: boolean;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -142,8 +145,11 @@ const Sidebar: React.FC<SidebarProps> = ({
   highlightGenerateButton = false,
   onChangeWardrobeItem,
   onClearSourceWardrobeItem,
+  guestRemaining = null,
+  guestLimitReached = false,
 }) => {
   const generateButtonRef = useRef<HTMLButtonElement>(null);
+  const generateDisabled = !image || loading || guestLimitReached;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -290,11 +296,8 @@ const Sidebar: React.FC<SidebarProps> = ({
       lines.push(image ? `Add to wardrobe: ready — ${image.name}` : 'Add to wardrobe: upload a photo first');
     }
     if (setUseWardrobeOnly) {
-      lines.push(
-        useWardrobeOnly
-          ? 'Use my wardrobe only: On (AI uses only your saved items)'
-          : 'Use my wardrobe only: Off (AI may suggest items you do not own)'
-      );
+      lines.push(`Use my wardrobe only: ${useWardrobeOnly ? 'On' : 'Off'}`);
+      lines.push(MICRO_HELP.WARDROBE_ONLY);
     }
     lines.push(
       'Random from Wardrobe uses the occasion, season, style, and notes in Preferences.',
@@ -308,7 +311,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     (onAddToWardrobe || setUseWardrobeOnly || onGetRandomSuggestion || onGetRandomFromHistory);
 
   const showAdvancedOptions = isAdmin;
-  const showModelGenerationControls = isAdmin || modelGenerationEnabled;
+  const showModelGenerationControls = isAdmin;
 
   const advancedOptionsHoverTitle = useMemo(() => {
     const lines: string[] = [];
@@ -503,18 +506,24 @@ const Sidebar: React.FC<SidebarProps> = ({
             checked={generateModelImage}
             onChange={(value) => setGenerateModelImage(value)}
             label="Include AI model preview"
-            description="This may take longer."
+            description={MICRO_HELP.MODEL_PREVIEW}
           />
         </div>
       )}
 
       {/* Primary: generate outfit */}
+      {!isAuthenticated && guestRemaining !== null && guestRemaining > 0 && (
+        <p className="mt-5 text-center text-xs text-slate-400">
+          {guestRemaining} of 3 free AI suggestions left
+        </p>
+      )}
+
       <button
         ref={generateButtonRef}
         onClick={onGetSuggestion}
-        disabled={!image || loading}
-        className={`mt-5 flex w-full min-h-[48px] touch-manipulation items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-semibold text-white transition-all duration-200 ${
-          !image || loading
+        disabled={generateDisabled}
+        className={`${!isAuthenticated && guestRemaining !== null && guestRemaining > 0 ? 'mt-2' : 'mt-5'} flex w-full min-h-[48px] touch-manipulation items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-semibold text-white transition-all duration-200 ${
+          generateDisabled
             ? 'cursor-not-allowed bg-white/10 text-slate-500'
             : highlightGenerateButton
               ? 'btn-brand animate-pulse ring-2 ring-brand-blue ring-offset-2 ring-offset-slate-900'
@@ -556,7 +565,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 checked={useWardrobeOnly}
                 onChange={(value) => setUseWardrobeOnly(value)}
                 label="Use my wardrobe only"
-                description={useWardrobeOnly ? 'Only your wardrobe items are used.' : 'AI may suggest items you do not own.'}
+                description={MICRO_HELP.WARDROBE_ONLY}
               />
             )}
             {onAddToWardrobe && (
@@ -658,10 +667,13 @@ const Sidebar: React.FC<SidebarProps> = ({
         <button
           type="button"
           onClick={onOpenInsights}
-          className="mt-1 w-full text-center text-xs text-slate-500 transition hover:text-brand-blue"
+          className="mt-1 w-full text-center transition hover:text-brand-blue"
           aria-label="Open insights for wardrobe analysis"
         >
-          Need closet insights? Open Insights →
+          <span className="text-xs text-slate-500">Open Insights →</span>
+          <span className="mt-1 block text-[11px] leading-snug text-slate-500">
+            {MICRO_HELP.INSIGHTS}
+          </span>
         </button>
       )}
 

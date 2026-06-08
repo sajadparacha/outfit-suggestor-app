@@ -11,6 +11,7 @@ interface OutfitPreviewProps {
   onMakeMoreCasual?: () => void;
   onUseWardrobeOnly?: () => void;
   onChangeOccasion?: () => void;
+  onLike?: () => void;
   onNavigateToWardrobe?: (category?: string) => void; // Optional callback to navigate to wardrobe
   isAuthenticated?: boolean; // Whether user is logged in
   onAddToWardrobe?: () => void; // Callback to add uploaded item to wardrobe
@@ -18,6 +19,7 @@ interface OutfitPreviewProps {
   showWardrobeOnlyAction?: boolean;
   showAiPromptResponse?: boolean;
   isAdmin?: boolean;
+  guestLimitReached?: boolean;
 }
 
 const OutfitPreview: React.FC<OutfitPreviewProps> = ({
@@ -29,14 +31,17 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
   onMakeMoreCasual,
   onUseWardrobeOnly,
   onChangeOccasion,
+  onLike,
   onNavigateToWardrobe,
   isAuthenticated = false,
   onAddToWardrobe,
   hasImage = false,
   showWardrobeOnlyAction = true,
   showAiPromptResponse = true,
-  isAdmin = false
+  isAdmin = false,
+  guestLimitReached = false,
 }) => {
+  const aiActionsDisabled = !hasImage || guestLimitReached;
   const [showFullImage, setShowFullImage] = React.useState(false);
   const [fullWardrobeImage, setFullWardrobeImage] = React.useState<{ src: string; label: string } | null>(null);
 
@@ -202,7 +207,8 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
           <p className="text-slate-200 mb-6">{error}</p>
           <button
             onClick={onGenerateAnother}
-            className="btn-brand rounded-full px-6 py-3"
+            disabled={aiActionsDisabled}
+            className="btn-brand rounded-full px-6 py-3 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Try Again
           </button>
@@ -383,25 +389,37 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
       ) : null}
 
       <div className="mt-6 space-y-4">
-        <button
-          onClick={onGenerateAnother}
-          disabled={!hasImage}
-          className={`min-h-[48px] w-full touch-manipulation rounded-xl px-4 py-3 text-sm font-semibold transition-all ${
-            hasImage
-              ? 'btn-brand'
-              : 'cursor-not-allowed border border-white/10 bg-white/10 text-slate-500'
-          }`}
-          aria-label="Generate another look"
-        >
-          Generate Another Look
-        </button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <button
+            onClick={onGenerateAnother}
+            disabled={aiActionsDisabled}
+            className={`min-h-[48px] flex-1 touch-manipulation rounded-xl px-4 py-3 text-sm font-semibold transition-all ${
+              !aiActionsDisabled
+                ? 'btn-brand'
+                : 'cursor-not-allowed border border-white/10 bg-white/10 text-slate-500'
+            }`}
+            aria-label="Generate another look"
+          >
+            Generate Another Look
+          </button>
+          {onLike && (
+            <button
+              type="button"
+              onClick={onLike}
+              className="min-h-[48px] touch-manipulation rounded-xl border border-white/20 bg-white/5 px-5 py-3 text-sm font-medium text-slate-100 transition hover:border-rose-400/50 hover:bg-rose-500/10 hover:text-rose-200"
+              aria-label="Like this outfit"
+            >
+              ♥ Like
+            </button>
+          )}
+        </div>
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {onMakeMoreFormal && (
             <button
               type="button"
               onClick={onMakeMoreFormal}
-              disabled={!hasImage}
+              disabled={aiActionsDisabled}
               className="min-h-[44px] touch-manipulation rounded-xl border border-white/20 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-100 transition hover:border-brand-purple/60 hover:bg-brand-purple/10 disabled:cursor-not-allowed disabled:opacity-40"
               aria-label="Make it more formal"
             >
@@ -412,7 +430,7 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
             <button
               type="button"
               onClick={onMakeMoreCasual}
-              disabled={!hasImage}
+              disabled={aiActionsDisabled}
               className="min-h-[44px] touch-manipulation rounded-xl border border-white/20 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-100 transition hover:border-brand-purple/60 hover:bg-brand-purple/10 disabled:cursor-not-allowed disabled:opacity-40"
               aria-label="Make it more casual"
             >
@@ -476,7 +494,7 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
         <div className="mx-auto flex max-w-md flex-col gap-2 rounded-2xl border border-white/10 bg-slate-900/90 p-2 backdrop-blur">
           <button
             onClick={onGenerateAnother}
-            disabled={!hasImage}
+            disabled={aiActionsDisabled}
             className="btn-brand min-h-[44px] w-full rounded-xl px-3 py-2 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-40"
             aria-label="Generate another look"
           >
@@ -487,7 +505,7 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
               <button
                 type="button"
                 onClick={onMakeMoreFormal}
-                disabled={!hasImage}
+                disabled={aiActionsDisabled}
                 className="min-h-[40px] rounded-xl border border-white/20 px-2 py-2 text-[11px] font-medium text-slate-100 disabled:opacity-40"
               >
                 More formal
@@ -497,7 +515,7 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
               <button
                 type="button"
                 onClick={onMakeMoreCasual}
-                disabled={!hasImage}
+                disabled={aiActionsDisabled}
                 className="min-h-[40px] rounded-xl border border-white/20 px-2 py-2 text-[11px] font-medium text-slate-100 disabled:opacity-40"
               >
                 More casual

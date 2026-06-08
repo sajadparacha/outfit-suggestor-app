@@ -7,6 +7,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { AiOperationType } from '../utils/aiProgressSteps';
 import { OutfitSuggestion, Filters, SourceWardrobeItem } from '../models/OutfitModels';
+import { GuestLimitReachedError } from '../models/GuestModels';
 import ApiService from '../services/ApiService';
 import { compressImageForOutfit, compressImageForWardrobe } from '../utils/imageUtils';
 import { getLocationString } from '../utils/geolocation';
@@ -62,7 +63,10 @@ interface UseOutfitControllerReturn {
   onSuggestionSuccess?: () => void; // Callback for when suggestion is successful
 }
 
-export const useOutfitController = (options?: { onSuggestionSuccess?: () => void }): UseOutfitControllerReturn => {
+export const useOutfitController = (options?: {
+  onSuggestionSuccess?: () => void;
+  onGuestLimitReached?: () => void;
+}): UseOutfitControllerReturn => {
   const [image, setImage] = useState<File | null>(null);
   const [filters, setFilters] = useState<Filters>(() => loadStoredFilters());
   const [preferenceText, setPreferenceText] = useState<string>(() => loadStoredPreferenceText());
@@ -257,6 +261,14 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
         setLoadingMessage(null);
         setActiveOperation(null);
         abortControllerRef.current = null;
+        return;
+      }
+      if (err instanceof GuestLimitReachedError) {
+        setLoading(false);
+        setLoadingMessage(null);
+        setActiveOperation(null);
+        abortControllerRef.current = null;
+        options?.onGuestLimitReached?.();
         return;
       }
       const errorMessage = err instanceof Error ? err.message : 'An error occurred';

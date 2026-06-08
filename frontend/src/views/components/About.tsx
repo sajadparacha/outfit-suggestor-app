@@ -5,7 +5,7 @@
 
 import React from 'react';
 
-const About: React.FC = () => {
+const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl overflow-hidden backdrop-blur">
@@ -52,7 +52,8 @@ const About: React.FC = () => {
               (AI suggests outfits only from items in your wardrobe) or <strong className="text-white">free generation</strong> 
               (AI can suggest any outfit). The app also includes a dedicated <strong className="text-white">Insights</strong> page for
               <strong className="text-white"> Analyze My Wardrobe</strong> with two modes:
-              <strong className="text-white"> Free Analysis</strong> (rules-based) and <strong className="text-white">Premium Analysis</strong> (ChatGPT-powered).
+              <strong className="text-white"> Quick Wardrobe Check</strong> (fast rules-based snapshot) and{' '}
+              <strong className="text-white">AI Stylist Review</strong> (deeper AI-powered styling advice).
               The app features a <strong className="text-white">smart wardrobe management system</strong> that learns your collection and makes recommendations practical and personalized.
             </p>
             <p className="text-slate-200 leading-relaxed">
@@ -61,10 +62,14 @@ const About: React.FC = () => {
               combines the power of artificial intelligence with modern web development to deliver a seamless 
               fashion experience. Generate stunning AI-powered model images to visualize complete outfits, 
               manage and edit your wardrobe with intelligent duplicate detection, get outfit suggestions directly 
-              from wardrobe items, run category-level wardrobe gap analysis, and track costs transparently. Images are optimized with smart compression 
-              (max 10MB, JPG/PNG/WebP) for fast uploads and efficient AI processing. All suggestions are saved 
-              to your searchable history with full-screen image viewing. Admins can view access logs, usage reports,
-              and premium wardrobe-analysis AI prompt/response and cost details.
+              from wardrobe items, run category-level wardrobe gap analysis, and browse your searchable history with full-screen image viewing.
+              Images are optimized with smart compression (max 10MB, JPG/PNG/WebP) for fast uploads and efficient AI processing.
+              {isAdmin && (
+                <>
+                  {' '}
+                  Admins can view access logs, usage reports, and premium wardrobe-analysis AI prompt/response and cost details.
+                </>
+              )}
             </p>
           </div>
 
@@ -174,13 +179,15 @@ const About: React.FC = () => {
                     <p className="text-sm text-slate-300">Generate stunning AI-powered model images wearing your recommended outfit using DALL-E 3 or Stable Diffusion, customized based on your location for personalized appearance.</p>
                   </div>
                 </div>
-                <div className="flex items-start space-x-3">
-                  <span className="text-2xl">💰</span>
-                  <div>
-                    <h4 className="font-semibold text-white">Transparent Cost Display</h4>
-                    <p className="text-sm text-slate-300">See the exact cost breakdown in USD for AI suggestions and premium wardrobe analysis. Admin users also get full prompt/response visibility for premium runs.</p>
+                {isAdmin && (
+                  <div className="flex items-start space-x-3">
+                    <span className="text-2xl">💰</span>
+                    <div>
+                      <h4 className="font-semibold text-white">Transparent Cost Display</h4>
+                      <p className="text-sm text-slate-300">See the exact cost breakdown in USD for AI suggestions and premium wardrobe analysis. Admin users also get full prompt/response visibility for premium runs.</p>
+                    </div>
                   </div>
-                </div>
+                )}
                 <div className="flex items-start space-x-3">
                   <span className="text-2xl">🌍</span>
                   <div>
@@ -200,7 +207,9 @@ const About: React.FC = () => {
 
             {/* Image & Admin Section */}
             <div className="mb-8">
-              <h4 className="text-lg font-semibold text-slate-200 mb-4 pb-2 border-b border-white/10">📷 Image & Admin</h4>
+              <h4 className="text-lg font-semibold text-slate-200 mb-4 pb-2 border-b border-white/10">
+                {isAdmin ? '📷 Image & Admin' : '📷 Image Optimization'}
+              </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex items-start space-x-3">
                   <span className="text-2xl">📷</span>
@@ -209,13 +218,15 @@ const About: React.FC = () => {
                     <p className="text-sm text-slate-300">Automatic client-side validation (max 10MB) and compression. Outfit suggestions use stricter limits (5MB, 1280px) for faster AI processing; wardrobe items use higher quality (10MB, 1920px) for better storage.</p>
                   </div>
                 </div>
-                <div className="flex items-start space-x-3">
-                  <span className="text-2xl">📊</span>
-                  <div>
-                    <h4 className="font-semibold text-white">Admin Reports</h4>
-                    <p className="text-sm text-slate-300">Admin users can view access logs, usage statistics, and recent API activity. Filter by date range, user, endpoint, and operation type. Client-side table filtering for quick searches.</p>
+                {isAdmin && (
+                  <div className="flex items-start space-x-3">
+                    <span className="text-2xl">📊</span>
+                    <div>
+                      <h4 className="font-semibold text-white">Admin Reports</h4>
+                      <p className="text-sm text-slate-300">Admin users can view access logs, usage statistics, and recent API activity. Filter by date range, user, endpoint, and operation type. Client-side table filtering for quick searches.</p>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
 
@@ -402,7 +413,10 @@ const About: React.FC = () => {
           <div className="text-3xl mb-3">🎨</div>
           <h4 className="font-semibold text-white mb-2">AI Fashion Expert</h4>
           <p className="text-sm text-slate-300">
-            Powered by OpenAI GPT-4 Vision for styling, rules-based and ChatGPT-powered premium wardrobe analysis, plus DALL-E 3, Stable Diffusion & Nano Banana for outfit visualizations. Includes wardrobe mode toggles and transparent admin diagnostics.
+            Powered by OpenAI GPT-4 Vision for styling, rules-based and ChatGPT-powered premium wardrobe analysis, plus DALL-E 3, Stable Diffusion & Nano Banana for outfit visualizations.
+            {isAdmin
+              ? ' Includes wardrobe mode toggles and transparent admin diagnostics.'
+              : ' Includes wardrobe mode toggles for personalized suggestions.'}
           </p>
         </div>
 

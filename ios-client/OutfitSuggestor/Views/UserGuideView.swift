@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct UserGuideView: View {
+    var isAdmin: Bool = false
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -91,31 +93,35 @@ struct UserGuideView: View {
                     tip: nil
                 )
                 
-                GuideSection(
-                    icon: "photo.artframe",
-                    title: "AI Model Images",
-                    color: .indigo,
-                    steps: [
-                        "Enable \"Generate model image\" before requesting a suggestion.",
-                        "Choose your preferred AI model (DALL-E 3, Stable Diffusion, or Nano Banana).",
-                        "The AI generates an image of a model wearing your recommended outfit.",
-                        "Tap the generated image for a full-screen view.",
-                        "Your location is used (with permission) to customize the model's appearance."
-                    ],
-                    tip: "Model image generation takes 10–30 seconds. Be patient!"
-                )
+                if AdminVisibility.guideIncludesModelImagesSection(isAdmin: isAdmin) {
+                    GuideSection(
+                        icon: "photo.artframe",
+                        title: "AI Model Images",
+                        color: .indigo,
+                        steps: [
+                            "Enable \"Include AI model preview\" in Advanced options before requesting a suggestion.",
+                            "Choose your preferred AI model (DALL-E 3, Stable Diffusion, or Nano Banana).",
+                            "The AI generates an image of a model wearing your recommended outfit.",
+                            "Tap the generated image for a full-screen view.",
+                            "Your location is used (with permission) to customize the model's appearance."
+                        ],
+                        tip: "Model image generation takes 10–30 seconds. Be patient!"
+                    )
+                }
                 
                 GuideSection(
                     icon: "chart.bar.xaxis",
                     title: "Wardrobe Insights",
                     color: .teal,
                     steps: [
-                        "Go to the Insights tab to analyze gaps in your wardrobe.",
-                        "Set your context (occasion, season, style) and tap \"Analyze\".",
-                        "View owned vs. missing colors and styles per category.",
-                        "See personalized shopping recommendations for what to buy next."
+                        "Go to the Insights tab to see what's missing from your wardrobe.",
+                        "Set your context (occasion, season, style) and tap \"Analyze My Wardrobe\".",
+                        "Choose Quick Check for a fast snapshot or AI Stylist for deeper advice.",
+                        "Review colors to add, styles to try, and what to buy next."
                     ],
-                    tip: "Use \"Premium\" mode for ChatGPT-powered analysis with deeper insights."
+                    tip: isAdmin
+                        ? GuideCopy.adminDiagnosticsTip
+                        : "Use AI Stylist Review for deeper styling advice tailored to your occasion and wardrobe."
                 )
                 
                 GuideSection(
@@ -130,6 +136,34 @@ struct UserGuideView: View {
                     ],
                     tip: nil
                 )
+
+                if isAdmin {
+                    GuideSection(
+                        icon: "sparkles",
+                        title: "Understanding Your Results",
+                        color: .purple,
+                        steps: [
+                            "View shirt, trousers, blazer, shoes, and belt with short descriptions.",
+                            "Why this works summarizes the styling logic in friendly language.",
+                            "After a result, tap Generate Another Look for a fresh outfit from the same photo."
+                        ],
+                        tip: GuideCopy.adminShowAiPromptTip
+                    )
+
+                    GuideSection(
+                        icon: "gearshape",
+                        title: "Account & Navigation",
+                        color: .gray,
+                        steps: [
+                            "Settings — Email, name, password, and shortcuts to Insights and Guide.",
+                            "Insights — Dedicated wardrobe gap analysis with category recommendations.",
+                            "Guide — Step-by-step help and tips (this page).",
+                            "About — Product story, features, and creator links.",
+                            "Reports — \(GuideCopy.reportsNavDescription)"
+                        ],
+                        tip: nil
+                    )
+                }
                 
                 Spacer(minLength: 40)
             }

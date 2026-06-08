@@ -1,19 +1,8 @@
 import React from 'react';
-
-type AppView =
-  | 'main'
-  | 'history'
-  | 'wardrobe'
-  | 'insights'
-  | 'reports'
-  | 'integration-tests'
-  | 'about'
-  | 'guide'
-  | 'settings';
+import { NavLink as RouterNavLink, useLocation, useNavigate, type NavLinkRenderProps } from 'react-router-dom';
+import { AppView, ROUTES, pathToView, viewToPath } from '../../navigation/routes';
 
 interface NavBarProps {
-  currentView: AppView;
-  onNavigate: (view: AppView) => void;
   isAuthenticated: boolean;
   user?: { full_name?: string | null; email?: string; is_admin?: boolean } | null;
   testRunnerEnabled?: boolean;
@@ -28,31 +17,34 @@ const SparkleIcon = () => (
   </svg>
 );
 
-interface NavLinkProps {
+interface NavTabLinkProps {
+  to: string;
   label: string;
-  active: boolean;
-  onClick: () => void;
+  end?: boolean;
 }
 
-const NavLink: React.FC<NavLinkProps> = ({ label, active, onClick }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    aria-current={active ? 'page' : undefined}
-    className={`relative min-h-[44px] touch-manipulation px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
-      active ? 'text-white' : 'text-slate-400 hover:text-slate-200'
-    }`}
+const NavTabLink: React.FC<NavTabLinkProps> = ({ to, label, end }) => (
+  <RouterNavLink
+    to={to}
+    end={end}
+    className={({ isActive }: NavLinkRenderProps) =>
+      `relative min-h-[44px] touch-manipulation px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
+        isActive ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+      }`
+    }
   >
-    {label}
-    {active && (
-      <span className="absolute bottom-0 left-3 right-3 h-0.5 rounded-full bg-brand-gradient" aria-hidden />
+    {({ isActive }: NavLinkRenderProps) => (
+      <>
+        {label}
+        {isActive && (
+          <span className="absolute bottom-0 left-3 right-3 h-0.5 rounded-full bg-brand-gradient" aria-hidden />
+        )}
+      </>
     )}
-  </button>
+  </RouterNavLink>
 );
 
 const NavBar: React.FC<NavBarProps> = ({
-  currentView,
-  onNavigate,
   isAuthenticated,
   user,
   testRunnerEnabled = false,
@@ -60,6 +52,9 @@ const NavBar: React.FC<NavBarProps> = ({
   onSignUp,
   onLogout,
 }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const currentView = pathToView(location.pathname);
   const initial = (user?.full_name || user?.email || 'U').charAt(0).toUpperCase();
 
   const mainLinks: { view: AppView; label: string }[] = [
@@ -76,7 +71,7 @@ const NavBar: React.FC<NavBarProps> = ({
         {/* Logo */}
         <button
           type="button"
-          onClick={() => onNavigate('main')}
+          onClick={() => navigate(ROUTES.MAIN)}
           className="col-start-1 row-start-1 flex flex-shrink-0 items-center gap-2 touch-manipulation"
           aria-label="Outfit Suggestor home"
         >
@@ -90,11 +85,11 @@ const NavBar: React.FC<NavBarProps> = ({
           aria-label="Main navigation"
         >
           {mainLinks.map(({ view, label }) => (
-            <NavLink
+            <NavTabLink
               key={view}
+              to={viewToPath(view)}
               label={label}
-              active={currentView === view}
-              onClick={() => onNavigate(view)}
+              end={view === 'main'}
             />
           ))}
         </nav>
@@ -107,7 +102,7 @@ const NavBar: React.FC<NavBarProps> = ({
                   <div className="hidden lg:flex items-center gap-1">
                     <button
                       type="button"
-                      onClick={() => onNavigate('reports')}
+                      onClick={() => navigate(ROUTES.ADMIN_REPORTS)}
                       className={`rounded-lg px-2 py-1 text-xs transition ${
                         currentView === 'reports' ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white'
                       }`}
@@ -117,7 +112,7 @@ const NavBar: React.FC<NavBarProps> = ({
                     {testRunnerEnabled && (
                       <button
                         type="button"
-                        onClick={() => onNavigate('integration-tests')}
+                        onClick={() => navigate(ROUTES.ADMIN_INTEGRATION_TESTS)}
                         className={`rounded-lg px-2 py-1 text-xs transition ${
                           currentView === 'integration-tests' ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white'
                         }`}
@@ -127,7 +122,7 @@ const NavBar: React.FC<NavBarProps> = ({
                     )}
                     <button
                       type="button"
-                      onClick={() => onNavigate('settings')}
+                      onClick={() => navigate(ROUTES.SETTINGS)}
                       className={`rounded-lg px-2 py-1 text-xs transition ${
                         currentView === 'settings' ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white'
                       }`}
@@ -138,7 +133,7 @@ const NavBar: React.FC<NavBarProps> = ({
                 )}
                 <button
                   type="button"
-                  onClick={() => onNavigate('settings')}
+                  onClick={() => navigate(ROUTES.SETTINGS)}
                   className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-gradient text-sm font-semibold text-white shadow-brand touch-manipulation"
                   aria-label="User profile and settings"
                   title={user?.full_name || user?.email || 'User'}

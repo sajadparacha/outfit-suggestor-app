@@ -24,6 +24,11 @@ struct MainFlowView: View {
     @State private var showOccasionPicker = false
     @State private var showAiPromptResponse = true
     @State private var transientMessage: String?
+    @AppStorage("guest_first_outfit_prompt_shown") private var guestFirstOutfitPromptShown = false
+    @State private var showFirstOutfitBanner = false
+    @State private var showGuestAuthSheet = false
+    @State private var guestAuthContext: AuthPromptContext = .like
+    @State private var guestAuthDestination: GuestAuthSheetDestination = .login
 
     private var isAdmin: Bool {
         auth.currentUser?.is_admin == true
@@ -39,7 +44,11 @@ struct MainFlowView: View {
     }
 
     private var canRequestSuggestion: Bool {
-        viewModel.selectedImage != nil && !viewModel.isLoading
+        viewModel.selectedImage != nil && !viewModel.isLoading && !viewModel.isGuestBlocked
+    }
+
+    private var showsGuestRemainingHint: Bool {
+        !auth.isAuthenticated && !viewModel.isGuestBlocked && viewModel.guestRemaining != nil
     }
 
     private var isRegularWidth: Bool {
@@ -107,6 +116,16 @@ struct MainFlowView: View {
             }
         }
         .navigationBarHidden(true)
+        .onAppear {
+            Task { await viewModel.refreshGuestUsage() }
+        }
+        .onChange(of: auth.isAuthenticated) { isAuthenticated in
+            if isAuthenticated {
+                viewModel.clearGuestUsageState()
+            } else {
+                Task { await viewModel.refreshGuestUsage() }
+            }
+        }
         .onChange(of: viewModel.sourceWardrobeItem?.id) { newId in
             guard newId != nil else { return }
             showTransientMessage("Item loaded — set preferences, then Generate Outfit.")
@@ -187,6 +206,18 @@ struct MainFlowView: View {
         } message: {
             Text("This image was already analyzed. Would you like to use the cached suggestion or get a new one?")
         }
+        .sheet(isPresented: $showGuestAuthSheet) {
+            GuestAuthSheetView(context: guestAuthContext, destination: guestAuthDestination)
+        }
+        .onChange(of: viewModel.currentSuggestion != nil) { hasSuggestion in
+            guard hasSuggestion,
+                  !auth.isAuthenticated,
+                  !guestFirstOutfitPromptShown else { return }
+            guestFirstOutfitPromptShown = true
+            withAnimation {
+                showFirstOutfitBanner = true
+            }
+        }
         .sheet(isPresented: $showOccasionPicker) {
             NavigationStack {
                 Form {
@@ -246,14 +277,27 @@ struct MainFlowView: View {
                 layout: .grid
             )
 
+            if !auth.isAuthenticated, viewModel.isGuestBlocked {
+                guestLimitReachedCard
+                    .padding(.horizontal)
+            }
+
             VStack(spacing: 10) {
+                if showsGuestRemainingHint, let remaining = viewModel.guestRemaining {
+                    Text("\(remaining) of 3 free AI suggestions left")
+                        .font(.caption)
+                        .foregroundColor(AppTheme.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .accessibilityIdentifier("main.guestRemainingHint")
+                }
+
                 if isAdmin {
                     Toggle(isOn: $viewModel.generateModelImage) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Include AI model preview")
                                 .font(.subheadline.weight(.medium))
                                 .foregroundColor(AppTheme.textPrimary)
-                            Text("This may take longer.")
+                            Text(MicroHelpCopy.modelPreview)
                                 .font(.caption)
                                 .foregroundColor(AppTheme.textSecondary)
                         }
@@ -297,7 +341,7 @@ struct MainFlowView: View {
                 }
 
                 if !canRequestSuggestion {
-                    Text("Add a photo to enable outfit suggestions.")
+                    Text(guestBlockedHelperText)
                         .font(.caption)
                         .foregroundColor(AppTheme.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .center)
@@ -336,7 +380,7 @@ struct MainFlowView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
-                .disabled(viewModel.isLoading || viewModel.selectedImage == nil)
+                .disabled(viewModel.isLoading || viewModel.selectedImage == nil || viewModel.isGuestBlocked)
                 .accessibilityIdentifier("main.makeMoreFormalButton")
 
                 Button {
@@ -346,7 +390,7 @@ struct MainFlowView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
-                .disabled(viewModel.isLoading || viewModel.selectedImage == nil)
+                .disabled(viewModel.isLoading || viewModel.selectedImage == nil || viewModel.isGuestBlocked)
                 .accessibilityIdentifier("main.makeMoreCasualButton")
             }
 
@@ -387,14 +431,35 @@ struct MainFlowView: View {
                     onAddToWardrobe: nil,
                     isLoading: viewModel.isLoading,
                     isAdmin: isAdmin,
-                    showAiPromptResponse: showAiPromptResponse,
+                    showAiPromptResponse: AdminVisibility.effectiveShowAiPromptResponse(
+                        isAdmin: isAdmin,
+                        toggleEnabled: showAiPromptResponse
+                    ),
                     showsActionSection: false
                 )
                 .padding(.horizontal)
                 .transition(.opacity)
                 .accessibilityIdentifier("main.resultCard")
 
+                if showFirstOutfitBanner, !auth.isAuthenticated, !viewModel.isGuestBlocked {
+                    firstOutfitAuthBanner
+                        .padding(.horizontal)
+                        .transition(.opacity)
+                }
+
+                if !auth.isAuthenticated, viewModel.isGuestBlocked {
+                    guestLimitReachedCard
+                        .padding(.horizontal)
+                }
+
                 VStack(spacing: 10) {
+                    if showsGuestRemainingHint, let remaining = viewModel.guestRemaining {
+                        Text("\(remaining) of 3 free AI suggestions left")
+                            .font(.caption)
+                            .foregroundColor(AppTheme.textSecondary)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+
                     Button {
                         viewModel.startGenerateAnotherLook()
                     } label: {
@@ -403,17 +468,25 @@ struct MainFlowView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(AppTheme.accent)
-                    .disabled(viewModel.isLoading || viewModel.selectedImage == nil)
+                    .disabled(viewModel.isLoading || viewModel.selectedImage == nil || viewModel.isGuestBlocked)
                     .accessibilityIdentifier("main.generateAnotherButton")
 
                     resultSecondaryActions
 
                     HStack(spacing: 10) {
+                        Button(action: handleLikeTap) {
+                            Label("Like", systemImage: "hand.thumbsup")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(viewModel.isLoading)
+                        .accessibilityIdentifier("main.likeButton")
+
                         Button {
                             if auth.isAuthenticated {
                                 showAddToWardrobeSheet = true
                             } else {
-                                showTransientMessage("Log in to save suggestions.")
+                                openGuestAuthSheet(context: .firstOutfit, destination: .register)
                             }
                         } label: {
                             Label("Save", systemImage: "plus.circle")
@@ -422,10 +495,13 @@ struct MainFlowView: View {
                         .buttonStyle(.bordered)
                         .disabled(viewModel.isLoading)
                         .accessibilityIdentifier("main.saveButton")
+                    }
 
+                    HStack(spacing: 10) {
                         Button {
                             viewModel.currentSuggestion = nil
                             viewModel.selectedImage = nil
+                            showFirstOutfitBanner = false
                         } label: {
                             Label("Start Over", systemImage: "arrow.counterclockwise")
                                 .frame(maxWidth: .infinity)
@@ -452,8 +528,17 @@ struct MainFlowView: View {
     private var moreOptionsSection: some View {
         DisclosureGroup("Wardrobe & picks") {
             VStack(spacing: 14) {
-                Toggle("Use my wardrobe only", isOn: $viewModel.useWardrobeOnly)
-                    .tint(AppTheme.accent)
+                Toggle(isOn: $viewModel.useWardrobeOnly) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Use my wardrobe only")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(AppTheme.textPrimary)
+                        Text(MicroHelpCopy.wardrobeOnly)
+                            .font(.caption)
+                            .foregroundColor(AppTheme.textSecondary)
+                    }
+                }
+                .tint(AppTheme.accent)
 
                 Button {
                     if viewModel.selectedImage == nil {
@@ -568,8 +653,124 @@ struct MainFlowView: View {
         .accessibilityIdentifier("main.wardrobeSourceBanner")
     }
 
+    private var guestBlockedHelperText: String {
+        if !auth.isAuthenticated, viewModel.isGuestBlocked {
+            return "Create an account to keep using AI outfit suggestions."
+        }
+        return "Add a photo to enable outfit suggestions."
+    }
+
+    private var guestLimitReachedCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("You've used your 3 free AI outfit suggestions. Create an account to keep using the app.")
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(AppTheme.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 10) {
+                Button {
+                    openGuestAuthSheet(context: .firstOutfit, destination: .register)
+                } label: {
+                    Text("Create account")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                }
+                .buttonStyle(GradientButtonStyle())
+
+                Button {
+                    openGuestAuthSheet(context: .firstOutfit, destination: .login)
+                } label: {
+                    Text("Sign in")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                }
+                .buttonStyle(.bordered)
+            }
+        }
+        .padding(14)
+        .glassCard()
+        .accessibilityIdentifier("main.guestLimitReachedCard")
+    }
+
+    private var firstOutfitAuthBanner: some View {
+        let copy = AuthPromptCopy.content(for: .firstOutfit)
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(copy.headline)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(AppTheme.textPrimary)
+                    if let subheadline = copy.subheadline {
+                        Text(subheadline)
+                            .font(.caption)
+                            .foregroundColor(AppTheme.textSecondary)
+                    }
+                }
+                Spacer()
+                Button {
+                    withAnimation {
+                        showFirstOutfitBanner = false
+                    }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(AppTheme.textSecondary)
+                        .padding(6)
+                }
+                .accessibilityLabel("Dismiss")
+            }
+
+            HStack(spacing: 10) {
+                Button {
+                    openGuestAuthSheet(context: .firstOutfit, destination: .register)
+                } label: {
+                    Text("Create account")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                }
+                .buttonStyle(GradientButtonStyle())
+
+                Button {
+                    openGuestAuthSheet(context: .firstOutfit, destination: .login)
+                } label: {
+                    Text("Sign in")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                }
+                .buttonStyle(.bordered)
+            }
+        }
+        .padding(14)
+        .glassCard()
+        .accessibilityIdentifier("main.firstOutfitAuthBanner")
+    }
+
     private func handleGetSuggestionTap() {
+        if !auth.isAuthenticated, viewModel.isGuestBlocked {
+            return
+        }
         viewModel.startGetSuggestion()
+    }
+
+    private func handleLikeTap() {
+        if auth.isAuthenticated {
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.impactOccurred()
+            showTransientMessage("Outfit liked!")
+        } else {
+            openGuestAuthSheet(context: .like, destination: .login)
+        }
+    }
+
+    private func openGuestAuthSheet(context: AuthPromptContext, destination: GuestAuthSheetDestination) {
+        guestAuthContext = context
+        guestAuthDestination = destination
+        showGuestAuthSheet = true
     }
 
     private func showTransientMessage(_ message: String) {

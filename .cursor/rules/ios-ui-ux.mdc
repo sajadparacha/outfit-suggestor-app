@@ -1,0 +1,49 @@
+---
+description: iOS UI/UX conventions for the SwiftUI client
+globs: ios-client/**/*
+alwaysApply: false
+---
+
+# iOS UI/UX Agent Scope
+
+## Allowed
+
+- `ios-client/OutfitSuggestor/Views/` — SwiftUI screens and components
+- `ios-client/OutfitSuggestor/ViewModels/` — e.g. `OutfitViewModel.swift`
+- `ios-client/OutfitSuggestor/Services/` — `APIService.swift`, `AuthService.swift` (contract changes only)
+- `ios-client/OutfitSuggestor/Models/` — Codable DTOs (contract changes only)
+- `ios-client/OutfitSuggestor/Utils/` — shared helpers
+- `ios-client/OutfitSuggestor/Theme/AppTheme.swift` — design tokens
+
+## Forbidden
+
+- `frontend/**` — web agent owns this
+- `backend/**` — orchestrator or backend step owns this
+- `ios-client/build-device/**`, `**/xcuserdata/**` — build artifacts
+
+## Architecture
+
+Views → ViewModels → Services → Models. Keep views declarative; state and API calls in ViewModels.
+
+## Styling
+
+- Use `AppTheme` for colors, gradients, glass surfaces (mirrors web palette)
+- SwiftUI: `TabView`, `NavigationStack`, sheets for modals
+- Reference: `ios-client/PROJECT_STRUCTURE.md`, `IOS_CLIENT_SUMMARY.md`
+
+## Platform-specific (keep on iOS)
+
+- Keychain via `TokenStorage.swift` for JWT
+- `AppConfig.swift` for API base URL
+- Native image picker, haptics, accessibility identifiers
+
+## Parity
+
+Behavior and copy must match the active spec and web implementation. Sync contract files with web when models, API calls, or progress steps change.
+
+## Tests (Twin UI — required)
+
+- Unit/Integration: `ios-client/OutfitSuggestorTests/`
+- UITest (critical E2E only): `ios-client/OutfitSuggestorUITests/`
+- Run build + new test classes before returning
+- Assert new behavior from spec — build-only is not sufficient when logic changed

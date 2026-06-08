@@ -1,19 +1,18 @@
 /**
  * Integration tests: Guide tab + footer links (User guide, About)
  */
-import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import App from '../../App';
+import { screen, waitFor, fireEvent } from '@testing-library/react';
+import { renderApp } from '../../test/renderWithRouter';
 
 describe('Guide and footer navigation (App)', () => {
   it('shows User guide when Guide tab is clicked', async () => {
-    render(<App />);
+    renderApp();
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Guide' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Guide' })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Guide' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Guide' }));
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /How to use/i })).toBeInTheDocument();
@@ -22,7 +21,7 @@ describe('Guide and footer navigation (App)', () => {
   });
 
   it('opens About from footer', async () => {
-    render(<App />);
+    renderApp();
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /More options/i })).toBeInTheDocument();
@@ -43,7 +42,7 @@ describe('Guide and footer navigation (App)', () => {
   });
 
   it('opens User guide from footer link', async () => {
-    render(<App />);
+    renderApp();
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /More options/i })).toBeInTheDocument();

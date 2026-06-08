@@ -6,6 +6,9 @@
 import SwiftUI
 
 struct RegisterView: View {
+    var headline: String? = nil
+    var subheadline: String? = nil
+
     @ObservedObject var auth = AuthService.shared
     @Environment(\.dismiss) private var dismiss
     @State private var email = ""
@@ -14,9 +17,27 @@ struct RegisterView: View {
     @State private var errorMessage: String?
     @State private var isLoading = false
     @State private var showSuccessMessage = false
+
+    private var resolvedHeadline: String {
+        headline ?? "Create account"
+    }
     
     var body: some View {
         Form {
+            if headline != nil || subheadline != nil {
+                Section {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(resolvedHeadline)
+                            .font(.headline)
+                        if let subheadline {
+                            Text(subheadline)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .listRowBackground(Color.clear)
+                }
+            }
             Section(header: Text("Create account")) {
                 TextField("Email", text: $email)
                     .textContentType(.emailAddress)
@@ -40,7 +61,8 @@ struct RegisterView: View {
                 .disabled(email.isEmpty || password.isEmpty || isLoading)
             }
         }
-        .navigationTitle("Sign Up")
+        .navigationTitle(headline == nil ? "Sign Up" : resolvedHeadline)
+        .navigationBarTitleDisplayMode(headline == nil ? .automatic : .inline)
         .alert("Account created", isPresented: $showSuccessMessage) {
             Button("OK", role: .cancel) {
                 dismiss()

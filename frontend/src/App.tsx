@@ -4,7 +4,8 @@
  * Uses controllers for business logic and views for presentation
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
+import { Navigate, Route, Routes, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import Hero from './views/components/Hero';
 import NavBar from './views/components/NavBar';
 import HowItWorksStepper from './views/components/HowItWorksStepper';
@@ -38,13 +39,23 @@ import WardrobeGapAnalysis from './views/components/WardrobeGapAnalysis';
 import AnalysisPreferences from './views/components/AnalysisPreferences';
 import { WardrobeGapAnalysisResponse } from './models/WardrobeModels';
 import { resolveFilters } from './utils/outfitPreferences';
+import { LOGIN_REDIRECT_STATE, ROUTES, wardrobePath } from './navigation/routes';
+import AuthGateCard from './views/components/AuthGateCard';
+import FirstOutfitPromptBanner from './views/components/FirstOutfitPromptBanner';
+import {
+  AuthPromptContextKey,
+  FIRST_OUTFIT_PROMPT_KEY,
+  getAuthPromptCopy,
+  prefersRegister,
+} from './utils/authPromptCopy';
+import { INSIGHTS_COPY } from './utils/insightsCopy';
+import { MICRO_HELP } from './utils/microHelpCopy';
 
 function App() {
-  // Model generation: URL flag for rollout, always enabled for admin users
-  const modelGenerationUrlEnabled = React.useMemo(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('modelGeneration') === 'true';
-  }, []);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const wardrobeCategoryFilter = searchParams.get('category');
 
   // Test runner should be hidden in production unless explicitly enabled.
   const testRunnerEnabled = React.useMemo(() => {
@@ -58,15 +69,33 @@ function App() {
 
   // Authentication
   const { user, isAuthenticated, isLoading: authLoading, login, register, logout, error: authError, clearError } = useAuthController();
-  const modelGenerationEnabled = modelGenerationUrlEnabled || !!user?.is_admin;
+  const modelGenerationEnabled = !!user?.is_admin;
   const [showRegister, setShowRegister] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginPromptContext, setLoginPromptContext] = useState<AuthPromptContextKey | null>(null);
+  const [showFirstOutfitBanner, setShowFirstOutfitBanner] = useState(false);
+  const [guestRemaining, setGuestRemaining] = useState<number | null>(null);
 
-  // View state (UI-only state)
-  const [currentView, setCurrentView] = useState<
-    'main' | 'history' | 'wardrobe' | 'insights' | 'reports' | 'integration-tests' | 'about' | 'guide' | 'settings'
-  >('main');
-  const [wardrobeCategoryFilter, setWardrobeCategoryFilter] = useState<string | null>(null);
+  const refreshGuestUsage = useCallback(async () => {
+    if (isAuthenticated) {
+      setGuestRemaining(null);
+      return;
+    }
+    try {
+      const usage = await ApiService.getGuestUsage();
+      setGuestRemaining(usage.remaining);
+    } catch (err) {
+      console.warn('Failed to fetch guest usage:', err);
+      setGuestRemaining(3);
+    }
+  }, [isAuthenticated]);
+
+  const handleGuestLimitReached = useCallback(() => {
+    setGuestRemaining(0);
+  }, []);
+
+  const guestLimitReached = !isAuthenticated && guestRemaining === 0;
+
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showAddWardrobeModal, setShowAddWardrobeModal] = useState(false);
   const [wardrobeFormData, setWardrobeFormData] = useState<{category: string; color: string; description: string} | null>(null);
@@ -118,7 +147,15 @@ function App() {
   } = useOutfitController({
     onSuggestionSuccess: async () => {
       await fetchRecentHistory();
-    }
+      if (!isAuthenticated) {
+        await refreshGuestUsage();
+        if (!localStorage.getItem(FIRST_OUTFIT_PROMPT_KEY)) {
+          localStorage.setItem(FIRST_OUTFIT_PROMPT_KEY, 'true');
+          setShowFirstOutfitBanner(true);
+        }
+      }
+    },
+    onGuestLimitReached: handleGuestLimitReached,
   });
 
   const {
@@ -161,8 +198,72 @@ function App() {
     localStorage.setItem('show_ai_prompt_response', String(showAiPromptResponse));
   }, [showAiPromptResponse]);
 
+  React.useEffect(() => {
+    if (authLoading) return;
+    if (isAuthenticated) {
+      setGuestRemaining(null);
+      return;
+    }
+    refreshGuestUsage();
+  }, [authLoading, isAuthenticated, refreshGuestUsage]);
+
+  const closeAuthModal = () => {
+    setShowRegister(false);
+    setShowLoginModal(false);
+    setLoginPromptContext(null);
+    clearError();
+  };
+
+  const openAuthPromptRegister = (context: AuthPromptContextKey) => {
+    setLoginPromptContext(context);
+    clearError();
+    setShowRegister(true);
+    setShowLoginModal(false);
+  };
+
+  const openAuthPromptSignIn = (context: AuthPromptContextKey) => {
+    setLoginPromptContext(context);
+    clearError();
+    setShowRegister(false);
+    setShowLoginModal(true);
+  };
+
+  const openAuthPrompt = (context: AuthPromptContextKey) => {
+    if (prefersRegister(context)) {
+      openAuthPromptRegister(context);
+    } else {
+      openAuthPromptSignIn(context);
+    }
+  };
+
+  React.useEffect(() => {
+    const state = location.state as Record<string, unknown> | null;
+    if (state?.[LOGIN_REDIRECT_STATE]) {
+      openAuthPrompt('wardrobe');
+      navigate(location.pathname + location.search, {
+        replace: true,
+        state: null,
+      });
+    }
+  }, [location.pathname, location.search, location.state, navigate]);
+
+  const authModalCopy = loginPromptContext ? getAuthPromptCopy(loginPromptContext) : null;
+
+  const handleLikeOutfit = () => {
+    if (!isAuthenticated) {
+      openAuthPrompt('like');
+      return;
+    }
+    showToast('Outfit saved to favorites! ❤️', 'success');
+  };
+
+  const dismissFirstOutfitBanner = () => {
+    setShowFirstOutfitBanner(false);
+  };
+
   // Event Handlers (UI orchestration only)
   const handleGetSuggestion = async () => {
+    if (guestLimitReached) return;
     if (!image) {
       showToast('Please upload an image first', 'error');
       return;
@@ -180,11 +281,13 @@ function App() {
 
   /** Generate another look using the current outfit as context (same photo). */
   const handleGenerateAnother = async () => {
+    if (guestLimitReached) return;
     if (!requireImageForAlternate()) return;
     await getSuggestion(true, undefined, !!currentSuggestion);
   };
 
   const handleMakeMoreFormal = async () => {
+    if (guestLimitReached) return;
     if (!requireImageForAlternate()) return;
     await getSuggestion(true, undefined, !!currentSuggestion, {
       promptModifier: OUTFIT_VARIATION_MODIFIERS.moreFormal,
@@ -192,6 +295,7 @@ function App() {
   };
 
   const handleMakeMoreCasual = async () => {
+    if (guestLimitReached) return;
     if (!requireImageForAlternate()) return;
     await getSuggestion(true, undefined, !!currentSuggestion, {
       promptModifier: OUTFIT_VARIATION_MODIFIERS.moreCasual,
@@ -232,6 +336,11 @@ function App() {
     showToast('Loaded suggestion from history! 📋', 'success');
   };
 
+  const handleGetNewSuggestionGuarded = async () => {
+    if (guestLimitReached) return;
+    await handleGetNewSuggestion();
+  };
+
   const handleGetRandomFromHistory = async () => {
     try {
       const fullHistory = await ensureFullHistory();
@@ -242,7 +351,7 @@ function App() {
       const randomEntry = fullHistory[Math.floor(Math.random() * fullHistory.length)];
       const suggestion = historyEntryToSuggestion(randomEntry);
       setCurrentSuggestion(suggestion);
-      setCurrentView('main');
+      navigate(ROUTES.MAIN);
       showToast('Random outfit from your history! 📋', 'success');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load history';
@@ -258,8 +367,8 @@ function App() {
 
     setWardrobeAnalysisLoadingMessage(
       mode === 'premium'
-        ? 'Running Premium Analysis with ChatGPT...'
-        : 'Analyzing your wardrobe with free rules...'
+        ? INSIGHTS_COPY.LOADING_AI
+        : INSIGHTS_COPY.LOADING_QUICK
     );
     wardrobeAnalysisAbortRef.current?.abort();
     const abortController = new AbortController();
@@ -276,10 +385,10 @@ function App() {
         analysis_mode: mode,
       }, abortController.signal);
       setWardrobeGapResult(result);
-      setCurrentView('insights');
+      navigate(ROUTES.INSIGHTS);
       showToast(
         mode === 'premium'
-          ? 'Premium Analysis is ready. ✅'
+          ? INSIGHTS_COPY.TOAST_AI_READY
           : 'Wardrobe analysis is ready. ✅',
         'success'
       );
@@ -385,16 +494,19 @@ function App() {
       </div>
 
       <NavBar
-        currentView={currentView}
-        onNavigate={setCurrentView}
         isAuthenticated={isAuthenticated}
         user={user}
         testRunnerEnabled={testRunnerEnabled}
         onLogin={() => {
+          setLoginPromptContext(null);
           setShowRegister(false);
           setShowLoginModal(true);
         }}
-        onSignUp={() => setShowRegister(true)}
+        onSignUp={() => {
+          setLoginPromptContext(null);
+          setShowRegister(true);
+          setShowLoginModal(false);
+        }}
         onLogout={handleLogout}
       />
 
@@ -402,8 +514,21 @@ function App() {
       <div 
         className="relative container mx-auto px-3 sm:px-4 py-4 sm:py-8"
       >
-        {currentView === 'main' && (
+        <Routes>
+          <Route
+            path={ROUTES.MAIN}
+            element={
           <>
+            {!isAuthenticated && guestLimitReached && (
+              <div className="mb-8">
+                <AuthGateCard
+                  contextKey="guest-limit"
+                  onCreateAccount={() => openAuthPromptRegister('guest-limit')}
+                  onSignIn={() => openAuthPromptSignIn('guest-limit')}
+                />
+              </div>
+            )}
+
             {/* Hero section — 2 columns on desktop */}
             <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-2 lg:gap-12">
               <Sidebar
@@ -416,7 +541,7 @@ function App() {
                 onGetSuggestion={handleGetSuggestion}
                 onGetRandomSuggestion={isAuthenticated ? getRandomSuggestion : undefined}
                 onGetRandomFromHistory={isAuthenticated ? handleGetRandomFromHistory : undefined}
-                onOpenInsights={isAuthenticated ? () => setCurrentView('insights') : undefined}
+                onOpenInsights={isAuthenticated ? () => navigate(ROUTES.INSIGHTS) : undefined}
                 loading={loading}
                 generateModelImage={generateModelImage}
                 setGenerateModelImage={setGenerateModelImage}
@@ -434,9 +559,11 @@ function App() {
                 sourceWardrobeItem={sourceWardrobeItem}
                 highlightGenerateButton={highlightGenerateButton}
                 onChangeWardrobeItem={
-                  isAuthenticated ? () => setCurrentView('wardrobe') : undefined
+                  isAuthenticated ? () => navigate(ROUTES.WARDROBE) : undefined
                 }
                 onClearSourceWardrobeItem={() => setSourceWardrobeItem(null)}
+                guestRemaining={guestRemaining}
+                guestLimitReached={guestLimitReached}
                 onAddToWardrobe={async () => {
                   if (!image) {
                     showToast('Please upload an image first to add it to your wardrobe', 'error');
@@ -489,13 +616,14 @@ function App() {
                 onMakeMoreCasual={handleMakeMoreCasual}
                 onUseWardrobeOnly={handleUseWardrobeOnlyFromResult}
                 onChangeOccasion={handleChangeOccasion}
+                onLike={handleLikeOutfit}
                 showWardrobeOnlyAction={isAuthenticated}
                 onNavigateToWardrobe={(category?: string) => {
-                  setWardrobeCategoryFilter(category || null);
-                  setCurrentView('wardrobe');
+                  navigate(wardrobePath(category));
                 }}
                 showAiPromptResponse={!!user?.is_admin && showAiPromptResponse}
                 isAuthenticated={isAuthenticated}
+                guestLimitReached={guestLimitReached}
                 onAddToWardrobe={async () => {
                   if (!image) {
                     showToast('No image to add. Please upload an image first.', 'error');
@@ -533,19 +661,36 @@ function App() {
               />
             </div>
 
+            {!isAuthenticated && showFirstOutfitBanner && currentSuggestion && (
+              <FirstOutfitPromptBanner
+                onCreateAccount={() => openAuthPromptRegister('first-outfit')}
+                onSignIn={() => openAuthPromptSignIn('first-outfit')}
+                onDismiss={dismissFirstOutfitBanner}
+              />
+            )}
+
             <HowItWorksStepper />
             <RecentLooksSection
               history={history}
               loading={historyLoading}
               isAuthenticated={isAuthenticated}
-              onViewAll={() => setCurrentView('history')}
+              onViewAll={() => navigate(ROUTES.HISTORY)}
             />
           </>
-        )}
+            }
+          />
 
-        {currentView === 'wardrobe' && (
-          isAuthenticated ? (
-            <ErrorBoundary label="Wardrobe" resetKey={currentView}>
+          <Route
+            path={ROUTES.WARDROBE}
+            element={
+          !isAuthenticated ? (
+            <AuthGateCard
+              contextKey="wardrobe"
+              onCreateAccount={() => openAuthPromptRegister('wardrobe')}
+              onSignIn={() => openAuthPromptSignIn('wardrobe')}
+            />
+          ) : (
+            <ErrorBoundary label="Wardrobe" resetKey={location.pathname}>
               <Wardrobe 
                 initialCategory={wardrobeCategoryFilter}
                 onAnalyzeWardrobe={handleAnalyzeWardrobe}
@@ -555,7 +700,7 @@ function App() {
                   setCurrentSuggestion(suggestion);
                 }}
                 onNavigateToMain={() => {
-                  setCurrentView('main');
+                  navigate(ROUTES.MAIN);
                 }}
                 onSourceImageLoaded={() => {
                   setHighlightGenerateButton(true);
@@ -573,26 +718,13 @@ function App() {
                 }}
               />
             </ErrorBoundary>
-          ) : (
-            <div className="max-w-2xl mx-auto rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-8 text-center">
-              <h2 className="text-2xl font-bold text-white mb-4">👔 Wardrobe Management</h2>
-              <p className="text-slate-200 mb-6">
-                Save your clothes and get outfit ideas using only your own wardrobe.
-              </p>
-              <button
-                onClick={() => {
-                  setShowRegister(false);
-                  setShowLoginModal(true);
-                }}
-                className="px-6 py-3 btn-brand rounded-full font-semibold transition-colors"
-              >
-                Login to Continue
-              </button>
-            </div>
           )
-        )}
+            }
+          />
 
-        {currentView === 'insights' && (
+          <Route
+            path={ROUTES.INSIGHTS}
+            element={
           isAuthenticated ? (
             <div className="max-w-5xl mx-auto">
               <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-6 mb-6">
@@ -600,11 +732,11 @@ function App() {
                   <div>
                     <h2 className="text-2xl font-bold text-white">Wardrobe Insights</h2>
                     <p className="text-slate-300 mt-1">
-                      Understand wardrobe gaps by category and plan what to buy next.
+                      {MICRO_HELP.INSIGHTS}
                     </p>
                   </div>
                   <button
-                    onClick={() => setCurrentView('wardrobe')}
+                    onClick={() => navigate(ROUTES.WARDROBE)}
                     className="px-4 py-2.5 rounded-xl font-medium bg-white/10 text-slate-200 hover:bg-white/20 border border-white/15 transition-colors w-fit"
                   >
                     Open Wardrobe
@@ -650,36 +782,34 @@ function App() {
               />
             </div>
           ) : (
-            <div className="max-w-2xl mx-auto rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-8 text-center">
-              <h2 className="text-2xl font-bold text-white mb-4">Wardrobe Insights</h2>
-              <p className="text-slate-200 mb-6">Please log in to analyze your wardrobe and view insights.</p>
-              <button
-                onClick={() => setShowLoginModal(true)}
-                className="px-6 py-2 btn-brand rounded-full transition-colors"
-              >
-                Login
-              </button>
-            </div>
+            <AuthGateCard
+              contextKey="insights"
+              onCreateAccount={() => openAuthPromptRegister('insights')}
+              onSignIn={() => openAuthPromptSignIn('insights')}
+            />
           )
-        )}
+            }
+          />
 
-        {currentView === 'reports' && (
+          <Route
+            path={ROUTES.ADMIN_REPORTS}
+            element={
           isAuthenticated && user && user.is_admin ? (
-            <ErrorBoundary label="Reports" resetKey={currentView}>
+            <ErrorBoundary label="Reports" resetKey={location.pathname}>
               <AdminReports user={user} />
             </ErrorBoundary>
           ) : (
-            <div className="max-w-2xl mx-auto rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-8 text-center">
-              <h2 className="text-2xl font-bold text-white mb-4">📊 Reports</h2>
-              <p className="text-slate-200 mb-6">Admin privileges are required to view reports.</p>
-            </div>
+            <Navigate to={ROUTES.MAIN} replace />
           )
-        )}
+            }
+          />
 
-        {currentView === 'integration-tests' && (
+          <Route
+            path={ROUTES.ADMIN_INTEGRATION_TESTS}
+            element={
           isAuthenticated && user && user.is_admin ? (
             testRunnerEnabled ? (
-              <ErrorBoundary label="Integration Tests" resetKey={currentView}>
+              <ErrorBoundary label="Integration Tests" resetKey={location.pathname}>
                 <AdminIntegrationTestRunner user={user} />
               </ErrorBoundary>
             ) : (
@@ -689,14 +819,14 @@ function App() {
               </div>
             )
           ) : (
-            <div className="max-w-2xl mx-auto rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-8 text-center">
-              <h2 className="text-2xl font-bold text-white mb-4">Integration Tests</h2>
-              <p className="text-slate-200 mb-6">Admin privileges are required to run integration tests.</p>
-            </div>
+            <Navigate to={ROUTES.MAIN} replace />
           )
-        )}
+            }
+          />
 
-        {currentView === 'history' && (
+          <Route
+            path={ROUTES.HISTORY}
+            element={
           isAuthenticated ? (
             <OutfitHistory
               history={history}
@@ -709,24 +839,22 @@ function App() {
               searchController={historySearchController}
             />
           ) : (
-            <div className="max-w-2xl mx-auto rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-8 text-center">
-              <h2 className="text-2xl font-bold text-white mb-4">Outfit History</h2>
-              <p className="text-slate-200 mb-6">Please log in to view your outfit history.</p>
-              <button
-                onClick={() => setShowLoginModal(true)}
-                className="px-6 py-2 btn-brand rounded-full transition-colors"
-              >
-                Login
-              </button>
-            </div>
+            <AuthGateCard
+              contextKey="history"
+              onCreateAccount={() => openAuthPromptRegister('history')}
+              onSignIn={() => openAuthPromptSignIn('history')}
+            />
           )
-        )}
+            }
+          />
 
-        {currentView === 'about' && <About />}
+          <Route path={ROUTES.ABOUT} element={<About isAdmin={!!user?.is_admin} />} />
 
-        {currentView === 'guide' && <UserGuide />}
+          <Route path={ROUTES.GUIDE} element={<UserGuide isAdmin={!!user?.is_admin} />} />
 
-        {currentView === 'settings' && (
+          <Route
+            path={ROUTES.SETTINGS}
+            element={
           isAuthenticated ? (
           <div className="max-w-2xl mx-auto">
             <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-6 mb-6">
@@ -768,7 +896,7 @@ function App() {
                     Manage your wardrobe items to get personalized outfit suggestions based on what you own.
                   </p>
                   <button
-                    onClick={() => setCurrentView('wardrobe')}
+                    onClick={() => navigate(ROUTES.WARDROBE)}
                     className="px-4 py-2 bg-slate-600 text-white rounded-full hover:bg-slate-500 transition-colors"
                   >
                     👔 Manage Wardrobe
@@ -778,18 +906,17 @@ function App() {
             </div>
           </div>
           ) : (
-            <div className="max-w-2xl mx-auto rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-8 text-center">
-              <h2 className="text-2xl font-bold text-white mb-4">Settings</h2>
-              <p className="text-slate-200 mb-6">Please log in to access your account settings.</p>
-              <button
-                onClick={() => setShowLoginModal(true)}
-                className="px-6 py-2 btn-brand rounded-full transition-colors"
-              >
-                Login
-              </button>
-            </div>
+            <AuthGateCard
+              contextKey="settings"
+              onCreateAccount={() => openAuthPromptRegister('settings')}
+              onSignIn={() => openAuthPromptSignIn('settings')}
+            />
           )
-        )}
+            }
+          />
+
+          <Route path="*" element={<Navigate to={ROUTES.MAIN} replace />} />
+        </Routes>
       </div>
 
       {/* Intro overlay - shown once after first successful login/register */}
@@ -814,28 +941,25 @@ function App() {
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div 
             className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" 
-            onClick={() => {
-              setShowRegister(false);
-              setShowLoginModal(false);
-            }}
+            onClick={closeAuthModal}
           ></div>
           <div className="flex min-h-full items-center justify-center p-4">
             <div className="relative rounded-2xl bg-slate-900 border border-white/10 shadow-2xl max-w-md w-full transform transition-all backdrop-blur">
               <button
-                onClick={() => {
-                  setShowRegister(false);
-                  setShowLoginModal(false);
-                }}
+                onClick={closeAuthModal}
                 className="absolute top-4 right-4 text-slate-400 hover:text-white z-10"
               >
                 ✕
               </button>
               {showRegister ? (
                 <Register
+                  headline={authModalCopy?.headline}
+                  subheadline={authModalCopy?.subheadline}
                   onRegister={async (data) => {
                     const success = await handleRegister(data);
                     if (success) {
-                      setShowRegister(false);
+                      closeAuthModal();
+                      setShowFirstOutfitBanner(false);
                     }
                   }}
                   onSwitchToLogin={() => {
@@ -848,10 +972,13 @@ function App() {
                 />
               ) : (
                 <Login
+                  headline={authModalCopy?.headline}
+                  subheadline={authModalCopy?.subheadline}
                   onLogin={async (credentials) => {
                     const success = await handleLogin(credentials);
                     if (success) {
-                      setShowLoginModal(false);
+                      closeAuthModal();
+                      setShowFirstOutfitBanner(false);
                     }
                   }}
                   onSwitchToRegister={() => {
@@ -885,7 +1012,7 @@ function App() {
         confirmText="Use Existing"
         cancelText="Get New"
         onConfirm={handleUseCachedSuggestionWrapper}
-        onCancel={handleGetNewSuggestion}
+        onCancel={handleGetNewSuggestionGuarded}
       />
 
       {/* Add to Wardrobe Modal with Editable Form */}
@@ -1095,9 +1222,9 @@ function App() {
           ></div>
           <div className="flex min-h-full items-center justify-center p-4">
             <div className="relative rounded-2xl bg-slate-900 border border-white/10 shadow-2xl max-w-md w-full p-6 transform transition-all backdrop-blur">
-              <h3 className="text-lg font-semibold text-white text-center mb-2">Choose Analysis Mode</h3>
+              <h3 className="text-lg font-semibold text-white text-center mb-2">{INSIGHTS_COPY.MODE_PICKER_TITLE}</h3>
               <p className="text-sm text-slate-200 text-center mb-6">
-                Pick how you want your wardrobe analyzed.
+                {INSIGHTS_COPY.MODE_PICKER_SUBTITLE}
               </p>
               <div className="space-y-3">
                 <button
@@ -1107,9 +1234,9 @@ function App() {
                   }}
                   className="w-full rounded-xl border border-brand-blue/30 bg-brand-blue/10 px-4 py-3 text-left transition hover:bg-brand-blue/20"
                 >
-                  <div className="text-sm font-semibold text-brand-blue">Basic Analysis</div>
+                  <div className="text-sm font-semibold text-brand-blue">{INSIGHTS_COPY.QUICK_WARDROBE_CHECK}</div>
                   <div className="text-xs text-slate-300 mt-1">
-                    Fast wardrobe insight with practical buy-next guidance.
+                    {INSIGHTS_COPY.QUICK_MODE_SUBTITLE}
                   </div>
                 </button>
                 <button
@@ -1119,9 +1246,9 @@ function App() {
                   }}
                   className="w-full rounded-xl border border-brand-blue/30 bg-brand-purple/15 px-4 py-3 text-left transition hover:bg-brand-purple/25"
                 >
-                  <div className="text-sm font-semibold text-brand-purple/90">Premium Analysis</div>
+                  <div className="text-sm font-semibold text-brand-purple/90">{INSIGHTS_COPY.AI_STYLIST_REVIEW}</div>
                   <div className="text-xs text-brand-purple/90 mt-1">
-                    Deeper outfit-matching insights and richer recommendation detail.
+                    {INSIGHTS_COPY.AI_MODE_SUBTITLE}
                   </div>
                 </button>
               </div>
@@ -1138,8 +1265,8 @@ function App() {
 
       {/* Footer */}
       <Footer
-        onOpenUserGuide={() => setCurrentView('guide')}
-        onOpenAbout={() => setCurrentView('about')}
+        onOpenUserGuide={() => navigate(ROUTES.GUIDE)}
+        onOpenAbout={() => navigate(ROUTES.ABOUT)}
       />
     </div>
   );

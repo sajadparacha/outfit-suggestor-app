@@ -21,6 +21,7 @@ describe('OutfitPreview', () => {
   const mockOnUseWardrobeOnly = jest.fn();
   const mockOnChangeOccasion = jest.fn();
   const mockOnAddToWardrobe = jest.fn();
+  const mockOnLike = jest.fn();
 
   const actionProps = {
     onGenerateAnother: mockOnGenerateAnother,
@@ -65,6 +66,7 @@ describe('OutfitPreview', () => {
           suggestion={null}
           loading={false}
           error="Something went wrong"
+          hasImage={true}
           {...actionProps}
         />
       );
@@ -387,6 +389,21 @@ describe('OutfitPreview', () => {
         />
       );
       expect(screen.queryByRole('button', { name: /Use wardrobe items only/i })).not.toBeInTheDocument();
+    });
+
+    it('calls onLike when Like button is clicked', () => {
+      render(
+        <OutfitPreview
+          suggestion={baseSuggestion}
+          loading={false}
+          error={null}
+          {...actionProps}
+          hasImage={true}
+          onLike={mockOnLike}
+        />
+      );
+      fireEvent.click(screen.getByRole('button', { name: /Like this outfit/i }));
+      expect(mockOnLike).toHaveBeenCalledTimes(1);
     });
 
     it('shows Add to Wardrobe when authenticated and handler provided', () => {

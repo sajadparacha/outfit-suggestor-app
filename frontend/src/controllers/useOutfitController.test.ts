@@ -2,6 +2,7 @@ import { renderHook, act } from '@testing-library/react';
 import { useOutfitController } from './useOutfitController';
 import ApiService from '../services/ApiService';
 import { OUTFIT_VARIATION_MODIFIERS } from '../utils/outfitPromptUtils';
+import { GuestLimitReachedError } from '../models/GuestModels';
 import type { OutfitSuggestion } from '../models/OutfitModels';
 
 jest.mock('../utils/imageUtils', () => ({
@@ -83,5 +84,22 @@ describe('useOutfitController getSuggestion variations', () => {
     expect(call[1]).toContain(OUTFIT_VARIATION_MODIFIERS.wardrobeOnly);
     expect(call[5]).toBe(true);
     expect(hook.result.current.useWardrobeOnly).toBe(true);
+  });
+
+  it('calls onGuestLimitReached when API returns guest limit error', async () => {
+    const onGuestLimitReached = jest.fn();
+    jest.spyOn(ApiService, 'getSuggestion').mockRejectedValue(
+      new GuestLimitReachedError('Limit reached')
+    );
+
+    const hook = renderHook(() => useOutfitController({ onGuestLimitReached }));
+    seedSuggestionState(hook);
+
+    await act(async () => {
+      await hook.result.current.getSuggestion(true);
+    });
+
+    expect(onGuestLimitReached).toHaveBeenCalledTimes(1);
+    expect(hook.result.current.error).toBeNull();
   });
 });

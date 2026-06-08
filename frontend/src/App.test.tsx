@@ -1,9 +1,8 @@
-import React from 'react';
-import { render, screen } from '@testing-library/react';
-import App from './App';
+import { screen } from '@testing-library/react';
+import { renderApp } from './test/renderWithRouter';
 
 test('renders AI Outfit Suggestor app', () => {
-  render(<App />);
-  expect(screen.getByRole('button', { name: /^Suggest$/ })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Guide' })).toBeInTheDocument();
+  renderApp();
+  expect(screen.getByRole('link', { name: /^Suggest$/ })).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Guide' })).toBeInTheDocument();
 });

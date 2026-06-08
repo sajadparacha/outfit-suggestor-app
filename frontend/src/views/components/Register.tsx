@@ -6,9 +6,18 @@ interface RegisterProps {
   onSwitchToLogin: () => void;
   loading: boolean;
   error: string | null;
+  headline?: string;
+  subheadline?: string;
 }
 
-const Register: React.FC<RegisterProps> = ({ onRegister, onSwitchToLogin, loading, error }) => {
+const Register: React.FC<RegisterProps> = ({
+  onRegister,
+  onSwitchToLogin,
+  loading,
+  error,
+  headline,
+  subheadline,
+}) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -32,8 +41,13 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onSwitchToLogin, loadin
     <div className="p-6 sm:p-8">
       <div className="space-y-6">
         <div>
-          <h2 className="text-center text-2xl font-bold text-white">Create your account</h2>
-          <p className="mt-2 text-center text-sm text-slate-400">
+          <h2 className="text-center text-2xl font-bold text-white">
+            {headline ?? 'Create your account'}
+          </h2>
+          {subheadline ? (
+            <p className="mt-2 text-center text-sm text-slate-300">{subheadline}</p>
+          ) : null}
+          <p className={`text-center text-sm text-slate-400 ${subheadline ? 'mt-3' : 'mt-2'}`}>
             Or{' '}
             <button
               type="button"

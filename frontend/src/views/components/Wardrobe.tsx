@@ -1,10 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useWardrobeController } from '../../controllers/useWardrobeController';
 import { WardrobeItem, WardrobeItemCreate, WardrobeItemUpdate } from '../../models/WardrobeModels';
 import { OutfitHistoryEntry, SourceWardrobeItem } from '../../models/OutfitModels';
 import ApiService from '../../services/ApiService';
 import { isValidImageSize, formatFileSize } from '../../utils/imageUtils';
 import { WARDROBE_MAX_SIZE_MB } from '../../constants/imageLimits';
+import { UI_CONFIG } from '../../utils/constants';
 import ConfirmationModal from './ConfirmationModal';
 import { historyEntryToSuggestion } from '../../utils/historyUtils';
 
@@ -100,11 +101,106 @@ const Wardrobe: React.FC<WardrobeProps> = ({
   const [historySuggestions, setHistorySuggestions] = useState<OutfitHistoryEntry[]>([]);
   const [historySuggestionsError, setHistorySuggestionsError] = useState<string | null>(null);
   const [historySourceItem, setHistorySourceItem] = useState<WardrobeItem | null>(null);
-  const [historyImageIndex, setHistoryImageIndex] = useState<Set<string>>(new Set());
-  const [historyItemIdIndex, setHistoryItemIdIndex] = useState<Set<number>>(new Set());
   const [flowTipDismissed, setFlowTipDismissed] = useState(
     () => localStorage.getItem('wardrobe_flow_tip_dismissed') === 'true'
   );
+
+  const [hiddenItemIds, setHiddenItemIds] = useState<Set<number>>(new Set());
+  const [openMenuItemId, setOpenMenuItemId] = useState<number | null>(null);
+  const [showDeleteUndoToast, setShowDeleteUndoToast] = useState(false);
+  const pendingDeleteRef = useRef<{
+    itemId: number;
+    timeoutId: ReturnType<typeof setTimeout>;
+  } | null>(null);
+
+  const visibleWardrobeItems = useMemo(
+    () => wardrobeItems.filter((item) => !hiddenItemIds.has(item.id)),
+    [wardrobeItems, hiddenItemIds]
+  );
+
+  const clearPendingDeleteUi = useCallback(() => {
+    if (pendingDeleteRef.current) {
+      clearTimeout(pendingDeleteRef.current.timeoutId);
+      pendingDeleteRef.current = null;
+    }
+    setShowDeleteUndoToast(false);
+  }, []);
+
+  const commitPendingDelete = useCallback(async () => {
+    const pending = pendingDeleteRef.current;
+    if (!pending) return;
+
+    clearTimeout(pending.timeoutId);
+    pendingDeleteRef.current = null;
+    setShowDeleteUndoToast(false);
+
+    const { itemId } = pending;
+    try {
+      await deleteItem(itemId);
+    } catch {
+      // Error surfaced by controller
+    } finally {
+      setHiddenItemIds((prev) => {
+        const next = new Set(prev);
+        next.delete(itemId);
+        return next;
+      });
+    }
+  }, [deleteItem]);
+
+  const handleUndoDelete = useCallback(() => {
+    const pending = pendingDeleteRef.current;
+    if (!pending) return;
+
+    clearTimeout(pending.timeoutId);
+    pendingDeleteRef.current = null;
+    setShowDeleteUndoToast(false);
+    setHiddenItemIds((prev) => {
+      const next = new Set(prev);
+      next.delete(pending.itemId);
+      return next;
+    });
+  }, []);
+
+  const handleDeleteItem = useCallback(
+    (itemId: number) => {
+      void (async () => {
+        await commitPendingDelete();
+
+        setHiddenItemIds((prev) => new Set(prev).add(itemId));
+        setShowDeleteUndoToast(true);
+
+        const timeoutId = setTimeout(() => {
+          void commitPendingDelete();
+        }, UI_CONFIG.undoDeleteDurationMs);
+
+        pendingDeleteRef.current = { itemId, timeoutId };
+      })();
+    },
+    [commitPendingDelete]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (pendingDeleteRef.current) {
+        clearTimeout(pendingDeleteRef.current.timeoutId);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (openMenuItemId === null) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('[data-wardrobe-item-menu]')) {
+        setOpenMenuItemId(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [openMenuItemId]);
 
   const dismissFlowTip = () => {
     localStorage.setItem('wardrobe_flow_tip_dismissed', 'true');
@@ -159,55 +255,6 @@ const Wardrobe: React.FC<WardrobeProps> = ({
       loadWardrobe(undefined, undefined, 1);
     }
   }, [loadWardrobe, loadSummary, initialCategory, setSelectedCategory]);
-
-  React.useEffect(() => {
-    let active = true;
-
-    const loadHistoryIndex = async () => {
-      if (wardrobeItems.length === 0) {
-        setHistoryImageIndex(new Set());
-        setHistoryItemIdIndex(new Set());
-        return;
-      }
-
-      try {
-        const allHistory = await ApiService.getOutfitHistory(100);
-        const index = new Set(
-          allHistory
-            .map((entry) => entry.image_data)
-            .filter((imageData): imageData is string => !!imageData)
-        );
-        const itemIdIndex = new Set(
-          allHistory.flatMap((entry) => {
-            const ids = [
-              entry.source_wardrobe_item_id,
-              entry.shirt_id,
-              entry.trouser_id,
-              entry.blazer_id,
-              entry.shoes_id,
-              entry.belt_id,
-            ];
-            return ids.filter((itemId): itemId is number => typeof itemId === 'number');
-          })
-        );
-        if (active) {
-          setHistoryImageIndex(index);
-          setHistoryItemIdIndex(itemIdIndex);
-        }
-      } catch (err) {
-        if (active) {
-          setHistoryImageIndex(new Set());
-          setHistoryItemIdIndex(new Set());
-        }
-      }
-    };
-
-    void loadHistoryIndex();
-
-    return () => {
-      active = false;
-    };
-  }, [wardrobeItems]);
 
   // Handle category filter
   const handleCategoryFilter = (category: string | null) => {
@@ -362,16 +409,6 @@ const Wardrobe: React.FC<WardrobeProps> = ({
     setShowDuplicateModal(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
-    }
-  };
-
-  const handleDeleteItem = async (itemId: number) => {
-    if (window.confirm('Are you sure you want to delete this item?')) {
-      try {
-        await deleteItem(itemId);
-      } catch (err) {
-        // Error is handled by controller
-      }
     }
   };
 
@@ -630,7 +667,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                   <p className="text-sm font-semibold text-white">How to style from wardrobe</p>
                   <ol className="mt-2 space-y-1.5 text-sm text-slate-200">
                     <li><span className="font-medium text-brand-blue">1.</span> Pick an item below</li>
-                    <li><span className="font-medium text-brand-blue">2.</span> Tap <strong className="text-white">Build outfit from this item</strong></li>
+                    <li><span className="font-medium text-brand-blue">2.</span> Tap <strong className="text-white">Style this item</strong></li>
                     <li><span className="font-medium text-brand-blue">3.</span> On Suggest, set preferences and tap <strong className="text-white">Generate Outfit</strong></li>
                   </ol>
                 </div>
@@ -751,18 +788,14 @@ const Wardrobe: React.FC<WardrobeProps> = ({
           </div>
         ) : (
           <div className="space-y-4">
-            {wardrobeItems && Array.isArray(wardrobeItems) && wardrobeItems.map((item) => (
+            {visibleWardrobeItems.map((item) => (
               <div
                 key={item.id}
                 className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-3 shadow-xl backdrop-blur transition-shadow hover:shadow-2xl sm:p-4"
               >
                 <div className="flex gap-3 sm:gap-4">
                   {item.image_data ? (
-                    <div
-                      className="h-20 w-20 flex-shrink-0 cursor-pointer overflow-hidden rounded-xl border border-white/10 bg-slate-800/80 transition-all hover:ring-2 ring-brand-blue sm:h-32 sm:w-32"
-                      onClick={() => handleViewImage(item.image_data!)}
-                      title="Click to view full size"
-                    >
+                    <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl border border-white/10 bg-slate-800/80 sm:h-32 sm:w-32">
                       <img
                         src={`data:image/jpeg;base64,${item.image_data}`}
                         alt={item.category}
@@ -797,13 +830,17 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                 </div>
 
                 <div className="mt-3 border-t border-white/10 pt-3 sm:mt-4">
-                  {item.image_data && (
+                  <div className="flex items-stretch gap-2">
                     <button
                       onClick={() => handleGetAISuggestion(item)}
-                      disabled={suggestionLoading === item.id || (outfitController?.loading ?? false)}
-                      className="flex w-full min-h-[48px] touch-manipulation flex-col items-center justify-center gap-0.5 rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm btn-brand transition-all disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={
+                        !item.image_data ||
+                        suggestionLoading === item.id ||
+                        (outfitController?.loading ?? false)
+                      }
+                      className="flex min-h-[48px] flex-1 touch-manipulation flex-col items-center justify-center gap-0.5 rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm btn-brand transition-all disabled:cursor-not-allowed disabled:opacity-50"
                       title="Open Suggest with this wardrobe item loaded"
-                      aria-label="Build outfit from this item"
+                      aria-label="Style this item with AI"
                     >
                       {suggestionLoading === item.id || (outfitController?.loading ?? false) ? (
                         <>
@@ -812,53 +849,91 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                         </>
                       ) : (
                         <>
-                          <span>✨ Build outfit from this item</span>
+                          <span>✨ Style this item</span>
                           <span className="text-xs font-normal text-white/80">
                             Opens Suggest — tune options, then Generate Outfit
                           </span>
                         </>
                       )}
                     </button>
-                  )}
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                  {(historyItemIdIndex.has(item.id) || (!!item.image_data && historyImageIndex.has(item.image_data))) && (
-                    <button
-                      onClick={() => handleOpenHistorySuggestions(item)}
-                      disabled={historyLoadingForItem === item.id}
-                      className="flex min-h-[40px] touch-manipulation items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-                      title="Show past suggestions for this item"
-                    >
-                      {historyLoadingForItem === item.id ? (
-                        <>
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                          Loading...
-                        </>
-                      ) : (
-                        <>
-                          <span className="sm:hidden">📚 History</span>
-                          <span className="hidden sm:inline">📚 Past Suggestions</span>
-                        </>
+                    <div className="relative flex-shrink-0" data-wardrobe-item-menu>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOpenMenuItemId((prev) => (prev === item.id ? null : item.id))
+                        }
+                        className="flex h-12 min-w-[48px] touch-manipulation items-center justify-center rounded-xl border border-white/15 bg-white/5 px-3 text-xl text-slate-200 transition hover:bg-white/10"
+                        aria-label="More actions"
+                        aria-expanded={openMenuItemId === item.id}
+                        aria-haspopup="menu"
+                        data-testid={`wardrobe-item-menu-${item.id}`}
+                      >
+                        ⋮
+                      </button>
+                      {openMenuItemId === item.id && (
+                        <div
+                          role="menu"
+                          className="absolute right-0 top-full z-20 mt-1 min-w-[10rem] overflow-hidden rounded-xl border border-white/15 bg-slate-900 py-1 shadow-2xl"
+                        >
+                          <button
+                            type="button"
+                            role="menuitem"
+                            disabled={!item.image_data}
+                            onClick={() => {
+                              if (item.image_data) {
+                                handleViewImage(item.image_data);
+                                setOpenMenuItemId(null);
+                              }
+                            }}
+                            className="flex w-full min-h-[44px] touch-manipulation items-center px-4 py-2.5 text-left text-sm text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                            aria-label="View image"
+                            data-testid={`wardrobe-menu-view-image-${item.id}`}
+                          >
+                            View image
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              handleEditItem(item);
+                              setOpenMenuItemId(null);
+                            }}
+                            className="flex w-full min-h-[44px] touch-manipulation items-center px-4 py-2.5 text-left text-sm text-slate-200 transition hover:bg-white/10"
+                            aria-label="Edit"
+                            data-testid={`wardrobe-menu-edit-${item.id}`}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              void handleOpenHistorySuggestions(item);
+                              setOpenMenuItemId(null);
+                            }}
+                            disabled={historyLoadingForItem === item.id}
+                            className="flex w-full min-h-[44px] touch-manipulation items-center px-4 py-2.5 text-left text-sm text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                            aria-label="History"
+                            data-testid={`wardrobe-menu-history-${item.id}`}
+                          >
+                            {historyLoadingForItem === item.id ? 'Loading…' : 'History'}
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              handleDeleteItem(item.id);
+                              setOpenMenuItemId(null);
+                            }}
+                            className="flex w-full min-h-[44px] touch-manipulation items-center px-4 py-2.5 text-left text-sm text-red-400 transition hover:bg-white/10 hover:text-red-300"
+                            aria-label="Delete"
+                            data-testid={`wardrobe-menu-delete-${item.id}`}
+                          >
+                            Delete
+                          </button>
+                        </div>
                       )}
-                    </button>
-                  )}
-                  <div className="ml-auto flex items-center gap-1">
-                    <button
-                      onClick={() => handleEditItem(item)}
-                      className="flex h-11 w-11 touch-manipulation items-center justify-center rounded-xl text-xl text-brand-blue transition-colors hover:bg-white/10"
-                      title="Edit item"
-                      aria-label="Edit item"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      onClick={() => handleDeleteItem(item.id)}
-                      className="flex h-11 w-11 touch-manipulation items-center justify-center rounded-xl text-xl text-red-400 transition-colors hover:bg-white/10 hover:text-red-300"
-                      title="Delete item"
-                      aria-label="Delete item"
-                    >
-                      🗑️
-                    </button>
-                  </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1588,6 +1663,27 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                   )
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {showDeleteUndoToast && (
+          <div
+            className="fixed bottom-6 left-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 animate-slide-in sm:left-auto sm:right-6 sm:translate-x-0"
+            role="status"
+            aria-live="polite"
+            data-testid="wardrobe-delete-undo-toast"
+          >
+            <div className="flex items-center gap-3 rounded-xl border border-white/15 bg-slate-900/95 px-4 py-3 shadow-2xl backdrop-blur">
+              <p className="flex-1 text-sm font-medium text-white">Item deleted.</p>
+              <button
+                type="button"
+                onClick={handleUndoDelete}
+                className="text-sm font-semibold text-brand-blue transition-opacity hover:opacity-80"
+                aria-label="Undo delete"
+              >
+                Undo
+              </button>
             </div>
           </div>
         )}

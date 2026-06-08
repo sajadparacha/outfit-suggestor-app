@@ -152,6 +152,15 @@ struct OutfitFilters {
 // MARK: - API Error
 struct APIError: Codable {
     let detail: String
+    let code: String?
+}
+
+// MARK: - Guest Usage
+struct GuestUsageResponse: Codable {
+    let limit: Int
+    let used: Int
+    let remaining: Int
+    let requires_signup: Bool
 }
 
 // MARK: - Filter Options

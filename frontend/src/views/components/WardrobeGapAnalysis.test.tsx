@@ -2,11 +2,12 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import WardrobeGapAnalysis from './WardrobeGapAnalysis';
 import { WardrobeGapAnalysisResponse } from '../../models/WardrobeModels';
+import { INSIGHTS_COPY } from '../../utils/insightsCopy';
 
 describe('WardrobeGapAnalysis', () => {
   it('renders empty hint when no result', () => {
     render(<WardrobeGapAnalysis result={null} loading={false} error={null} />);
-    expect(screen.getByText(/Run analysis to get category-wise color and style coverage/i)).toBeInTheDocument();
+    expect(screen.getByText(INSIGHTS_COPY.EMPTY_STATE)).toBeInTheDocument();
   });
 
   it('renders category analysis details', () => {
@@ -29,16 +30,17 @@ describe('WardrobeGapAnalysis', () => {
     };
 
     render(<WardrobeGapAnalysis result={result} loading={false} error={null} />);
-    expect(screen.getByText(/Wardrobe Gap Analysis/i)).toBeInTheDocument();
+    expect(screen.getByText(INSIGHTS_COPY.WHATS_MISSING_TITLE)).toBeInTheDocument();
     expect(screen.getByText(/Best next purchases are in blazer and shoes/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/Missing colors/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(new RegExp(INSIGHTS_COPY.COLORS_TO_ADD, 'i')).length).toBeGreaterThan(0);
     expect(screen.getByText(/Add a black shirt for better office coverage/i)).toBeInTheDocument();
-    expect(screen.getByText(/Categories analyzed/i)).toBeInTheDocument();
+    expect(screen.getByText(INSIGHTS_COPY.CATEGORIES_CHECKED)).toBeInTheDocument();
     expect(screen.getAllByText(/^1$/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Top buy-next category/i)).toBeInTheDocument();
+    expect(screen.getByText(INSIGHTS_COPY.BEST_CATEGORY_TO_SHOP_NEXT)).toBeInTheDocument();
+    expect(screen.getByText(INSIGHTS_COPY.WHAT_TO_BUY_NEXT)).toBeInTheDocument();
   });
 
-  it('shows Premium depth and no fallback message for successful premium analysis', () => {
+  it('shows AI Stylist Review label and no fallback message for successful premium analysis', () => {
     const result: WardrobeGapAnalysisResponse = {
       occasion: 'casual',
       season: 'summer',
@@ -61,8 +63,8 @@ describe('WardrobeGapAnalysis', () => {
 
     render(<WardrobeGapAnalysis result={result} loading={false} error={null} />);
 
-    expect(screen.getByText(/Analysis depth:/i)).toBeInTheDocument();
-    expect(screen.getByText('Premium')).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`${INSIGHTS_COPY.REVIEW_TYPE_PREFIX}`))).toBeInTheDocument();
+    expect(screen.getByText(INSIGHTS_COPY.AI_STYLIST_REVIEW)).toBeInTheDocument();
     expect(screen.queryByText(/temporarily unavailable/i)).not.toBeInTheDocument();
     expect(screen.getByText(/Start with breathable shirts and tailored shorts for summer/i)).toBeInTheDocument();
   });
@@ -92,7 +94,7 @@ describe('WardrobeGapAnalysis', () => {
 
     render(<WardrobeGapAnalysis result={result} loading={false} error={null} />);
 
-    expect(screen.getByText('Basic')).toBeInTheDocument();
+    expect(screen.getByText(INSIGHTS_COPY.QUICK_WARDROBE_CHECK)).toBeInTheDocument();
     expect(screen.getByText(fallbackSummary)).toBeInTheDocument();
   });
 

@@ -22,6 +22,10 @@ struct WardrobeListView: View {
     @State private var searchText = ""
     @State private var categoryInfoMessage: String?
     @State private var categoryInfoDismissTask: Task<Void, Never>?
+    @State private var pendingDeleteItem: WardrobeItem?
+    @State private var pendingDeleteTask: Task<Void, Never>?
+    var initialCategoryFilter: String?
+    var onConsumeCategoryFilter: (() -> Void)?
     var onGetSuggestionFromItem: ((WardrobeItem) -> Void)?
     var onSelectHistorySuggestion: ((OutfitHistoryEntry) -> Void)?
     @State private var historyLoadingForItem: Int?
@@ -31,8 +35,6 @@ struct WardrobeListView: View {
     @State private var historySourceItem: WardrobeItem?
     @State private var editingItem: WardrobeItem?
     @State private var fullScreenImage: UIImage?
-    @State private var historyImageIndex: Set<String> = []
-    @State private var historyItemIdIndex: Set<Int> = []
     @AppStorage("wardrobe_flow_tip_dismissed") private var flowTipDismissed = false
     
     private var categoryVisibleItems: [WardrobeItem] {
@@ -54,16 +56,17 @@ struct WardrobeListView: View {
         }
     }
 
+    private var displayedItems: [WardrobeItem] {
+        guard let pendingDeleteItem else { return filteredItems }
+        return filteredItems.filter { $0.id != pendingDeleteItem.id }
+    }
+
     private var visibleWardrobeItemIDsLabel: String {
-        filteredItems.map { String($0.id) }.joined(separator: ",")
+        displayedItems.map { String($0.id) }.joined(separator: ",")
     }
 
     private var isRegularWidth: Bool {
         horizontalSizeClass == .regular
-    }
-
-    private var rowActionsWidth: CGFloat {
-        isRegularWidth ? 190 : 150
     }
 
     var body: some View {
@@ -121,16 +124,14 @@ struct WardrobeListView: View {
                     
                     ScrollView {
                         LazyVStack(spacing: 12) {
-                            ForEach(filteredItems) { item in
+                            ForEach(displayedItems) { item in
                                 WardrobeCardView(
                                     item: item,
                                     image: decodeBase64Image(item.image_data),
-                                    showPastSuggestions: itemHasPastSuggestions(item) || historyLoadingForItem == item.id,
-                                    isPastSuggestionsLoading: historyLoadingForItem == item.id,
                                     onGetSuggestion: onGetSuggestionFromItem == nil ? nil : { onGetSuggestionFromItem?(item) },
                                     onPastSuggestions: { Task { await openHistorySuggestions(for: item) } },
                                     onEdit: { editingItem = item },
-                                    onDelete: { deleteItem(id: item.id) },
+                                    onDelete: { scheduleDelete(item: item) },
                                     onShowImage: { image in fullScreenImage = image }
                                 )
                                 .accessibilityIdentifier("wardrobe.row.\(item.id)")
@@ -149,6 +150,34 @@ struct WardrobeListView: View {
                     }
                 }
                 .adaptiveContent(maxWidth: 1080)
+                .overlay(alignment: .bottom) {
+                    if pendingDeleteItem != nil {
+                        HStack(spacing: 12) {
+                            Text("Item deleted.")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(AppTheme.textPrimary)
+                                .accessibilityIdentifier("wardrobe.deleteUndoToastText")
+                            Spacer()
+                            Button("Undo", action: undoPendingDelete)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(AppTheme.accent)
+                                .accessibilityIdentifier("wardrobe.deleteUndoButton")
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(AppTheme.bgSecondary.opacity(0.96))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(AppTheme.border, lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .shadow(color: .black.opacity(0.25), radius: 12, y: 4)
+                        .padding(.horizontal)
+                        .padding(.bottom, 12)
+                        .accessibilityElement(children: .contain)
+                        .accessibilityIdentifier("wardrobe.deleteUndoToast")
+                    }
+                }
             }
         }
         .navigationTitle("Wardrobe")
@@ -160,13 +189,18 @@ struct WardrobeListView: View {
             }
         }
         .onAppear {
+            applyInitialCategoryFilterIfNeeded()
             guard !hasLoaded else { return }
             hasLoaded = true
             Task { await load() }
         }
+        .onChange(of: initialCategoryFilter) { _ in
+            applyInitialCategoryFilterIfNeeded()
+        }
         .onDisappear {
             categoryInfoDismissTask?.cancel()
             categoryInfoDismissTask = nil
+            Task { await commitPendingDelete() }
         }
         .sheet(isPresented: $showAddSheet) {
             WardrobeFormView(item: nil, onSaved: { showAddSheet = false; Task { await load() } }, onCancel: { showAddSheet = false })
@@ -203,7 +237,7 @@ struct WardrobeListView: View {
                         .font(.caption.weight(.semibold))
                         .foregroundColor(AppTheme.textSecondary)
                 }
-                Text("1. Pick an item  2. Tap Build outfit  3. On Suggest, set preferences and Generate Outfit")
+                Text("1. Pick an item  2. \(WardrobeCardUx.flowTipStep2Fragment)  3. On Suggest, set preferences and Generate Outfit")
                     .font(.caption)
                     .foregroundColor(AppTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -279,6 +313,22 @@ struct WardrobeListView: View {
         return categoryCounts[category.lowercased()] ?? 0
     }
     
+    private func applyInitialCategoryFilterIfNeeded() {
+        guard let seed = initialCategoryFilter?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+              !seed.isEmpty else { return }
+
+        let normalized = seed.lowercased()
+        if normalized == "all" {
+            categoryFilter = "All"
+        } else if wardrobeCategoryOptions.contains(where: { $0.lowercased() == normalized }) {
+            categoryFilter = wardrobeCategoryOptions.first(where: { $0.lowercased() == normalized }) ?? seed
+        } else {
+            categoryFilter = seed
+        }
+        onConsumeCategoryFilter?()
+    }
+
     private func matchesCategoryFilter(_ itemCategory: String, filter: String) -> Bool {
         let normalized = itemCategory.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         switch filter.lowercased() {
@@ -330,14 +380,39 @@ struct WardrobeListView: View {
         categoryCounts = counts
     }
 
-    private func deleteItem(id: Int) {
-        Task {
-            do {
-                try await APIService.shared.deleteWardrobeItem(id: id)
-                await load()
-            } catch {
-                await MainActor.run { errorMessage = error.localizedDescription }
+    private func scheduleDelete(item: WardrobeItem) {
+        Task { @MainActor in
+            await commitPendingDelete()
+            pendingDeleteItem = item
+            pendingDeleteTask?.cancel()
+            pendingDeleteTask = Task {
+                try? await Task.sleep(nanoseconds: 5_000_000_000)
+                guard !Task.isCancelled else { return }
+                await commitPendingDelete()
             }
+        }
+    }
+
+    @MainActor
+    private func undoPendingDelete() {
+        pendingDeleteTask?.cancel()
+        pendingDeleteTask = nil
+        pendingDeleteItem = nil
+    }
+
+    @MainActor
+    private func commitPendingDelete() async {
+        guard let item = pendingDeleteItem else { return }
+        pendingDeleteTask?.cancel()
+        pendingDeleteTask = nil
+
+        do {
+            try await APIService.shared.deleteWardrobeItem(id: item.id)
+            pendingDeleteItem = nil
+            await load()
+        } catch {
+            pendingDeleteItem = nil
+            errorMessage = error.localizedDescription
         }
     }
 
@@ -357,12 +432,9 @@ struct WardrobeListView: View {
                 categoryFilter = "All"
             }
             isLoading = false
-            await refreshHistoryIndex(for: allResponse.items)
         } catch {
             errorMessage = error.localizedDescription
             isLoading = false
-            historyImageIndex = []
-            historyItemIdIndex = []
             allWardrobeItems = []
             categoryCounts = [:]
             categoryInfoDismissTask?.cancel()
@@ -424,44 +496,6 @@ struct WardrobeListView: View {
         return itemImage == entryImage
     }
 
-    @MainActor
-    private func refreshHistoryIndex(for items: [WardrobeItem]) async {
-        guard !items.isEmpty else {
-            historyImageIndex = []
-            historyItemIdIndex = []
-            return
-        }
-        do {
-            let allHistory = try await APIService.shared.getOutfitHistory(limit: 100)
-            historyImageIndex = Set(
-                allHistory.compactMap { $0.image_data?.isEmpty == false ? $0.image_data : nil }
-            )
-            historyItemIdIndex = Set(
-                allHistory.flatMap { entry in
-                    [
-                        entry.source_wardrobe_item_id,
-                        entry.shirt_id,
-                        entry.trouser_id,
-                        entry.blazer_id,
-                        entry.shoes_id,
-                        entry.belt_id
-                    ].compactMap { $0 }
-                }
-            )
-        } catch {
-            historyImageIndex = []
-            historyItemIdIndex = []
-        }
-    }
-
-    private func itemHasPastSuggestions(_ item: WardrobeItem) -> Bool {
-        if historyItemIdIndex.contains(item.id) {
-            return true
-        }
-        guard let imageData = item.image_data else { return false }
-        return historyImageIndex.contains(imageData)
-    }
-
     private var historySuggestionsSheet: some View {
         NavigationView {
             VStack(spacing: 14) {
@@ -493,20 +527,7 @@ struct WardrobeListView: View {
                 }
 
                 Group {
-                if let error = historySuggestionsError {
-                    VStack(spacing: 16) {
-                        Text(error)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                        Button("Close") {
-                            showHistorySuggestionsSheet = false
-                        }
-                        .buttonStyle(.bordered)
-                    }
-                } else if historySuggestions.isEmpty {
-                    ProgressView("Loading...")
-                } else {
+                if !historySuggestions.isEmpty {
                     ScrollView {
                         LazyVStack(spacing: 12) {
                             ForEach(historySuggestions) { entry in
@@ -519,6 +540,22 @@ struct WardrobeListView: View {
                         .padding(.horizontal, 16)
                         .padding(.bottom, 12)
                     }
+                    .accessibilityIdentifier("wardrobe.historySuggestionsList")
+                } else if let error = historySuggestionsError {
+                    VStack(spacing: 16) {
+                        Text(error)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                        Button("Close") {
+                            showHistorySuggestionsSheet = false
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                    .accessibilityIdentifier("wardrobe.historySuggestionsError")
+                } else {
+                    ProgressView("Loading...")
+                        .accessibilityIdentifier("wardrobe.historySuggestionsLoading")
                 }
             }
             }
@@ -555,83 +592,50 @@ struct WardrobeListView: View {
 struct WardrobeCardView: View {
     let item: WardrobeItem
     let image: UIImage?
-    let showPastSuggestions: Bool
-    let isPastSuggestionsLoading: Bool
     let onGetSuggestion: (() -> Void)?
     let onPastSuggestions: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
     let onShowImage: (UIImage) -> Void
-    private let actionButtonWidth: CGFloat = 220
-    private let actionButtonHeight: CGFloat = 52
 
     var body: some View {
-        HStack(alignment: .top, spacing: 14) {
-            imageBlock
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 14) {
+                imageBlock
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text(item.category.capitalized)
-                    .font(.title3.weight(.semibold))
-                    .foregroundColor(AppTheme.textPrimary)
-                    .accessibilityIdentifier("wardrobe.row.category.\(item.id)")
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(item.category.capitalized)
+                        .font(.title3.weight(.semibold))
+                        .foregroundColor(AppTheme.textPrimary)
+                        .accessibilityIdentifier("wardrobe.row.category.\(item.id)")
 
-                Text("Color: \(item.color?.isEmpty == false ? item.color! : "—")")
-                    .font(.title3.weight(.semibold))
-                    .foregroundColor(AppTheme.textPrimary)
+                    Text("Color: \(item.color?.isEmpty == false ? item.color! : "—")")
+                        .font(.title3.weight(.semibold))
+                        .foregroundColor(AppTheme.textPrimary)
 
-                Text(item.description?.isEmpty == false ? item.description! : "No description available.")
-                    .font(.title3)
-                    .foregroundColor(AppTheme.textSecondary)
-                    .lineLimit(3)
+                    Text(item.description?.isEmpty == false ? item.description! : "No description available.")
+                        .font(.title3)
+                        .foregroundColor(AppTheme.textSecondary)
+                        .lineLimit(3)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
 
-            VStack(alignment: .trailing, spacing: 10) {
+            HStack(spacing: 10) {
                 if let onGetSuggestion {
                     WardrobeTopActionButton(
-                        title: "Build outfit",
+                        title: WardrobeCardUx.styleThisItemTitle,
                         systemImage: "sparkles",
                         isPrimary: true,
+                        accessibilityLabel: WardrobeCardUx.styleThisItemAccessibilityLabel,
+                        accessibilityIdentifier: WardrobeCardUx.heroButtonIdentifier(itemId: item.id),
                         action: onGetSuggestion
                     )
-                    .frame(width: actionButtonWidth, height: actionButtonHeight)
-                    .accessibilityIdentifier("wardrobe.getSuggestion.\(item.id)")
-                } else {
-                    Color.clear
-                        .frame(width: actionButtonWidth, height: actionButtonHeight)
+                    .frame(maxWidth: .infinity, minHeight: 48)
                 }
 
-                if showPastSuggestions {
-                    WardrobeTopActionButton(
-                        title: isPastSuggestionsLoading ? "Loading..." : "Past Suggestions",
-                        systemImage: "clock.arrow.circlepath",
-                        isPrimary: false,
-                        action: onPastSuggestions
-                    )
-                    .frame(width: actionButtonWidth, height: actionButtonHeight)
-                    .disabled(isPastSuggestionsLoading)
-                    .accessibilityIdentifier("wardrobe.pastSuggestions.\(item.id)")
-                } else {
-                    Color.clear
-                        .frame(width: actionButtonWidth, height: actionButtonHeight)
-                }
-
-                HStack(spacing: 10) {
-                    Button(action: onEdit) {
-                        Image(systemName: "pencil")
-                            .font(.body.weight(.semibold))
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundColor(AppTheme.accent)
-
-                    Button(role: .destructive, action: onDelete) {
-                        Image(systemName: "trash")
-                            .font(.body.weight(.semibold))
-                    }
-                    .buttonStyle(.plain)
-                }
+                wardrobeOverflowMenu
             }
-            .frame(width: actionButtonWidth, alignment: .trailing)
         }
         .padding(14)
         .background(AppTheme.surface)
@@ -642,22 +646,78 @@ struct WardrobeCardView: View {
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
+    private var wardrobeOverflowMenu: some View {
+        Menu {
+            Button {
+                if let image {
+                    onShowImage(image)
+                }
+            } label: {
+                Label(
+                    WardrobeCardMenuAction.viewImage.title,
+                    systemImage: WardrobeCardMenuAction.viewImage.systemImage
+                )
+            }
+            .disabled(image == nil)
+            .accessibilityIdentifier(
+                WardrobeCardUx.menuItemIdentifier(itemId: item.id, action: .viewImage)
+            )
+
+            Button(action: onEdit) {
+                Label(
+                    WardrobeCardMenuAction.edit.title,
+                    systemImage: WardrobeCardMenuAction.edit.systemImage
+                )
+            }
+            .accessibilityIdentifier(
+                WardrobeCardUx.menuItemIdentifier(itemId: item.id, action: .edit)
+            )
+
+            Button(action: onPastSuggestions) {
+                Label(
+                    WardrobeCardMenuAction.history.title,
+                    systemImage: WardrobeCardMenuAction.history.systemImage
+                )
+            }
+            .accessibilityIdentifier(
+                WardrobeCardUx.menuItemIdentifier(itemId: item.id, action: .history)
+            )
+
+            Button(role: .destructive, action: onDelete) {
+                Label(
+                    WardrobeCardMenuAction.delete.title,
+                    systemImage: WardrobeCardMenuAction.delete.systemImage
+                )
+            }
+            .accessibilityIdentifier(
+                WardrobeCardUx.menuItemIdentifier(itemId: item.id, action: .delete)
+            )
+        } label: {
+            Image(systemName: "ellipsis.circle")
+                .font(.title2)
+                .foregroundColor(AppTheme.textPrimary)
+                .frame(width: 48, height: 48)
+                .accessibilityElement(children: .ignore)
+                .accessibilityAddTraits(.isButton)
+                .accessibilityLabel(WardrobeCardUx.menuTriggerAccessibilityLabel)
+                .accessibilityIdentifier(WardrobeCardUx.menuTriggerIdentifier(itemId: item.id))
+        }
+    }
+
     private var imageBlock: some View {
         Group {
             if let image {
-                Button(action: { onShowImage(image) }) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 130, height: 130)
-                        .clipped()
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(AppTheme.accent, lineWidth: 2)
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                }
-                .buttonStyle(.plain)
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 130, height: 130)
+                    .clipped()
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(AppTheme.accent, lineWidth: 2)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .accessibilityHidden(true)
             } else {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(Color.white.opacity(0.06))
@@ -667,6 +727,7 @@ struct WardrobeCardView: View {
                             .font(.title3)
                             .foregroundColor(AppTheme.textSecondary)
                     )
+                    .accessibilityHidden(true)
             }
         }
     }
@@ -676,9 +737,22 @@ struct WardrobeTopActionButton: View {
     let title: String
     let systemImage: String
     let isPrimary: Bool
+    var accessibilityLabel: String? = nil
+    var accessibilityIdentifier: String? = nil
     let action: () -> Void
 
     var body: some View {
+        Group {
+            if let accessibilityIdentifier {
+                buttonCore
+                    .accessibilityIdentifier(accessibilityIdentifier)
+            } else {
+                buttonCore
+            }
+        }
+    }
+
+    private var buttonCore: some View {
         Button(action: action) {
             Label(title, systemImage: systemImage)
                 .font(.subheadline.weight(.semibold))
@@ -695,6 +769,9 @@ struct WardrobeTopActionButton: View {
                 .clipShape(Capsule())
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel(accessibilityLabel ?? title)
     }
 }
 
@@ -763,6 +840,7 @@ struct HistorySuggestionCardView: View {
                     .foregroundColor(.white)
                     .background(AppTheme.accent)
                     .clipShape(Capsule())
+                    .accessibilityIdentifier(WardrobeCardUx.historyUseThisIdentifier(entryId: entry.id))
             }
 
             if let prompt = entry.text_input, !prompt.isEmpty {

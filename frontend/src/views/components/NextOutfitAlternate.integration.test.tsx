@@ -5,9 +5,8 @@
  * MSW 1.x cannot reliably intercept fetch() with FormData bodies in Jest; we spy on ApiService
  * for duplicate check + suggestion while exercising the real App, Sidebar, OutfitPreview, and controller.
  */
-import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import App from '../../App';
+import { screen, waitFor, fireEvent } from '@testing-library/react';
+import { renderApp } from '../../test/renderWithRouter';
 import ApiService from '../../services/ApiService';
 
 jest.setTimeout(25000);
@@ -74,7 +73,7 @@ describe('Next suggestion alternate outfit (App)', () => {
   });
 
   it('second getSuggestion call receives previous outfit text after Next', async () => {
-    render(<App />);
+    renderApp();
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Get AI outfit suggestion/i })).toBeInTheDocument();

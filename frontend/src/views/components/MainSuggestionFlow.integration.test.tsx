@@ -5,9 +5,8 @@
  * Image compression is mocked for jsdom; ApiService is spied because MSW 1.x
  * does not reliably intercept fetch() with multipart FormData in Jest.
  */
-import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import App from '../../App';
+import { screen, waitFor, fireEvent } from '@testing-library/react';
+import { renderApp } from '../../test/renderWithRouter';
 import ApiService from '../../services/ApiService';
 
 jest.setTimeout(25000);
@@ -42,7 +41,7 @@ describe('Main suggestion flow integration', () => {
   });
 
   it('displays suggestion after uploading image and clicking Get Suggestion', async () => {
-    render(<App />);
+    renderApp();
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Get AI outfit suggestion/i })).toBeInTheDocument();

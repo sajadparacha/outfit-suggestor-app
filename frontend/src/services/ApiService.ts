@@ -5,6 +5,7 @@
  */
 
 import { OutfitResponse, ApiError, OutfitHistoryEntry } from '../models/OutfitModels';
+import { GuestUsage, GuestLimitReachedError } from '../models/GuestModels';
 import { RegisterRequest, LoginRequest, TokenResponse, User } from '../models/AuthModels';
 import {
   WardrobeItem,
@@ -14,6 +15,7 @@ import {
   WardrobeGapAnalysisRequest,
   WardrobeGapAnalysisResponse,
 } from '../models/WardrobeModels';
+import { getGuestSessionId } from '../utils/guestSession';
 
 class ApiService {
   private baseUrl: string;
@@ -57,6 +59,8 @@ class ApiService {
     
     if (includeAuth && this.getAuthToken()) {
       headers['Authorization'] = `Bearer ${this.getAuthToken()}`;
+    } else if (!this.getAuthToken()) {
+      headers['X-Guest-Session-Id'] = getGuestSessionId();
     }
     
     // Don't set Content-Type for FormData - browser sets it automatically with boundary
@@ -203,14 +207,17 @@ class ApiService {
       const responseData = await response.json().catch(() => null);
 
       if (!response.ok) {
-        let errorMessage = 'Failed to get outfit suggestion';
         if (responseData) {
           const error: ApiError = responseData;
-          errorMessage = error.detail || errorMessage;
-        } else {
-          errorMessage = `Server error: ${response.status} ${response.statusText}`;
+          if (response.status === 403 && error.code === 'guest_limit_reached') {
+            throw new GuestLimitReachedError(
+              error.detail ||
+                "You've used your 3 free AI outfit suggestions. Create an account to keep using the app."
+            );
+          }
+          throw new Error(error.detail || 'Failed to get outfit suggestion');
         }
-        throw new Error(errorMessage);
+        throw new Error(`Server error: ${response.status} ${response.statusText}`);
       }
 
       return responseData as OutfitResponse;
@@ -274,6 +281,30 @@ class ApiService {
         throw error;
       }
       throw new Error('An unexpected error occurred');
+    }
+  }
+
+  /**
+   * Get guest AI usage for the current device session.
+   */
+  async getGuestUsage(): Promise<GuestUsage> {
+    try {
+      const url = `${this.baseUrl}/api/guest-usage`;
+      const response = await this.fetchWithLogging(url, {
+        headers: this.getHeaders(false),
+      });
+
+      if (!response.ok) {
+        const error: ApiError = await response.json();
+        throw new Error(error.detail || 'Failed to get guest usage');
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to get guest usage');
     }
   }
 

@@ -66,6 +66,21 @@ class APIService {
         if let v = authHeader() { request.setValue(v, forHTTPHeaderField: "Authorization") }
     }
 
+    private func setGuestHeaderIfNeeded(_ request: inout URLRequest) {
+        guard authHeader() == nil else { return }
+        request.setValue(GuestSession.sessionId(), forHTTPHeaderField: "X-Guest-Session-Id")
+    }
+
+    private func throwAPIError(from data: Data, statusCode: Int) throws -> Never {
+        if let apiError = try? JSONDecoder().decode(APIError.self, from: data) {
+            if statusCode == 403, apiError.code == "guest_limit_reached" {
+                throw APIServiceError.guestLimitReached(apiError.detail)
+            }
+            throw APIServiceError.serverError(apiError.detail)
+        }
+        throw APIServiceError.httpError(statusCode)
+    }
+
     private func maybeSimulateUITestDelay() async {
         guard AppConfig.isUITestMode else { return }
         try? await Task.sleep(nanoseconds: 1_800_000_000)
@@ -100,7 +115,11 @@ class APIService {
         defer { endRequestActivity() }
         if AppConfig.isUITestMode {
             await maybeSimulateUITestDelay()
-            return uiTestStore.makeSuggestionForUpload(image: image, textInput: textInput)
+            return uiTestStore.makeSuggestionForUpload(
+                image: image,
+                textInput: textInput,
+                sourceWardrobeItemId: sourceWardrobeItemId
+            )
         }
         guard let url = URL(string: "\(baseURL)/api/suggest-outfit") else { throw APIServiceError.invalidURL }
         let boundary = UUID().uuidString
@@ -108,6 +127,7 @@ class APIService {
         request.httpMethod = "POST"
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         setAuthIfNeeded(&request)
+        setGuestHeaderIfNeeded(&request)
         
         var body = Data()
         if let imageData = image.jpegData(compressionQuality: 0.8) {
@@ -157,8 +177,7 @@ class APIService {
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw APIServiceError.invalidResponse }
         guard http.statusCode == 200 else {
-            if let apiError = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(apiError.detail) }
-            throw APIServiceError.httpError(http.statusCode)
+            try throwAPIError(from: data, statusCode: http.statusCode)
         }
         var suggestion = try JSONDecoder().decode(OutfitSuggestion.self, from: data)
         suggestion.imageData = image.jpegData(compressionQuality: 0.8)
@@ -203,6 +222,26 @@ class APIService {
         return try JSONDecoder().decode(OutfitSuggestion.self, from: data)
     }
     
+    // MARK: - Guest Usage
+
+    func getGuestUsage() async throws -> GuestUsageResponse {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
+        if AppConfig.isUITestMode {
+            return GuestUsageResponse(limit: 3, used: 0, remaining: 3, requires_signup: false)
+        }
+        guard let url = URL(string: "\(baseURL)/api/guest-usage") else { throw APIServiceError.invalidURL }
+        var request = URLRequest(url: url)
+        setGuestHeaderIfNeeded(&request)
+        request.timeoutInterval = 15
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+            try throwAPIError(from: data, statusCode: statusCode)
+        }
+        return try JSONDecoder().decode(GuestUsageResponse.self, from: data)
+    }
+
     // MARK: - Outfit History
     
     func getOutfitHistory(limit: Int = 50) async throws -> [OutfitHistoryEntry] {
@@ -833,7 +872,11 @@ final class UITestDataStore {
         return suggestion
     }
 
-    func makeSuggestionForUpload(image: UIImage, textInput: String) -> OutfitSuggestion {
+    func makeSuggestionForUpload(
+        image: UIImage,
+        textInput: String,
+        sourceWardrobeItemId: Int? = nil
+    ) -> OutfitSuggestion {
         lock.lock()
         defer { lock.unlock() }
         let suggestion = OutfitSuggestion(
@@ -845,7 +888,7 @@ final class UITestDataStore {
             reasoning: "A modern smart-casual combination tuned for comfort and clean contrast.",
             imageData: image.jpegData(compressionQuality: 0.8)
         )
-        appendSuggestionToHistory(suggestion, sourceWardrobeItemId: nil, prompt: textInput)
+        appendSuggestionToHistory(suggestion, sourceWardrobeItemId: sourceWardrobeItemId, prompt: textInput)
         return suggestion
     }
 
@@ -934,6 +977,7 @@ enum APIServiceError: LocalizedError {
     case invalidResponse
     case httpError(Int)
     case serverError(String)
+    case guestLimitReached(String)
     case networkError(Error)
     
     var errorDescription: String? {
@@ -947,6 +991,8 @@ enum APIServiceError: LocalizedError {
         case .httpError(let code):
             return "HTTP Error: \(code)"
         case .serverError(let message):
+            return message
+        case .guestLimitReached(let message):
             return message
         case .networkError(let error):
             return "Network error: \(error.localizedDescription)"

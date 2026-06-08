@@ -1,8 +1,8 @@
-import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { rest } from 'msw';
-import App from '../../App';
+import { renderApp } from '../../test/renderWithRouter';
 import { server } from '../../test/msw/server';
+import { INSIGHTS_COPY } from '../../utils/insightsCopy';
 
 const API_BASE = 'http://localhost:8001';
 
@@ -71,13 +71,13 @@ describe('Admin insights flow integration', () => {
   });
 
   it('shows admin cost, input prompt, and AI response after premium wardrobe analysis', async () => {
-    render(<App />);
+    renderApp();
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Insights' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Insights' })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Insights' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Insights' }));
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /Wardrobe Insights/i })).toBeInTheDocument();
@@ -86,10 +86,10 @@ describe('Admin insights flow integration', () => {
     fireEvent.click(screen.getByRole('button', { name: /Analyze My Wardrobe/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Choose Analysis Mode/i)).toBeInTheDocument();
+      expect(screen.getByText(INSIGHTS_COPY.MODE_PICKER_TITLE)).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Premium Analysis/i }));
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(INSIGHTS_COPY.AI_STYLIST_REVIEW, 'i') }));
 
     await waitFor(
       () => {
@@ -103,5 +103,6 @@ describe('Admin insights flow integration', () => {
     expect(screen.getByTestId('input-prompt')).toHaveTextContent('ui-test-premium-prompt');
     expect(screen.getByTestId('ai-response')).toHaveTextContent('ui-test-premium-response');
     expect(screen.getByTestId('analysis-cost')).toHaveTextContent(/\$0\.012/);
+    expect(screen.getByText(/Admin diagnostics/i)).toBeInTheDocument();
   });
 });

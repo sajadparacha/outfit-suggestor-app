@@ -72,6 +72,86 @@ final class OutfitAppE2ETests: XCTestCase {
         waitForExpectations(timeout: timeout)
     }
 
+    private func wardrobeHeroButton(itemId: Int) -> XCUIElement {
+        app.buttons["wardrobe.getSuggestion.\(itemId)"]
+    }
+
+    private func scrollWardrobeItemIntoView(itemId: Int) {
+        let hero = wardrobeHeroButton(itemId: itemId)
+        let menu = wardrobeMenuTrigger(itemId: itemId)
+        let list = app.scrollViews["wardrobe.itemsList"]
+        for _ in 0..<6 {
+            if hero.exists, hero.isHittable { return }
+            if menu.exists, menu.isHittable { return }
+            if list.exists {
+                list.swipeUp()
+            } else {
+                app.swipeUp()
+            }
+        }
+    }
+
+    private func tapWardrobeHeroButton(itemId: Int, timeout: TimeInterval = 10) {
+        scrollWardrobeItemIntoView(itemId: itemId)
+        let byIdentifier = wardrobeHeroButton(itemId: itemId)
+        if waitFor(byIdentifier, timeout: timeout) {
+            byIdentifier.tap()
+            return
+        }
+        let byLabel = app.buttons["Style this item with AI"].firstMatch
+        XCTAssertTrue(waitFor(byLabel, timeout: timeout))
+        byLabel.tap()
+    }
+
+    private func wardrobeMenuTrigger(itemId: Int) -> XCUIElement {
+        app.buttons["wardrobe.itemMenu.\(itemId)"]
+    }
+
+    private func tapWardrobeMenuTrigger(itemId: Int, timeout: TimeInterval = 10) {
+        scrollWardrobeItemIntoView(itemId: itemId)
+        let byIdentifier = wardrobeMenuTrigger(itemId: itemId)
+        if waitFor(byIdentifier, timeout: timeout) {
+            byIdentifier.tap()
+            return
+        }
+        let byLabel = app.buttons["More actions"].firstMatch
+        XCTAssertTrue(waitFor(byLabel, timeout: timeout))
+        byLabel.tap()
+    }
+
+    private func wardrobeMenuHistory(itemId: Int) -> XCUIElement {
+        app.buttons["wardrobe.menu.history.\(itemId)"]
+    }
+
+    private func tapWardrobeMenuHistory(itemId: Int, timeout: TimeInterval = 4) {
+        let menuItem = app.menuItems["History"]
+        if waitFor(menuItem, timeout: timeout) {
+            menuItem.tap()
+            return
+        }
+        let byIdentifier = wardrobeMenuHistory(itemId: itemId)
+        if waitFor(byIdentifier, timeout: timeout) {
+            byIdentifier.tap()
+            return
+        }
+        let button = app.buttons["History"].firstMatch
+        XCTAssertTrue(waitFor(button, timeout: timeout))
+        button.tap()
+    }
+
+    private func tapWardrobeHistoryUseThis(timeout: TimeInterval = 12) {
+        let byIdentifier = app.buttons.matching(
+            NSPredicate(format: "identifier BEGINSWITH 'wardrobe.history.useThis.'")
+        ).firstMatch
+        if waitFor(byIdentifier, timeout: timeout) {
+            byIdentifier.tap()
+            return
+        }
+        let useThis = app.buttons["Use This"].firstMatch
+        XCTAssertTrue(waitFor(useThis, timeout: timeout))
+        useThis.tap()
+    }
+
     func testWardrobeFilterChipsUpdateVisibleList() {
         openWardrobe()
 
@@ -172,11 +252,24 @@ final class OutfitAppE2ETests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 6))
     }
 
-    func testWardrobeActionButtonsNavigateToExpectedPaths() {
-        openWardrobe()
-        XCTAssertTrue(waitFor(app.buttons["Build outfit"].firstMatch))
+    private func focusWardrobeItem(_ itemId: Int) {
+        switch itemId {
+        case 1: app.buttons["wardrobe.chip.shirt"].tap()
+        case 2: app.buttons["wardrobe.chip.trouser"].tap()
+        case 3: app.buttons["wardrobe.chip.shoes"].tap()
+        case 4: app.buttons["wardrobe.chip.belt"].tap()
+        default: app.buttons["wardrobe.chip.other"].tap()
+        }
+        waitForAppUnlocked()
+        assertVisibleWardrobeItemIDs("\(itemId)")
+    }
 
-        app.buttons["Build outfit"].firstMatch.tap()
+    func testWardrobeActionButtonsNavigateToExpectedPaths() {
+        let wardrobeItemId = 1
+
+        openWardrobe()
+        focusWardrobeItem(wardrobeItemId)
+        tapWardrobeHeroButton(itemId: wardrobeItemId)
         waitForAppUnlocked()
         XCTAssertTrue(
             app.staticTexts["From your wardrobe"].waitForExistence(timeout: 6)
@@ -187,12 +280,17 @@ final class OutfitAppE2ETests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 6))
 
         openWardrobe()
-        XCTAssertTrue(app.buttons["Past Suggestions"].firstMatch.waitForExistence(timeout: 2))
-        app.buttons["Past Suggestions"].firstMatch.tap()
-        XCTAssertTrue(app.navigationBars["Past Suggestions"].waitForExistence(timeout: 3))
-
-        app.buttons["Use This"].firstMatch.tap()
-        XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 4))
+        focusWardrobeItem(wardrobeItemId)
+        tapWardrobeMenuTrigger(itemId: wardrobeItemId)
+        tapWardrobeMenuHistory(itemId: wardrobeItemId)
+        XCTAssertTrue(app.navigationBars["Past Suggestions"].waitForExistence(timeout: 8))
+        waitForAppUnlocked(timeout: 8)
+        let suggestionEntry = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS 'SUGGESTION #'")
+        ).firstMatch
+        XCTAssertTrue(waitFor(suggestionEntry, timeout: 12), "Expected wardrobe history entries")
+        tapWardrobeHistoryUseThis()
+        XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 6))
     }
 
     func testAiProgressPanelAppearsDuringSuggestionAndTabsStayUsable() {
@@ -219,13 +317,14 @@ final class OutfitAppE2ETests: XCTestCase {
         XCTAssertTrue(waitFor(app.buttons["profile.insightsLink"]))
         app.buttons["profile.insightsLink"].tap()
         XCTAssertTrue(waitFor(app.buttons["insights.analyzeButton"]))
-        XCTAssertTrue(app.staticTexts["Wardrobe Gap Analysis"].waitForExistence(timeout: 4))
+        XCTAssertTrue(app.staticTexts["What's Missing From My Wardrobe?"].waitForExistence(timeout: 4))
+        XCTAssertTrue(app.buttons["Quick Check"].waitForExistence(timeout: 2))
 
         let premiumSegment = app.segmentedControls["insights.analysisMode"].buttons.element(boundBy: 1)
         if premiumSegment.waitForExistence(timeout: 2) {
             premiumSegment.tap()
-        } else if app.buttons["Premium (ChatGPT)"].waitForExistence(timeout: 2) {
-            app.buttons["Premium (ChatGPT)"].tap()
+        } else if app.buttons["AI Stylist"].waitForExistence(timeout: 2) {
+            app.buttons["AI Stylist"].tap()
         }
 
         app.buttons["insights.analyzeButton"].tap()

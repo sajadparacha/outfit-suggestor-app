@@ -44,6 +44,7 @@ export const API_CONFIG = {
 
 export const UI_CONFIG = {
   toastDuration: 3000, // 3 seconds
+  undoDeleteDurationMs: 5000, // wardrobe delete undo window
   loadingMessages: [
     'Analyzing your style...',
     'Creating perfect combinations...',

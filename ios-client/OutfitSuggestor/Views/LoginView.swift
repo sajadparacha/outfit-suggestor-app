@@ -6,15 +6,36 @@
 import SwiftUI
 
 struct LoginView: View {
+    var headline: String? = nil
+    var subheadline: String? = nil
+
     @ObservedObject var auth = AuthService.shared
     @Environment(\.dismiss) private var dismiss
     @State private var email = ""
     @State private var password = ""
     @State private var errorMessage: String?
     @State private var isLoading = false
+
+    private var resolvedHeadline: String {
+        headline ?? AuthPromptCopy.defaultLoginTitle
+    }
     
     var body: some View {
         Form {
+            if headline != nil || subheadline != nil {
+                Section {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(resolvedHeadline)
+                            .font(.headline)
+                        if let subheadline {
+                            Text(subheadline)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .listRowBackground(Color.clear)
+                }
+            }
             Section(header: Text("Log in")) {
                 TextField("Email", text: $email)
                     .textContentType(.emailAddress)
@@ -36,7 +57,8 @@ struct LoginView: View {
                 .disabled(email.isEmpty || password.isEmpty || isLoading)
             }
         }
-        .navigationTitle("Login")
+        .navigationTitle(headline == nil ? "Login" : resolvedHeadline)
+        .navigationBarTitleDisplayMode(headline == nil ? .automatic : .inline)
         .onChange(of: auth.isAuthenticated) { isAuthenticated in
             if isAuthenticated {
                 dismiss()

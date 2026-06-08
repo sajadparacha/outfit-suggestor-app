@@ -1,10 +1,9 @@
 /**
  * Integration tests for Random Outfit from History flow
  */
-import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { screen, waitFor, fireEvent } from '@testing-library/react';
 import { rest } from 'msw';
-import App from '../../App';
+import { renderApp } from '../../test/renderWithRouter';
 import { server } from '../../test/msw/server';
 
 const API_BASE = 'http://localhost:8001';
@@ -49,11 +48,11 @@ describe('Random from History integration', () => {
   });
 
   it('displays random outfit from history when button is clicked', async () => {
-    render(<App />);
+    renderApp();
 
     // Wait for app to load and expand Wardrobe & picks for Random from History
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /^Suggest$/ })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /^Suggest$/ })).toBeInTheDocument();
       expect(screen.getByText('Wardrobe & picks')).toBeInTheDocument();
     });
 
@@ -83,7 +82,7 @@ describe('Random from History integration', () => {
       })
     );
 
-    render(<App />);
+    renderApp();
 
     await waitFor(() => {
       expect(screen.getByText('Wardrobe & picks')).toBeInTheDocument();

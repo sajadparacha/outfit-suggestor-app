@@ -4,6 +4,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Sidebar from './Sidebar';
+import { MICRO_HELP } from '../../utils/microHelpCopy';
 
 describe('Sidebar file validation', () => {
   const defaultProps = {
@@ -148,8 +149,69 @@ describe('Sidebar file validation', () => {
 
     const shortcut = screen.getByRole('button', { name: /open insights for wardrobe analysis/i });
     expect(shortcut).toBeInTheDocument();
+    expect(screen.getByText('Open Insights →')).toBeInTheDocument();
+    expect(screen.getByText(MICRO_HELP.INSIGHTS)).toBeInTheDocument();
     fireEvent.click(shortcut);
     expect(onOpenInsights).toHaveBeenCalledTimes(1);
+  });
+
+  describe('contextual micro-help', () => {
+    it('shows static wardrobe-only micro-help regardless of toggle state', () => {
+      const setUseWardrobeOnly = jest.fn();
+      const { rerender } = render(
+        <Sidebar
+          {...defaultProps}
+          isAuthenticated
+          setUseWardrobeOnly={setUseWardrobeOnly}
+          useWardrobeOnly={false}
+        />
+      );
+
+      fireEvent.click(screen.getByText('Wardrobe & picks'));
+      expect(screen.getByText(MICRO_HELP.WARDROBE_ONLY)).toBeInTheDocument();
+      expect(screen.queryByText(/AI may suggest items you do not own/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Only your wardrobe items are used/i)).not.toBeInTheDocument();
+
+      rerender(
+        <Sidebar
+          {...defaultProps}
+          isAuthenticated
+          setUseWardrobeOnly={setUseWardrobeOnly}
+          useWardrobeOnly={true}
+        />
+      );
+      expect(screen.getByText(MICRO_HELP.WARDROBE_ONLY)).toBeInTheDocument();
+    });
+
+    it('shows model preview micro-help when admin model generation controls are visible', () => {
+      render(
+        <Sidebar
+          {...defaultProps}
+          isAuthenticated
+          isAdmin
+          modelGenerationEnabled
+          generateModelImage={false}
+        />
+      );
+
+      expect(screen.getByText(MICRO_HELP.MODEL_PREVIEW)).toBeInTheDocument();
+      expect(screen.queryByText(/This may take longer/i)).not.toBeInTheDocument();
+    });
+
+    it('hides model preview micro-help for non-admins even with modelGeneration URL flag prop', () => {
+      render(
+        <Sidebar
+          {...defaultProps}
+          isAuthenticated
+          isAdmin={false}
+          modelGenerationEnabled
+          generateModelImage={false}
+        />
+      );
+
+      expect(screen.queryByText(MICRO_HELP.MODEL_PREVIEW)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Advanced options/i)).not.toBeInTheDocument();
+    });
   });
 
   describe('section hint tooltips', () => {
@@ -179,6 +241,8 @@ describe('Sidebar file validation', () => {
       const secondaryHint = tooltips.find((el) => el.textContent?.includes('Add to wardrobe'));
       expect(secondaryHint?.textContent).toMatch(/Add to wardrobe: upload a photo first/);
       expect(secondaryHint?.textContent).toMatch(/Use my wardrobe only: Off/);
+      expect(secondaryHint?.textContent).toMatch(new RegExp(MICRO_HELP.WARDROBE_ONLY));
+      expect(secondaryHint?.textContent).not.toMatch(/AI may suggest items you do not own/);
       expect(secondaryHint?.textContent).toMatch(/Random from Wardrobe uses/);
       expect(secondaryHint?.textContent).toMatch(/Random from History loads/);
     });

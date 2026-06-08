@@ -1,0 +1,96 @@
+---
+description: Orchestrate parallel web + iOS UI/UX work from a single instruction
+alwaysApply: true
+---
+
+# Parallel UI/UX Orchestrator
+
+## Triggers (any of these start this workflow)
+
+| Phrase | Notes |
+|--------|-------|
+| **`Twin UI:`** | **Preferred** — short, always spawns two subagents |
+| `Parallel UI/UX on current branch` | Legacy; same strict workflow |
+| `spawn both web and iOS agents` | Reinforces dual-agent dispatch |
+
+Works on the **current git branch** only.
+
+## Orchestrator role — strict
+
+The orchestrator (this chat) may ONLY touch:
+
+- `.cursor/specs/`
+- `backend/` (contract/backend step)
+- `backend/tests/` (when orchestrator owns backend changes)
+- `IOS_WEB_FEATURE_PARITY.md` (parity review)
+- Docs explicitly needed for the spec
+
+The orchestrator **MUST NOT** edit platform UI directly:
+
+- `frontend/**` (web agent only)
+- `ios-client/**` (iOS agent only)
+
+If platform UI changes are needed, **always** dispatch subagents — never implement both platforms inline.
+
+## 1. Confirm scope
+
+- Run `git branch --show-current` and note the branch in the spec.
+- Do not switch branches unless the user asks.
+
+## 2. Write a platform-neutral spec
+
+Create `.cursor/specs/<feature-slug>.md` from `_template.md` **before** spawning agents.
+
+Fill the **Tests (required)** section with concrete cases per platform.
+
+## 3. Contract and backend first
+
+If API, validation, or shared client contract changes are needed, orchestrator updates `backend/` and both client contract layers **before** step 4.
+
+**Backend tests are mandatory** when orchestrator changes `backend/`:
+
+- Add/update tests in `backend/tests/`
+- Run `pytest` for touched modules before spawning UI agents
+
+Skip backend step for pure visual/layout changes with no behavior change.
+
+## 4. Launch two parallel agents — required
+
+In **one message**, spawn **exactly two** Task subagents (`subagent_type: generalPurpose`). Do not proceed to parity review until both return.
+
+| Agent | Scope | Must NOT edit |
+|-------|-------|---------------|
+| **Web** | `frontend/**` | `ios-client/**`, `backend/**` |
+| **iOS** | `ios-client/**` | `frontend/**`, `backend/**` |
+
+Each prompt must include: spec path, branch name, allowed/forbidden dirs, `IOS_WEB_FEATURE_PARITY.md`, platform rule paths, and **mandatory test instructions** (see skill).
+
+Each agent **must** add/update tests and run them before returning. No feature is done without passing tests.
+
+**Failure mode:** If only one subagent was spawned, the orchestrator edited platform UI directly, or either agent skipped tests — stop and correct before reporting done.
+
+## 5. Parity and test gate — required
+
+After both agents complete:
+
+1. Compare implementation vs spec (behavior, copy, API usage)
+2. Update `IOS_WEB_FEATURE_PARITY.md` if feature parity changed
+3. **Ask user to confirm** before running full test suites (web + iOS always; backend if changed). Do not auto-run — full suites take several minutes. See skill for the confirmation prompt.
+
+4. **Run full test suites** (only after user confirms):
+
+| Layer | Command | When |
+|-------|---------|------|
+| Backend | `cd backend && . venv/bin/activate && pytest -q` | Orchestrator changed `backend/` this feature |
+| Web | `cd frontend && npm test -- --watchAll=false --passWithNoTests` | **Always** — all unit + integration tests |
+| iOS | See skill: full `OutfitSuggestorTests` + `OutfitSuggestorUITests` via `xcodebuild test` | **Always** — all unit + integration (+ UITest) suites |
+
+5. Mark spec **Tests** checkboxes and parity checklist
+6. Publish the **Test Execution Report** (required — use template in skill)
+7. Report parity gaps and missing new-behavior tests
+
+**Do not report "done"** if any full suite fails, or if new behavior has no tests added. If the user declined the full-suite run, report implementation status but note verification is pending.
+
+## 6. Commits
+
+Only commit when the user explicitly asks. Never commit build artifacts.
