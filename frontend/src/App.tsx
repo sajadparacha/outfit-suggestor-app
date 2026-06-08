@@ -541,7 +541,7 @@ function App() {
             <div className="max-w-2xl mx-auto rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-8 text-center">
               <h2 className="text-2xl font-bold text-white mb-4">👔 Wardrobe Management</h2>
               <p className="text-slate-200 mb-6">
-                Please log in to manage your wardrobe and get personalized outfit suggestions based on your existing clothes.
+                Save your clothes and get outfit ideas using only your own wardrobe.
               </p>
               <button
                 onClick={() => {
