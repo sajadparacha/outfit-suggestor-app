@@ -54,10 +54,18 @@ const categoryForSearch = (rawCategory: string): string => {
   return normalized;
 };
 
-const openShoppingSearch = (category: string, style: string, color: string) => {
-  const query = `Show me men ${categoryForSearch(category)} in ${prettyLabel(style)} style and ${prettyLabel(
-    color
-  )} color`;
+const formatSearchList = (items: string[]): string => {
+  const labels = items.map((item) => prettyLabel(item)).filter(Boolean);
+  if (labels.length === 0) return '';
+  if (labels.length === 1) return labels[0];
+  if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
+  return `${labels.slice(0, -1).join(', ')}, and ${labels[labels.length - 1]}`;
+};
+
+const openShoppingSearch = (category: string, styles: string[], colors: string[]) => {
+  const stylePhrase = formatSearchList(styles.length > 0 ? styles : ['classic']);
+  const colorPhrase = formatSearchList(colors.length > 0 ? colors : ['neutral']);
+  const query = `Show me men ${categoryForSearch(category)} in ${stylePhrase} style and ${colorPhrase} color`;
   const url = `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(query)}`;
   window.open(url, '_blank', 'noopener,noreferrer');
 };
@@ -70,7 +78,7 @@ const renderStyleChips = (category: string, items: string[], emptyLabel: string,
         <button
           key={style}
           type="button"
-          onClick={() => openShoppingSearch(category, style, missingColors[0] || 'neutral')}
+          onClick={() => openShoppingSearch(category, [style], [missingColors[0] || 'neutral'])}
           className="rounded-full border border-brand-blue/25 bg-brand-blue/10 px-2.5 py-1 text-xs text-brand-blue/90 transition-colors hover:bg-brand-blue/20"
           aria-label={`Find similar items for ${prettyLabel(style)}`}
         >
@@ -130,7 +138,7 @@ const renderColorSwatches = (
 };
 
 const derivePriorityList = (result: WardrobeGapAnalysisResponse, orderedCategories: string[]): WardrobePriorityShoppingItem[] => {
-  if (result.priorityShoppingList?.length) return result.priorityShoppingList.slice(0, 3);
+  if (result.priorityShoppingList?.length) return result.priorityShoppingList;
   type RankedPriority = WardrobePriorityShoppingItem & { score: number };
   const ranked: RankedPriority[] = orderedCategories
     .map<RankedPriority>((category) => {
@@ -143,15 +151,15 @@ const derivePriorityList = (result: WardrobeGapAnalysisResponse, orderedCategori
         itemName: `${entry.missing_colors[0] || 'core'} ${entry.missing_styles[0] || category} ${category}`,
         category,
         priority,
-        recommendedColors: entry.missing_colors.slice(0, 3),
-        recommendedStyles: entry.missing_styles.slice(0, 3),
+        recommendedColors: entry.missing_colors,
+        recommendedStyles: entry.missing_styles,
         reason: `Improves your ${result.style} ${result.occasion} options for ${result.season}.`,
         outfitImpact: `Unlocks more complete looks in ${prettyLabel(category)}.`,
         actions: ['Show outfit examples'],
       };
     })
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score);
   return ranked.map(({ score: _score, ...item }, idx): WardrobePriorityShoppingItem => ({ ...item, rank: idx + 1 }));
 };
 
@@ -315,7 +323,11 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
                       <button
                         type="button"
                         onClick={() =>
-                          openShoppingSearch(item.category, item.recommendedStyles[0] || result.style, item.recommendedColors[0] || 'neutral')
+                          openShoppingSearch(
+                            item.category,
+                            item.recommendedStyles.length > 0 ? item.recommendedStyles : [result.style],
+                            item.recommendedColors.length > 0 ? item.recommendedColors : ['neutral']
+                          )
                         }
                         className="rounded-lg border border-white/20 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-100 hover:bg-white/10"
                       >
@@ -435,7 +447,11 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
                         'You already have enough core colors in this category.',
                         {
                           onColorClick: (color) =>
-                            openShoppingSearch(insight.category, insight.missingStyles[0] || result.style, color),
+                            openShoppingSearch(
+                              insight.category,
+                              insight.missingStyles.length > 0 ? [insight.missingStyles[0]] : [result.style],
+                              [color]
+                            ),
                           ariaPrefix: 'Find similar items for',
                         }
                       )}
@@ -457,7 +473,11 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
                       <button
                         type="button"
                         onClick={() =>
-                          openShoppingSearch(insight.category, insight.missingStyles[0] || result.style, insight.missingColors[0] || 'neutral')
+                          openShoppingSearch(
+                            insight.category,
+                            insight.missingStyles.length > 0 ? insight.missingStyles : [result.style],
+                            insight.missingColors.length > 0 ? insight.missingColors : ['neutral']
+                          )
                         }
                         className="rounded-lg border border-white/20 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-100 hover:bg-white/10"
                       >
@@ -485,7 +505,11 @@ const WardrobeGapAnalysis: React.FC<WardrobeGapAnalysisProps> = ({
                             'You already have enough core colors in this category.',
                             {
                               onColorClick: (color) =>
-                                openShoppingSearch(entry.category, entry.missing_styles[0] || result.style, color),
+                                openShoppingSearch(
+                                  entry.category,
+                                  entry.missing_styles.length > 0 ? [entry.missing_styles[0]] : [result.style],
+                                  [color]
+                                ),
                               ariaPrefix: 'Find similar items for',
                             }
                           )}

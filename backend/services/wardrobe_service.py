@@ -822,7 +822,7 @@ class WardrobeService:
         ranked.sort(key=lambda item: item[1], reverse=True)
 
         shopping_list: List[Dict[str, Any]] = []
-        for idx, (category, score) in enumerate(ranked[:3], start=1):
+        for idx, (category, score) in enumerate((pair for pair in ranked if pair[1] > 0), start=1):
             entry = category_analysis[category]
             priority = self._priority_label(score)
             item_name = self._format_item_name(category, entry["missing_colors"], entry["missing_styles"])
@@ -840,8 +840,8 @@ class WardrobeService:
                     "itemName": item_name,
                     "category": category,
                     "priority": priority,
-                    "recommendedColors": entry["missing_colors"][:3],
-                    "recommendedStyles": entry["missing_styles"][:3],
+                    "recommendedColors": entry["missing_colors"],
+                    "recommendedStyles": entry["missing_styles"],
                     "reason": reason,
                     "outfitImpact": f"Unlocks more combinations in {category} for {entry['occasion']} looks.",
                     "actions": ["Add to shopping list", "Show outfit examples"],
@@ -960,7 +960,7 @@ class WardrobeService:
         )
 
         if priority_shopping_list:
-            top_items = ", ".join(item["itemName"] for item in priority_shopping_list[:3])
+            top_items = ", ".join(item["itemName"] for item in priority_shopping_list[:5])
             summary = (
                 f"Your wardrobe is close to complete for {occasion} in {season}. "
                 f"Start with {top_items} to unlock the most {style} outfit combinations."

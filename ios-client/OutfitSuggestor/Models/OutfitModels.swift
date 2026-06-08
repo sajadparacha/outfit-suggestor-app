@@ -161,6 +161,7 @@ enum Occasion: String, CaseIterable {
     case formal = "Formal"
     case party = "Party"
     case date = "Date Night"
+    case sports = "Sports/Active"
 
     var apiValue: String {
         switch self {
@@ -169,6 +170,7 @@ enum Occasion: String, CaseIterable {
         case .formal: return "formal"
         case .party: return "party"
         case .date: return "date"
+        case .sports: return "sports"
         }
     }
 }
@@ -192,19 +194,25 @@ enum Season: String, CaseIterable {
 }
 
 enum Style: String, CaseIterable {
+    case businessCasual = "Business Casual"
+    case casual = "Casual"
     case modern = "Modern"
     case classic = "Classic"
     case trendy = "Trendy"
     case minimalist = "Minimalist"
     case bold = "Bold"
+    case vintage = "Vintage"
 
     var apiValue: String {
         switch self {
+        case .businessCasual: return "business casual"
+        case .casual: return "casual"
         case .modern: return "modern"
         case .classic: return "classic"
         case .trendy: return "trendy"
         case .minimalist: return "minimalist"
         case .bold: return "bold"
+        case .vintage: return "vintage"
         }
     }
 }

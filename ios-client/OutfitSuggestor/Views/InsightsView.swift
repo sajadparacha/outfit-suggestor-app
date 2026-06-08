@@ -8,19 +8,12 @@
 import SwiftUI
 
 struct InsightsView: View {
+    @EnvironmentObject private var viewModel: OutfitViewModel
     @ObservedObject private var auth = AuthService.shared
-    @State private var occasion = "casual"
-    @State private var season = "all"
-    @State private var style = "modern"
-    @State private var textInput = ""
     @State private var analysisMode = "free"
     @State private var result: WardrobeGapAnalysisResponse?
     @State private var isLoading = false
     @State private var errorMessage: String?
-    
-    private let occasions = ["casual", "business", "formal", "party", "date", "sports"]
-    private let seasons = ["all", "spring", "summer", "fall", "winter"]
-    private let styles = ["business casual", "casual", "modern", "classic", "trendy", "minimalist", "bold", "vintage"]
     
     var body: some View {
         ScrollView {
@@ -40,24 +33,19 @@ struct InsightsView: View {
                 }
                 .padding()
                 
-                // Filters
-                VStack(spacing: 12) {
-                    Picker("Occasion", selection: $occasion) {
-                        ForEach(occasions, id: \.self) { Text($0.capitalized).tag($0) }
-                    }
-                    Picker("Season", selection: $season) {
-                        ForEach(seasons, id: \.self) { Text($0.capitalized).tag($0) }
-                    }
-                    Picker("Style", selection: $style) {
-                        ForEach(styles, id: \.self) { Text($0.capitalized).tag($0) }
-                    }
-                }
-                .pickerStyle(.menu)
-                .padding(.horizontal)
-                
-                TextField("Additional preferences (optional)", text: $textInput)
-                    .textFieldStyle(.roundedBorder)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Shared with Suggest — occasion, season, style, and notes stay in sync across outfit suggestions and wardrobe insights.")
+                        .font(.caption)
+                        .foregroundColor(AppTheme.textSecondary)
+                        .padding(.horizontal)
+
+                    FiltersView(
+                        filters: $viewModel.filters,
+                        preferenceText: $viewModel.preferenceText,
+                        layout: .form
+                    )
                     .padding(.horizontal)
+                }
                 
                 // Analysis mode
                 Picker("Analysis Mode", selection: $analysisMode) {
@@ -112,10 +100,10 @@ struct InsightsView: View {
         errorMessage = nil
         do {
             let request = WardrobeGapAnalysisRequest(
-                occasion: occasion,
-                season: season,
-                style: style,
-                text_input: textInput,
+                occasion: viewModel.filters.occasion,
+                season: viewModel.filters.season,
+                style: viewModel.filters.style,
+                text_input: viewModel.preferenceText,
                 analysis_mode: analysisMode
             )
             result = try await APIService.shared.analyzeWardrobeGaps(request: request)
@@ -181,40 +169,39 @@ struct GapAnalysisResultView: View {
 
     private var priorityShoppingList: [WardrobePriorityShoppingItem] {
         if let list = result.priorityShoppingList, !list.isEmpty {
-            return Array(list.prefix(3))
+            return list
         }
-        let derived: [WardrobePriorityShoppingItem] = orderedCategories.compactMap { category in
+        let derived: [(score: Int, item: WardrobePriorityShoppingItem)] = orderedCategories.compactMap { category in
             guard let entry = result.analysis_by_category[category] else { return nil }
             let score = (entry.missing_colors.count * 2) + (entry.missing_styles.count * 2) + (entry.item_count == 0 ? 2 : 0)
+            guard score > 0 else { return nil }
             let priority = score >= 8 ? "High" : (score >= 4 ? "Medium" : "Low")
-            return WardrobePriorityShoppingItem(
+            let item = WardrobePriorityShoppingItem(
                 rank: 0,
                 itemName: "\(entry.missing_colors.first ?? "core") \(entry.missing_styles.first ?? category) \(category)",
                 category: category,
                 priority: priority,
-                recommendedColors: Array(entry.missing_colors.prefix(3)),
-                recommendedStyles: Array(entry.missing_styles.prefix(3)),
+                recommendedColors: entry.missing_colors,
+                recommendedStyles: entry.missing_styles,
                 reason: "Improves your \(result.style) \(result.occasion) options for \(result.season).",
                 outfitImpact: "Unlocks more complete looks in \(category).",
                 actions: ["Show outfit examples"]
             )
+            return (score, item)
         }
-        .sorted { left, right in
-            let leftScore = (left.recommendedColors.count * 2) + (left.recommendedStyles.count * 2)
-            let rightScore = (right.recommendedColors.count * 2) + (right.recommendedStyles.count * 2)
-            return leftScore > rightScore
-        }
-        return Array(derived.prefix(3)).enumerated().map { idx, item in
+        .sorted { $0.score > $1.score }
+
+        return derived.enumerated().map { idx, pair in
             WardrobePriorityShoppingItem(
                 rank: idx + 1,
-                itemName: item.itemName,
-                category: item.category,
-                priority: item.priority,
-                recommendedColors: item.recommendedColors,
-                recommendedStyles: item.recommendedStyles,
-                reason: item.reason,
-                outfitImpact: item.outfitImpact,
-                actions: item.actions
+                itemName: pair.item.itemName,
+                category: pair.item.category,
+                priority: pair.item.priority,
+                recommendedColors: pair.item.recommendedColors,
+                recommendedStyles: pair.item.recommendedStyles,
+                reason: pair.item.reason,
+                outfitImpact: pair.item.outfitImpact,
+                actions: pair.item.actions
             )
         }
     }
@@ -298,9 +285,11 @@ struct GapAnalysisResultView: View {
                         .font(.headline)
                         .foregroundColor(AppTheme.textPrimary)
                     Spacer()
-                    Text("Top 3")
-                        .font(.caption.weight(.semibold))
-                        .foregroundColor(AppTheme.textSecondary)
+                    if !priorityShoppingList.isEmpty {
+                        Text("\(priorityShoppingList.count) items")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(AppTheme.textSecondary)
+                    }
                 }
 
                 if priorityShoppingList.isEmpty {
@@ -473,7 +462,7 @@ struct CategoryGapCard: View {
                     .textCase(.uppercase)
 
                 ColorSwatchRow(
-                    colors: Array(entry.missing_colors.prefix(4)),
+                    colors: entry.missing_colors,
                     onTap: { color in
                         openGoogleImagesForSuggestion(color: color, style: entry.missing_styles.first)
                     }
@@ -492,7 +481,7 @@ struct CategoryGapCard: View {
                         .foregroundColor(AppTheme.textSecondary)
                 } else {
                     FlowLayout(spacing: 6) {
-                        ForEach(Array(entry.missing_styles.prefix(3)), id: \.self) { style in
+                        ForEach(entry.missing_styles, id: \.self) { style in
                             Button(action: { openGoogleImagesForSuggestion(color: nil, style: style) }) {
                                 Text(style.capitalized)
                                     .font(.caption)
@@ -530,7 +519,7 @@ struct CategoryGapCard: View {
 
             HStack(spacing: 8) {
                 Button("Show outfit examples") {
-                    openGoogleImagesForSuggestion(color: entry.missing_colors.first, style: entry.missing_styles.first)
+                    openGoogleImagesForSuggestion(colors: entry.missing_colors, styles: entry.missing_styles)
                 }
                 .font(.caption.weight(.semibold))
                 .padding(.horizontal, 10)
@@ -603,10 +592,29 @@ struct CategoryGapCard: View {
     }
 
     private func openGoogleImagesForSuggestion(color: String?, style: String?) {
-        let resolvedStyle = normalizedOrNil(style) ?? normalizedOrNil(entry.missing_styles.first) ?? normalizedOrNil(defaultStyle) ?? "classic"
-        let resolvedColor = normalizedOrNil(color) ?? normalizedOrNil(entry.missing_colors.first) ?? "neutral"
+        var colors: [String] = []
+        var styles: [String] = []
+        if let color = normalizedOrNil(color) {
+            colors.append(color)
+        }
+        if let style = normalizedOrNil(style) {
+            styles.append(style)
+        }
+        openGoogleImagesForSuggestion(
+            colors: colors.isEmpty ? entry.missing_colors : colors,
+            styles: styles.isEmpty ? (color == nil ? entry.missing_styles : []) : styles
+        )
+    }
+
+    private func openGoogleImagesForSuggestion(colors: [String], styles: [String]) {
+        let resolvedStyles = styles.compactMap { normalizedOrNil($0) }
+        let resolvedColors = colors.compactMap { normalizedOrNil($0) }
+        let stylePhrase = formatSearchList(
+            resolvedStyles.isEmpty ? [normalizedOrNil(defaultStyle) ?? "classic"] : resolvedStyles
+        )
+        let colorPhrase = formatSearchList(resolvedColors.isEmpty ? ["neutral"] : resolvedColors)
         let categoryPhrase = categoryForSearch(entry.category)
-        let query = "Show me men \(categoryPhrase) in \(resolvedStyle) style and \(resolvedColor) color"
+        let query = "Show me men \(categoryPhrase) in \(stylePhrase) style and \(colorPhrase) color"
 
         var components = URLComponents(string: "https://www.google.com/search")
         components?.queryItems = [
@@ -639,6 +647,7 @@ struct CategoryGapCard: View {
 
 private struct PriorityShoppingItemCard: View {
     let item: WardrobePriorityShoppingItem
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -664,6 +673,21 @@ private struct PriorityShoppingItemCard: View {
             Text(item.outfitImpact)
                 .font(.caption2)
                 .foregroundColor(AppTheme.textSecondary)
+
+            Button("Show outfit examples") {
+                openPriorityShoppingSearch(
+                    category: item.category,
+                    colors: item.recommendedColors,
+                    styles: item.recommendedStyles,
+                    openURL: openURL
+                )
+            }
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(AppTheme.accent.opacity(0.2))
+            .cornerRadius(8)
+            .buttonStyle(.plain)
         }
         .padding(10)
         .background(AppTheme.surface)
@@ -672,6 +696,43 @@ private struct PriorityShoppingItemCard: View {
                 .stroke(AppTheme.border, lineWidth: 1)
         )
         .cornerRadius(10)
+    }
+}
+
+private func formatSearchList(_ items: [String]) -> String {
+    let labels = items.map { $0.capitalized }
+    guard !labels.isEmpty else { return "neutral" }
+    if labels.count == 1 { return labels[0] }
+    if labels.count == 2 { return "\(labels[0]) and \(labels[1])" }
+    return "\(labels.dropLast().joined(separator: ", ")), and \(labels.last!)"
+}
+
+private func openPriorityShoppingSearch(
+    category: String,
+    colors: [String],
+    styles: [String],
+    openURL: OpenURLAction
+) {
+    let stylePhrase = formatSearchList(styles.isEmpty ? ["classic"] : styles)
+    let colorPhrase = formatSearchList(colors.isEmpty ? ["neutral"] : colors)
+    let categoryPhrase: String = {
+        let lower = category.lowercased()
+        switch lower {
+        case "shirt": return "shirts"
+        case "trouser": return "trousers"
+        case "shoe": return "shoes"
+        case "blazer", "belt": return "\(lower)s"
+        default: return lower
+        }
+    }()
+    let query = "Show me men \(categoryPhrase) in \(stylePhrase) style and \(colorPhrase) color"
+    var components = URLComponents(string: "https://www.google.com/search")
+    components?.queryItems = [
+        URLQueryItem(name: "tbm", value: "shop"),
+        URLQueryItem(name: "q", value: query)
+    ]
+    if let url = components?.url {
+        openURL(url)
     }
 }
 

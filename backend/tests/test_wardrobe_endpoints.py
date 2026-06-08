@@ -606,7 +606,7 @@ class TestWardrobeEndpoints:
         assert payload["analysis_mode"] == "premium"
         assert payload["analysisDepth"] == "Premium"
         assert recording_ai.captured_max_tokens == recording_ai.wardrobe_gap_max_tokens
-        assert recording_ai.captured_max_tokens >= 2500
+        assert recording_ai.captured_max_tokens >= 6000
 
     def test_analyze_wardrobe_gaps_premium_falls_back_when_ai_fails(self, client, auth_headers, db, test_user, monkeypatch):
         """Premium mode gracefully falls back to free analysis on provider/parse failures."""

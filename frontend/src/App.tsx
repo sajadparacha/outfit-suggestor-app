@@ -34,7 +34,9 @@ import { useWardrobeController } from './controllers/useWardrobeController';
 import ApiService from './services/ApiService';
 import { historyEntryToSuggestion } from './utils/historyUtils';
 import WardrobeGapAnalysis from './views/components/WardrobeGapAnalysis';
+import AnalysisPreferences from './views/components/AnalysisPreferences';
 import { WardrobeGapAnalysisResponse } from './models/WardrobeModels';
+import { resolveFilters } from './utils/outfitPreferences';
 
 function App() {
   // Check URL parameter for model generation feature flag
@@ -105,6 +107,7 @@ function App() {
     setImageModel,
     setUseWardrobeOnly,
     setSourceWardrobeItemId,
+    clearPreferences,
     getSuggestion,
     getRandomSuggestion,
     handleUseCachedSuggestion,
@@ -234,19 +237,6 @@ function App() {
     await handleGetSuggestion(); // Get a new suggestion
   };
 
-  const handleInsightsFilterChange = (key: keyof typeof filters, value: string) => {
-    setFilters({ ...filters, [key]: value });
-  };
-
-  const handleClearInsightsPreferences = () => {
-    setFilters({
-      occasion: '',
-      season: '',
-      style: '',
-    });
-    setPreferenceText('');
-  };
-
   const runWardrobeAnalysis = async (mode: 'free' | 'premium') => {
     if (!isAuthenticated) {
       showToast('Please login to analyze your wardrobe.', 'error');
@@ -261,10 +251,11 @@ function App() {
     setWardrobeGapLoading(true);
     setWardrobeGapError(null);
     try {
+      const resolved = resolveFilters(filters);
       const result = await ApiService.analyzeWardrobeGaps({
-        occasion: filters.occasion || 'casual',
-        season: filters.season || 'all',
-        style: filters.style || 'modern',
+        occasion: resolved.occasion,
+        season: resolved.season,
+        style: resolved.style,
         text_input: preferenceText || '',
         analysis_mode: mode,
       });
@@ -405,6 +396,7 @@ function App() {
                 onFileReject={(msg) => showToast(msg, 'error')}
                 showAiPromptResponse={showAiPromptResponse}
                 setShowAiPromptResponse={setShowAiPromptResponse}
+                onClearPreferences={clearPreferences}
                 onAddToWardrobe={async () => {
                   if (!image) {
                     showToast('Please upload an image first to add it to your wardrobe', 'error');
@@ -582,83 +574,16 @@ function App() {
                   Tell us your context so the analysis matches your event, season, and style needs.
                 </p>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-200 mb-2">Occasion</label>
-                    <select
-                      value={filters.occasion}
-                      onChange={(e) => handleInsightsFilterChange('occasion', e.target.value)}
-                      className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-brand-blue focus:border-brand-blue transition-all"
-                      aria-label="Select occasion for wardrobe insights"
-                    >
-                      <option value="">Select occasion</option>
-                      <option value="casual">Casual</option>
-                      <option value="business">Business</option>
-                      <option value="formal">Formal</option>
-                      <option value="party">Party</option>
-                      <option value="date">Date Night</option>
-                      <option value="sports">Sports/Active</option>
-                    </select>
-                  </div>
+                <AnalysisPreferences
+                  filters={filters}
+                  setFilters={setFilters}
+                  preferenceText={preferenceText}
+                  setPreferenceText={setPreferenceText}
+                  onClear={clearPreferences}
+                  variant="insights"
+                />
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-200 mb-2">Season</label>
-                    <select
-                      value={filters.season}
-                      onChange={(e) => handleInsightsFilterChange('season', e.target.value)}
-                      className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-brand-blue focus:border-brand-blue transition-all"
-                      aria-label="Select season for wardrobe insights"
-                    >
-                      <option value="">Select season</option>
-                      <option value="all">All Seasons</option>
-                      <option value="spring">Spring</option>
-                      <option value="summer">Summer</option>
-                      <option value="fall">Fall</option>
-                      <option value="winter">Winter</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-200 mb-2">Style</label>
-                    <select
-                      value={filters.style}
-                      onChange={(e) => handleInsightsFilterChange('style', e.target.value)}
-                      className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-brand-blue focus:border-brand-blue transition-all"
-                      aria-label="Select style for wardrobe insights"
-                    >
-                      <option value="">Select style</option>
-                      <option value="business casual">Business Casual</option>
-                      <option value="casual">Casual</option>
-                      <option value="modern">Modern</option>
-                      <option value="classic">Classic</option>
-                      <option value="trendy">Trendy</option>
-                      <option value="minimalist">Minimalist</option>
-                      <option value="bold">Bold</option>
-                      <option value="vintage">Vintage</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-slate-200 mb-2">Extra Notes</label>
-                  <textarea
-                    value={preferenceText}
-                    onChange={(e) => setPreferenceText(e.target.value)}
-                    placeholder="e.g., Smart casual, navy and brown, no sneakers."
-                    className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-brand-blue focus:border-brand-blue transition-all resize-none"
-                    rows={3}
-                    aria-label="Extra notes for wardrobe insights"
-                  />
-                </div>
-
-                <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <button
-                    type="button"
-                    onClick={handleClearInsightsPreferences}
-                    className="px-4 py-2.5 rounded-xl font-medium bg-white/10 text-slate-200 hover:bg-white/20 border border-white/15 transition-colors"
-                  >
-                    Clear
-                  </button>
+                <div className="mt-4 flex justify-end">
                   <button
                     onClick={handleAnalyzeWardrobe}
                     disabled={wardrobeGapLoading}

@@ -125,6 +125,7 @@ struct MainTabView: View {
                     .accessibilityIdentifier("global.loadingLock")
             }
         }
+        .environmentObject(viewModel)
         .tint(AppTheme.accent)
         .preferredColorScheme(.dark)
         .onChange(of: auth.isAuthenticated) { isAuthenticated in

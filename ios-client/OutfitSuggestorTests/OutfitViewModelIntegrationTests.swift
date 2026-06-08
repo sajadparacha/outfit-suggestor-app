@@ -57,6 +57,33 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
         XCTAssertNil(AuthService.shared.currentUser)
     }
 
+    func testSuggestPreferencesCarryToInsightsContext() {
+        let viewModel = OutfitViewModel(apiService: MockAPIService())
+        viewModel.filters.occasion = "business"
+        viewModel.filters.season = "summer"
+        viewModel.filters.style = "business casual"
+        viewModel.preferenceText = "navy and brown, no sneakers"
+
+        let request = WardrobeGapAnalysisRequest(
+            occasion: viewModel.filters.occasion,
+            season: viewModel.filters.season,
+            style: viewModel.filters.style,
+            text_input: viewModel.preferenceText,
+            analysis_mode: "free"
+        )
+
+        XCTAssertEqual(request.occasion, "business")
+        XCTAssertEqual(request.season, "summer")
+        XCTAssertEqual(request.style, "business casual")
+        XCTAssertEqual(request.text_input, "navy and brown, no sneakers")
+    }
+
+    func testFilterEnumsAlignWithSharedWebOptions() {
+        XCTAssertEqual(Occasion.sports.apiValue, "sports")
+        XCTAssertEqual(Style.businessCasual.apiValue, "business casual")
+        XCTAssertEqual(Style.vintage.apiValue, "vintage")
+    }
+
     func testGetRandomFromHistoryUsesEntryFromAPI() async {
         AuthService.shared.authToken = "test-token"
         AuthService.shared.currentUser = makeUser()

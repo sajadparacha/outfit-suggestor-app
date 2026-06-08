@@ -29,7 +29,8 @@ class AIService:
         api_key: str, 
         replicate_token: Optional[str] = None,
         nano_banana_key: Optional[str] = None,
-        chatgpt_model: str = "gpt-4o"
+        chatgpt_model: str = "gpt-4o",
+        wardrobe_gap_max_tokens: int = 8000,
     ):
         """
         Initialize AI Service
@@ -39,12 +40,13 @@ class AIService:
             replicate_token: Replicate API token (optional, for Stable Diffusion)
             nano_banana_key: Nano Banana API key (optional, for Nano Banana image generation)
             chatgpt_model: ChatGPT model version to use (default: "gpt-4o", can be "gpt-5.2" when available)
+            wardrobe_gap_max_tokens: Completion token budget for premium wardrobe gap analysis
         """
         self.client = openai.OpenAI(api_key=api_key)
         self.model = chatgpt_model  # Use configurable model
         self.max_tokens = 1000
         # Premium wardrobe gap analysis returns a large structured JSON payload.
-        self.wardrobe_gap_max_tokens = 3000
+        self.wardrobe_gap_max_tokens = wardrobe_gap_max_tokens
         self.temperature = 0.7
         self.replicate_token = replicate_token
         self.replicate_client = None
@@ -244,6 +246,7 @@ Rules:
 3) Be practical and fashion-aware for the provided context.
 4) Return STRICT JSON only, no markdown, no extra prose.
 5) Avoid repeating generic style words like "trendy" across every category.
+6) priorityShoppingList must include every category with meaningful gaps, ranked by impact (do not limit to only three items).
 
 Required JSON shape:
 {{
@@ -391,10 +394,10 @@ Required JSON shape:
         scored.sort(key=lambda pair: pair[1], reverse=True)
 
         rows: List[Dict[str, Any]] = []
-        for rank, (category, score) in enumerate(scored[:3], start=1):
+        for rank, (category, score) in enumerate((pair for pair in scored if pair[1] > 0), start=1):
             entry = categories[category]
-            colors = entry.get("missing_colors", [])[:3]
-            styles = entry.get("missing_styles", [])[:3]
+            colors = entry.get("missing_colors", [])
+            styles = entry.get("missing_styles", [])
             lead_color = colors[0] if colors else "core"
             lead_style = styles[0] if styles else category
             rows.append(

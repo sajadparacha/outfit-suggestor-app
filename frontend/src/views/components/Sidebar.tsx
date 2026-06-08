@@ -2,6 +2,8 @@ import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { isValidImageSize, formatFileSize, createImagePreviewUrl, revokeImagePreviewUrl } from '../../utils/imageUtils';
 import { CLIENT_MAX_SIZE_MB } from '../../constants/imageLimits';
 import ModernSwitch from './suggestion/ModernSwitch';
+import AnalysisPreferences from './AnalysisPreferences';
+import { DEFAULT_FILTERS } from '../../utils/outfitPreferences';
 
 interface Filters {
   occasion: string;
@@ -40,8 +42,8 @@ function styleDisplay(v: string): string {
     minimalist: 'Minimalist',
     bold: 'Bold',
     vintage: 'Vintage',
-    Casual: 'Casual',
-    'Businees Casual': 'Business Casual',
+    casual: 'Casual',
+    'business casual': 'Business Casual',
   };
   return v ? m[v] || v : 'Modern';
 }
@@ -55,38 +57,6 @@ function preferenceSelectionSummary(filters: Filters, preferenceText: string): s
   ];
   return lines.join('\n');
 }
-
-interface FilterSelectProps {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  ariaLabel: string;
-  children: React.ReactNode;
-}
-
-const FilterSelect: React.FC<FilterSelectProps> = ({ label, value, onChange, ariaLabel, children }) => (
-  <div className="rounded-2xl border border-white/15 bg-white/[0.04] px-3 py-2.5 transition hover:border-brand-blue/40">
-    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</label>
-    <div className="relative">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full min-h-[28px] cursor-pointer appearance-none bg-transparent pr-5 text-sm font-medium text-white focus:outline-none focus:ring-0"
-        aria-label={ariaLabel}
-      >
-        {children}
-      </select>
-      <svg
-        className="pointer-events-none absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-500"
-        viewBox="0 0 12 12"
-        fill="none"
-        aria-hidden
-      >
-        <path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      </svg>
-    </div>
-  </div>
-);
 
 const UploadIcon = () => (
   <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
@@ -133,6 +103,7 @@ interface SidebarProps {
   onFileReject?: (message: string) => void;
   showAiPromptResponse?: boolean;
   setShowAiPromptResponse?: (show: boolean) => void;
+  onClearPreferences?: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -161,6 +132,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   onFileReject,
   showAiPromptResponse = true,
   setShowAiPromptResponse,
+  onClearPreferences,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -170,9 +142,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [showCamera, setShowCamera] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [showEnlargeImage, setShowEnlargeImage] = useState(false);
-  const [showNotesModal, setShowNotesModal] = useState(false);
-  const [notesDraft, setNotesDraft] = useState(preferenceText);
-  const [colorPreference] = useState('No Preference');
 
   const imagePreviewUrl = useMemo(() => (image ? createImagePreviewUrl(image) : null), [image]);
   useEffect(() => {
@@ -211,12 +180,12 @@ const Sidebar: React.FC<SidebarProps> = ({
     }
   };
 
-  const handleFilterChange = (key: keyof Filters, value: string) => {
-    setFilters({ ...filters, [key]: value });
-  };
-
   const handleClearPreferences = () => {
-    setFilters({ occasion: 'casual', season: 'all', style: 'modern' });
+    if (onClearPreferences) {
+      onClearPreferences();
+      return;
+    }
+    setFilters({ ...DEFAULT_FILTERS });
     setPreferenceText('');
   };
 
@@ -328,8 +297,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     ].join('\n');
   }, [filters, preferenceText]);
 
-  const notesLabel = preferenceText.trim() ? 'Has notes' : 'Add notes';
-
   const selectClass =
     'w-full rounded-lg border border-white/15 bg-slate-800/80 px-3 py-2 text-sm text-white focus:border-brand-blue focus:outline-none focus:ring-1 focus:ring-brand-blue';
 
@@ -425,72 +392,14 @@ const Sidebar: React.FC<SidebarProps> = ({
         JPG, PNG, WebP up to {CLIENT_MAX_SIZE_MB}MB
       </p>
 
-      {/* Preference filters — visible combo boxes with current values */}
-      <div
-        className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5"
-        role="group"
-        aria-label="Outfit preferences"
-      >
-        <FilterSelect
-          label="Occasion"
-          value={filters.occasion || 'casual'}
-          onChange={(value) => handleFilterChange('occasion', value)}
-          ariaLabel="Select occasion"
-        >
-          <option value="casual">Casual</option>
-          <option value="business">Business</option>
-          <option value="formal">Formal</option>
-          <option value="party">Party</option>
-          <option value="date">Date Night</option>
-          <option value="sports">Sports/Active</option>
-        </FilterSelect>
-
-        <FilterSelect
-          label="Season"
-          value={filters.season || 'all'}
-          onChange={(value) => handleFilterChange('season', value)}
-          ariaLabel="Select season"
-        >
-          <option value="all">All Seasons</option>
-          <option value="spring">Spring</option>
-          <option value="summer">Summer</option>
-          <option value="fall">Fall</option>
-          <option value="winter">Winter</option>
-        </FilterSelect>
-
-        <FilterSelect
-          label="Style"
-          value={filters.style || 'modern'}
-          onChange={(value) => handleFilterChange('style', value)}
-          ariaLabel="Select style preference"
-        >
-          <option value="modern">Modern</option>
-          <option value="Businees Casual">Business Casual</option>
-          <option value="Casual">Casual</option>
-          <option value="classic">Classic</option>
-          <option value="trendy">Trendy</option>
-          <option value="minimalist">Minimalist</option>
-          <option value="bold">Bold</option>
-          <option value="vintage">Vintage</option>
-        </FilterSelect>
-
-        <div className="rounded-2xl border border-white/15 bg-white/[0.04] px-3 py-2.5">
-          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Colors</span>
-          <p className="text-sm font-medium text-white">{colorPreference}</p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            setNotesDraft(preferenceText);
-            setShowNotesModal(true);
-          }}
-          className="rounded-2xl border border-white/15 bg-white/[0.04] px-3 py-2.5 text-left transition hover:border-brand-blue/40 touch-manipulation"
-        >
-          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Notes</span>
-          <span className="block text-sm font-medium text-white">{notesLabel}</span>
-        </button>
-      </div>
+      <AnalysisPreferences
+        filters={filters}
+        setFilters={setFilters}
+        preferenceText={preferenceText}
+        setPreferenceText={setPreferenceText}
+        onClear={handleClearPreferences}
+        variant="sidebar"
+      />
 
       {/* Wardrobe options — above generate so users set wardrobe mode first */}
       {isAuthenticated && (onAddToWardrobe || setUseWardrobeOnly) && (
@@ -719,42 +628,6 @@ const Sidebar: React.FC<SidebarProps> = ({
             className="max-h-full max-w-full object-contain"
             onClick={(e) => e.stopPropagation()}
           />
-        </div>
-      )}
-
-      {/* Notes modal */}
-      {showNotesModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true">
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-5 shadow-2xl backdrop-blur">
-            <h3 className="text-lg font-semibold text-white">Extra Notes</h3>
-            <textarea
-              value={notesDraft}
-              onChange={(e) => setNotesDraft(e.target.value)}
-              placeholder="e.g., Smart casual, navy and brown, no sneakers."
-              className="mt-3 w-full resize-none rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-white placeholder-slate-500 focus:border-brand-blue focus:outline-none"
-              rows={4}
-              aria-label="Preference text"
-            />
-            <div className="mt-4 flex gap-3">
-              <button
-                type="button"
-                onClick={() => setShowNotesModal(false)}
-                className="flex-1 rounded-xl border border-white/15 py-2.5 text-sm text-slate-300"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setPreferenceText(notesDraft);
-                  setShowNotesModal(false);
-                }}
-                className="btn-brand flex-1 rounded-xl py-2.5 text-sm font-semibold"
-              >
-                Save
-              </button>
-            </div>
-          </div>
         </div>
       )}
 

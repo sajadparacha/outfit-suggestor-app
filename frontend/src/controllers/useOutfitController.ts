@@ -4,12 +4,20 @@
  * This is the "Controller" in the MVC pattern
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { OutfitSuggestion, Filters } from '../models/OutfitModels';
 import ApiService from '../services/ApiService';
 import { compressImageForOutfit, compressImageForWardrobe } from '../utils/imageUtils';
 import { getLocationString } from '../utils/geolocation';
 import { formatPreviousOutfitForPrompt } from '../utils/outfitPromptUtils';
+import {
+  DEFAULT_FILTERS,
+  buildSuggestionPrompt,
+  loadStoredFilters,
+  loadStoredPreferenceText,
+  persistOutfitPreferences,
+  resolveFilters,
+} from '../utils/outfitPreferences';
 
 interface UseOutfitControllerReturn {
   // State
@@ -45,17 +53,23 @@ interface UseOutfitControllerReturn {
   handleGetNewSuggestion: () => Promise<void>;
   setShowDuplicateModal: (show: boolean) => void;
   setSourceWardrobeItemId: (id: number | null) => void;
+  clearPreferences: () => void;
   onSuggestionSuccess?: () => void; // Callback for when suggestion is successful
 }
 
 export const useOutfitController = (options?: { onSuggestionSuccess?: () => void }): UseOutfitControllerReturn => {
   const [image, setImage] = useState<File | null>(null);
-  const [filters, setFilters] = useState<Filters>({
-    occasion: 'casual',
-    season: 'all',
-    style: 'modern'
-  });
-  const [preferenceText, setPreferenceText] = useState<string>('');
+  const [filters, setFilters] = useState<Filters>(() => loadStoredFilters());
+  const [preferenceText, setPreferenceText] = useState<string>(() => loadStoredPreferenceText());
+
+  useEffect(() => {
+    persistOutfitPreferences(filters, preferenceText);
+  }, [filters, preferenceText]);
+
+  const clearPreferences = useCallback(() => {
+    setFilters({ ...DEFAULT_FILTERS });
+    setPreferenceText('');
+  }, []);
   const [currentSuggestion, setCurrentSuggestion] = useState<OutfitSuggestion | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -142,11 +156,7 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
         }
       }
 
-      // Build prompt from filters or preference text
-      const trimmed = preferenceText.trim();
-      const prompt = trimmed.length > 0
-        ? `User preferences (free-text): ${trimmed}`
-        : `Occasion: ${filters.occasion}, Season: ${filters.season}, Style: ${filters.style}`;
+      const prompt = buildSuggestionPrompt(filters, preferenceText);
 
       // Call API service with compressed image and model image generation option
       const data = await ApiService.getSuggestion(
@@ -262,11 +272,12 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
     setLoading(true);
     setError(null);
     try {
+      const resolved = resolveFilters(filters);
       const trimmed = preferenceText.trim();
       const data = await ApiService.getWardrobeOnlySuggestion(
-        filters.occasion,
-        filters.season,
-        filters.style,
+        resolved.occasion,
+        resolved.season,
+        resolved.style,
         trimmed
       );
       const suggestion: OutfitSuggestion = {
@@ -275,7 +286,7 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
         model_image: null,
         raw: data,
         meta: {
-          usedPrompt: data.ai_prompt || `Wardrobe-only: Occasion=${filters.occasion}, Season=${filters.season}, Style=${filters.style}${
+          usedPrompt: data.ai_prompt || `Wardrobe-only: Occasion=${resolved.occasion}, Season=${resolved.season}, Style=${resolved.style}${
             trimmed ? `, Notes=${trimmed}` : ''
           }`
         }
@@ -338,6 +349,7 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
     handleGetNewSuggestion,
     setShowDuplicateModal,
     setSourceWardrobeItemId,
+    clearPreferences,
     onSuggestionSuccess: options?.onSuggestionSuccess
   };
 };

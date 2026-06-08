@@ -15,8 +15,8 @@ from fastapi import HTTPException
 from models.wardrobe_schemas import WardrobeGapAnalysisResponse
 from services.ai_service import AIService
 
-# Observed premium payloads need ~1.2k completion tokens; keep headroom.
-MIN_WARDROBE_GAP_MAX_TOKENS = 2500
+# Observed premium payloads need ~1.2k completion tokens; default budget is 8000 for full detail.
+MIN_WARDROBE_GAP_MAX_TOKENS = 6000
 
 
 def _ai_service() -> AIService:
@@ -223,7 +223,7 @@ def test_analyze_wardrobe_gaps_returns_premium_contract():
     assert result["analysisDepth"] == "Premium"
     assert "temporarily unavailable" not in result["overall_summary"].lower()
     assert result["analysis_by_category"]["shirt"]["item_count"] == 1
-    assert len(result["priorityShoppingList"]) == 3
+    assert len(result["priorityShoppingList"]) >= 3
     assert result["ai_prompt"]
     assert result["ai_raw_response"]
     assert result["cost"]["total_cost"] > 0

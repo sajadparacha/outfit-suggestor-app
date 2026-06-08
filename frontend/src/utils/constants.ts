@@ -9,22 +9,26 @@ export const FILTER_OPTIONS = {
     { value: 'business', label: 'Business' },
     { value: 'formal', label: 'Formal' },
     { value: 'party', label: 'Party' },
-    { value: 'date', label: 'Date Night' }
+    { value: 'date', label: 'Date Night' },
+    { value: 'sports', label: 'Sports/Active' },
   ],
   seasons: [
     { value: 'all', label: 'All Seasons' },
     { value: 'spring', label: 'Spring' },
     { value: 'summer', label: 'Summer' },
     { value: 'fall', label: 'Fall' },
-    { value: 'winter', label: 'Winter' }
+    { value: 'winter', label: 'Winter' },
   ],
   styles: [
+    { value: 'business casual', label: 'Business Casual' },
+    { value: 'casual', label: 'Casual' },
     { value: 'modern', label: 'Modern' },
     { value: 'classic', label: 'Classic' },
     { value: 'trendy', label: 'Trendy' },
     { value: 'minimalist', label: 'Minimalist' },
-    { value: 'bold', label: 'Bold' }
-  ]
+    { value: 'bold', label: 'Bold' },
+    { value: 'vintage', label: 'Vintage' },
+  ],
 };
 
 export const IMAGE_CONFIG = {

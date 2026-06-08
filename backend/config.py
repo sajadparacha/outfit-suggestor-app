@@ -39,6 +39,9 @@ class Config:
     # ChatGPT model version for outfit suggestions
     CHATGPT_MODEL = os.getenv("CHATGPT_MODEL", "gpt-4o")  # "gpt-4o" or "gpt-5.2" (when available)
 
+    # Premium wardrobe insights: allow full structured JSON (shopping list + per-category detail)
+    WARDROBE_GAP_MAX_TOKENS = int(os.getenv("WARDROBE_GAP_MAX_TOKENS", "8000"))
+
     # Database settings
     # Railway provides DATABASE_URL, fallback to local for development
     DATABASE_URL = os.getenv("DATABASE_URL")
@@ -119,7 +122,8 @@ def get_ai_service() -> AIService:
             api_key=api_key, 
             replicate_token=replicate_token,
             nano_banana_key=nano_banana_key,
-            chatgpt_model=Config.CHATGPT_MODEL
+            chatgpt_model=Config.CHATGPT_MODEL,
+            wardrobe_gap_max_tokens=Config.WARDROBE_GAP_MAX_TOKENS,
         )
     
     return _ai_service_instance

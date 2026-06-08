@@ -140,6 +140,44 @@ describe('WardrobeGapAnalysis', () => {
     expect(screen.getByText(/Admin diagnostics/i)).toBeInTheDocument();
   });
 
+  it('shows the full priority shopping list, not only top three items', () => {
+    const categories = ['shirt', 'trouser', 'blazer', 'shoes', 'belt'] as const;
+    const result: WardrobeGapAnalysisResponse = {
+      occasion: 'business',
+      season: 'summer',
+      style: 'business casual',
+      overall_summary: 'Expand across categories.',
+      priorityShoppingList: categories.map((category, index) => ({
+        rank: index + 1,
+        itemName: `${category} item`,
+        category,
+        priority: 'High',
+        recommendedColors: ['navy'],
+        recommendedStyles: ['tailored'],
+        reason: `Reason for ${category}`,
+        outfitImpact: `Impact for ${category}`,
+        actions: ['Show outfit examples'],
+      })),
+      analysis_by_category: {
+        shirt: {
+          category: 'shirt',
+          owned_colors: [],
+          owned_styles: [],
+          missing_colors: ['navy'],
+          missing_styles: ['tailored'],
+          recommended_purchases: [],
+          item_count: 0,
+        },
+      },
+    };
+
+    render(<WardrobeGapAnalysis result={result} loading={false} error={null} />);
+
+    expect(screen.getByText(/shirt item/i)).toBeInTheDocument();
+    expect(screen.getByText(/belt item/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/High Priority/i)).toHaveLength(5);
+  });
+
   it('toggles category details and opens Google Shopping search on chip click', () => {
     const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
     const result: WardrobeGapAnalysisResponse = {
@@ -152,8 +190,8 @@ describe('WardrobeGapAnalysis', () => {
           category: 'shirt',
           owned_colors: ['white'],
           owned_styles: ['solid'],
-          missing_colors: ['pastel pink'],
-          missing_styles: ['linen'],
+          missing_colors: ['pastel pink', 'navy'],
+          missing_styles: ['linen', 'slim fit'],
           recommended_purchases: ['Pastel pink linen shirt'],
           item_count: 1,
         },
@@ -176,7 +214,9 @@ describe('WardrobeGapAnalysis', () => {
     expect(openSpy).toHaveBeenCalledTimes(2);
     const styleUrl = String(openSpy.mock.calls[1][0]);
     expect(styleUrl).toContain('tbm=shop');
-    expect(styleUrl).toContain(encodeURIComponent('Show me men shirts in Linen style and Pastel Pink color'));
+    expect(styleUrl).toContain(
+      encodeURIComponent('Show me men shirts in Linen and Slim Fit style and Pastel Pink and Navy color')
+    );
 
     openSpy.mockRestore();
   });
