@@ -228,9 +228,9 @@ const UserGuide: React.FC = () => {
             <li className="flex gap-3">
               <span className="text-brand-blue font-bold shrink-0">•</span>
               <span>
-                <strong className="text-white">Like</strong>, <strong className="text-white">Dislike</strong>, and{' '}
-                <strong className="text-white">Next suggestion</strong> work when you started from an uploaded photo.
-                Some actions are limited for wardrobe-only flows without a new upload.
+                After a result, tap <strong className="text-white">Generate Another Look</strong> for a fresh outfit from the
+                same photo. Secondary actions let you make it more formal or casual, limit picks to your wardrobe, or change
+                occasion in Preferences. Image-based actions require an uploaded photo.
               </span>
             </li>
             <li className="flex gap-3">
@@ -279,7 +279,8 @@ const UserGuide: React.FC = () => {
               'Open the Wardrobe tab to browse shirts, trousers, blazers, shoes, and belts.',
               'Add items with the guided flow: we suggest category, color, and a description—edit anything before saving.',
               'Tap an item anytime to update details or swap the photo.',
-              'Use Get AI Suggestion on a piece to build a full outfit around that item.',
+              'Tap Build outfit from this item to open Suggest with that piece loaded.',
+              'Set occasion, season, style, and notes on Suggest, then tap Generate Outfit.',
               'We warn you if a new photo looks like something you already saved—no accidental twins.',
             ]}
           />

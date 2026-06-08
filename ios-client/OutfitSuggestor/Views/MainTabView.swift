@@ -53,77 +53,66 @@ struct GuestTabPlaceholderView: View {
 struct MainTabView: View {
     @StateObject private var viewModel = OutfitViewModel()
     @ObservedObject private var auth = AuthService.shared
-    @ObservedObject private var requestActivity = AppRequestActivity.shared
     @State private var selectedTab = 0
 
     private var isAdmin: Bool { auth.currentUser?.is_admin == true }
 
     var body: some View {
-        ZStack {
-            TabView(selection: $selectedTab) {
-                NavigationStack {
-                    MainFlowView(
-                        viewModel: viewModel,
-                        onRequestHistory: { selectedTab = 2 },
-                        onNavigateToProfile: { selectedTab = 3 }
-                    )
-                }
-                .tabItem { Label("Suggest", systemImage: "sparkles") }
-                .tag(0)
+        TabView(selection: $selectedTab) {
+            NavigationStack {
+                MainFlowView(
+                    viewModel: viewModel,
+                    onRequestHistory: { selectedTab = 2 },
+                    onNavigateToProfile: { selectedTab = 3 }
+                )
+            }
+            .tabItem { Label("Suggest", systemImage: "sparkles") }
+            .tag(0)
 
-                NavigationStack {
-                    if auth.isAuthenticated {
-                        WardrobeListView(
-                            onGetSuggestionFromItem: { itemId in
-                                selectedTab = 0
-                                Task { await viewModel.getSuggestionFromWardrobeItem(id: itemId) }
-                            },
-                            onSelectHistorySuggestion: { entry in
-                                viewModel.loadFromHistory(entry)
+            NavigationStack {
+                if auth.isAuthenticated {
+                    WardrobeListView(
+                        onGetSuggestionFromItem: { item in
+                            if viewModel.preloadWardrobeItemForSuggestion(item: item) {
                                 selectedTab = 0
                             }
-                        )
-                    } else {
-                        GuestTabPlaceholderView(
-                            title: "Wardrobe",
-                            message: "Sign in to save clothing items and get wardrobe-aware outfit suggestions."
-                        )
-                    }
-                }
-                .tabItem { Label("Wardrobe", systemImage: "tshirt") }
-                .tag(1)
-
-                NavigationStack {
-                    if auth.isAuthenticated {
-                        HistoryListView { entry in
+                        },
+                        onSelectHistorySuggestion: { entry in
                             viewModel.loadFromHistory(entry)
                             selectedTab = 0
                         }
-                    } else {
-                        GuestTabPlaceholderView(
-                            title: "Looks",
-                            message: "Sign in to browse your saved outfit history and reload past looks."
-                        )
+                    )
+                } else {
+                    GuestTabPlaceholderView(
+                        title: "Wardrobe",
+                        message: "Sign in to save clothing items and get wardrobe-aware outfit suggestions."
+                    )
+                }
+            }
+            .tabItem { Label("Wardrobe", systemImage: "tshirt") }
+            .tag(1)
+
+            NavigationStack {
+                if auth.isAuthenticated {
+                    HistoryListView { entry in
+                        viewModel.loadFromHistory(entry)
+                        selectedTab = 0
                     }
+                } else {
+                    GuestTabPlaceholderView(
+                        title: "Looks",
+                        message: "Sign in to browse your saved outfit history and reload past looks."
+                    )
                 }
-                .tabItem { Label("Looks", systemImage: "clock.arrow.circlepath") }
-                .tag(2)
-
-                NavigationStack {
-                    SettingsView()
-                }
-                .tabItem { Label("Profile", systemImage: "person.crop.circle") }
-                .tag(3)
             }
-            .allowsHitTesting(!requestActivity.isBusy)
+            .tabItem { Label("Looks", systemImage: "clock.arrow.circlepath") }
+            .tag(2)
 
-            if requestActivity.isBusy {
-                Color.black.opacity(0.22)
-                    .ignoresSafeArea()
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("Global Loading Lock")
-                    .accessibilityIdentifier("global.loadingLock")
+            NavigationStack {
+                SettingsView()
             }
+            .tabItem { Label("Profile", systemImage: "person.crop.circle") }
+            .tag(3)
         }
         .environmentObject(viewModel)
         .tint(AppTheme.accent)

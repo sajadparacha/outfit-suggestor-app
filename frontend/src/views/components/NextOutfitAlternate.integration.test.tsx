@@ -99,7 +99,7 @@ describe('Next suggestion alternate outfit (App)', () => {
     expect(suggestCalls).toHaveLength(1);
     expect(suggestCalls[0].previousOutfit).toBeNull();
 
-    const nextBtns = screen.getAllByRole('button', { name: /Get next suggestion/i });
+    const nextBtns = screen.getAllByRole('button', { name: /Generate another look/i });
     fireEvent.click(nextBtns[0]);
 
     await waitFor(

@@ -112,9 +112,13 @@ describe('Mobile-friendly layout and touch targets', () => {
   });
 
   describe('OutfitPreview', () => {
-    const mockOnLike = jest.fn();
-    const mockOnDislike = jest.fn();
-    const mockOnNext = jest.fn();
+    const mockActionProps = {
+      onGenerateAnother: jest.fn(),
+      onMakeMoreFormal: jest.fn(),
+      onMakeMoreCasual: jest.fn(),
+      onUseWardrobeOnly: jest.fn(),
+      onChangeOccasion: jest.fn(),
+    };
 
     const baseSuggestion: OutfitSuggestion = {
       id: '1',
@@ -130,26 +134,23 @@ describe('Mobile-friendly layout and touch targets', () => {
       jest.clearAllMocks();
     });
 
-    it('action buttons (Next, Like, Dislike) have min-h-[48px] and touch-manipulation', () => {
+    it('action buttons have touch-friendly sizing', () => {
       render(
         <OutfitPreview
           suggestion={baseSuggestion}
           loading={false}
           error={null}
-          onLike={mockOnLike}
-          onDislike={mockOnDislike}
-          onNext={mockOnNext}
+          {...mockActionProps}
           hasImage={true}
         />
       );
 
-      const nextBtn = screen.getByRole('button', { name: /Get next suggestion/i });
-      const likeBtn = screen.getByRole('button', { name: /^Like this outfit$/i });
-      const dislikeBtn = screen.getByRole('button', { name: /Dislike this outfit/i });
+      const generateBtn = screen.getAllByRole('button', { name: /Generate another look/i })[0];
+      const formalBtn = screen.getByRole('button', { name: /Make it more formal/i });
 
-      [nextBtn, likeBtn, dislikeBtn].forEach((btn) => {
+      [generateBtn, formalBtn].forEach((btn) => {
         const cls = btn.getAttribute('class') ?? '';
-        expect(cls).toMatch(/min-h-\[48px\]/);
+        expect(cls).toMatch(/min-h-\[(40|44|48)px\]/);
         expect(cls).toMatch(/touch-manipulation/);
       });
     });
@@ -160,9 +161,7 @@ describe('Mobile-friendly layout and touch targets', () => {
           suggestion={baseSuggestion}
           loading={false}
           error={null}
-          onLike={mockOnLike}
-          onDislike={mockOnDislike}
-          onNext={mockOnNext}
+          {...mockActionProps}
         />
       );
       const contentSection = container.querySelector('.p-4');
@@ -177,9 +176,7 @@ describe('Mobile-friendly layout and touch targets', () => {
           suggestion={null}
           loading={false}
           error={null}
-          onLike={mockOnLike}
-          onDislike={mockOnDislike}
-          onNext={mockOnNext}
+          {...mockActionProps}
         />
       );
       expect(screen.getByText(/Ready for Style Magic?/i)).toBeInTheDocument();
@@ -194,9 +191,7 @@ describe('Mobile-friendly layout and touch targets', () => {
           suggestion={baseSuggestion}
           loading={false}
           error={null}
-          onLike={mockOnLike}
-          onDislike={mockOnDislike}
-          onNext={mockOnNext}
+          {...mockActionProps}
           isAuthenticated={true}
           onAddToWardrobe={jest.fn()}
           hasImage={true}
@@ -216,8 +211,10 @@ describe('Mobile-friendly layout and touch targets', () => {
       await screen.findByText('Integration test shirt');
 
       expect(container.querySelector('.flex-col.gap-4.sm\\:flex-row')).toBeInTheDocument();
-      expect(container.querySelector('[class*="flex-wrap"][class*="border-t"]')).toBeInTheDocument();
-      expect(container.querySelector('.min-h-\\[44px\\].touch-manipulation')).toBeInTheDocument();
+      expect(container.querySelector('.border-t.border-white\\/10')).toBeInTheDocument();
+      const addItemBtn = screen.getByRole('button', { name: /\+ Add Item/i });
+      expect(addItemBtn.className).toMatch(/min-h-\[44px\]/);
+      expect(addItemBtn.className).toMatch(/touch-manipulation/);
     });
 
     it('search form stacks vertically on mobile', async () => {

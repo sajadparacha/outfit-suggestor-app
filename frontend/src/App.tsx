@@ -4,7 +4,7 @@
  * Uses controllers for business logic and views for presentation
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Hero from './views/components/Hero';
 import NavBar from './views/components/NavBar';
 import HowItWorksStepper from './views/components/HowItWorksStepper';
@@ -26,6 +26,7 @@ import Login from './views/components/Login';
 import Register from './views/components/Register';
 import ChangePassword from './views/components/ChangePassword';
 import { useOutfitController } from './controllers/useOutfitController';
+import { OUTFIT_VARIATION_MODIFIERS } from './utils/outfitPromptUtils';
 import { useHistoryController } from './controllers/useHistoryController';
 import { useHistorySearchController } from './controllers/useHistorySearchController';
 import { useToastController } from './controllers/useToastController';
@@ -39,8 +40,8 @@ import { WardrobeGapAnalysisResponse } from './models/WardrobeModels';
 import { resolveFilters } from './utils/outfitPreferences';
 
 function App() {
-  // Check URL parameter for model generation feature flag
-  const modelGenerationEnabled = React.useMemo(() => {
+  // Model generation: URL flag for rollout, always enabled for admin users
+  const modelGenerationUrlEnabled = React.useMemo(() => {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get('modelGeneration') === 'true';
   }, []);
@@ -57,6 +58,7 @@ function App() {
 
   // Authentication
   const { user, isAuthenticated, isLoading: authLoading, login, register, logout, error: authError, clearError } = useAuthController();
+  const modelGenerationEnabled = modelGenerationUrlEnabled || !!user?.is_admin;
   const [showRegister, setShowRegister] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
 
@@ -66,9 +68,6 @@ function App() {
   >('main');
   const [wardrobeCategoryFilter, setWardrobeCategoryFilter] = useState<string | null>(null);
   const [showChangePassword, setShowChangePassword] = useState(false);
-  const [showModelImageConfirm, setShowModelImageConfirm] = useState(false);
-  const [modelImageConfirmed, setModelImageConfirmed] = useState(false);
-  const [pendingAlternateAfterModel, setPendingAlternateAfterModel] = useState(false);
   const [showAddWardrobeModal, setShowAddWardrobeModal] = useState(false);
   const [wardrobeFormData, setWardrobeFormData] = useState<{category: string; color: string; description: string} | null>(null);
   const [wardrobeImageToAdd, setWardrobeImageToAdd] = useState<File | null>(null);
@@ -85,11 +84,13 @@ function App() {
   const [wardrobeGapError, setWardrobeGapError] = useState<string | null>(null);
   const [wardrobeAnalysisLoadingMessage, setWardrobeAnalysisLoadingMessage] = useState('Analyzing your wardrobe...');
   const [showWardrobeAnalysisModeModal, setShowWardrobeAnalysisModeModal] = useState(false);
+  const [highlightGenerateButton, setHighlightGenerateButton] = useState(false);
 
   // Controllers (Business Logic)
   const {
     image,
     loadingMessage,
+    activeOperation,
     filters,
     preferenceText,
     currentSuggestion,
@@ -106,12 +107,14 @@ function App() {
     setGenerateModelImage,
     setImageModel,
     setUseWardrobeOnly,
-    setSourceWardrobeItemId,
+    sourceWardrobeItem,
+    setSourceWardrobeItem,
     clearPreferences,
     getSuggestion,
     getRandomSuggestion,
     handleUseCachedSuggestion,
     handleGetNewSuggestion,
+    cancelOperation,
   } = useOutfitController({
     onSuggestionSuccess: async () => {
       await fetchRecentHistory();
@@ -144,8 +147,9 @@ function App() {
   // Wardrobe controller for auto-add functionality
   const { analyzeImage, addItem, loading: wardrobeLoading } = useWardrobeController();
   const [addingToWardrobe, setAddingToWardrobe] = useState(false);
+  const wardrobeAnalysisAbortRef = useRef<AbortController | null>(null);
 
-  // Ensure model generation is disabled if feature flag is off
+  // Turn off model generation when neither URL flag nor admin access applies
   React.useEffect(() => {
     if (!modelGenerationEnabled && generateModelImage) {
       setGenerateModelImage(false);
@@ -158,52 +162,70 @@ function App() {
   }, [showAiPromptResponse]);
 
   // Event Handlers (UI orchestration only)
-  const handleGetSuggestion = async (skipModelImageConfirm: boolean = false) => {
-    setPendingAlternateAfterModel(false);
+  const handleGetSuggestion = async () => {
     if (!image) {
       showToast('Please upload an image first', 'error');
       return;
     }
-
-    // Show confirmation dialog if model image generation is enabled and not already confirmed
-    if (generateModelImage && !skipModelImageConfirm && !modelImageConfirmed) {
-      setShowModelImageConfirm(true);
-      return;
-    }
-
-    // Reset confirmation state for next time
-    if (skipModelImageConfirm) {
-      setModelImageConfirmed(false);
-    }
-
-    // All business logic is now in the controller
     await getSuggestion();
   };
 
-  /** Next suggestion: ask AI for a different outfit using the current one as context (same photo). */
-  const handleNextSuggestion = async (skipModelImageConfirm: boolean = false) => {
+  const requireImageForAlternate = (): boolean => {
     if (!image) {
       showToast('Please upload an image first', 'error');
-      return;
+      return false;
     }
+    return true;
+  };
 
-    if (generateModelImage && !skipModelImageConfirm && !modelImageConfirmed) {
-      setPendingAlternateAfterModel(true);
-      setShowModelImageConfirm(true);
-      return;
-    }
-
-    if (skipModelImageConfirm) {
-      setModelImageConfirmed(false);
-    }
-    setPendingAlternateAfterModel(false);
+  /** Generate another look using the current outfit as context (same photo). */
+  const handleGenerateAnother = async () => {
+    if (!requireImageForAlternate()) return;
     await getSuggestion(true, undefined, !!currentSuggestion);
   };
 
-  const handleSetImage = (file: File | null) => {
-    setSourceWardrobeItemId(null);
-    setImage(file);
+  const handleMakeMoreFormal = async () => {
+    if (!requireImageForAlternate()) return;
+    await getSuggestion(true, undefined, !!currentSuggestion, {
+      promptModifier: OUTFIT_VARIATION_MODIFIERS.moreFormal,
+    });
   };
+
+  const handleMakeMoreCasual = async () => {
+    if (!requireImageForAlternate()) return;
+    await getSuggestion(true, undefined, !!currentSuggestion, {
+      promptModifier: OUTFIT_VARIATION_MODIFIERS.moreCasual,
+    });
+  };
+
+  const handleUseWardrobeOnlyFromResult = async () => {
+    if (!requireImageForAlternate()) return;
+    if (!isAuthenticated) {
+      showToast('Please log in to use wardrobe-only suggestions.', 'error');
+      return;
+    }
+    await getSuggestion(true, undefined, !!currentSuggestion, {
+      promptModifier: OUTFIT_VARIATION_MODIFIERS.wardrobeOnly,
+      forceWardrobeOnly: true,
+    });
+  };
+
+  const handleChangeOccasion = () => {
+    document.getElementById('outfit-preferences')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    showToast('Update occasion in Preferences, then tap Generate Another Look.', 'success');
+  };
+
+  const handleSetImage = (file: File | null) => {
+    setSourceWardrobeItem(null);
+    setImage(file);
+    setHighlightGenerateButton(false);
+  };
+
+  React.useEffect(() => {
+    if (!highlightGenerateButton) return;
+    const timer = window.setTimeout(() => setHighlightGenerateButton(false), 8000);
+    return () => window.clearTimeout(timer);
+  }, [highlightGenerateButton]);
 
   const handleUseCachedSuggestionWrapper = () => {
     handleUseCachedSuggestion();
@@ -228,15 +250,6 @@ function App() {
     }
   };
 
-  const handleLike = () => {
-    showToast('Thanks for the feedback! 👍', 'success');
-  };
-
-  const handleDislike = async () => {
-    showToast("We'll improve our suggestions! 👎", 'success');
-    await handleGetSuggestion(); // Get a new suggestion
-  };
-
   const runWardrobeAnalysis = async (mode: 'free' | 'premium') => {
     if (!isAuthenticated) {
       showToast('Please login to analyze your wardrobe.', 'error');
@@ -248,6 +261,9 @@ function App() {
         ? 'Running Premium Analysis with ChatGPT...'
         : 'Analyzing your wardrobe with free rules...'
     );
+    wardrobeAnalysisAbortRef.current?.abort();
+    const abortController = new AbortController();
+    wardrobeAnalysisAbortRef.current = abortController;
     setWardrobeGapLoading(true);
     setWardrobeGapError(null);
     try {
@@ -258,7 +274,7 @@ function App() {
         style: resolved.style,
         text_input: preferenceText || '',
         analysis_mode: mode,
-      });
+      }, abortController.signal);
       setWardrobeGapResult(result);
       setCurrentView('insights');
       showToast(
@@ -268,11 +284,28 @@ function App() {
         'success'
       );
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return;
+      }
       const message = err instanceof Error ? err.message : 'Failed to analyze wardrobe';
       setWardrobeGapError(message);
       showToast(message, 'error');
     } finally {
       setWardrobeGapLoading(false);
+      wardrobeAnalysisAbortRef.current = null;
+    }
+  };
+
+  const handleCancelAiOperation = () => {
+    if (loading) {
+      cancelOperation();
+      showToast('Outfit generation cancelled', 'success');
+    }
+    if (wardrobeGapLoading) {
+      wardrobeAnalysisAbortRef.current?.abort();
+      setWardrobeGapLoading(false);
+      wardrobeAnalysisAbortRef.current = null;
+      showToast('Wardrobe analysis cancelled', 'success');
     }
   };
 
@@ -337,11 +370,13 @@ function App() {
   const appBusyMessage = loading
     ? (loadingMessage || 'Generating AI suggestion...')
     : wardrobeAnalysisLoadingMessage;
+  const appBusyOperationType = wardrobeGapLoading
+    ? 'wardrobe-analysis' as const
+    : (activeOperation ?? 'outfit-suggestion');
 
   return (
     <div 
       className="relative min-h-screen overflow-x-hidden bg-brand-navy text-white"
-      style={{ pointerEvents: appBusy ? 'none' : 'auto' }}
     >
       {/* Subtle gradient orbs */}
       <div className="fixed inset-0 opacity-20 md:opacity-25 pointer-events-none overflow-hidden">
@@ -366,7 +401,6 @@ function App() {
       {/* Main Content */}
       <div 
         className="relative container mx-auto px-3 sm:px-4 py-4 sm:py-8"
-        style={{ pointerEvents: appBusy ? 'none' : 'auto' }}
       >
         {currentView === 'main' && (
           <>
@@ -397,6 +431,12 @@ function App() {
                 showAiPromptResponse={showAiPromptResponse}
                 setShowAiPromptResponse={setShowAiPromptResponse}
                 onClearPreferences={clearPreferences}
+                sourceWardrobeItem={sourceWardrobeItem}
+                highlightGenerateButton={highlightGenerateButton}
+                onChangeWardrobeItem={
+                  isAuthenticated ? () => setCurrentView('wardrobe') : undefined
+                }
+                onClearSourceWardrobeItem={() => setSourceWardrobeItem(null)}
                 onAddToWardrobe={async () => {
                   if (!image) {
                     showToast('Please upload an image first to add it to your wardrobe', 'error');
@@ -444,9 +484,12 @@ function App() {
                 error={error}
                 hasImage={!!image}
                 isAdmin={!!user?.is_admin}
-                onLike={handleLike}
-                onDislike={handleDislike}
-                onNext={handleNextSuggestion}
+                onGenerateAnother={handleGenerateAnother}
+                onMakeMoreFormal={handleMakeMoreFormal}
+                onMakeMoreCasual={handleMakeMoreCasual}
+                onUseWardrobeOnly={handleUseWardrobeOnlyFromResult}
+                onChangeOccasion={handleChangeOccasion}
+                showWardrobeOnlyAction={isAuthenticated}
                 onNavigateToWardrobe={(category?: string) => {
                   setWardrobeCategoryFilter(category || null);
                   setCurrentView('wardrobe');
@@ -515,11 +558,12 @@ function App() {
                   setCurrentView('main');
                 }}
                 onSourceImageLoaded={() => {
-                  showToast('Your selected item has been loaded. Now select the options and try to generate AI outfit.', 'success');
+                  setHighlightGenerateButton(true);
+                  showToast('Item loaded on Suggest — set your preferences, then tap Generate Outfit.', 'success');
                 }}
                 outfitController={{
                   setImage,
-                  setSourceWardrobeItemId,
+                  setSourceWardrobeItem,
                   getSuggestion,
                   loading,
                   error,
@@ -844,36 +888,6 @@ function App() {
         onCancel={handleGetNewSuggestion}
       />
 
-      {/* Model Image Generation Confirmation Modal */}
-      <ConfirmationModal
-        isOpen={showModelImageConfirm}
-        title="Generate Model Image?"
-        message="Would you like to create an AI-generated image of a model wearing your recommended outfit? The uploaded clothing item will be preserved exactly as shown in your photo. This may take a few extra seconds."
-        confirmText="Yes, Generate"
-        cancelText="Skip for Now"
-        onConfirm={async () => {
-          setShowModelImageConfirm(false);
-          setModelImageConfirmed(true);
-          if (pendingAlternateAfterModel) {
-            setPendingAlternateAfterModel(false);
-            await getSuggestion(true, undefined, !!currentSuggestion);
-          } else {
-            await handleGetSuggestion(true);
-          }
-        }}
-        onCancel={async () => {
-          setShowModelImageConfirm(false);
-          setGenerateModelImage(false);
-          setModelImageConfirmed(false);
-          if (pendingAlternateAfterModel) {
-            setPendingAlternateAfterModel(false);
-            await getSuggestion(true, undefined, !!currentSuggestion);
-          } else {
-            await handleGetSuggestion(true);
-          }
-        }}
-      />
-
       {/* Add to Wardrobe Modal with Editable Form */}
       {showAddWardrobeModal && wardrobeFormData && wardrobeImageToAdd && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
@@ -1064,8 +1078,13 @@ function App() {
         }}
       />
 
-      {/* Loading Overlay - Disables entire app when generating suggestion */}
-      <LoadingOverlay isLoading={appBusy} message={appBusyMessage} />
+      {/* AI progress panel — keeps the page visible while blocking duplicate submissions via button disabled states */}
+      <LoadingOverlay
+        isLoading={appBusy}
+        operationType={appBusyOperationType}
+        message={appBusyMessage}
+        onCancel={handleCancelAiOperation}
+      />
 
       {/* Wardrobe Analysis Mode Picker */}
       {showWardrobeAnalysisModeModal && (

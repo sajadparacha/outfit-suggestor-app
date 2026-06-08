@@ -5,6 +5,12 @@ const MAX_PREVIOUS_OUTFIT_CHARS = 6000;
 /**
  * Serialize the current outfit for the API so the model can suggest a clearly different alternative.
  */
+export const OUTFIT_VARIATION_MODIFIERS = {
+  moreFormal: 'Make this outfit more formal and polished while keeping the same uploaded item.',
+  moreCasual: 'Make this outfit more relaxed and casual while keeping the same uploaded item.',
+  wardrobeOnly: 'Use only items from my wardrobe for every piece of this outfit.',
+} as const;
+
 export function formatPreviousOutfitForPrompt(s: OutfitSuggestion): string {
   const lines = [
     `Shirt: ${s.shirt}`,

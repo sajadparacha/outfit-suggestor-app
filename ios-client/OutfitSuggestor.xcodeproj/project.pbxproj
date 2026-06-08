@@ -28,6 +28,9 @@
 		96A83F2AAE2ED65AD4E24997 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62893A1B15D2311F3AEBA721 /* AuthService.swift */; };
 		9BE1667E64CA0C40EDF6B0C1 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E0DF875D431141A2F841D3F /* LoginView.swift */; };
 		A963F0085A29335578FB7847 /* ImagePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3016CC9235E918186E85387 /* ImagePicker.swift */; };
+		A1B2C3D4E5F60718293A4B5D /* AiProgressSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5C /* AiProgressSteps.swift */; };
+		B2C3D4E5F60718293A4B5C6E /* AiProgressPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F60718293A4B5C6D /* AiProgressPanelView.swift */; };
+		C3D4E5F60718293A4B5C6D7E /* AiProgressStepsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F60718293A4B5C6D7D /* AiProgressStepsTests.swift */; };
 		AA245C6D61B794ED24A4FB23 /* HistoryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF7CFFE9C12AF6FE014BD2FD /* HistoryModels.swift */; };
 		AAE87AAF310E73964C11C7FB /* WardrobeListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66828E50349EE49EE62FFFFD /* WardrobeListView.swift */; };
 		B030C4AADF57B3488189CD98 /* AuthModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7F8B084F37279B1A44C15F4 /* AuthModels.swift */; };
@@ -81,6 +84,9 @@
 		4FDE60751389D95FDB822F3E /* OutfitSuggestor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OutfitSuggestor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		54E8D18B61E9EF222656069F /* TokenStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenStorage.swift; sourceTree = "<group>"; };
 		585D224C3BAB35D9CD03EA3B /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B5C /* AiProgressSteps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AiProgressSteps.swift; sourceTree = "<group>"; };
+		B2C3D4E5F60718293A4B5C6D /* AiProgressPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AiProgressPanelView.swift; sourceTree = "<group>"; };
+		C3D4E5F60718293A4B5C6D7D /* AiProgressStepsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AiProgressStepsTests.swift; sourceTree = "<group>"; };
 		60FB09DAD00AB05C5F220D23 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		62893A1B15D2311F3AEBA721 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		65F83DC80A17A5A7B6CC15D0 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
@@ -115,6 +121,7 @@
 			children = (
 				A4ED51E6300690222125BE0F /* APIServiceIntegrationTests.swift */,
 				969C61A8446536869AAFE1CD /* AppConfigTests.swift */,
+				C3D4E5F60718293A4B5C6D7D /* AiProgressStepsTests.swift */,
 				D86343F4A060EB70A1831EAA /* OutfitViewModelIntegrationTests.swift */,
 			);
 			path = OutfitSuggestorTests;
@@ -132,6 +139,7 @@
 			isa = PBXGroup;
 			children = (
 				60FB09DAD00AB05C5F220D23 /* AboutView.swift */,
+				B2C3D4E5F60718293A4B5C6D /* AiProgressPanelView.swift */,
 				7E8840F40CF3A5119424E263 /* ContentView.swift */,
 				2602BE97B13F02079895BAEB /* FiltersView.swift */,
 				7D48E9D66A6647B473956314 /* HeroView.swift */,
@@ -184,6 +192,7 @@
 		B03A5A91EAFDED2AFA475892 /* Utils */ = {
 			isa = PBXGroup;
 			children = (
+				A1B2C3D4E5F60718293A4B5C /* AiProgressSteps.swift */,
 				585D224C3BAB35D9CD03EA3B /* AppConfig.swift */,
 				E3016CC9235E918186E85387 /* ImagePicker.swift */,
 				79B25D4D09B5BB781246B0DF /* LocationService.swift */,
@@ -364,6 +373,8 @@
 				D49CCC05C1C483C20F5B066E /* APIService.swift in Sources */,
 				C7F027A59B48C9E0730C18C5 /* AboutView.swift in Sources */,
 				23CB85FFAAF34EEC0F240672 /* AppConfig.swift in Sources */,
+				A1B2C3D4E5F60718293A4B5D /* AiProgressSteps.swift in Sources */,
+				B2C3D4E5F60718293A4B5C6E /* AiProgressPanelView.swift in Sources */,
 				C9F8C11DE63D85713E22F929 /* AppTheme.swift in Sources */,
 				B030C4AADF57B3488189CD98 /* AuthModels.swift in Sources */,
 				96A83F2AAE2ED65AD4E24997 /* AuthService.swift in Sources */,
@@ -402,6 +413,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0D0FFD43456FF9B083A5AE92 /* APIServiceIntegrationTests.swift in Sources */,
+				C3D4E5F60718293A4B5C6D7E /* AiProgressStepsTests.swift in Sources */,
 				FD933F9E2EC6AC064C14756F /* AppConfigTests.swift in Sources */,
 				BDC51E614A7C765FB3FA7572 /* OutfitViewModelIntegrationTests.swift in Sources */,
 			);

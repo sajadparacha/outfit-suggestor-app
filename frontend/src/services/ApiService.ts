@@ -167,7 +167,8 @@ class ApiService {
     imageModel: string = 'dalle3',
     useWardrobeOnly: boolean = false,
     sourceWardrobeItemId: number | null = null,
-    previousOutfitText: string | null = null
+    previousOutfitText: string | null = null,
+    signal?: AbortSignal
   ): Promise<OutfitResponse> {
     try {
       const formData = new FormData();
@@ -196,6 +197,7 @@ class ApiService {
         method: 'POST',
         headers: this.getHeaders(true, true), // isFormData = true
         body: formData,
+        signal,
       });
 
       const responseData = await response.json().catch(() => null);
@@ -213,6 +215,9 @@ class ApiService {
 
       return responseData as OutfitResponse;
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw error;
+      }
       if (error instanceof Error) {
         throw error;
       }
@@ -228,7 +233,8 @@ class ApiService {
     occasion: string,
     season: string,
     style: string,
-    textInput: string = ''
+    textInput: string = '',
+    signal?: AbortSignal
   ): Promise<OutfitResponse> {
     try {
       const url = `${this.baseUrl}/api/suggest-outfit-from-wardrobe`;
@@ -243,6 +249,7 @@ class ApiService {
         method: 'POST',
         headers: this.getHeaders(true, false), // include auth token for wardrobe-only endpoint
         body: JSON.stringify(body),
+        signal,
       });
 
       const responseData = await response.json().catch(() => null);
@@ -260,6 +267,9 @@ class ApiService {
 
       return responseData as OutfitResponse;
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw error;
+      }
       if (error instanceof Error) {
         throw error;
       }
@@ -439,7 +449,8 @@ class ApiService {
    * @returns Promise with duplicate check result
    */
   async checkDuplicate(
-    image: File
+    image: File,
+    signal?: AbortSignal
   ): Promise<{ is_duplicate: boolean; existing_suggestion?: OutfitResponse }> {
     try {
       const formData = new FormData();
@@ -450,6 +461,7 @@ class ApiService {
         method: 'POST',
         headers: this.getHeaders(true, true), // isFormData = true
         body: formData,
+        signal,
       });
 
       if (!response.ok) {
@@ -787,7 +799,8 @@ class ApiService {
    * Analyze wardrobe for missing colors/styles by category.
    */
   async analyzeWardrobeGaps(
-    request: WardrobeGapAnalysisRequest
+    request: WardrobeGapAnalysisRequest,
+    signal?: AbortSignal
   ): Promise<WardrobeGapAnalysisResponse> {
     try {
       const url = `${this.baseUrl}/api/wardrobe/analyze-gaps`;
@@ -795,6 +808,7 @@ class ApiService {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify(request),
+        signal,
       });
 
       if (!response.ok) {

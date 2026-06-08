@@ -4,8 +4,9 @@
  * This is the "Controller" in the MVC pattern
  */
 
-import { useState, useCallback, useEffect } from 'react';
-import { OutfitSuggestion, Filters } from '../models/OutfitModels';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { AiOperationType } from '../utils/aiProgressSteps';
+import { OutfitSuggestion, Filters, SourceWardrobeItem } from '../models/OutfitModels';
 import ApiService from '../services/ApiService';
 import { compressImageForOutfit, compressImageForWardrobe } from '../utils/imageUtils';
 import { getLocationString } from '../utils/geolocation';
@@ -23,6 +24,7 @@ interface UseOutfitControllerReturn {
   // State
   image: File | null;
   loadingMessage: string | null;
+  activeOperation: AiOperationType | null;
   filters: Filters;
   preferenceText: string;
   currentSuggestion: OutfitSuggestion | null;
@@ -33,6 +35,7 @@ interface UseOutfitControllerReturn {
   useWardrobeOnly: boolean;
   existingSuggestion: OutfitSuggestion | null;
   showDuplicateModal: boolean;
+  sourceWardrobeItem: SourceWardrobeItem | null;
   
   // Actions
   setImage: (file: File | null) => void;
@@ -45,15 +48,17 @@ interface UseOutfitControllerReturn {
   getSuggestion: (
     skipDuplicateCheck?: boolean,
     sourceImage?: File | null,
-    alternateFromPrevious?: boolean
+    alternateFromPrevious?: boolean,
+    variationOptions?: { promptModifier?: string; forceWardrobeOnly?: boolean }
   ) => Promise<void>;
   getRandomSuggestion: () => Promise<void>;
   clearError: () => void;
   handleUseCachedSuggestion: () => void;
   handleGetNewSuggestion: () => Promise<void>;
   setShowDuplicateModal: (show: boolean) => void;
-  setSourceWardrobeItemId: (id: number | null) => void;
+  setSourceWardrobeItem: (item: SourceWardrobeItem | null) => void;
   clearPreferences: () => void;
+  cancelOperation: () => void;
   onSuggestionSuccess?: () => void; // Callback for when suggestion is successful
 }
 
@@ -77,9 +82,12 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
   const [imageModel, setImageModel] = useState<string>("dalle3");
   const [useWardrobeOnly, setUseWardrobeOnly] = useState<boolean>(false);
   const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
+  const [activeOperation, setActiveOperation] = useState<AiOperationType | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const [existingSuggestion, setExistingSuggestion] = useState<OutfitSuggestion | null>(null);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
-  const [sourceWardrobeItemId, setSourceWardrobeItemId] = useState<number | null>(null);
+  const [sourceWardrobeItem, setSourceWardrobeItem] = useState<SourceWardrobeItem | null>(null);
+  const sourceWardrobeItemId = sourceWardrobeItem?.id ?? null;
 
   /**
    * Get outfit suggestion from API
@@ -90,7 +98,8 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
     async (
       skipDuplicateCheck: boolean = false,
       sourceImage?: File | null,
-      alternateFromPrevious: boolean = false
+      alternateFromPrevious: boolean = false,
+      variationOptions?: { promptModifier?: string; forceWardrobeOnly?: boolean }
     ) => {
     const effectiveImage = sourceImage ?? image;
 
@@ -101,14 +110,21 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
 
     const skipDup = skipDuplicateCheck || alternateFromPrevious;
 
+    abortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    const { signal } = abortController;
+
     setLoading(true);
     setError(null);
+    setActiveOperation(generateModelImage ? 'outfit-with-preview' : 'outfit-suggestion');
 
     try {
       // Compress image before sending. When use_wardrobe_only, use same params as wardrobe
       // so perceptual hash can match the uploaded item to the correct wardrobe item.
       setLoadingMessage('Compressing image...');
-      const compressedImage = useWardrobeOnly
+      const effectiveUseWardrobeOnly = variationOptions?.forceWardrobeOnly ?? useWardrobeOnly;
+      const compressedImage = effectiveUseWardrobeOnly
         ? await compressImageForWardrobe(effectiveImage)
         : await compressImageForOutfit(effectiveImage);
       setLoadingMessage(
@@ -123,7 +139,7 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
       // Check for duplicate image (unless skipped)
       if (!skipDup) {
         try {
-          const duplicateCheck = await ApiService.checkDuplicate(compressedImage);
+          const duplicateCheck = await ApiService.checkDuplicate(compressedImage, signal);
           
           if (duplicateCheck.is_duplicate && duplicateCheck.existing_suggestion) {
             // Found duplicate - show confirmation modal
@@ -136,6 +152,8 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
           setShowDuplicateModal(true);
           setLoading(false);
           setLoadingMessage(null);
+          setActiveOperation(null);
+          abortControllerRef.current = null;
           return;
           }
         } catch (duplicateErr) {
@@ -156,7 +174,13 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
         }
       }
 
-      const prompt = buildSuggestionPrompt(filters, preferenceText);
+      let prompt = buildSuggestionPrompt(filters, preferenceText);
+      if (variationOptions?.promptModifier) {
+        prompt = `${prompt}\n\n${variationOptions.promptModifier}`;
+      }
+      if (variationOptions?.forceWardrobeOnly) {
+        setUseWardrobeOnly(true);
+      }
 
       // Call API service with compressed image and model image generation option
       const data = await ApiService.getSuggestion(
@@ -165,9 +189,10 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
         generateModelImage, 
         location || null,
         imageModel,
-        useWardrobeOnly,
+        effectiveUseWardrobeOnly,
         sourceWardrobeItemId,
-        previousOutfitText
+        previousOutfitText,
+        signal
       );
 
       // Debug: Log the response to see if model_image is present
@@ -219,17 +244,28 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
       setCurrentSuggestion(suggestion);
       setLoading(false);
       setLoadingMessage(null);
+      setActiveOperation(null);
+      abortControllerRef.current = null;
       
       // Call success callback if provided
       if (options?.onSuggestionSuccess) {
         options.onSuggestionSuccess();
       }
     } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        setLoading(false);
+        setLoadingMessage(null);
+        setActiveOperation(null);
+        abortControllerRef.current = null;
+        return;
+      }
       const errorMessage = err instanceof Error ? err.message : 'An error occurred';
       console.error('Error getting outfit suggestion:', err);
       setError(errorMessage);
       setLoading(false);
       setLoadingMessage(null);
+      setActiveOperation(null);
+      abortControllerRef.current = null;
     }
   }, [
     image,
@@ -269,8 +305,15 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
    * Uses occasion, season, style filters and optional free-text preferences
    */
   const getRandomSuggestion = useCallback(async () => {
+    abortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    const { signal } = abortController;
+
     setLoading(true);
     setError(null);
+    setActiveOperation('wardrobe-outfit');
+    setLoadingMessage('Scanning your wardrobe...');
     try {
       const resolved = resolveFilters(filters);
       const trimmed = preferenceText.trim();
@@ -278,7 +321,8 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
         resolved.occasion,
         resolved.season,
         resolved.style,
-        trimmed
+        trimmed,
+        signal
       );
       const suggestion: OutfitSuggestion = {
         ...data,
@@ -296,10 +340,16 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
         options.onSuggestionSuccess();
       }
     } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        return;
+      }
       const errorMessage = err instanceof Error ? err.message : 'An error occurred';
       setError(errorMessage);
     } finally {
       setLoading(false);
+      setLoadingMessage(null);
+      setActiveOperation(null);
+      abortControllerRef.current = null;
     }
   }, [filters.occasion, filters.season, filters.style, preferenceText, options]);
 
@@ -319,10 +369,19 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
     setError(null);
   }, []);
 
+  const cancelOperation = useCallback(() => {
+    abortControllerRef.current?.abort();
+    setLoading(false);
+    setLoadingMessage(null);
+    setActiveOperation(null);
+    abortControllerRef.current = null;
+  }, []);
+
   return {
     // State
     image,
     loadingMessage,
+    activeOperation,
     filters,
     preferenceText,
     currentSuggestion,
@@ -333,6 +392,7 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
     useWardrobeOnly,
     existingSuggestion,
     showDuplicateModal,
+    sourceWardrobeItem,
     
     // Actions
     setImage,
@@ -348,8 +408,9 @@ export const useOutfitController = (options?: { onSuggestionSuccess?: () => void
     handleUseCachedSuggestion,
     handleGetNewSuggestion,
     setShowDuplicateModal,
-    setSourceWardrobeItemId,
+    setSourceWardrobeItem,
     clearPreferences,
+    cancelOperation,
     onSuggestionSuccess: options?.onSuggestionSuccess
   };
 };

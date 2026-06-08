@@ -6,9 +6,13 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import OutfitPreview from './OutfitPreview';
 
-const mockOnLike = jest.fn();
-const mockOnDislike = jest.fn();
-const mockOnNext = jest.fn();
+const mockActionProps = {
+  onGenerateAnother: jest.fn(),
+  onMakeMoreFormal: jest.fn(),
+  onMakeMoreCasual: jest.fn(),
+  onUseWardrobeOnly: jest.fn(),
+  onChangeOccasion: jest.fn(),
+};
 
 const baseSuggestion = {
   id: '1',
@@ -39,9 +43,7 @@ describe('AI instrumentation integration', () => {
         suggestion={suggestionWithCost as any}
         loading={false}
         error={null}
-        onLike={mockOnLike}
-        onDislike={mockOnDislike}
-        onNext={mockOnNext}
+        {...mockActionProps}
         hasImage={true}
         isAdmin={false}
       />
@@ -54,9 +56,7 @@ describe('AI instrumentation integration', () => {
         suggestion={suggestionWithCost as any}
         loading={false}
         error={null}
-        onLike={mockOnLike}
-        onDislike={mockOnDislike}
-        onNext={mockOnNext}
+        {...mockActionProps}
         hasImage={true}
         isAdmin={true}
       />
@@ -76,9 +76,7 @@ describe('AI instrumentation integration', () => {
         suggestion={suggestionWithCost as any}
         loading={false}
         error={null}
-        onLike={mockOnLike}
-        onDislike={mockOnDislike}
-        onNext={mockOnNext}
+        {...mockActionProps}
         hasImage={true}
         isAdmin={true}
         showAiPromptResponse={false}

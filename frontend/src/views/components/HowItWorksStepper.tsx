@@ -45,9 +45,13 @@ const steps = [
 
 const HowItWorksStepper: React.FC = () => (
   <section className="mt-12 sm:mt-16" aria-labelledby="how-it-works-heading">
-    <h2 id="how-it-works-heading" className="mb-6 text-xl font-bold text-white sm:text-2xl">
+    <h2 id="how-it-works-heading" className="mb-2 text-xl font-bold text-white sm:text-2xl">
       How it works
     </h2>
+    <p className="mb-6 text-sm text-slate-400">
+      Upload a new photo, or start from{' '}
+      <span className="text-slate-200">Wardrobe</span> — pick a saved item, tune preferences on Suggest, then generate.
+    </p>
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {steps.map((step, index) => (
         <div

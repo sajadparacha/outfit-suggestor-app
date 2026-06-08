@@ -16,7 +16,8 @@ protocol APIServiceProtocol {
         generateModelImage: Bool,
         imageModel: String,
         location: String?,
-        previousOutfitText: String?
+        previousOutfitText: String?,
+        sourceWardrobeItemId: Int?
     ) async throws -> OutfitSuggestion
     func getSuggestionFromWardrobeItem(
         itemId: Int,
@@ -92,7 +93,8 @@ class APIService {
         generateModelImage: Bool = false,
         imageModel: String = "dalle3",
         location: String? = nil,
-        previousOutfitText: String? = nil
+        previousOutfitText: String? = nil,
+        sourceWardrobeItemId: Int? = nil
     ) async throws -> OutfitSuggestion {
         await beginRequestActivity()
         defer { endRequestActivity() }
@@ -141,6 +143,12 @@ class APIService {
             body.append("--\(boundary)\r\n".data(using: .utf8)!)
             body.append("Content-Disposition: form-data; name=\"previous_outfit_text\"\r\n\r\n".data(using: .utf8)!)
             body.append(previousOutfitText.data(using: .utf8)!)
+            body.append("\r\n".data(using: .utf8)!)
+        }
+        if let sourceWardrobeItemId {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"source_wardrobe_item_id\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(sourceWardrobeItemId)".data(using: .utf8)!)
             body.append("\r\n".data(using: .utf8)!)
         }
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
@@ -278,6 +286,12 @@ class APIService {
     func getWardrobeItem(id: Int) async throws -> WardrobeItem {
         await beginRequestActivity()
         defer { endRequestActivity() }
+        if AppConfig.isUITestMode {
+            guard let item = uiTestStore.wardrobeItem(id: id) else {
+                throw APIServiceError.invalidResponse
+            }
+            return item
+        }
         guard let url = URL(string: "\(baseURL)/api/wardrobe/\(id)") else { throw APIServiceError.invalidURL }
         var request = URLRequest(url: url)
         setAuthIfNeeded(&request)
@@ -689,18 +703,29 @@ struct RandomOutfitResponse: Codable {
 final class UITestDataStore {
     static let shared = UITestDataStore()
 
+    private static let wardrobeTestImageBase64: String = {
+        let size = CGSize(width: 4, height: 4)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        let image = renderer.image { context in
+            UIColor.white.setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+        }
+        return image.jpegData(compressionQuality: 0.85)?.base64EncodedString() ?? ""
+    }()
+
     private let lock = NSLock()
     private var wardrobeItems: [WardrobeItem]
     private var historyEntries: [OutfitHistoryEntry]
     private var nextHistoryId: Int
 
     private init() {
+        let testImage = Self.wardrobeTestImageBase64
         wardrobeItems = [
-            WardrobeItem(id: 1, category: "shirt", name: "Oxford Shirt", description: "White oxford shirt", color: "White"),
-            WardrobeItem(id: 2, category: "trouser", name: "Chino", description: "Navy chinos", color: "Navy"),
-            WardrobeItem(id: 3, category: "shoes", name: "Loafers", description: "Black loafers", color: "Black"),
-            WardrobeItem(id: 4, category: "belt", name: "Leather Belt", description: "Brown leather belt", color: "Brown"),
-            WardrobeItem(id: 5, category: "hat", name: "Wool Hat", description: "Soft gray wool hat", color: "Gray")
+            WardrobeItem(id: 1, category: "shirt", name: "Oxford Shirt", description: "White oxford shirt", color: "White", image_data: testImage),
+            WardrobeItem(id: 2, category: "trouser", name: "Chino", description: "Navy chinos", color: "Navy", image_data: testImage),
+            WardrobeItem(id: 3, category: "shoes", name: "Loafers", description: "Black loafers", color: "Black", image_data: testImage),
+            WardrobeItem(id: 4, category: "belt", name: "Leather Belt", description: "Brown leather belt", color: "Brown", image_data: testImage),
+            WardrobeItem(id: 5, category: "hat", name: "Wool Hat", description: "Soft gray wool hat", color: "Gray", image_data: testImage)
         ]
         historyEntries = [
             OutfitHistoryEntry(
@@ -751,6 +776,12 @@ final class UITestDataStore {
             )
         ]
         nextHistoryId = 200
+    }
+
+    func wardrobeItem(id: Int) -> WardrobeItem? {
+        lock.lock()
+        defer { lock.unlock() }
+        return wardrobeItems.first { $0.id == id }
     }
 
     func wardrobe(category: String?, search: String?, limit: Int, offset: Int) -> WardrobeListResponse {

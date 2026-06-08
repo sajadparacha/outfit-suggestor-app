@@ -11,15 +11,45 @@ import Combine
 
 @MainActor
 class OutfitViewModel: ObservableObject {
+    struct WardrobeSourceContext: Equatable {
+        let id: Int
+        let category: String
+        let color: String?
+    }
+
     enum LoadingContext: Equatable {
         case suggestion
         case nextSuggestion
         case wardrobeItem
+        case wardrobePreload
         case randomWardrobe
         case randomHistory
     }
 
+    enum OutfitVariationModifier {
+        case moreFormal
+        case moreCasual
+        case wardrobeOnly
+
+        var promptText: String {
+            switch self {
+            case .moreFormal:
+                return "Make this outfit more formal and polished while keeping the same uploaded item."
+            case .moreCasual:
+                return "Make this outfit more relaxed and casual while keeping the same uploaded item."
+            case .wardrobeOnly:
+                return "Use only items from my wardrobe for every piece of this outfit."
+            }
+        }
+
+        var forcesWardrobeOnly: Bool {
+            self == .wardrobeOnly
+        }
+    }
+
     @Published var selectedImage: UIImage?
+    @Published var sourceWardrobeItem: WardrobeSourceContext?
+    @Published var highlightGenerateButton = false
     @Published var currentSuggestion: OutfitSuggestion?
     @Published var isLoading = false
     @Published var errorMessage: String?
@@ -38,12 +68,92 @@ class OutfitViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var cachedHistory: [OutfitHistoryEntry] = []
     private var hasLoadedHistory = false
+    private var activeOperationTask: Task<Void, Never>?
+    
+    var aiOperationType: AiOperationType? {
+        guard isLoading, let context = loadingContext else { return nil }
+        switch context {
+        case .suggestion, .nextSuggestion, .wardrobeItem:
+            return generateModelImage ? .outfitWithPreview : .outfitSuggestion
+        case .randomWardrobe:
+            return .wardrobeOutfit
+        case .randomHistory, .wardrobePreload:
+            return nil
+        }
+    }
+
+    var showsAiProgressPanel: Bool {
+        aiOperationType != nil
+    }
     
     init(apiService: APIServiceProtocol = APIService.shared) {
         self.apiService = apiService
     }
     
     var isAuthenticated: Bool { AuthService.shared.isAuthenticated }
+
+    func cancelOperation() {
+        activeOperationTask?.cancel()
+        activeOperationTask = nil
+        clearLoadingState()
+    }
+
+    func startGetSuggestion(skipDuplicateCheck: Bool = false) {
+        runCancellableOperation { await self.getSuggestion(skipDuplicateCheck: skipDuplicateCheck) }
+    }
+
+    func startGetNextSuggestion() {
+        runCancellableOperation { await self.getNextSuggestion() }
+    }
+
+    func startGenerateAnotherLook() {
+        startGetNextSuggestion()
+    }
+
+    func startMakeMoreFormal() {
+        runCancellableOperation { await self.getNextSuggestion(variation: .moreFormal) }
+    }
+
+    func startMakeMoreCasual() {
+        runCancellableOperation { await self.getNextSuggestion(variation: .moreCasual) }
+    }
+
+    func startUseWardrobeOnlyFromResult() {
+        guard isAuthenticated else {
+            showErrorMessage("Log in to use wardrobe-only suggestions.")
+            return
+        }
+        runCancellableOperation { await self.getNextSuggestion(variation: .wardrobeOnly) }
+    }
+
+    func startGenerateAnotherAfterOccasionChange() {
+        startGetNextSuggestion()
+    }
+
+    func startGetRandomFromWardrobe() {
+        runCancellableOperation { await self.getRandomFromWardrobe() }
+    }
+
+    func startGetRandomFromHistory() {
+        runCancellableOperation { await self.getRandomFromHistory() }
+    }
+
+    func startForceNewSuggestion() {
+        runCancellableOperation { await self.forceNewSuggestion() }
+    }
+
+    private func runCancellableOperation(_ operation: @escaping () async -> Void) {
+        activeOperationTask?.cancel()
+        activeOperationTask = Task {
+            await operation()
+        }
+    }
+
+    private func clearLoadingState() {
+        isLoading = false
+        loadingMessage = nil
+        loadingContext = nil
+    }
     
     /// Get outfit suggestion from API with optional duplicate check
     func getSuggestion(skipDuplicateCheck: Bool = false) async {
@@ -55,27 +165,38 @@ class OutfitViewModel: ObservableObject {
         loadingContext = .suggestion
         loadingMessage = generateModelImage
             ? "Creating your outfit idea and model preview..."
-            : "Creating your outfit idea..."
+            : "Preparing your image..."
         errorMessage = nil
         showError = false
         
+        defer {
+            if !Task.isCancelled {
+                clearLoadingState()
+                activeOperationTask = nil
+            }
+        }
+        
         if !skipDuplicateCheck {
             do {
+                try Task.checkCancellation()
                 let dupResult = try await apiService.checkOutfitDuplicate(image: image)
                 if dupResult.is_duplicate, let existing = dupResult.existing_suggestion {
                     existingDuplicateSuggestion = existing
                     showDuplicateModal = true
-                    isLoading = false
-                    loadingMessage = nil
-                    loadingContext = nil
                     return
                 }
+            } catch is CancellationError {
+                return
             } catch {
                 // If duplicate check fails, proceed with suggestion anyway
             }
         }
         
         do {
+            try Task.checkCancellation()
+            loadingMessage = generateModelImage
+                ? "Generating preview..."
+                : "Building outfit recommendation..."
             var location: String? = nil
             if generateModelImage {
                 location = await LocationService.shared.getLocationString()
@@ -90,19 +211,20 @@ class OutfitViewModel: ObservableObject {
                 generateModelImage: generateModelImage,
                 imageModel: imageModel,
                 location: location,
-                previousOutfitText: nil
+                previousOutfitText: nil,
+                sourceWardrobeItemId: sourceWardrobeItem?.id
             )
             currentSuggestion = suggestion
+            highlightGenerateButton = false
             // Suggestion flow may add new history entries server-side; mark cache stale.
             hasLoadedHistory = false
+        } catch is CancellationError {
+            return
         } catch let error as APIServiceError {
             showErrorMessage(error.errorDescription ?? "An error occurred")
         } catch {
             showErrorMessage("An unexpected error occurred: \(error.localizedDescription)")
         }
-        isLoading = false
-        loadingMessage = nil
-        loadingContext = nil
     }
     
     /// Use the cached duplicate suggestion
@@ -121,20 +243,30 @@ class OutfitViewModel: ObservableObject {
         await getSuggestion(skipDuplicateCheck: true)
     }
     
-    /// Get an alternate/next outfit suggestion using the same photo but asking for something different
-    func getNextSuggestion() async {
+    /// Get an alternate outfit suggestion using the same photo but asking for something different
+    func getNextSuggestion(variation: OutfitVariationModifier? = nil) async {
         guard let image = selectedImage, let previous = currentSuggestion else {
             showErrorMessage("No current suggestion to get an alternate for")
             return
+        }
+        if variation == .wardrobeOnly {
+            useWardrobeOnly = true
         }
         isLoading = true
         loadingContext = .nextSuggestion
         loadingMessage = generateModelImage
             ? "Trying another look with a model preview..."
-            : "Trying another outfit option..."
+            : "Building outfit recommendation..."
         errorMessage = nil
         showError = false
+        defer {
+            if !Task.isCancelled {
+                clearLoadingState()
+                activeOperationTask = nil
+            }
+        }
         do {
+            try Task.checkCancellation()
             var location: String? = nil
             if generateModelImage {
                 location = await LocationService.shared.getLocationString()
@@ -150,27 +282,32 @@ class OutfitViewModel: ObservableObject {
             let basePrompt = preferenceText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 ? filters.description
                 : "User preferences: \(preferenceText)"
-            let fullPrompt = "\(basePrompt)\n\n\(previousOutfitText)"
-            
+            var fullPrompt = "\(basePrompt)\n\n\(previousOutfitText)"
+            if let variation {
+                fullPrompt += "\n\n\(variation.promptText)"
+            }
+
+            let effectiveWardrobeOnly = isAuthenticated && (variation?.forcesWardrobeOnly == true || useWardrobeOnly)
+
             let suggestion = try await apiService.getSuggestion(
                 image: image,
                 textInput: fullPrompt,
-                useWardrobeOnly: isAuthenticated && useWardrobeOnly,
+                useWardrobeOnly: effectiveWardrobeOnly,
                 generateModelImage: generateModelImage,
                 imageModel: imageModel,
                 location: location,
-                previousOutfitText: previousOutfitText
+                previousOutfitText: previousOutfitText,
+                sourceWardrobeItemId: sourceWardrobeItem?.id
             )
             currentSuggestion = suggestion
             hasLoadedHistory = false
+        } catch is CancellationError {
+            return
         } catch let error as APIServiceError {
             showErrorMessage(error.errorDescription ?? "An error occurred")
         } catch {
             showErrorMessage(error.localizedDescription)
         }
-        isLoading = false
-        loadingMessage = nil
-        loadingContext = nil
     }
     
     /// Load a suggestion from history (e.g. after tapping in History tab)
@@ -183,39 +320,59 @@ class OutfitViewModel: ObservableObject {
         currentSuggestion = suggestion
     }
     
-    /// Get outfit suggestion from a single wardrobe item; then switch to main to show result
-    func getSuggestionFromWardrobeItem(id: Int) async {
-        guard isAuthenticated else { showErrorMessage("Please log in"); return }
-        isLoading = true
-        loadingContext = .wardrobeItem
-        loadingMessage = "Creating an outfit from this wardrobe piece..."
-        errorMessage = nil
-        showError = false
+    /// Load a wardrobe item into the Suggest flow so the user can tune preferences before generating.
+    func preloadWardrobeItemForSuggestion(id: Int) async -> Bool {
         do {
-            var location: String? = nil
-            if generateModelImage {
-                location = await LocationService.shared.getLocationString()
-            }
-            let prompt = preferenceText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                ? filters.description
-                : "User preferences: \(preferenceText)"
-            let suggestion = try await apiService.getSuggestionFromWardrobeItem(
-                itemId: id,
-                textInput: prompt,
-                generateModelImage: generateModelImage,
-                imageModel: imageModel,
-                location: location
-            )
-            currentSuggestion = suggestion
-            hasLoadedHistory = false
+            let item = try await APIService.shared.getWardrobeItem(id: id)
+            return applyWardrobeItemToSuggestFlow(item)
         } catch let error as APIServiceError {
             showErrorMessage(error.errorDescription ?? "An error occurred")
         } catch {
             showErrorMessage(error.localizedDescription)
         }
-        isLoading = false
-        loadingMessage = nil
-        loadingContext = nil
+        return false
+    }
+
+    /// Preload from an item already shown in the wardrobe list (no extra fetch).
+    func preloadWardrobeItemForSuggestion(item: WardrobeItem) -> Bool {
+        applyWardrobeItemToSuggestFlow(item)
+    }
+
+    @discardableResult
+    private func applyWardrobeItemToSuggestFlow(_ item: WardrobeItem) -> Bool {
+        guard isAuthenticated else { showErrorMessage("Please log in"); return false }
+        guard let imageData = item.image_data,
+              let image = Self.decodeBase64Image(imageData) else {
+            showErrorMessage("This item doesn't have an image.")
+            return false
+        }
+        errorMessage = nil
+        showError = false
+        currentSuggestion = nil
+        selectedImage = image
+        sourceWardrobeItem = WardrobeSourceContext(
+            id: item.id,
+            category: item.category,
+            color: item.color
+        )
+        highlightGenerateButton = true
+        return true
+    }
+
+    func clearWardrobeSource() {
+        sourceWardrobeItem = nil
+        highlightGenerateButton = false
+    }
+
+    func clearSelectedImage() {
+        selectedImage = nil
+        clearWardrobeSource()
+    }
+
+    private static func decodeBase64Image(_ payload: String) -> UIImage? {
+        let cleaned = payload.replacingOccurrences(of: "\\s", with: "", options: .regularExpression)
+        guard let data = Data(base64Encoded: cleaned) else { return nil }
+        return UIImage(data: data)
     }
     
     /// Random outfit from wardrobe (auth required)
@@ -223,10 +380,17 @@ class OutfitViewModel: ObservableObject {
         guard isAuthenticated else { showErrorMessage("Please log in"); return }
         isLoading = true
         loadingContext = .randomWardrobe
-        loadingMessage = "Picking a random look from your wardrobe..."
+        loadingMessage = "Scanning your wardrobe..."
         errorMessage = nil
         showError = false
+        defer {
+            if !Task.isCancelled {
+                clearLoadingState()
+                activeOperationTask = nil
+            }
+        }
         do {
+            try Task.checkCancellation()
             let suggestion = try await apiService.getRandomOutfit(
                 occasion: filters.occasion.lowercased(),
                 season: filters.season.lowercased(),
@@ -234,6 +398,8 @@ class OutfitViewModel: ObservableObject {
             )
             currentSuggestion = suggestion
             hasLoadedHistory = false
+        } catch is CancellationError {
+            return
         } catch let error as APIServiceError {
             if (error.errorDescription ?? "").localizedCaseInsensitiveContains("log in again") {
                 AuthService.shared.logout()
@@ -242,9 +408,6 @@ class OutfitViewModel: ObservableObject {
         } catch {
             showErrorMessage(error.localizedDescription)
         }
-        isLoading = false
-        loadingMessage = nil
-        loadingContext = nil
     }
     
     /// Random outfit from history (client-side pick)
@@ -255,29 +418,32 @@ class OutfitViewModel: ObservableObject {
         loadingMessage = "Picking a random look from your history..."
         errorMessage = nil
         showError = false
+        defer {
+            if !Task.isCancelled {
+                clearLoadingState()
+                activeOperationTask = nil
+            }
+        }
         do {
+            try Task.checkCancellation()
             if !hasLoadedHistory {
                 cachedHistory = try await apiService.getOutfitHistory(limit: 100)
                 hasLoadedHistory = true
             }
             guard let entry = cachedHistory.randomElement() else {
                 showErrorMessage("No history yet. Get some outfit suggestions first.")
-                isLoading = false
-                loadingMessage = nil
-                loadingContext = nil
                 return
             }
             currentSuggestion = entry.toOutfitSuggestion()
+        } catch is CancellationError {
+            return
         } catch {
             showErrorMessage(error.localizedDescription)
         }
-        isLoading = false
-        loadingMessage = nil
-        loadingContext = nil
     }
     
     func clearSelection() {
-        selectedImage = nil
+        clearSelectedImage()
         currentSuggestion = nil
         errorMessage = nil
         showError = false

@@ -142,11 +142,48 @@ final class OutfitAppE2ETests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 6))
     }
 
+    func testResultActionButtonsAreVisibleAfterSuggestion() {
+        addSampleImageOnSuggest()
+        app.buttons["main.getSuggestionButton"].tap()
+        XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 6))
+
+        XCTAssertTrue(app.buttons["main.generateAnotherButton"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["main.makeMoreFormalButton"].exists)
+        XCTAssertTrue(app.buttons["main.makeMoreCasualButton"].exists)
+        XCTAssertTrue(app.buttons["main.changeOccasionButton"].exists)
+    }
+
+    func testChangeOccasionOpensPickerSheet() {
+        addSampleImageOnSuggest()
+        app.buttons["main.getSuggestionButton"].tap()
+        XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 6))
+
+        app.buttons["main.changeOccasionButton"].tap()
+        XCTAssertTrue(app.navigationBars["Change Occasion"].waitForExistence(timeout: 4))
+    }
+
+    func testGenerateAnotherLookKeepsResultVisible() {
+        addSampleImageOnSuggest()
+        app.buttons["main.getSuggestionButton"].tap()
+        XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 6))
+
+        app.buttons["main.generateAnotherButton"].tap()
+        waitForAppUnlocked(timeout: 8)
+        XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 6))
+    }
+
     func testWardrobeActionButtonsNavigateToExpectedPaths() {
         openWardrobe()
-        XCTAssertTrue(waitFor(app.buttons["Get Suggestion"].firstMatch))
+        XCTAssertTrue(waitFor(app.buttons["Build outfit"].firstMatch))
 
-        app.buttons["Get Suggestion"].firstMatch.tap()
+        app.buttons["Build outfit"].firstMatch.tap()
+        waitForAppUnlocked()
+        XCTAssertTrue(
+            app.staticTexts["From your wardrobe"].waitForExistence(timeout: 6)
+                || app.otherElements["main.wardrobeSourceBanner"].waitForExistence(timeout: 1)
+        )
+        XCTAssertTrue(app.buttons["main.getSuggestionButton"].waitForExistence(timeout: 4))
+        app.buttons["main.getSuggestionButton"].tap()
         XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 6))
 
         openWardrobe()
@@ -158,24 +195,22 @@ final class OutfitAppE2ETests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 4))
     }
 
-    func testGlobalAppLockAppearsDuringServerCalls() {
+    func testAiProgressPanelAppearsDuringSuggestionAndTabsStayUsable() {
         addSampleImageOnSuggest()
         app.buttons["main.getSuggestionButton"].tap()
 
-        let lock = app.otherElements["global.loadingLock"]
-        _ = lock.waitForExistence(timeout: 2)
+        let progressPanel = app.otherElements["ai.progressPanel"]
+        let progressTitle = app.staticTexts["Creating your outfit"]
+        let sawProgress = progressPanel.waitForExistence(timeout: 4)
+            || progressTitle.waitForExistence(timeout: 1)
+        XCTAssertTrue(sawProgress)
 
         let historyTarget = tabTarget("Looks")
         XCTAssertTrue(waitFor(historyTarget, timeout: 2))
         historyTarget.tap()
+        XCTAssertTrue(app.navigationBars["Looks"].waitForExistence(timeout: 3))
 
-        let unlocked = NSPredicate(format: "exists == false")
-        expectation(for: unlocked, evaluatedWith: lock)
-        waitForExpectations(timeout: 8)
-
-        if app.navigationBars["Looks"].exists {
-            openTab("Suggest")
-        }
+        openTab("Suggest")
         XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 8))
     }
 

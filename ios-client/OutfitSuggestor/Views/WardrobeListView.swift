@@ -22,7 +22,7 @@ struct WardrobeListView: View {
     @State private var searchText = ""
     @State private var categoryInfoMessage: String?
     @State private var categoryInfoDismissTask: Task<Void, Never>?
-    var onGetSuggestionFromItem: ((Int) -> Void)?
+    var onGetSuggestionFromItem: ((WardrobeItem) -> Void)?
     var onSelectHistorySuggestion: ((OutfitHistoryEntry) -> Void)?
     @State private var historyLoadingForItem: Int?
     @State private var showHistorySuggestionsSheet = false
@@ -33,6 +33,7 @@ struct WardrobeListView: View {
     @State private var fullScreenImage: UIImage?
     @State private var historyImageIndex: Set<String> = []
     @State private var historyItemIdIndex: Set<Int> = []
+    @AppStorage("wardrobe_flow_tip_dismissed") private var flowTipDismissed = false
     
     private var categoryVisibleItems: [WardrobeItem] {
         if categoryFilter == "All" {
@@ -87,6 +88,10 @@ struct WardrobeListView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if response != nil {
                 VStack(spacing: 0) {
+                    wardrobeFlowTip
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+
                     categoryFilterChips
                         .padding(.horizontal)
                         .padding(.top, 8)
@@ -122,7 +127,7 @@ struct WardrobeListView: View {
                                     image: decodeBase64Image(item.image_data),
                                     showPastSuggestions: itemHasPastSuggestions(item) || historyLoadingForItem == item.id,
                                     isPastSuggestionsLoading: historyLoadingForItem == item.id,
-                                    onGetSuggestion: onGetSuggestionFromItem == nil ? nil : { onGetSuggestionFromItem?(item.id) },
+                                    onGetSuggestion: onGetSuggestionFromItem == nil ? nil : { onGetSuggestionFromItem?(item) },
                                     onPastSuggestions: { Task { await openHistorySuggestions(for: item) } },
                                     onEdit: { editingItem = item },
                                     onDelete: { deleteItem(id: item.id) },
@@ -185,6 +190,35 @@ struct WardrobeListView: View {
         }
     }
     
+    @ViewBuilder
+    private var wardrobeFlowTip: some View {
+        if !flowTipDismissed {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("How to style from wardrobe")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(AppTheme.textPrimary)
+                    Spacer()
+                    Button("Dismiss") { flowTipDismissed = true }
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(AppTheme.textSecondary)
+                }
+                Text("1. Pick an item  2. Tap Build outfit  3. On Suggest, set preferences and Generate Outfit")
+                    .font(.caption)
+                    .foregroundColor(AppTheme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(12)
+            .background(AppTheme.accentSoft)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(AppTheme.gradientStart.opacity(0.3), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .accessibilityIdentifier("wardrobe.flowTip")
+        }
+    }
+
     private var categoryFilterChips: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Filter by:")
@@ -555,7 +589,7 @@ struct WardrobeCardView: View {
             VStack(alignment: .trailing, spacing: 10) {
                 if let onGetSuggestion {
                     WardrobeTopActionButton(
-                        title: "Get Suggestion",
+                        title: "Build outfit",
                         systemImage: "sparkles",
                         isPrimary: true,
                         action: onGetSuggestion

@@ -103,6 +103,8 @@ describe('Sidebar file validation', () => {
       />
     );
 
+    fireEvent.click(screen.getByText('Wardrobe & picks'));
+
     const button = screen.getByRole('button', { name: /get random outfit from wardrobe/i });
     expect(button).toBeInTheDocument();
     fireEvent.click(button);
@@ -118,6 +120,8 @@ describe('Sidebar file validation', () => {
         onGetRandomFromHistory={onGetRandomFromHistory}
       />
     );
+
+    fireEvent.click(screen.getByText('Wardrobe & picks'));
 
     const button = screen.getByRole('button', { name: /show random outfit from your history/i });
     expect(button).toBeInTheDocument();
@@ -158,7 +162,7 @@ describe('Sidebar file validation', () => {
       expect(prefs?.textContent).toMatch(/Style: Modern/);
     });
 
-    it('renders Wardrobe tooltip with add-to-wardrobe and wardrobe-only hints when authenticated', () => {
+    it('renders Wardrobe & picks tooltip with wardrobe and random pick hints when authenticated', () => {
       const setUseWardrobeOnly = jest.fn();
       render(
         <Sidebar
@@ -167,28 +171,16 @@ describe('Sidebar file validation', () => {
           image={null}
           onAddToWardrobe={jest.fn()}
           setUseWardrobeOnly={setUseWardrobeOnly}
-        />
-      );
-      const tooltips = screen.getAllByRole('tooltip');
-      const wardrobeHint = tooltips.find((el) => el.textContent?.includes('Add to wardrobe'));
-      expect(wardrobeHint?.textContent).toMatch(/Add to wardrobe: upload a photo first/);
-      expect(wardrobeHint?.textContent).toMatch(/Use my wardrobe only: Off/);
-    });
-
-    it('renders Random picks tooltip explaining wardrobe vs history', () => {
-      render(
-        <Sidebar
-          {...defaultProps}
-          isAuthenticated
           onGetRandomSuggestion={jest.fn()}
           onGetRandomFromHistory={jest.fn()}
         />
       );
       const tooltips = screen.getAllByRole('tooltip');
-      const randomHint = tooltips.find((el) =>
-        el.textContent?.includes('Random from Wardrobe uses')
-      );
-      expect(randomHint?.textContent).toMatch(/Random from History loads/);
+      const secondaryHint = tooltips.find((el) => el.textContent?.includes('Add to wardrobe'));
+      expect(secondaryHint?.textContent).toMatch(/Add to wardrobe: upload a photo first/);
+      expect(secondaryHint?.textContent).toMatch(/Use my wardrobe only: Off/);
+      expect(secondaryHint?.textContent).toMatch(/Random from Wardrobe uses/);
+      expect(secondaryHint?.textContent).toMatch(/Random from History loads/);
     });
   });
 });

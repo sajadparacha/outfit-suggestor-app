@@ -14,10 +14,12 @@ struct InsightsView: View {
     @State private var result: WardrobeGapAnalysisResponse?
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var analysisTask: Task<Void, Never>?
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
+        ZStack(alignment: .bottom) {
+            ScrollView {
+                VStack(spacing: 20) {
                 // Header
                 VStack(spacing: 8) {
                     Image(systemName: "bag.badge.plus")
@@ -57,7 +59,7 @@ struct InsightsView: View {
                 .accessibilityIdentifier("insights.analysisMode")
                 
                 // Analyze button
-                Button(action: { Task { await analyze() } }) {
+                Button(action: startAnalysis) {
                     if isLoading {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
@@ -87,18 +89,55 @@ struct InsightsView: View {
                     GapAnalysisResultView(result: result, isAdmin: auth.currentUser?.is_admin == true)
                 }
                 
-                Spacer(minLength: 50)
+                Spacer(minLength: isLoading ? 220 : 50)
             }
             .padding(.vertical)
+            }
+
+            if isLoading {
+                AiProgressPanelView(
+                    operationType: .wardrobeAnalysis,
+                    message: analysisLoadingMessage,
+                    onCancel: cancelAnalysis
+                )
+                .padding(.horizontal, 16)
+                .padding(.bottom, 16)
+            }
         }
         .navigationTitle("Insights")
         .navigationBarTitleDisplayMode(.large)
+    }
+
+    private var analysisLoadingMessage: String {
+        analysisMode == "premium"
+            ? "Running Premium Analysis with ChatGPT..."
+            : "Analyzing your wardrobe with free rules..."
+    }
+
+    private func cancelAnalysis() {
+        analysisTask?.cancel()
+        analysisTask = nil
+        isLoading = false
+    }
+    
+    private func startAnalysis() {
+        analysisTask?.cancel()
+        analysisTask = Task {
+            await analyze()
+        }
     }
     
     private func analyze() async {
         isLoading = true
         errorMessage = nil
+        defer {
+            if !Task.isCancelled {
+                isLoading = false
+                analysisTask = nil
+            }
+        }
         do {
+            try Task.checkCancellation()
             let request = WardrobeGapAnalysisRequest(
                 occasion: viewModel.filters.occasion,
                 season: viewModel.filters.season,
@@ -107,12 +146,13 @@ struct InsightsView: View {
                 analysis_mode: analysisMode
             )
             result = try await APIService.shared.analyzeWardrobeGaps(request: request)
+        } catch is CancellationError {
+            return
         } catch let error as APIServiceError {
             errorMessage = error.errorDescription
         } catch {
             errorMessage = error.localizedDescription
         }
-        isLoading = false
     }
 }
 

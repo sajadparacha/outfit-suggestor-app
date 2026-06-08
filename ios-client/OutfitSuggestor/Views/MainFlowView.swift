@@ -16,12 +16,18 @@ struct MainFlowView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showImagePicker = false
     @State private var pickerSourceType: UIImagePickerController.SourceType = .photoLibrary
-    @State private var showModelGenerationConfirm = false
     @State private var showAddToWardrobeSheet = false
-    @State private var showAdvancedSheet = false
+    @State private var showAddFromCreationSheet = false
+    @State private var showAdminOptionsSheet = false
     @State private var showRandomPicksDialog = false
     @State private var showMoreActionsMenu = false
+    @State private var showOccasionPicker = false
+    @State private var showAiPromptResponse = true
     @State private var transientMessage: String?
+
+    private var isAdmin: Bool {
+        auth.currentUser?.is_admin == true
+    }
 
     private enum MainScreenState {
         case creation
@@ -30,12 +36,6 @@ struct MainFlowView: View {
 
     private var screenState: MainScreenState {
         viewModel.currentSuggestion == nil ? .creation : .result
-    }
-
-    private var shouldShowFullscreenLoading: Bool {
-        guard viewModel.isLoading else { return false }
-        guard let context = viewModel.loadingContext else { return true }
-        return context == .suggestion || context == .wardrobeItem
     }
 
     private var canRequestSuggestion: Bool {
@@ -74,23 +74,18 @@ struct MainFlowView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            if shouldShowFullscreenLoading {
-                ZStack {
-                    Color.black.opacity(0.45).ignoresSafeArea()
-                    VStack(spacing: 12) {
-                        ProgressView()
-                            .progressViewStyle(.circular)
-                            .tint(AppTheme.accent)
-                            .scaleEffect(1.15)
-                        Text(viewModel.loadingMessage ?? "Creating your outfit idea...")
-                            .font(.headline)
-                            .foregroundColor(AppTheme.textPrimary)
-                    }
-                    .padding(20)
-                    .glassCard()
-                    .padding(.horizontal, 30)
+            if viewModel.showsAiProgressPanel, let operationType = viewModel.aiOperationType {
+                VStack {
+                    Spacer()
+                    AiProgressPanelView(
+                        operationType: operationType,
+                        message: viewModel.loadingMessage,
+                        onCancel: { viewModel.cancelOperation() }
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 16)
                 }
-                .accessibilityIdentifier("main.fullscreenLoadingOverlay")
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
 
             if let transientMessage {
@@ -112,11 +107,29 @@ struct MainFlowView: View {
             }
         }
         .navigationBarHidden(true)
+        .onChange(of: viewModel.sourceWardrobeItem?.id) { newId in
+            guard newId != nil else { return }
+            showTransientMessage("Item loaded — set preferences, then Generate Outfit.")
+        }
         .sheet(isPresented: $showImagePicker) {
             ImagePicker(selectedImage: $viewModel.selectedImage, sourceType: pickerSourceType)
         }
-        .sheet(isPresented: $showAdvancedSheet) {
-            advancedSheet
+        .sheet(isPresented: $showAddFromCreationSheet) {
+            WardrobeFormView(
+                initialCategory: nil,
+                initialColor: nil,
+                initialDescription: nil,
+                initialImage: viewModel.selectedImage,
+                onSaved: {
+                    showAddFromCreationSheet = false
+                },
+                onCancel: {
+                    showAddFromCreationSheet = false
+                }
+            )
+        }
+        .sheet(isPresented: $showAdminOptionsSheet) {
+            adminOptionsSheet
         }
         .sheet(isPresented: $showAddToWardrobeSheet) {
             WardrobeFormView(
@@ -134,11 +147,11 @@ struct MainFlowView: View {
         }
         .confirmationDialog("Random Picks", isPresented: $showRandomPicksDialog) {
             Button("Random from Wardrobe") {
-                Task { await viewModel.getRandomFromWardrobe() }
+                viewModel.startGetRandomFromWardrobe()
             }
             .disabled(!viewModel.isAuthenticated || viewModel.isLoading)
             Button("Random from History") {
-                Task { await viewModel.getRandomFromHistory() }
+                viewModel.startGetRandomFromHistory()
             }
             .disabled(!viewModel.isAuthenticated || viewModel.isLoading)
             Button("Cancel", role: .cancel) { }
@@ -150,8 +163,10 @@ struct MainFlowView: View {
                 showRandomPicksDialog = true
             }
             .disabled(!viewModel.isAuthenticated || viewModel.isLoading)
-            Button("Advanced Options") {
-                showAdvancedSheet = true
+            if isAdmin {
+                Button("Advanced Options") {
+                    showAdminOptionsSheet = true
+                }
             }
             if auth.isAuthenticated, let onRequestHistory {
                 Button("View Looks") {
@@ -167,16 +182,36 @@ struct MainFlowView: View {
         }
         .alert("Duplicate Found", isPresented: $viewModel.showDuplicateModal) {
             Button("Use Cached") { viewModel.useCachedSuggestion() }
-            Button("Get New") { Task { await viewModel.forceNewSuggestion() } }
+            Button("Get New") { viewModel.startForceNewSuggestion() }
             Button("Cancel", role: .cancel) { viewModel.showDuplicateModal = false }
         } message: {
             Text("This image was already analyzed. Would you like to use the cached suggestion or get a new one?")
         }
-        .alert("Generate Model Image?", isPresented: $showModelGenerationConfirm) {
-            Button("Continue") { Task { await viewModel.getSuggestion() } }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Model-image generation takes longer and may increase API usage cost. Continue?")
+        .sheet(isPresented: $showOccasionPicker) {
+            NavigationStack {
+                Form {
+                    Picker("Occasion", selection: $viewModel.filters.occasion) {
+                        ForEach(Occasion.allCases, id: \.apiValue) { occasion in
+                            Text(occasion.rawValue).tag(occasion.apiValue)
+                        }
+                    }
+                    .pickerStyle(.inline)
+                }
+                .navigationTitle("Change Occasion")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { showOccasionPicker = false }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Apply") {
+                            showOccasionPicker = false
+                            viewModel.startGenerateAnotherAfterOccasionChange()
+                        }
+                    }
+                }
+            }
+            .presentationDetents([.medium])
         }
     }
 
@@ -184,8 +219,23 @@ struct MainFlowView: View {
         VStack(spacing: 22) {
             HeroView()
 
+            if let source = viewModel.sourceWardrobeItem, viewModel.selectedImage != nil {
+                wardrobeSourceBanner(source)
+                    .padding(.horizontal)
+            }
+
             ImageUploadView(
-                selectedImage: $viewModel.selectedImage,
+                selectedImage: Binding(
+                    get: { viewModel.selectedImage },
+                    set: { newValue in
+                        if newValue == nil {
+                            viewModel.clearSelectedImage()
+                        } else {
+                            viewModel.selectedImage = newValue
+                            viewModel.clearWardrobeSource()
+                        }
+                    }
+                ),
                 showImagePicker: $showImagePicker,
                 pickerSourceType: $pickerSourceType
             )
@@ -197,6 +247,29 @@ struct MainFlowView: View {
             )
 
             VStack(spacing: 10) {
+                if isAdmin {
+                    Toggle(isOn: $viewModel.generateModelImage) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Include AI model preview")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(AppTheme.textPrimary)
+                            Text("This may take longer.")
+                                .font(.caption)
+                                .foregroundColor(AppTheme.textSecondary)
+                        }
+                    }
+                    .tint(AppTheme.accent)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Color.white.opacity(0.06))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(AppTheme.border, lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .accessibilityIdentifier("main.includeModelPreviewToggle")
+                }
+
                 Button(action: handleGetSuggestionTap) {
                     if viewModel.isLoading {
                         ProgressView()
@@ -207,7 +280,21 @@ struct MainFlowView: View {
                 }
                 .buttonStyle(GradientButtonStyle(isEnabled: canRequestSuggestion))
                 .disabled(!canRequestSuggestion)
+                .overlay {
+                    if viewModel.highlightGenerateButton && canRequestSuggestion {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(AppTheme.gradientStart, lineWidth: 2)
+                            .shadow(color: AppTheme.gradientStart.opacity(0.45), radius: 8)
+                    }
+                }
                 .accessibilityIdentifier("main.getSuggestionButton")
+                .onChange(of: viewModel.highlightGenerateButton) { highlighted in
+                    guard highlighted else { return }
+                    Task {
+                        try? await Task.sleep(nanoseconds: 8_000_000_000)
+                        viewModel.highlightGenerateButton = false
+                    }
+                }
 
                 if !canRequestSuggestion {
                     Text("Add a photo to enable outfit suggestions.")
@@ -215,20 +302,18 @@ struct MainFlowView: View {
                         .foregroundColor(AppTheme.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
-
-                HStack {
-                    Spacer()
-                    Button {
-                        showAdvancedSheet = true
-                    } label: {
-                        Label("Advanced", systemImage: "slider.horizontal.3")
-                            .font(.caption.weight(.semibold))
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundColor(AppTheme.gradientStart)
-                }
             }
             .padding(.horizontal)
+
+            if auth.isAuthenticated {
+                moreOptionsSection
+                    .padding(.horizontal)
+            }
+
+            if isAdmin {
+                advancedOptionsSection
+                    .padding(.horizontal)
+            }
 
             RecentLooksSection(
                 onSelectEntry: { entry in
@@ -238,6 +323,56 @@ struct MainFlowView: View {
                     onRequestHistory?()
                 }
             )
+        }
+    }
+
+    private var resultSecondaryActions: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Button {
+                    viewModel.startMakeMoreFormal()
+                } label: {
+                    Text("Make it more formal")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .disabled(viewModel.isLoading || viewModel.selectedImage == nil)
+                .accessibilityIdentifier("main.makeMoreFormalButton")
+
+                Button {
+                    viewModel.startMakeMoreCasual()
+                } label: {
+                    Text("Make it more casual")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .disabled(viewModel.isLoading || viewModel.selectedImage == nil)
+                .accessibilityIdentifier("main.makeMoreCasualButton")
+            }
+
+            HStack(spacing: 8) {
+                if auth.isAuthenticated {
+                    Button {
+                        viewModel.startUseWardrobeOnlyFromResult()
+                    } label: {
+                        Text("Use wardrobe items only")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(viewModel.isLoading || viewModel.selectedImage == nil)
+                    .accessibilityIdentifier("main.useWardrobeOnlyButton")
+                }
+
+                Button {
+                    showOccasionPicker = true
+                } label: {
+                    Text("Change occasion")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .disabled(viewModel.isLoading)
+                .accessibilityIdentifier("main.changeOccasionButton")
+            }
         }
     }
 
@@ -251,7 +386,8 @@ struct MainFlowView: View {
                     onDislike: nil,
                     onAddToWardrobe: nil,
                     isLoading: viewModel.isLoading,
-                    isAdmin: auth.currentUser?.is_admin == true,
+                    isAdmin: isAdmin,
+                    showAiPromptResponse: showAiPromptResponse,
                     showsActionSection: false
                 )
                 .padding(.horizontal)
@@ -259,18 +395,20 @@ struct MainFlowView: View {
                 .accessibilityIdentifier("main.resultCard")
 
                 VStack(spacing: 10) {
-                    HStack(spacing: 10) {
-                        Button {
-                            Task { await viewModel.getNextSuggestion() }
-                        } label: {
-                            Label("Try Another", systemImage: "arrow.triangle.2.circlepath")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(AppTheme.accent)
-                        .disabled(viewModel.isLoading)
-                        .accessibilityIdentifier("main.tryAnotherButton")
+                    Button {
+                        viewModel.startGenerateAnotherLook()
+                    } label: {
+                        Label("Generate Another Look", systemImage: "arrow.triangle.2.circlepath")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(AppTheme.accent)
+                    .disabled(viewModel.isLoading || viewModel.selectedImage == nil)
+                    .accessibilityIdentifier("main.generateAnotherButton")
 
+                    resultSecondaryActions
+
+                    HStack(spacing: 10) {
                         Button {
                             if auth.isAuthenticated {
                                 showAddToWardrobeSheet = true
@@ -284,17 +422,16 @@ struct MainFlowView: View {
                         .buttonStyle(.bordered)
                         .disabled(viewModel.isLoading)
                         .accessibilityIdentifier("main.saveButton")
-                    }
-                    .frame(maxWidth: isRegularWidth ? 760 : .infinity)
 
-                    Button {
-                        viewModel.currentSuggestion = nil
-                        viewModel.selectedImage = nil
-                    } label: {
-                        Label("Start Over", systemImage: "arrow.counterclockwise")
-                            .frame(maxWidth: .infinity)
+                        Button {
+                            viewModel.currentSuggestion = nil
+                            viewModel.selectedImage = nil
+                        } label: {
+                            Label("Start Over", systemImage: "arrow.counterclockwise")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
                     }
-                    .buttonStyle(.bordered)
 
                     Button {
                         showMoreActionsMenu = true
@@ -305,69 +442,83 @@ struct MainFlowView: View {
                     .buttonStyle(.bordered)
                     .disabled(viewModel.isLoading)
                     .accessibilityIdentifier("main.moreButton")
-
-                    if viewModel.isLoading, !shouldShowFullscreenLoading {
-                        HStack(spacing: 8) {
-                            ProgressView()
-                                .tint(AppTheme.accent)
-                            Text(viewModel.loadingMessage ?? "Working on your request...")
-                                .font(.subheadline)
-                                .foregroundColor(AppTheme.textSecondary)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(12)
-                        .background(Color.white.opacity(0.06))
-                        .cornerRadius(10)
-                    }
                 }
+                .frame(maxWidth: isRegularWidth ? 760 : .infinity)
                 .padding(.horizontal)
             }
         }
     }
 
-    private var advancedSheet: some View {
+    private var moreOptionsSection: some View {
+        DisclosureGroup("Wardrobe & picks") {
+            VStack(spacing: 14) {
+                Toggle("Use my wardrobe only", isOn: $viewModel.useWardrobeOnly)
+                    .tint(AppTheme.accent)
+
+                Button {
+                    if viewModel.selectedImage == nil {
+                        showTransientMessage("Upload a photo first.")
+                    } else {
+                        showAddFromCreationSheet = true
+                    }
+                } label: {
+                    Label("Add to Wardrobe", systemImage: "plus.circle")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .disabled(viewModel.isLoading)
+
+                Button {
+                    showRandomPicksDialog = true
+                } label: {
+                    Label("Random from Wardrobe", systemImage: "shuffle")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .disabled(viewModel.isLoading)
+
+                Button {
+                    viewModel.startGetRandomFromHistory()
+                } label: {
+                    Label("Random from History", systemImage: "clock.arrow.circlepath")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .disabled(viewModel.isLoading)
+            }
+            .padding(.top, 8)
+        }
+        .font(.subheadline.weight(.semibold))
+        .foregroundColor(AppTheme.textPrimary)
+        .padding()
+        .glassCard()
+    }
+
+    private var advancedOptionsSection: some View {
+        DisclosureGroup("Advanced options") {
+            VStack(spacing: 14) {
+                if viewModel.generateModelImage {
+                    Picker("Image model", selection: $viewModel.imageModel) {
+                        Text("DALL-E 3").tag("dalle3")
+                        Text("Stable Diffusion").tag("stable-diffusion")
+                        Text("Nano Banana").tag("nano-banana")
+                    }
+                    .pickerStyle(.menu)
+                }
+
+                Toggle("Show AI prompt & response", isOn: $showAiPromptResponse)
+                    .tint(AppTheme.accent)
+            }
+            .padding(.top, 8)
+        }
+        .font(.subheadline.weight(.semibold))
+        .foregroundColor(AppTheme.textPrimary)
+        .padding()
+        .glassCard()
+    }
+
+    private var adminOptionsSheet: some View {
         NavigationView {
             ScrollView {
-                VStack(spacing: 16) {
-                    FiltersView(
-                        filters: $viewModel.filters,
-                        preferenceText: $viewModel.preferenceText,
-                        layout: .form
-                    )
-
-                    DisclosureGroup("Advanced Options") {
-                        VStack(spacing: 14) {
-                            if auth.isAuthenticated {
-                                Toggle("Use wardrobe only", isOn: $viewModel.useWardrobeOnly)
-                                    .tint(AppTheme.accent)
-
-                                Button {
-                                    showAdvancedSheet = false
-                                    showRandomPicksDialog = true
-                                } label: {
-                                    Label("Random Pick", systemImage: "shuffle")
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                .disabled(viewModel.isLoading)
-                            }
-
-                            Toggle("Generate model preview", isOn: $viewModel.generateModelImage)
-                                .tint(AppTheme.accent)
-                            if viewModel.generateModelImage {
-                                Picker("Image model", selection: $viewModel.imageModel) {
-                                    Text("DALL-E 3").tag("dalle3")
-                                    Text("Stable Diffusion").tag("stable-diffusion")
-                                    Text("Nano Banana").tag("nano-banana")
-                                }
-                                .pickerStyle(.menu)
-                            }
-                        }
-                        .padding(.top, 8)
-                    }
+                advancedOptionsSection
                     .padding()
-                    .glassCard()
-                }
-                .padding()
             }
             .background(
                 LinearGradient(
@@ -377,22 +528,48 @@ struct MainFlowView: View {
                 )
                 .ignoresSafeArea()
             )
-            .navigationTitle("Advanced")
+            .navigationTitle("Advanced options")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { showAdvancedSheet = false }
+                    Button("Done") { showAdminOptionsSheet = false }
                 }
             }
         }
     }
 
-    private func handleGetSuggestionTap() {
-        guard viewModel.generateModelImage else {
-            Task { await viewModel.getSuggestion() }
-            return
+    @ViewBuilder
+    private func wardrobeSourceBanner(_ source: OutfitViewModel.WardrobeSourceContext) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 10) {
+                Text("👔")
+                    .font(.title3)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("From your wardrobe")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(AppTheme.textPrimary)
+                    Text("\(source.category.capitalized)\(source.color.map { " · \($0)" } ?? "")")
+                        .font(.subheadline)
+                        .foregroundColor(AppTheme.textSecondary)
+                    Text("Set preferences below, then tap Generate Outfit.")
+                        .font(.caption)
+                        .foregroundColor(AppTheme.textSecondary)
+                }
+                Spacer()
+            }
         }
-        showModelGenerationConfirm = true
+        .padding(14)
+        .background(AppTheme.accentSoft)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(AppTheme.gradientStart.opacity(0.35), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .accessibilityIdentifier("main.wardrobeSourceBanner")
+    }
+
+    private func handleGetSuggestionTap() {
+        viewModel.startGetSuggestion()
     }
 
     private func showTransientMessage(_ message: String) {

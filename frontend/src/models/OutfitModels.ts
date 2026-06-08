@@ -3,6 +3,13 @@
  * These models define the shape of data used throughout the application
  */
 
+/** Wardrobe item loaded into the main suggestion flow (preload + tune). */
+export interface SourceWardrobeItem {
+  id: number;
+  category: string;
+  color?: string | null;
+}
+
 export interface MatchingWardrobeItem {
   id: number;
   category: string;

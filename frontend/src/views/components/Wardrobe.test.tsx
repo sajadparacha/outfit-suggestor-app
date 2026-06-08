@@ -70,7 +70,7 @@ describe('Wardrobe page', () => {
   it('loads the wardrobe page and shows the page header', () => {
     render(<Wardrobe />);
     expect(screen.getByRole('heading', { name: /My Wardrobe/i })).toBeInTheDocument();
-    expect(screen.getAllByText(/Add items to get personalized outfit suggestions/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Pick a saved piece/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it('shows empty list state when there are no wardrobe items', () => {
@@ -109,7 +109,7 @@ describe('Wardrobe page', () => {
     const onNavigateToMain = jest.fn();
     const onSourceImageLoaded = jest.fn();
     const setImage = jest.fn();
-    const setSourceWardrobeItemId = jest.fn();
+    const setSourceWardrobeItem = jest.fn();
 
     jest.spyOn(ApiService, 'getOutfitHistory').mockResolvedValue([
       {
@@ -138,7 +138,7 @@ describe('Wardrobe page', () => {
         onSourceImageLoaded={onSourceImageLoaded}
         outfitController={{
           setImage,
-          setSourceWardrobeItemId,
+          setSourceWardrobeItem,
           getSuggestion: jest.fn(),
           loading: false,
           error: null,
@@ -153,7 +153,9 @@ describe('Wardrobe page', () => {
     fireEvent.click(screen.getByRole('button', { name: /Use This/i }));
 
     await waitFor(() => {
-      expect(setSourceWardrobeItemId).toHaveBeenCalledWith(1);
+      expect(setSourceWardrobeItem).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 1, category: 'shirt' })
+      );
       expect(setImage).toHaveBeenCalledTimes(1);
       expect(onSourceImageLoaded).toHaveBeenCalledTimes(1);
       expect(onSuggestionReady).toHaveBeenCalledTimes(1);

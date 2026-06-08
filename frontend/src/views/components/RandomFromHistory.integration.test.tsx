@@ -51,13 +51,13 @@ describe('Random from History integration', () => {
   it('displays random outfit from history when button is clicked', async () => {
     render(<App />);
 
-    // Wait for app to load and expand Quick Picks for Random from History
+    // Wait for app to load and expand Wardrobe & picks for Random from History
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /^Suggest$/ })).toBeInTheDocument();
-      expect(screen.getByText('Quick Picks')).toBeInTheDocument();
+      expect(screen.getByText('Wardrobe & picks')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText('Quick Picks'));
+    fireEvent.click(screen.getByText('Wardrobe & picks'));
 
     const randomFromHistoryBtn = await screen.findByRole('button', {
       name: /show random outfit from your history/i,
@@ -86,10 +86,10 @@ describe('Random from History integration', () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByText('Quick Picks')).toBeInTheDocument();
+      expect(screen.getByText('Wardrobe & picks')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText('Quick Picks'));
+    fireEvent.click(screen.getByText('Wardrobe & picks'));
 
     const randomFromHistoryBtn = await screen.findByRole('button', {
       name: /show random outfit from your history/i,

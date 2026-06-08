@@ -101,7 +101,7 @@ const About: React.FC = () => {
                   <span className="text-2xl">✨</span>
                   <div>
                     <h4 className="font-semibold text-white">Get Suggestions from Wardrobe</h4>
-                    <p className="text-sm text-slate-300">Click "Get AI Suggestion" on any wardrobe item to instantly get outfit recommendations. Uses the same powerful duplicate detection and filtering as the main suggestion flow.</p>
+                    <p className="text-sm text-slate-300">Tap "Build outfit from this item" on any wardrobe piece to load it on Suggest, tune your preferences, then generate — same duplicate detection and filtering as the main flow.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">

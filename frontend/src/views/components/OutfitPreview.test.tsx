@@ -6,11 +6,29 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import OutfitPreview from './OutfitPreview';
 import type { OutfitSuggestion } from '../../models/OutfitModels';
 
+const defaultActionProps = {
+  onGenerateAnother: jest.fn(),
+  onMakeMoreFormal: jest.fn(),
+  onMakeMoreCasual: jest.fn(),
+  onUseWardrobeOnly: jest.fn(),
+  onChangeOccasion: jest.fn(),
+};
+
 describe('OutfitPreview', () => {
-  const mockOnLike = jest.fn();
-  const mockOnDislike = jest.fn();
-  const mockOnNext = jest.fn();
+  const mockOnGenerateAnother = jest.fn();
+  const mockOnMakeMoreFormal = jest.fn();
+  const mockOnMakeMoreCasual = jest.fn();
+  const mockOnUseWardrobeOnly = jest.fn();
+  const mockOnChangeOccasion = jest.fn();
   const mockOnAddToWardrobe = jest.fn();
+
+  const actionProps = {
+    onGenerateAnother: mockOnGenerateAnother,
+    onMakeMoreFormal: mockOnMakeMoreFormal,
+    onMakeMoreCasual: mockOnMakeMoreCasual,
+    onUseWardrobeOnly: mockOnUseWardrobeOnly,
+    onChangeOccasion: mockOnChangeOccasion,
+  };
 
   const baseSuggestion: OutfitSuggestion = {
     id: '1',
@@ -28,17 +46,15 @@ describe('OutfitPreview', () => {
 
   describe('loading state', () => {
     it('shows loading skeleton when loading', () => {
-      render(
+      const { container } = render(
         <OutfitPreview
           suggestion={null}
           loading={true}
           error={null}
-          onLike={mockOnLike}
-          onDislike={mockOnDislike}
-          onNext={mockOnNext}
+          {...defaultActionProps}
         />
       );
-      expect(screen.getByText(/AI is creating your perfect outfit/i)).toBeInTheDocument();
+      expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
     });
   });
 
@@ -49,9 +65,7 @@ describe('OutfitPreview', () => {
           suggestion={null}
           loading={false}
           error="Something went wrong"
-          onLike={mockOnLike}
-          onDislike={mockOnDislike}
-          onNext={mockOnNext}
+          {...actionProps}
         />
       );
       expect(screen.getByText(/Oops! Something went wrong/i)).toBeInTheDocument();
@@ -59,7 +73,7 @@ describe('OutfitPreview', () => {
       const tryAgainBtn = screen.getByRole('button', { name: /Try Again/i });
       expect(tryAgainBtn).toBeInTheDocument();
       fireEvent.click(tryAgainBtn);
-      expect(mockOnNext).toHaveBeenCalledTimes(1);
+      expect(mockOnGenerateAnother).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -70,9 +84,7 @@ describe('OutfitPreview', () => {
           suggestion={null}
           loading={false}
           error={null}
-          onLike={mockOnLike}
-          onDislike={mockOnDislike}
-          onNext={mockOnNext}
+          {...defaultActionProps}
         />
       );
       expect(screen.getByText(/Ready for Style Magic?/i)).toBeInTheDocument();
@@ -87,9 +99,7 @@ describe('OutfitPreview', () => {
           suggestion={baseSuggestion}
           loading={false}
           error={null}
-          onLike={mockOnLike}
-          onDislike={mockOnDislike}
-          onNext={mockOnNext}
+          {...actionProps}
           hasImage={true}
         />
       );
@@ -101,7 +111,7 @@ describe('OutfitPreview', () => {
       expect(screen.getByText('Brown leather belt')).toBeInTheDocument();
       expect(screen.getByText(/Why This Works/i)).toBeInTheDocument();
       expect(screen.getAllByText(/Classic business casual combination/).length).toBeGreaterThan(0);
-      expect(screen.getByText(/AI Prompt & Response/i)).toBeInTheDocument();
+      expect(screen.queryByText(/Advanced options/i)).not.toBeInTheDocument();
     });
 
     it('uses uploaded image as shirt thumbnail when upload matched shirt (upload_matched_category)', () => {
@@ -125,9 +135,7 @@ describe('OutfitPreview', () => {
           suggestion={suggestionWithWardrobe}
           loading={false}
           error={null}
-          onLike={mockOnLike}
-          onDislike={mockOnDislike}
-          onNext={mockOnNext}
+          {...actionProps}
           hasImage={true}
         />
       );
@@ -157,9 +165,7 @@ describe('OutfitPreview', () => {
           suggestion={suggestionWithWardrobe}
           loading={false}
           error={null}
-          onLike={mockOnLike}
-          onDislike={mockOnDislike}
-          onNext={mockOnNext}
+          {...actionProps}
         />
       );
       const shirtImg = screen.getAllByRole('img').find((img) => img.getAttribute('alt') === 'Shirt');
@@ -193,9 +199,7 @@ describe('OutfitPreview', () => {
           suggestion={suggestionWithMismatch}
           loading={false}
           error={null}
-          onLike={mockOnLike}
-          onDislike={mockOnDislike}
-          onNext={mockOnNext}
+          {...actionProps}
           hasImage={true}
         />
       );
@@ -228,17 +232,13 @@ describe('OutfitPreview', () => {
           suggestion={suggestionWithWardrobe}
           loading={false}
           error={null}
-          onLike={mockOnLike}
-          onDislike={mockOnDislike}
-          onNext={mockOnNext}
+          {...actionProps}
           hasImage={true}
         />
       );
       const shirtImg = screen.getAllByRole('img').find((img) => img.getAttribute('alt') === 'Shirt');
       const trouserImg = screen.getAllByRole('img').find((img) => img.getAttribute('alt') === 'Trousers');
-      // Shirt card uses wardrobe match (not upload) because upload was trousers
       expect(shirtImg?.getAttribute('src')).toBe('data:image/jpeg;base64,base64_shirt_match');
-      // Trousers card uses upload because upload matched trousers
       expect(trouserImg?.getAttribute('src')).toBe(uploadedImageUrl);
     });
 
@@ -267,9 +267,7 @@ describe('OutfitPreview', () => {
           suggestion={suggestionWithMismatch}
           loading={false}
           error={null}
-          onLike={mockOnLike}
-          onDislike={mockOnDislike}
-          onNext={mockOnNext}
+          {...actionProps}
           hasImage={true}
         />
       );
@@ -304,9 +302,7 @@ describe('OutfitPreview', () => {
           suggestion={suggestionWithSourceSlot}
           loading={false}
           error={null}
-          onLike={mockOnLike}
-          onDislike={mockOnDislike}
-          onNext={mockOnNext}
+          {...actionProps}
           hasImage={true}
         />
       );
@@ -331,67 +327,66 @@ describe('OutfitPreview', () => {
           suggestion={suggestionWithCost}
           loading={false}
           error={null}
-          onLike={mockOnLike}
-          onDislike={mockOnDislike}
-          onNext={mockOnNext}
+          {...actionProps}
           hasImage={true}
           isAdmin={true}
         />
       );
+      fireEvent.click(screen.getByText('Advanced options'));
       expect(screen.getByText(/AI Suggestion Cost/i)).toBeInTheDocument();
     });
   });
 
   describe('action buttons - hasImage true', () => {
-    it('calls onNext when Next button is clicked', () => {
+    it('calls onGenerateAnother when primary button is clicked', () => {
       render(
         <OutfitPreview
           suggestion={baseSuggestion}
           loading={false}
           error={null}
-          onLike={mockOnLike}
-          onDislike={mockOnDislike}
-          onNext={mockOnNext}
+          {...actionProps}
           hasImage={true}
         />
       );
-      const nextBtns = screen.getAllByRole('button', { name: /Get next suggestion/i });
-      fireEvent.click(nextBtns[0]);
-      expect(mockOnNext).toHaveBeenCalledTimes(1);
+      const generateBtns = screen.getAllByRole('button', { name: /Generate another look/i });
+      fireEvent.click(generateBtns[0]);
+      expect(mockOnGenerateAnother).toHaveBeenCalledTimes(1);
     });
 
-    it('calls onLike when Like button is clicked', () => {
+    it('calls secondary action handlers', () => {
       render(
         <OutfitPreview
           suggestion={baseSuggestion}
           loading={false}
           error={null}
-          onLike={mockOnLike}
-          onDislike={mockOnDislike}
-          onNext={mockOnNext}
+          {...actionProps}
           hasImage={true}
+          isAuthenticated={true}
         />
       );
-      const likeBtns = screen.getAllByRole('button', { name: /Like this outfit/i });
-      fireEvent.click(likeBtns[0]);
-      expect(mockOnLike).toHaveBeenCalledTimes(1);
+      fireEvent.click(screen.getByRole('button', { name: /Make it more formal/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Make it more casual/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Use wardrobe items only/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Change occasion/i }));
+
+      expect(mockOnMakeMoreFormal).toHaveBeenCalledTimes(1);
+      expect(mockOnMakeMoreCasual).toHaveBeenCalledTimes(1);
+      expect(mockOnUseWardrobeOnly).toHaveBeenCalledTimes(1);
+      expect(mockOnChangeOccasion).toHaveBeenCalledTimes(1);
     });
 
-    it('calls onDislike when Dislike button is clicked', () => {
+    it('hides wardrobe-only action when showWardrobeOnlyAction is false', () => {
       render(
         <OutfitPreview
           suggestion={baseSuggestion}
           loading={false}
           error={null}
-          onLike={mockOnLike}
-          onDislike={mockOnDislike}
-          onNext={mockOnNext}
+          {...actionProps}
           hasImage={true}
+          showWardrobeOnlyAction={false}
         />
       );
-      const dislikeBtns = screen.getAllByRole('button', { name: /Dislike this outfit/i });
-      fireEvent.click(dislikeBtns[0]);
-      expect(mockOnDislike).toHaveBeenCalledTimes(1);
+      expect(screen.queryByRole('button', { name: /Use wardrobe items only/i })).not.toBeInTheDocument();
     });
 
     it('shows Add to Wardrobe when authenticated and handler provided', () => {
@@ -400,9 +395,7 @@ describe('OutfitPreview', () => {
           suggestion={baseSuggestion}
           loading={false}
           error={null}
-          onLike={mockOnLike}
-          onDislike={mockOnDislike}
-          onNext={mockOnNext}
+          {...actionProps}
           isAuthenticated={true}
           onAddToWardrobe={mockOnAddToWardrobe}
           hasImage={true}
@@ -416,36 +409,40 @@ describe('OutfitPreview', () => {
   });
 
   describe('action buttons - hasImage false (wardrobe-only suggestion)', () => {
-    it('disables Next, Like, Dislike when hasImage is false', () => {
+    it('disables image-based actions when hasImage is false', () => {
       render(
         <OutfitPreview
           suggestion={baseSuggestion}
           loading={false}
           error={null}
-          onLike={mockOnLike}
-          onDislike={mockOnDislike}
-          onNext={mockOnNext}
+          {...actionProps}
           hasImage={false}
+          isAuthenticated={true}
         />
       );
-      const nextBtns = screen.getAllByRole('button', { name: /Get next suggestion/i });
-      const likeBtns = screen.getAllByRole('button', { name: /Like this outfit/i });
-      const dislikeBtns = screen.getAllByRole('button', { name: /Dislike this outfit/i });
-      const nextBtn = nextBtns[0];
-      const likeBtn = likeBtns[0];
-      const dislikeBtn = dislikeBtns[0];
+      const generateBtns = screen.getAllByRole('button', { name: /Generate another look/i });
+      const formalBtn = screen.getByRole('button', { name: /Make it more formal/i });
+      const casualBtn = screen.getByRole('button', { name: /Make it more casual/i });
+      const wardrobeBtn = screen.getByRole('button', { name: /Use wardrobe items only/i });
+      const occasionBtn = screen.getByRole('button', { name: /Change occasion/i });
 
-      expect(nextBtn).toBeDisabled();
-      expect(likeBtn).toBeDisabled();
-      expect(dislikeBtn).toBeDisabled();
+      expect(generateBtns[0]).toBeDisabled();
+      expect(formalBtn).toBeDisabled();
+      expect(casualBtn).toBeDisabled();
+      expect(wardrobeBtn).toBeDisabled();
+      expect(occasionBtn).not.toBeDisabled();
 
-      fireEvent.click(nextBtn);
-      fireEvent.click(likeBtn);
-      fireEvent.click(dislikeBtn);
+      fireEvent.click(generateBtns[0]);
+      fireEvent.click(formalBtn);
+      fireEvent.click(casualBtn);
+      fireEvent.click(wardrobeBtn);
+      fireEvent.click(occasionBtn);
 
-      expect(mockOnNext).not.toHaveBeenCalled();
-      expect(mockOnLike).not.toHaveBeenCalled();
-      expect(mockOnDislike).not.toHaveBeenCalled();
+      expect(mockOnGenerateAnother).not.toHaveBeenCalled();
+      expect(mockOnMakeMoreFormal).not.toHaveBeenCalled();
+      expect(mockOnMakeMoreCasual).not.toHaveBeenCalled();
+      expect(mockOnUseWardrobeOnly).not.toHaveBeenCalled();
+      expect(mockOnChangeOccasion).toHaveBeenCalledTimes(1);
     });
 
     it('disables Add to Wardrobe when hasImage is false and authenticated', () => {
@@ -454,9 +451,7 @@ describe('OutfitPreview', () => {
           suggestion={baseSuggestion}
           loading={false}
           error={null}
-          onLike={mockOnLike}
-          onDislike={mockOnDislike}
-          onNext={mockOnNext}
+          {...actionProps}
           isAuthenticated={true}
           onAddToWardrobe={mockOnAddToWardrobe}
           hasImage={false}
@@ -476,9 +471,7 @@ describe('OutfitPreview', () => {
           suggestion={baseSuggestion}
           loading={false}
           error={null}
-          onLike={mockOnLike}
-          onDislike={mockOnDislike}
-          onNext={mockOnNext}
+          {...actionProps}
           isAuthenticated={false}
           onAddToWardrobe={mockOnAddToWardrobe}
           hasImage={true}
@@ -493,9 +486,7 @@ describe('OutfitPreview', () => {
           suggestion={baseSuggestion}
           loading={false}
           error={null}
-          onLike={mockOnLike}
-          onDislike={mockOnDislike}
-          onNext={mockOnNext}
+          {...actionProps}
           isAuthenticated={true}
           hasImage={true}
         />

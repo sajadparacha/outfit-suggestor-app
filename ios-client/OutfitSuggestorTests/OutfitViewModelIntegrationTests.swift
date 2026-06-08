@@ -111,6 +111,102 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
         XCTAssertEqual(mock.historyCalls, 1)
     }
 
+    func testGetNextSuggestionSendsPreviousOutfitText() async {
+        let mock = MockAPIService()
+        mock.suggestionResult = .success(makeAlternateSuggestion())
+        let viewModel = OutfitViewModel(apiService: mock)
+        viewModel.selectedImage = makeTestImage()
+        viewModel.currentSuggestion = makePreviousSuggestion()
+
+        await viewModel.getNextSuggestion()
+
+        XCTAssertEqual(mock.suggestionCalls.count, 1)
+        XCTAssertEqual(mock.suggestionCalls.first?.previousOutfitText?.contains("White oxford shirt"), true)
+        XCTAssertEqual(viewModel.currentSuggestion?.shirt, "Updated blue shirt")
+    }
+
+    func testGetNextSuggestionMoreFormalIncludesPromptModifier() async {
+        let mock = MockAPIService()
+        mock.suggestionResult = .success(makeAlternateSuggestion())
+        let viewModel = OutfitViewModel(apiService: mock)
+        viewModel.selectedImage = makeTestImage()
+        viewModel.currentSuggestion = makePreviousSuggestion()
+
+        await viewModel.getNextSuggestion(variation: .moreFormal)
+
+        let prompt = mock.suggestionCalls.first?.textInput ?? ""
+        XCTAssertTrue(prompt.contains("more formal"))
+        XCTAssertTrue(prompt.contains("Previous outfit"))
+    }
+
+    func testGetNextSuggestionWardrobeOnlyForcesWardrobeFlag() async {
+        AuthService.shared.authToken = "test-token"
+        AuthService.shared.currentUser = makeUser()
+        let mock = MockAPIService()
+        mock.suggestionResult = .success(makeAlternateSuggestion())
+        let viewModel = OutfitViewModel(apiService: mock)
+        viewModel.selectedImage = makeTestImage()
+        viewModel.currentSuggestion = makePreviousSuggestion()
+
+        await viewModel.getNextSuggestion(variation: .wardrobeOnly)
+
+        XCTAssertTrue(viewModel.useWardrobeOnly)
+        XCTAssertEqual(mock.suggestionCalls.first?.useWardrobeOnly, true)
+        XCTAssertTrue(mock.suggestionCalls.first?.textInput.contains("wardrobe") ?? false)
+    }
+
+    func testStartUseWardrobeOnlyFromResultRequiresAuthentication() async {
+        AuthService.shared.authToken = nil
+        AuthService.shared.currentUser = nil
+        let mock = MockAPIService()
+        let viewModel = OutfitViewModel(apiService: mock)
+        viewModel.selectedImage = makeTestImage()
+        viewModel.currentSuggestion = makePreviousSuggestion()
+
+        viewModel.startUseWardrobeOnlyFromResult()
+        try? await Task.sleep(nanoseconds: 200_000_000)
+
+        XCTAssertTrue(viewModel.showError)
+        XCTAssertEqual(mock.suggestionCalls.count, 0)
+    }
+
+    func testOutfitVariationModifierPromptTextsAreDistinct() {
+        XCTAssertTrue(OutfitViewModel.OutfitVariationModifier.moreFormal.promptText.contains("formal"))
+        XCTAssertTrue(OutfitViewModel.OutfitVariationModifier.moreCasual.promptText.contains("casual"))
+        XCTAssertTrue(OutfitViewModel.OutfitVariationModifier.wardrobeOnly.promptText.contains("wardrobe"))
+        XCTAssertTrue(OutfitViewModel.OutfitVariationModifier.wardrobeOnly.forcesWardrobeOnly)
+    }
+
+    private func makePreviousSuggestion() -> OutfitSuggestion {
+        OutfitSuggestion(
+            shirt: "White oxford shirt",
+            trouser: "Navy chinos",
+            blazer: "Soft gray blazer",
+            shoes: "Brown loafers",
+            belt: "Brown belt",
+            reasoning: "Smart casual baseline."
+        )
+    }
+
+    private func makeAlternateSuggestion() -> OutfitSuggestion {
+        OutfitSuggestion(
+            shirt: "Updated blue shirt",
+            trouser: "Charcoal trousers",
+            blazer: "Structured blazer",
+            shoes: "Black shoes",
+            belt: "Black belt",
+            reasoning: "Alternate look."
+        )
+    }
+
+    private func makeTestImage() -> UIImage {
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 8, height: 8))
+        return renderer.image { context in
+            UIColor.systemBlue.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 8, height: 8))
+        }
+    }
+
     private func makeUser() -> User {
         User(
             id: 1,
@@ -137,10 +233,18 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
 }
 
 private final class MockAPIService: APIServiceProtocol {
+    struct RecordedSuggestionCall {
+        let textInput: String
+        let useWardrobeOnly: Bool
+        let previousOutfitText: String?
+    }
+
     var randomOutfitResult: Result<OutfitSuggestion, Error> = .failure(APIServiceError.invalidResponse)
     var historyResult: Result<[OutfitHistoryEntry], Error> = .failure(APIServiceError.invalidResponse)
+    var suggestionResult: Result<OutfitSuggestion, Error> = .failure(APIServiceError.invalidResponse)
     var randomOutfitCalls = 0
     var historyCalls = 0
+    var suggestionCalls: [RecordedSuggestionCall] = []
 
     func getSuggestion(
         image: UIImage,
@@ -149,9 +253,17 @@ private final class MockAPIService: APIServiceProtocol {
         generateModelImage: Bool,
         imageModel: String,
         location: String?,
-        previousOutfitText: String?
+        previousOutfitText: String?,
+        sourceWardrobeItemId: Int?
     ) async throws -> OutfitSuggestion {
-        throw APIServiceError.invalidResponse
+        suggestionCalls.append(
+            RecordedSuggestionCall(
+                textInput: textInput,
+                useWardrobeOnly: useWardrobeOnly,
+                previousOutfitText: previousOutfitText
+            )
+        )
+        return try suggestionResult.get()
     }
 
     func getSuggestionFromWardrobeItem(

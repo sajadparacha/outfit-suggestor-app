@@ -79,7 +79,7 @@ const AnalysisPreferences: React.FC<AnalysisPreferencesProps> = ({
 
   if (variant === 'sidebar') {
     return (
-      <div className="mt-5 space-y-3">
+      <div id="outfit-preferences" className="mt-5 space-y-3">
         {sharedHint}
         <div
           className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5"

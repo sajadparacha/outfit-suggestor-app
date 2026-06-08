@@ -46,11 +46,11 @@ struct UserGuideView: View {
                     title: "Getting Alternate Outfits",
                     color: .purple,
                     steps: [
-                        "After receiving a suggestion, tap \"Next Outfit\" below the result.",
-                        "The AI will suggest a completely different outfit for the same photo.",
-                        "Repeat as many times as you like for fresh ideas."
+                        "After receiving a suggestion, tap \"Generate Another Look\" below the result.",
+                        "Use secondary actions to make it more formal or casual, limit picks to your wardrobe, or change occasion.",
+                        "Repeat as many times as you like for fresh ideas from the same photo."
                     ],
-                    tip: "Each \"Next\" request tells the AI to avoid repeating the previous suggestion."
+                    tip: "Each alternate request tells the AI to avoid repeating the previous suggestion."
                 )
                 
                 GuideSection(

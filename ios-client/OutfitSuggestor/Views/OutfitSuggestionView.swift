@@ -17,6 +17,7 @@ struct OutfitSuggestionView: View {
     var onAddToWardrobe: (() -> Void)?
     var isLoading: Bool = false
     var isAdmin: Bool = false
+    var showAiPromptResponse: Bool = true
     var showsActionSection: Bool = true
     @State private var showModelImageFullScreen = false
     
@@ -131,7 +132,7 @@ struct OutfitSuggestionView: View {
                 HStack(spacing: 12) {
                     if let onNext = onNext {
                         Button(action: onNext) {
-                            Label("Next Outfit", systemImage: "arrow.right.circle")
+                            Label("Generate Another Look", systemImage: "arrow.triangle.2.circlepath")
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(AppTheme.accent)
@@ -155,57 +156,64 @@ struct OutfitSuggestionView: View {
                     }
                     if let onDislike = onDislike {
                         Button(action: onDislike) {
-                            Label("Try Variation", systemImage: "arrow.triangle.2.circlepath")
+                            Label("Make it more casual", systemImage: "sparkles")
                         }
                         .buttonStyle(.bordered)
                     }
                 }
             }
 
-            if isAdmin, let cost = suggestion.cost {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("AI Suggestion Cost")
-                        .font(.headline)
-                        .foregroundColor(AppTheme.textPrimary)
-                    Text("GPT-4 Vision: \(formatCost(cost.gpt4_cost))")
-                        .font(.subheadline)
-                        .foregroundColor(AppTheme.textSecondary)
-                    if let modelCost = cost.model_image_cost, modelCost > 0 {
-                        Text("Model Image: \(formatCost(modelCost))")
-                            .font(.subheadline)
-                            .foregroundColor(AppTheme.textSecondary)
-                    }
-                    Text("Total: \(formatCost(cost.total_cost))")
-                        .font(.headline)
-                        .foregroundColor(AppTheme.accent)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding()
-                .background(AppTheme.accentSoft)
-                .cornerRadius(12)
-            }
-
             if isAdmin {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("AI Prompt & Response")
-                        .font(.headline)
-                        .foregroundColor(AppTheme.textPrimary)
-                    adminCodePanel(title: "Input Prompt", text: suggestion.ai_prompt ?? "Prompt details unavailable for this run.")
-                    adminCodePanel(
-                        title: "AI Response",
-                        text: suggestion.ai_raw_response ?? """
-                        {
-                          "shirt": "\(suggestion.shirt)",
-                          "trouser": "\(suggestion.trouser)",
-                          "blazer": "\(suggestion.blazer)",
-                          "shoes": "\(suggestion.shoes)",
-                          "belt": "\(suggestion.belt)",
-                          "reasoning": "\(suggestion.reasoning)"
+                DisclosureGroup("Advanced options") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        if let cost = suggestion.cost {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("AI Suggestion Cost")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(AppTheme.textPrimary)
+                                Text("GPT-4 Vision: \(formatCost(cost.gpt4_cost))")
+                                    .font(.subheadline)
+                                    .foregroundColor(AppTheme.textSecondary)
+                                if let modelCost = cost.model_image_cost, modelCost > 0 {
+                                    Text("Model Image: \(formatCost(modelCost))")
+                                        .font(.subheadline)
+                                        .foregroundColor(AppTheme.textSecondary)
+                                }
+                                Text("Total: \(formatCost(cost.total_cost))")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(AppTheme.accent)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 4)
                         }
-                        """
-                    )
+
+                        if showAiPromptResponse {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("AI Prompt & Response")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(AppTheme.textPrimary)
+                                adminCodePanel(title: "Input Prompt", text: suggestion.ai_prompt ?? "Prompt details unavailable for this run.")
+                                adminCodePanel(
+                                    title: "AI Response",
+                                    text: suggestion.ai_raw_response ?? """
+                                    {
+                                      "shirt": "\(suggestion.shirt)",
+                                      "trouser": "\(suggestion.trouser)",
+                                      "blazer": "\(suggestion.blazer)",
+                                      "shoes": "\(suggestion.shoes)",
+                                      "belt": "\(suggestion.belt)",
+                                      "reasoning": "\(suggestion.reasoning)"
+                                    }
+                                    """
+                                )
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                    .padding(.top, 8)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(AppTheme.textPrimary)
             }
         }
         .padding()

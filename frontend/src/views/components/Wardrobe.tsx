@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useWardrobeController } from '../../controllers/useWardrobeController';
 import { WardrobeItem, WardrobeItemCreate, WardrobeItemUpdate } from '../../models/WardrobeModels';
-import { OutfitHistoryEntry } from '../../models/OutfitModels';
+import { OutfitHistoryEntry, SourceWardrobeItem } from '../../models/OutfitModels';
 import ApiService from '../../services/ApiService';
 import { isValidImageSize, formatFileSize } from '../../utils/imageUtils';
 import { WARDROBE_MAX_SIZE_MB } from '../../constants/imageLimits';
@@ -17,7 +17,7 @@ interface WardrobeProps {
   analyzingWardrobe?: boolean;
   outfitController?: {
     setImage: (image: File | null) => void;
-    setSourceWardrobeItemId?: (id: number | null) => void;
+    setSourceWardrobeItem?: (item: SourceWardrobeItem | null) => void;
     getSuggestion: (
       skipDuplicateCheck?: boolean,
       sourceImage?: File | null,
@@ -102,6 +102,30 @@ const Wardrobe: React.FC<WardrobeProps> = ({
   const [historySourceItem, setHistorySourceItem] = useState<WardrobeItem | null>(null);
   const [historyImageIndex, setHistoryImageIndex] = useState<Set<string>>(new Set());
   const [historyItemIdIndex, setHistoryItemIdIndex] = useState<Set<number>>(new Set());
+  const [flowTipDismissed, setFlowTipDismissed] = useState(
+    () => localStorage.getItem('wardrobe_flow_tip_dismissed') === 'true'
+  );
+
+  const dismissFlowTip = () => {
+    localStorage.setItem('wardrobe_flow_tip_dismissed', 'true');
+    setFlowTipDismissed(true);
+  };
+
+  const applyWardrobeItemToMainFlow = async (item: WardrobeItem) => {
+    if (!item.image_data || !outfitController) return;
+
+    const response = await fetch(`data:image/jpeg;base64,${item.image_data}`);
+    const blob = await response.blob();
+    const file = new File([blob], `wardrobe-item-${item.id}.jpg`, { type: 'image/jpeg' });
+
+    outfitController.setSourceWardrobeItem?.({
+      id: item.id,
+      category: item.category,
+      color: item.color,
+    });
+    outfitController.setImage(file);
+    onSourceImageLoaded?.();
+  };
 
   const historyEntryReferencesItem = React.useCallback((entry: OutfitHistoryEntry, item: WardrobeItem): boolean => {
     if (entry.source_wardrobe_item_id === item.id) {
@@ -442,17 +466,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
       setSuggestionLoading(item.id);
 
       try {
-        const base64Image = item.image_data;
-        const response = await fetch(`data:image/jpeg;base64,${base64Image}`);
-        const blob = await response.blob();
-        const file = new File([blob], `wardrobe-item-${item.id}.jpg`, { type: 'image/jpeg' });
-
-        // Preload the image into the main suggestion flow
-        if (outfitController.setSourceWardrobeItemId) {
-          outfitController.setSourceWardrobeItemId(item.id);
-        }
-        outfitController.setImage(file);
-        onSourceImageLoaded?.();
+        await applyWardrobeItemToMainFlow(item);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to prepare outfit suggestion';
         setSuggestionError(errorMessage);
@@ -543,15 +557,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
 
     try {
       if (outfitController) {
-        const response = await fetch(`data:image/jpeg;base64,${historySourceItem.image_data}`);
-        const blob = await response.blob();
-        const file = new File([blob], `wardrobe-item-${historySourceItem.id}.jpg`, { type: 'image/jpeg' });
-
-        if (outfitController.setSourceWardrobeItemId) {
-          outfitController.setSourceWardrobeItemId(historySourceItem.id);
-        }
-        outfitController.setImage(file);
-        onSourceImageLoaded?.();
+        await applyWardrobeItemToMainFlow(historySourceItem);
       }
 
       const suggestion = historyEntryToSuggestion(entry);
@@ -582,7 +588,9 @@ const Wardrobe: React.FC<WardrobeProps> = ({
           <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <h1 className="mb-2 text-2xl font-bold text-white sm:text-3xl">👔 My Wardrobe</h1>
-              <p className="text-sm text-slate-300 sm:text-base">Add items to get personalized outfit suggestions</p>
+              <p className="text-sm text-slate-300 sm:text-base">
+                Pick a saved piece, build an outfit on Suggest, then generate with your preferences.
+              </p>
             </div>
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:flex-shrink-0">
               {onAnalyzeWardrobe && (
@@ -614,6 +622,29 @@ const Wardrobe: React.FC<WardrobeProps> = ({
               </button>
             </div>
           </div>
+
+          {!flowTipDismissed && wardrobeItems && wardrobeItems.length > 0 && (
+            <div className="mt-4 rounded-xl border border-brand-blue/30 bg-brand-gradient-soft p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-white">How to style from wardrobe</p>
+                  <ol className="mt-2 space-y-1.5 text-sm text-slate-200">
+                    <li><span className="font-medium text-brand-blue">1.</span> Pick an item below</li>
+                    <li><span className="font-medium text-brand-blue">2.</span> Tap <strong className="text-white">Build outfit from this item</strong></li>
+                    <li><span className="font-medium text-brand-blue">3.</span> On Suggest, set preferences and tap <strong className="text-white">Generate Outfit</strong></li>
+                  </ol>
+                </div>
+                <button
+                  type="button"
+                  onClick={dismissFlowTip}
+                  className="shrink-0 rounded-lg px-2 py-1 text-xs text-slate-400 transition hover:bg-white/10 hover:text-slate-200"
+                  aria-label="Dismiss wardrobe flow tip"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Category Filters */}
           <div className="mt-4 border-t border-white/10 pt-4">
@@ -765,32 +796,36 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                   </div>
                 </div>
 
-                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-white/10 pt-3 sm:mt-4">
+                <div className="mt-3 border-t border-white/10 pt-3 sm:mt-4">
                   {item.image_data && (
                     <button
                       onClick={() => handleGetAISuggestion(item)}
                       disabled={suggestionLoading === item.id || (outfitController?.loading ?? false)}
-                      className="flex min-h-[44px] min-w-0 flex-1 touch-manipulation items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium shadow-sm btn-brand transition-all disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none sm:px-4"
-                      title="Get AI outfit suggestion for this item"
+                      className="flex w-full min-h-[48px] touch-manipulation flex-col items-center justify-center gap-0.5 rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm btn-brand transition-all disabled:cursor-not-allowed disabled:opacity-50"
+                      title="Open Suggest with this wardrobe item loaded"
+                      aria-label="Build outfit from this item"
                     >
                       {suggestionLoading === item.id || (outfitController?.loading ?? false) ? (
                         <>
                           <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                          Getting...
+                          <span>Opening in Suggest…</span>
                         </>
                       ) : (
                         <>
-                          <span className="sm:hidden">✨ AI Suggest</span>
-                          <span className="hidden sm:inline">✨ Get AI Suggestion</span>
+                          <span>✨ Build outfit from this item</span>
+                          <span className="text-xs font-normal text-white/80">
+                            Opens Suggest — tune options, then Generate Outfit
+                          </span>
                         </>
                       )}
                     </button>
                   )}
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
                   {(historyItemIdIndex.has(item.id) || (!!item.image_data && historyImageIndex.has(item.image_data))) && (
                     <button
                       onClick={() => handleOpenHistorySuggestions(item)}
                       disabled={historyLoadingForItem === item.id}
-                      className="flex min-h-[44px] min-w-0 flex-1 touch-manipulation items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium shadow-sm btn-brand transition-all disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none sm:px-4"
+                      className="flex min-h-[40px] touch-manipulation items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
                       title="Show past suggestions for this item"
                     >
                       {historyLoadingForItem === item.id ? (
@@ -806,7 +841,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                       )}
                     </button>
                   )}
-                  <div className="ml-auto flex items-center gap-1 sm:ml-0">
+                  <div className="ml-auto flex items-center gap-1">
                     <button
                       onClick={() => handleEditItem(item)}
                       className="flex h-11 w-11 touch-manipulation items-center justify-center rounded-xl text-xl text-brand-blue transition-colors hover:bg-white/10"
@@ -823,6 +858,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                     >
                       🗑️
                     </button>
+                  </div>
                   </div>
                 </div>
               </div>
