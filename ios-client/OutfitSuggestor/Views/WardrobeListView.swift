@@ -123,6 +123,7 @@ struct WardrobeListView: View {
                         .accessibilityIdentifier("wardrobe.searchField")
                     
                     ScrollView {
+                        // Native Menu popover stacks above LazyVStack siblings (no web z-index fix needed).
                         LazyVStack(spacing: 12) {
                             ForEach(displayedItems) { item in
                                 WardrobeCardView(
@@ -130,6 +131,7 @@ struct WardrobeListView: View {
                                     image: decodeBase64Image(item.image_data),
                                     onGetSuggestion: onGetSuggestionFromItem == nil ? nil : { onGetSuggestionFromItem?(item) },
                                     onPastSuggestions: { Task { await openHistorySuggestions(for: item) } },
+                                    isPastSuggestionsLoading: historyLoadingForItem == item.id,
                                     onEdit: { editingItem = item },
                                     onDelete: { scheduleDelete(item: item) },
                                     onShowImage: { image in fullScreenImage = image }
@@ -138,7 +140,7 @@ struct WardrobeListView: View {
                             }
                         }
                         .padding(.horizontal)
-                        .padding(.bottom, 12)
+                        .padding(.bottom, 32)
                     }
                     .accessibilityIdentifier("wardrobe.itemsList")
                     .overlay(alignment: .topLeading) {
@@ -594,6 +596,7 @@ struct WardrobeCardView: View {
     let image: UIImage?
     let onGetSuggestion: (() -> Void)?
     let onPastSuggestions: () -> Void
+    var isPastSuggestionsLoading: Bool = false
     let onEdit: () -> Void
     let onDelete: () -> Void
     let onShowImage: (UIImage) -> Void
@@ -643,9 +646,12 @@ struct WardrobeCardView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(AppTheme.border, lineWidth: 1)
         )
+        // Rounds card chrome only. SwiftUI Menu below uses native popover presentation
+        // outside this view's bounds, so overflow items are not clipped (unlike web).
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
+    /// Native SwiftUI `Menu` — popover is presented by UIKit and is not clipped by card `clipShape`.
     private var wardrobeOverflowMenu: some View {
         Menu {
             Button {
@@ -679,6 +685,12 @@ struct WardrobeCardView: View {
                     systemImage: WardrobeCardMenuAction.history.systemImage
                 )
             }
+            .disabled(isPastSuggestionsLoading)
+            .accessibilityLabel(
+                isPastSuggestionsLoading
+                    ? WardrobeCardUx.pastSuggestionsLoadingAccessibilityLabel
+                    : WardrobeCardUx.pastSuggestionsAccessibilityLabel
+            )
             .accessibilityIdentifier(
                 WardrobeCardUx.menuItemIdentifier(itemId: item.id, action: .history)
             )
@@ -737,9 +749,14 @@ struct WardrobeTopActionButton: View {
     let title: String
     let systemImage: String
     let isPrimary: Bool
+    var isLoading: Bool = false
     var accessibilityLabel: String? = nil
     var accessibilityIdentifier: String? = nil
     let action: () -> Void
+
+    private var displayTitle: String {
+        isLoading ? "Loading…" : title
+    }
 
     var body: some View {
         Group {
@@ -754,24 +771,33 @@ struct WardrobeTopActionButton: View {
 
     private var buttonCore: some View {
         Button(action: action) {
-            Label(title, systemImage: systemImage)
-                .font(.subheadline.weight(.semibold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.82)
-                .foregroundColor(isPrimary ? .white : AppTheme.textPrimary)
-                .frame(maxWidth: .infinity, minHeight: 50)
-                .padding(.horizontal, 14)
-                .background(isPrimary ? AppTheme.accent : AppTheme.accentSoft)
-                .overlay(
-                    Capsule()
-                        .stroke(isPrimary ? AppTheme.accent.opacity(0.25) : AppTheme.border, lineWidth: 1)
-                )
-                .clipShape(Capsule())
+            HStack(spacing: 8) {
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                    Text("Loading…")
+                        .font(.subheadline.weight(.semibold))
+                } else {
+                    Label(title, systemImage: systemImage)
+                }
+            }
+            .font(.subheadline.weight(.semibold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.82)
+            .foregroundColor(isPrimary ? .white : AppTheme.textPrimary)
+            .frame(maxWidth: .infinity, minHeight: 50)
+            .padding(.horizontal, 14)
+            .background(isPrimary ? AppTheme.accent : AppTheme.accentSoft)
+            .overlay(
+                Capsule()
+                    .stroke(isPrimary ? AppTheme.accent.opacity(0.25) : AppTheme.border, lineWidth: 1)
+            )
+            .clipShape(Capsule())
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
         .accessibilityAddTraits(.isButton)
-        .accessibilityLabel(accessibilityLabel ?? title)
+        .accessibilityLabel(accessibilityLabel ?? displayTitle)
     }
 }
 

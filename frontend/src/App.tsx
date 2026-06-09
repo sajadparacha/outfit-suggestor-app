@@ -146,13 +146,15 @@ function App() {
     cancelOperation,
   } = useOutfitController({
     onSuggestionSuccess: async () => {
-      await fetchRecentHistory();
       if (!isAuthenticated) {
-        await refreshGuestUsage();
         if (!localStorage.getItem(FIRST_OUTFIT_PROMPT_KEY)) {
           localStorage.setItem(FIRST_OUTFIT_PROMPT_KEY, 'true');
           setShowFirstOutfitBanner(true);
         }
+      }
+      await fetchRecentHistory();
+      if (!isAuthenticated) {
+        await refreshGuestUsage();
       }
     },
     onGuestLimitReached: handleGuestLimitReached,

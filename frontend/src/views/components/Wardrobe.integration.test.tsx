@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { rest } from 'msw';
 import Wardrobe from './Wardrobe';
 import { server } from '../../test/msw/server';
@@ -17,6 +17,11 @@ describe('Wardrobe integration (real hook + mocked HTTP)', () => {
     // Loaded item from MSW handler
     expect(await screen.findByText('Integration test shirt')).toBeInTheDocument();
     expect(screen.getByText('Blue')).toBeInTheDocument();
+    expect(screen.queryByTestId('wardrobe-past-suggestions-1')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('wardrobe-item-menu-1'));
+    expect(screen.getByRole('menuitem', { name: /^Past Suggestions$/i })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: /^History$/i })).not.toBeInTheDocument();
   });
 
   it('shows a user-visible error (not a blank screen) when the wardrobe API fails', async () => {

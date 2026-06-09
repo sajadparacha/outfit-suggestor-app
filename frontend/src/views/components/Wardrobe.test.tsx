@@ -65,6 +65,11 @@ const openItemMenu = (itemId = 1) => {
   fireEvent.click(screen.getByTestId(`wardrobe-item-menu-${itemId}`));
 };
 
+const clickPastSuggestionsFromMenu = (itemId = 1) => {
+  openItemMenu(itemId);
+  fireEvent.click(screen.getByTestId(`wardrobe-menu-past-suggestions-${itemId}`));
+};
+
 describe('Wardrobe page', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -103,7 +108,7 @@ describe('Wardrobe page', () => {
     expect(screen.getByRole('button', { name: /Style this item with AI/i })).toBeInTheDocument();
   });
 
-  it('opens overflow menu with View image, Edit, History, and Delete', () => {
+  it('opens overflow menu with View image, Edit, Past Suggestions, and Delete in order', () => {
     mockWardrobeItems.push({
       ...mockWardrobeItem,
       image_data: 'base64-image-a',
@@ -112,22 +117,98 @@ describe('Wardrobe page', () => {
 
     openItemMenu();
 
-    expect(screen.getByRole('menuitem', { name: /View image/i })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: /^Edit$/i })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: /^History$/i })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: /^Delete$/i })).toBeInTheDocument();
+    const menuItems = screen.getAllByRole('menuitem');
+    expect(menuItems.map((item) => item.textContent?.trim())).toEqual([
+      'View image',
+      'Edit',
+      'Past Suggestions',
+      'Delete',
+    ]);
+    expect(screen.queryByRole('menuitem', { name: /^History$/i })).not.toBeInTheDocument();
   });
 
-  it('does not show standalone Past Suggestions or inline Edit/Delete icon buttons', () => {
+  it('uses overflow-visible on card wrapper and opens menu downward below trigger', () => {
     mockWardrobeItems.push({
       ...mockWardrobeItem,
       image_data: 'base64-image-a',
     });
     render(<Wardrobe />);
 
-    expect(screen.queryByRole('button', { name: /Past Suggestions/i })).not.toBeInTheDocument();
+    const cardWrapper = screen.getByTestId('wardrobe-item-card-1');
+    expect(cardWrapper).toHaveClass('overflow-visible');
+    expect(cardWrapper).not.toHaveClass('overflow-hidden');
+
+    const thumbnail = cardWrapper.querySelector('img')?.parentElement;
+    expect(thumbnail).toHaveClass('overflow-hidden');
+
+    openItemMenu();
+
+    const menu = screen.getByRole('menu');
+    expect(menu).toHaveClass('top-full');
+    expect(menu).toHaveClass('mt-1');
+    expect(menu).toHaveClass('z-50');
+    expect(menu).not.toHaveClass('bottom-full');
+  });
+
+  it('elevates card z-index when overflow menu is open', () => {
+    mockWardrobeItems.push(
+      { ...mockWardrobeItem, id: 1, image_data: 'base64-image-a' },
+      {
+        ...mockWardrobeItem,
+        id: 2,
+        description: 'Second shirt',
+        color: 'Red',
+        image_data: 'base64-image-b',
+      }
+    );
+    render(<Wardrobe />);
+
+    const firstCard = screen.getByTestId('wardrobe-item-card-1');
+    const secondCard = screen.getByTestId('wardrobe-item-card-2');
+
+    expect(firstCard).not.toHaveClass('relative');
+    expect(firstCard).not.toHaveClass('z-50');
+
+    openItemMenu(1);
+
+    expect(firstCard).toHaveClass('relative');
+    expect(firstCard).toHaveClass('z-50');
+    expect(secondCard).not.toHaveClass('z-50');
+
+    const menuItems = screen.getAllByRole('menuitem');
+    expect(menuItems).toHaveLength(4);
+    expect(menuItems.map((item) => item.textContent?.trim())).toEqual([
+      'View image',
+      'Edit',
+      'Past Suggestions',
+      'Delete',
+    ]);
+  });
+
+  it('shows Past Suggestions in overflow menu and no standalone button on card', () => {
+    mockWardrobeItems.push({
+      ...mockWardrobeItem,
+      image_data: 'base64-image-a',
+    });
+    render(<Wardrobe />);
+
+    expect(screen.queryByTestId('wardrobe-past-suggestions-1')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Delete item/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Edit item/i })).not.toBeInTheDocument();
+
+    openItemMenu();
+    expect(screen.getByTestId('wardrobe-menu-past-suggestions-1')).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /^Past Suggestions$/i })).toBeInTheDocument();
+  });
+
+  it('keeps Past Suggestions enabled when item has no image but Style this item is disabled', () => {
+    mockWardrobeItems.push(mockWardrobeItem);
+    render(<Wardrobe />);
+
+    expect(screen.getByRole('button', { name: /Style this item with AI/i })).toBeDisabled();
+
+    openItemMenu();
+    expect(screen.getByRole('menuitem', { name: /^Past Suggestions$/i })).not.toBeDisabled();
   });
 
   it('shows flow tip step 2 with Style this item copy', () => {
@@ -233,7 +314,7 @@ describe('Wardrobe page', () => {
     expect(firstInput.accept).toBe('image/jpeg,image/jpg,image/png,image/webp');
   });
 
-  it('loads history suggestions via menu and allows selecting one', async () => {
+  it('loads history suggestions via Past Suggestions menu item and allows selecting one', async () => {
     const itemWithImage: WardrobeItem = {
       ...mockWardrobeItem,
       image_data: 'base64-image-a',
@@ -283,8 +364,7 @@ describe('Wardrobe page', () => {
       />
     );
 
-    openItemMenu();
-    fireEvent.click(screen.getByRole('menuitem', { name: /^History$/i }));
+    clickPastSuggestionsFromMenu();
     expect(await screen.findByRole('heading', { name: /History Suggestions/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Use This/i }));
 
@@ -299,36 +379,6 @@ describe('Wardrobe page', () => {
     });
 
     fetchSpy.mockRestore();
-  });
-
-  it('always shows History in overflow menu even when item has no linked history', async () => {
-    const itemWithImage: WardrobeItem = {
-      ...mockWardrobeItem,
-      image_data: 'base64-image-no-history',
-    };
-    mockWardrobeItems.push(itemWithImage);
-
-    jest.spyOn(ApiService, 'getOutfitHistory').mockResolvedValue([
-      {
-        id: 202,
-        created_at: '2026-05-04T10:00:00.000Z',
-        text_input: 'Different item',
-        image_data: 'other-image-data',
-        model_image: null,
-        shirt: 'Black polo',
-        trouser: 'Beige chinos',
-        blazer: 'None',
-        shoes: 'White sneakers',
-        belt: 'Brown belt',
-        reasoning: 'Different source image from current wardrobe item.',
-      },
-    ]);
-
-    render(<Wardrobe />);
-
-    openItemMenu();
-    expect(screen.getByRole('menuitem', { name: /^History$/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Past Suggestions/i })).not.toBeInTheDocument();
   });
 
   it('opens history modal with empty state when no linked history', async () => {
@@ -356,8 +406,7 @@ describe('Wardrobe page', () => {
 
     render(<Wardrobe />);
 
-    openItemMenu();
-    fireEvent.click(screen.getByRole('menuitem', { name: /^History$/i }));
+    clickPastSuggestionsFromMenu();
 
     expect(await screen.findByRole('heading', { name: /History Suggestions/i })).toBeInTheDocument();
     expect(
@@ -365,7 +414,7 @@ describe('Wardrobe page', () => {
     ).toBeInTheDocument();
   });
 
-  it('opens history from menu when history links by source_wardrobe_item_id', async () => {
+  it('opens history from Past Suggestions when history links by source_wardrobe_item_id', async () => {
     const itemWithImage: WardrobeItem = {
       ...mockWardrobeItem,
       id: 99,
@@ -392,12 +441,11 @@ describe('Wardrobe page', () => {
 
     render(<Wardrobe />);
 
-    openItemMenu(99);
-    fireEvent.click(screen.getByRole('menuitem', { name: /^History$/i }));
+    clickPastSuggestionsFromMenu(99);
     expect(await screen.findByRole('heading', { name: /History Suggestions/i })).toBeInTheDocument();
   });
 
-  it('opens history from menu when history links by shirt_id', async () => {
+  it('opens history from Past Suggestions when history links by shirt_id', async () => {
     const shirtItem: WardrobeItem = {
       ...mockWardrobeItem,
       id: 501,
@@ -425,8 +473,37 @@ describe('Wardrobe page', () => {
 
     render(<Wardrobe />);
 
-    openItemMenu(501);
-    fireEvent.click(screen.getByRole('menuitem', { name: /^History$/i }));
+    clickPastSuggestionsFromMenu(501);
+    expect(await screen.findByRole('heading', { name: /History Suggestions/i })).toBeInTheDocument();
+  });
+
+  it('opens history modal from Past Suggestions when item has no image', async () => {
+    const itemNoImage: WardrobeItem = {
+      ...mockWardrobeItem,
+      id: 77,
+    };
+    mockWardrobeItems.push(itemNoImage);
+
+    jest.spyOn(ApiService, 'getOutfitHistory').mockResolvedValue([
+      {
+        id: 505,
+        created_at: '2026-05-06T10:00:00.000Z',
+        text_input: 'linked by source id without image',
+        image_data: null,
+        model_image: null,
+        shirt: 'White shirt',
+        trouser: 'Black trousers',
+        blazer: 'None',
+        shoes: 'Sneakers',
+        belt: 'Brown belt',
+        reasoning: 'Linked via source_wardrobe_item_id.',
+        source_wardrobe_item_id: 77,
+      },
+    ]);
+
+    render(<Wardrobe />);
+
+    clickPastSuggestionsFromMenu(77);
     expect(await screen.findByRole('heading', { name: /History Suggestions/i })).toBeInTheDocument();
   });
 

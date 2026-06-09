@@ -94,6 +94,8 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 
 **Web**: List wardrobe items, add (with optional AI analysis), edit, delete, filter by category, get suggestion from a single item. Duplicate check before add. Full-screen image view.
 
+**Wardrobe item card actions (web + iOS)**: Primary **Style this item** + overflow menu (View image, Edit, **Past Suggestions**, Delete). Past Suggestions opens per-item outfit history modal/sheet.
+
 **iOS status**: Full parity. List, add (with "Analyze with AI" and duplicate check), edit, delete, category filter, "Get suggestion" from item; history has full-screen image viewer.
 
 **API endpoints**:

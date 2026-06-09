@@ -60,11 +60,11 @@ interface UseOutfitControllerReturn {
   setSourceWardrobeItem: (item: SourceWardrobeItem | null) => void;
   clearPreferences: () => void;
   cancelOperation: () => void;
-  onSuggestionSuccess?: () => void; // Callback for when suggestion is successful
+  onSuggestionSuccess?: () => void | Promise<void>; // Callback for when suggestion is successful
 }
 
 export const useOutfitController = (options?: {
-  onSuggestionSuccess?: () => void;
+  onSuggestionSuccess?: () => void | Promise<void>;
   onGuestLimitReached?: () => void;
 }): UseOutfitControllerReturn => {
   const [image, setImage] = useState<File | null>(null);
@@ -253,7 +253,7 @@ export const useOutfitController = (options?: {
       
       // Call success callback if provided
       if (options?.onSuggestionSuccess) {
-        options.onSuggestionSuccess();
+        await options.onSuggestionSuccess();
       }
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
@@ -304,9 +304,7 @@ export const useOutfitController = (options?: {
       setCurrentSuggestion(suggestion);
       
       // Call success callback if provided
-      if (options?.onSuggestionSuccess) {
-        options.onSuggestionSuccess();
-      }
+      void options?.onSuggestionSuccess?.();
     }
     setShowDuplicateModal(false);
     setExistingSuggestion(null);
@@ -349,7 +347,7 @@ export const useOutfitController = (options?: {
       };
       setCurrentSuggestion(suggestion);
       if (options?.onSuggestionSuccess) {
-        options.onSuggestionSuccess();
+        await options.onSuggestionSuccess();
       }
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {

@@ -109,7 +109,13 @@ describe('Persuasive auth UX (App integration)', () => {
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, { target: { files: [file] } });
 
-    fireEvent.click(screen.getByRole('button', { name: /Get AI outfit suggestion/i }));
+    const getAiBtn = screen.getByRole('button', { name: /Get AI outfit suggestion/i });
+    await waitFor(() => expect(getAiBtn).not.toBeDisabled());
+    fireEvent.click(getAiBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('White linen shirt')).toBeInTheDocument();
+    });
 
     await waitFor(() => {
       expect(

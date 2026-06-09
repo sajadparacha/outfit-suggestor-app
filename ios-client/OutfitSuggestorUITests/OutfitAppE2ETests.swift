@@ -119,24 +119,34 @@ final class OutfitAppE2ETests: XCTestCase {
         byLabel.tap()
     }
 
-    private func wardrobeMenuHistory(itemId: Int) -> XCUIElement {
-        app.buttons["wardrobe.menu.history.\(itemId)"]
-    }
+    private func tapWardrobePastSuggestions(itemId: Int, timeout: TimeInterval = 10) {
+        scrollWardrobeItemIntoView(itemId: itemId)
+        tapWardrobeMenuTrigger(itemId: itemId, timeout: timeout)
 
-    private func tapWardrobeMenuHistory(itemId: Int, timeout: TimeInterval = 4) {
-        let menuItem = app.menuItems["History"]
-        if waitFor(menuItem, timeout: timeout) {
-            menuItem.tap()
-            return
+        let identifier = "wardrobe.menu.history.\(itemId)"
+        let candidates: [XCUIElement] = [
+            app.buttons[identifier],
+            app.descendants(matching: .any)[identifier],
+            app.menuItems["Past Suggestions"],
+            app.menus.firstMatch.menuItems["Past Suggestions"],
+            app.buttons.matching(
+                NSPredicate(format: "label CONTAINS %@", "Past Suggestions")
+            ).firstMatch,
+            app.buttons["Past Suggestions"].firstMatch,
+        ]
+        for element in candidates {
+            if waitFor(element, timeout: 2) {
+                element.tap()
+                return
+            }
         }
-        let byIdentifier = wardrobeMenuHistory(itemId: itemId)
-        if waitFor(byIdentifier, timeout: timeout) {
-            byIdentifier.tap()
-            return
-        }
-        let button = app.buttons["History"].firstMatch
-        XCTAssertTrue(waitFor(button, timeout: timeout))
-        button.tap()
+
+        let fallback = app.menuItems["Past Suggestions"]
+        XCTAssertTrue(
+            waitFor(fallback, timeout: timeout),
+            "Past Suggestions menu item not found after opening wardrobe overflow menu"
+        )
+        fallback.tap()
     }
 
     private func tapWardrobeHistoryUseThis(timeout: TimeInterval = 12) {
@@ -281,8 +291,7 @@ final class OutfitAppE2ETests: XCTestCase {
 
         openWardrobe()
         focusWardrobeItem(wardrobeItemId)
-        tapWardrobeMenuTrigger(itemId: wardrobeItemId)
-        tapWardrobeMenuHistory(itemId: wardrobeItemId)
+        tapWardrobePastSuggestions(itemId: wardrobeItemId)
         XCTAssertTrue(app.navigationBars["Past Suggestions"].waitForExistence(timeout: 8))
         waitForAppUnlocked(timeout: 8)
         let suggestionEntry = app.staticTexts.matching(

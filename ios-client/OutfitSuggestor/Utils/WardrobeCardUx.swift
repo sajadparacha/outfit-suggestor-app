@@ -17,7 +17,7 @@ enum WardrobeCardMenuAction: String, CaseIterable {
         switch self {
         case .viewImage: return "View image"
         case .edit: return "Edit"
-        case .history: return "History"
+        case .history: return "Past Suggestions"
         case .delete: return "Delete"
         }
     }
@@ -35,8 +35,14 @@ enum WardrobeCardMenuAction: String, CaseIterable {
 enum WardrobeCardUx {
     static let styleThisItemTitle = "Style this item"
     static let styleThisItemAccessibilityLabel = "Style this item with AI"
+    static let pastSuggestionsTitle = "Past Suggestions"
+    static let pastSuggestionsAccessibilityLabel = "Past Suggestions"
+    static let pastSuggestionsLoadingAccessibilityLabel = "Loading…"
     static let menuTriggerAccessibilityLabel = "More actions"
 
+    /// Overflow menu order for wardrobe card actions.
+    /// WardrobeCardView uses native SwiftUI `Menu`; the system popover presents outside
+    /// the card and is unaffected by the card's `clipShape` (web overflow-hidden bug N/A).
     static let menuActionsOrder: [WardrobeCardMenuAction] = [
         .viewImage, .edit, .history, .delete
     ]
@@ -45,6 +51,10 @@ enum WardrobeCardUx {
 
     static func heroButtonIdentifier(itemId: Int) -> String {
         "wardrobe.getSuggestion.\(itemId)"
+    }
+
+    static func pastSuggestionsButtonIdentifier(itemId: Int) -> String {
+        "wardrobe.pastSuggestions.\(itemId)"
     }
 
     static func menuTriggerIdentifier(itemId: Int) -> String {

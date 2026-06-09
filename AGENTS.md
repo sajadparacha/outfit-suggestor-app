@@ -66,6 +66,7 @@ Add a heart on suggestion results to save favorites. Empty state when none saved
 | `.cursor/rules/web-ui-ux.mdc` | Web scope (`frontend/**`) |
 | `.cursor/rules/ios-ui-ux.mdc` | iOS scope (`ios-client/**`) |
 | `.cursor/skills/parallel-ui-ux/SKILL.md` | Workflow, prompts, test requirements |
+| `.cursor/skills/publish-on-web/SKILL.md` | Test → commit → push → GitHub Pages + Railway |
 | `.cursor/specs/_template.md` | Spec + Tests (required) template |
 | `.cursor/specs/_test-report-template.md` | End-of-run Test Execution Report |
 

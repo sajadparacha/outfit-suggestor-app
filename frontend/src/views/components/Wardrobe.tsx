@@ -558,11 +558,6 @@ const Wardrobe: React.FC<WardrobeProps> = ({
   };
 
   const handleOpenHistorySuggestions = async (item: WardrobeItem) => {
-    if (!item.image_data) {
-      setSuggestionError("This item doesn't have an image. Please add an image first.");
-      return;
-    }
-
     setHistoryLoadingForItem(item.id);
     setHistorySuggestionsError(null);
     setHistorySuggestions([]);
@@ -787,11 +782,14 @@ const Wardrobe: React.FC<WardrobeProps> = ({
             </button>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-4 pb-6 sm:pb-8">
             {visibleWardrobeItems.map((item) => (
               <div
                 key={item.id}
-                className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-3 shadow-xl backdrop-blur transition-shadow hover:shadow-2xl sm:p-4"
+                data-testid={`wardrobe-item-card-${item.id}`}
+                className={`overflow-visible rounded-2xl border border-white/10 bg-white/5 p-3 shadow-xl backdrop-blur transition-shadow hover:shadow-2xl sm:p-4${
+                  openMenuItemId === item.id ? ' relative z-50' : ''
+                }`}
               >
                 <div className="flex gap-3 sm:gap-4">
                   {item.image_data ? (
@@ -873,7 +871,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                       {openMenuItemId === item.id && (
                         <div
                           role="menu"
-                          className="absolute right-0 top-full z-20 mt-1 min-w-[10rem] overflow-hidden rounded-xl border border-white/15 bg-slate-900 py-1 shadow-2xl"
+                          className="absolute right-0 top-full z-50 mt-1 min-w-[10rem] overflow-hidden rounded-xl border border-white/15 bg-slate-900 py-1 shadow-2xl"
                         >
                           <button
                             type="button"
@@ -907,16 +905,16 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                           <button
                             type="button"
                             role="menuitem"
+                            disabled={historyLoadingForItem === item.id}
                             onClick={() => {
                               void handleOpenHistorySuggestions(item);
                               setOpenMenuItemId(null);
                             }}
-                            disabled={historyLoadingForItem === item.id}
                             className="flex w-full min-h-[44px] touch-manipulation items-center px-4 py-2.5 text-left text-sm text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-                            aria-label="History"
-                            data-testid={`wardrobe-menu-history-${item.id}`}
+                            aria-label="Past Suggestions"
+                            data-testid={`wardrobe-menu-past-suggestions-${item.id}`}
                           >
-                            {historyLoadingForItem === item.id ? 'Loading…' : 'History'}
+                            {historyLoadingForItem === item.id ? 'Loading…' : 'Past Suggestions'}
                           </button>
                           <button
                             type="button"
