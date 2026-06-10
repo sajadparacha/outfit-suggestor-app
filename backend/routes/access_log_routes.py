@@ -3,14 +3,64 @@ from typing import Optional, List
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, Query, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import func, and_, or_
+from sqlalchemy import func
 
 from models.database import get_db
 from models.access_log import AccessLog
 from dependencies import get_current_admin_user
 from models.user import User
+from utils.db_time_group import time_bucket_expr
+from utils.user_filter import matched_user_ids
 
 router = APIRouter(prefix="/api/access-logs", tags=["Access Logs"])
+
+
+def _empty_usage_response():
+    return {
+        "ai_calls": {
+            "outfit_suggestions": 0,
+            "wardrobe_analysis": 0,
+            "total": 0,
+            "unique_users": 0,
+            "average_response_time_ms": None,
+        },
+        "wardrobe_operations": {
+            "add": 0,
+            "update": 0,
+            "delete": 0,
+            "view": 0,
+            "check_duplicate": 0,
+            "summary": 0,
+            "total": 0,
+            "unique_users": 0,
+            "average_response_time_ms": None,
+        },
+        "outfit_history": {"views": 0, "unique_users": 0},
+        "top_users": [],
+    }
+
+
+def _empty_stats_response():
+    return {
+        "total_requests": 0,
+        "unique_ip_addresses": 0,
+        "average_response_time_ms": None,
+        "by_country": [],
+        "by_city": [],
+        "by_age_group": [],
+        "by_endpoint": [],
+        "by_user": [],
+    }
+
+
+def _apply_access_log_user_filter(query, db, user: Optional[str], user_id: Optional[int]):
+    """Apply user filter; return (query, is_empty) when no users match."""
+    user_ids = matched_user_ids(db, user=user, user_id=user_id)
+    if user_ids is None:
+        return query, False
+    if not user_ids:
+        return query, True
+    return query.filter(AccessLog.user_id.in_(user_ids)), False
 
 
 @router.get("/")
@@ -45,19 +95,9 @@ async def get_access_logs(
         query = query.filter(AccessLog.age_group == age_group)
     if ip_address:
         query = query.filter(AccessLog.ip_address == ip_address)
-    if user_id:
-        query = query.filter(AccessLog.user_id == user_id)
-    if user:
-        user_like = f"%{user}%"
-        matched_user_ids = [
-            uid
-            for (uid,) in db.query(User.id)
-            .filter(or_(User.email.ilike(user_like), User.full_name.ilike(user_like)))
-            .all()
-        ]
-        if not matched_user_ids:
-            return {"total": 0, "limit": limit, "offset": offset, "logs": []}
-        query = query.filter(AccessLog.user_id.in_(matched_user_ids))
+    query, user_filter_empty = _apply_access_log_user_filter(query, db, user, user_id)
+    if user_filter_empty:
+        return {"total": 0, "limit": limit, "offset": offset, "logs": []}
     if operation_type:
         query = query.filter(AccessLog.operation_type == operation_type)
     if endpoint:
@@ -130,6 +170,8 @@ async def get_access_logs(
 async def get_access_stats(
     start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
+    user: Optional[str] = Query(None, description="Filter by user name/email (case-insensitive contains)"),
+    user_id: Optional[int] = Query(None, description="Filter by user ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user)  # Admin-only
 ):
@@ -138,6 +180,10 @@ async def get_access_stats(
     Requires authentication.
     """
     query = db.query(AccessLog)
+
+    query, user_filter_empty = _apply_access_log_user_filter(query, db, user, user_id)
+    if user_filter_empty:
+        return _empty_stats_response()
     
     # Apply date filters
     if start_date:
@@ -260,6 +306,7 @@ async def get_access_stats(
 async def get_usage_statistics(
     start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
+    user: Optional[str] = Query(None, description="Filter by user name/email (case-insensitive contains)"),
     user_id: Optional[int] = Query(None, description="Filter by user ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user)  # Admin-only
@@ -269,6 +316,10 @@ async def get_usage_statistics(
     Requires authentication.
     """
     query = db.query(AccessLog)
+
+    query, user_filter_empty = _apply_access_log_user_filter(query, db, user, user_id)
+    if user_filter_empty:
+        return _empty_usage_response()
     
     # Apply date filters
     if start_date:
@@ -290,9 +341,6 @@ async def get_usage_statistics(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid end_date format. Use YYYY-MM-DD"
             )
-    
-    if user_id:
-        query = query.filter(AccessLog.user_id == user_id)
     
     # AI Calls Statistics
     ai_outfit_suggestions = query.filter(AccessLog.operation_type == "ai_outfit_suggestion").count()
@@ -381,6 +429,10 @@ async def get_usage_statistics(
 async def get_access_timeline(
     start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
+    country: Optional[str] = Query(None, description="Filter by country"),
+    city: Optional[str] = Query(None, description="Filter by city"),
+    user: Optional[str] = Query(None, description="Filter by user name/email (case-insensitive contains)"),
+    user_id: Optional[int] = Query(None, description="Filter by user ID"),
     group_by: str = Query("hour", regex="^(hour|day|week)$", description="Group by hour, day, or week"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user)  # Admin-only
@@ -390,6 +442,15 @@ async def get_access_timeline(
     Requires authentication.
     """
     query = db.query(AccessLog)
+
+    query, user_filter_empty = _apply_access_log_user_filter(query, db, user, user_id)
+    if user_filter_empty:
+        return {"group_by": group_by, "timeline": []}
+
+    if country:
+        query = query.filter(AccessLog.country.ilike(f"%{country}%"))
+    if city:
+        query = query.filter(AccessLog.city.ilike(f"%{city}%"))
     
     # Apply date filters
     if start_date:
@@ -412,15 +473,7 @@ async def get_access_timeline(
                 detail="Invalid end_date format. Use YYYY-MM-DD"
             )
     
-    # Group by time period
-    if group_by == "hour":
-        time_expr = func.date_trunc('hour', AccessLog.timestamp)
-    elif group_by == "day":
-        time_expr = func.date_trunc('day', AccessLog.timestamp)
-    elif group_by == "week":
-        time_expr = func.date_trunc('week', AccessLog.timestamp)
-    else:
-        time_expr = func.date_trunc('hour', AccessLog.timestamp)
+    time_expr = time_bucket_expr(db, AccessLog.timestamp, group_by)
     
     timeline = (
         query.with_entities(
@@ -436,7 +489,11 @@ async def get_access_timeline(
         "group_by": group_by,
         "timeline": [
             {
-                "period": period.isoformat() if period else None,
+                "period": (
+                    period.isoformat()
+                    if period is not None and hasattr(period, "isoformat")
+                    else period
+                ),
                 "count": count
             }
             for period, count in timeline

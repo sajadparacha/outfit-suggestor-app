@@ -92,7 +92,8 @@ struct HistoryListView: View {
                                         onDelete: { pendingDeleteEntry = entry },
                                         onViewImage: { image in fullScreenImage = image }
                                     )
-                                    .accessibilityIdentifier("history.card.index.\(index)")
+                                    .accessibilityElement(children: .contain)
+                                    .accessibilityIdentifier("history.card.\(entry.id)")
                                 }
                             }
                         }
@@ -409,7 +410,6 @@ struct WebStyleHistoryCardView: View {
         }
         .padding(14)
         .glassCard()
-        .accessibilityIdentifier("history.card.\(entry.id)")
     }
     
     @ViewBuilder

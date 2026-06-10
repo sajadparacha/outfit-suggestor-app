@@ -53,5 +53,45 @@ export const handlers = [
       })
     );
   }),
+
+  rest.get(`${API_BASE}/api/access-logs/stats`, (_req, res, ctx) => {
+    return res(
+      ctx.json({
+        total_requests: 0,
+        unique_ip_addresses: 0,
+        average_response_time_ms: null,
+        by_country: [],
+        by_city: [],
+      })
+    );
+  }),
+
+  rest.get(`${API_BASE}/api/access-logs/usage`, (_req, res, ctx) => {
+    return res(
+      ctx.json({
+        ai_calls: { total: 0, outfit_suggestions: 0, wardrobe_analysis: 0, unique_users: 0 },
+        wardrobe_operations: { total: 0, add: 0, view: 0, unique_users: 0 },
+        outfit_history: { views: 0, unique_users: 0 },
+        top_users: [],
+      })
+    );
+  }),
+
+  rest.get(`${API_BASE}/api/access-logs/timeline`, (_req, res, ctx) => {
+    return res(ctx.json({ group_by: 'day', timeline: [] }));
+  }),
+
+  rest.get(`${API_BASE}/api/reports/searches`, (_req, res, ctx) => {
+    return res(
+      ctx.json({
+        total_searches: 0,
+        by_occasion: [],
+        by_season: [],
+        by_style: [],
+        timeline: [],
+        recent: [],
+      })
+    );
+  }),
 ];
 

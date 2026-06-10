@@ -2,7 +2,7 @@
 
 This document tracks feature parity between the **web app** and the **iOS app** so both offer the same functionality. Use it as a checklist when implementing or syncing features.
 
-**Branch**: `feature/ios-web-sync`
+**Branch**: `feature/admin-reports`
 
 ---
 
@@ -30,6 +30,7 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 | **60s first-run coach (Phase A)** | ✅ | ✅ | 3-step coach strip, collapsed optional preferences, empty-preview directional copy; `first_run_coach_dismissed` persistence |
 | **Guest limit auth UX** | ✅ | ✅ | At 3/3 free tries: single auth surface on Suggest; nav Sign Up/Login hidden; no duplicate CTAs |
 | **Logout clears main flow** | ✅ | ✅ | Logout resets image, result, prefs on Suggest |
+| **Admin Reports** | ✅ | ✅ | Four tabs (Overview, Utilization, Users, Searches); timeline + search APIs; Recharts (web) / Swift Charts (iOS); city filter web-only |
 
 ---
 
@@ -210,15 +211,17 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 
 ## 11. Admin Reports
 
-**Web**: Reports tab for admin users: access logs, usage stats, filters.
+**Web**: Admin-only Reports tab with four sections — **Overview**, **Utilization**, **Users**, **Searches**. Shared filters (date range, user, country, **city**, operation type, endpoint). Recharts line/bar charts; timeline from `GET /api/access-logs/timeline`; search aggregates from `GET /api/reports/searches`.
 
-**iOS status**: Not implemented. Low priority unless admins need it on mobile.
+**iOS status**: **Implemented** — same four tabs, shared filters (no **city** filter — web-only), Swift Charts where practical, same APIs.
 
-**API**: See access log endpoints in API_DOCUMENTATION.md.
+**API**: `/api/access-logs/` (list), `/stats`, `/usage`, `/timeline`; `/api/reports/searches` (outfit_history occasion/season/style aggregates).
 
-**iOS work** (optional):
+**Parity gaps**:
 
-- [ ] If needed: Admin-only section, call access log/usage APIs, table/list view with filters.
+- [ ] **City filter** — web only (by design).
+- [x] Tabbed layout and copy match.
+- [x] Timeline + search report endpoints wired on both platforms.
 
 ---
 

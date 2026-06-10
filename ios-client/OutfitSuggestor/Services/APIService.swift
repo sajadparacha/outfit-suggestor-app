@@ -249,7 +249,6 @@ class APIService {
         await beginRequestActivity()
         defer { endRequestActivity() }
         if AppConfig.isUITestMode {
-            await maybeSimulateUITestDelay()
             return uiTestStore.history(limit: limit)
         }
         guard let url = URL(string: "\(baseURL)/api/outfit-history?limit=\(limit)") else { throw APIServiceError.invalidURL }
@@ -289,7 +288,6 @@ class APIService {
         await beginRequestActivity()
         defer { endRequestActivity() }
         if AppConfig.isUITestMode {
-            await maybeSimulateUITestDelay()
             return uiTestStore.wardrobe(category: category, search: search, limit: limit, offset: offset)
         }
         var comp = URLComponents(string: "\(baseURL)/api/wardrobe")!
@@ -536,6 +534,7 @@ class APIService {
         var startDate: String?
         var endDate: String?
         var user: String?
+        var country: String?
         var operationType: String?
         var endpoint: String?
         var limit: Int = 100
@@ -545,6 +544,9 @@ class APIService {
     func getAccessLogs(params: AccessLogsParams = AccessLogsParams()) async throws -> AccessLogsResponse {
         await beginRequestActivity()
         defer { endRequestActivity() }
+        if AppConfig.isUITestMode {
+            return uiTestStore.accessLogsResponse()
+        }
         var comp = URLComponents(string: "\(baseURL)/api/access-logs/")!
         comp.queryItems = [
             URLQueryItem(name: "limit", value: "\(params.limit)"),
@@ -553,6 +555,7 @@ class APIService {
         if let v = params.startDate, !v.isEmpty { comp.queryItems?.append(URLQueryItem(name: "start_date", value: v)) }
         if let v = params.endDate, !v.isEmpty { comp.queryItems?.append(URLQueryItem(name: "end_date", value: v)) }
         if let v = params.user, !v.isEmpty { comp.queryItems?.append(URLQueryItem(name: "user", value: v)) }
+        if let v = params.country, !v.isEmpty { comp.queryItems?.append(URLQueryItem(name: "country", value: v)) }
         if let v = params.operationType, !v.isEmpty { comp.queryItems?.append(URLQueryItem(name: "operation_type", value: v)) }
         if let v = params.endpoint, !v.isEmpty { comp.queryItems?.append(URLQueryItem(name: "endpoint", value: v)) }
         guard let url = comp.url else { throw APIServiceError.invalidURL }
@@ -566,13 +569,23 @@ class APIService {
         return try JSONDecoder().decode(AccessLogsResponse.self, from: data)
     }
     
-    func getAccessLogStats(startDate: String? = nil, endDate: String? = nil) async throws -> AccessLogStatsResponse {
+    func getAccessLogStats(
+        startDate: String? = nil,
+        endDate: String? = nil,
+        user: String? = nil,
+        userId: Int? = nil
+    ) async throws -> AccessLogStatsResponse {
         await beginRequestActivity()
         defer { endRequestActivity() }
+        if AppConfig.isUITestMode {
+            return uiTestStore.accessLogStatsResponse()
+        }
         var comp = URLComponents(string: "\(baseURL)/api/access-logs/stats")!
         var items: [URLQueryItem] = []
         if let v = startDate, !v.isEmpty { items.append(URLQueryItem(name: "start_date", value: v)) }
         if let v = endDate, !v.isEmpty { items.append(URLQueryItem(name: "end_date", value: v)) }
+        if let userId { items.append(URLQueryItem(name: "user_id", value: "\(userId)")) }
+        else if let v = user, !v.isEmpty { items.append(URLQueryItem(name: "user", value: v)) }
         comp.queryItems = items.isEmpty ? nil : items
         guard let url = comp.url else { throw APIServiceError.invalidURL }
         var request = URLRequest(url: url)
@@ -585,13 +598,23 @@ class APIService {
         return try JSONDecoder().decode(AccessLogStatsResponse.self, from: data)
     }
     
-    func getAccessLogUsage(startDate: String? = nil, endDate: String? = nil) async throws -> AccessLogUsageResponse {
+    func getAccessLogUsage(
+        startDate: String? = nil,
+        endDate: String? = nil,
+        user: String? = nil,
+        userId: Int? = nil
+    ) async throws -> AccessLogUsageBreakdown {
         await beginRequestActivity()
         defer { endRequestActivity() }
+        if AppConfig.isUITestMode {
+            return uiTestStore.accessLogUsageResponse()
+        }
         var comp = URLComponents(string: "\(baseURL)/api/access-logs/usage")!
         var items: [URLQueryItem] = []
         if let v = startDate, !v.isEmpty { items.append(URLQueryItem(name: "start_date", value: v)) }
         if let v = endDate, !v.isEmpty { items.append(URLQueryItem(name: "end_date", value: v)) }
+        if let userId { items.append(URLQueryItem(name: "user_id", value: "\(userId)")) }
+        else if let v = user, !v.isEmpty { items.append(URLQueryItem(name: "user", value: v)) }
         comp.queryItems = items.isEmpty ? nil : items
         guard let url = comp.url else { throw APIServiceError.invalidURL }
         var request = URLRequest(url: url)
@@ -601,7 +624,78 @@ class APIService {
             if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
             throw APIServiceError.invalidResponse
         }
-        return try JSONDecoder().decode(AccessLogUsageResponse.self, from: data)
+        return try JSONDecoder().decode(AccessLogUsageBreakdown.self, from: data)
+    }
+
+    func getAccessLogTimeline(
+        startDate: String? = nil,
+        endDate: String? = nil,
+        groupBy: String = "day",
+        city: String? = nil,
+        country: String? = nil,
+        user: String? = nil,
+        userId: Int? = nil
+    ) async throws -> AccessLogTimelineResponse {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
+        if AppConfig.isUITestMode {
+            return uiTestStore.accessLogTimelineResponse()
+        }
+        var comp = URLComponents(string: "\(baseURL)/api/access-logs/timeline")!
+        var items: [URLQueryItem] = [URLQueryItem(name: "group_by", value: groupBy)]
+        if let v = startDate, !v.isEmpty { items.append(URLQueryItem(name: "start_date", value: v)) }
+        if let v = endDate, !v.isEmpty { items.append(URLQueryItem(name: "end_date", value: v)) }
+        if let v = country, !v.isEmpty { items.append(URLQueryItem(name: "country", value: v)) }
+        if let v = city, !v.isEmpty { items.append(URLQueryItem(name: "city", value: v)) }
+        if let userId { items.append(URLQueryItem(name: "user_id", value: "\(userId)")) }
+        else if let v = user, !v.isEmpty { items.append(URLQueryItem(name: "user", value: v)) }
+        comp.queryItems = items
+        guard let url = comp.url else { throw APIServiceError.invalidURL }
+        var request = URLRequest(url: url)
+        setAuthIfNeeded(&request)
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
+            throw APIServiceError.invalidResponse
+        }
+        return try JSONDecoder().decode(AccessLogTimelineResponse.self, from: data)
+    }
+
+    struct SearchReportsParams {
+        var startDate: String?
+        var endDate: String?
+        var occasion: String?
+        var season: String?
+        var style: String?
+        var user: String?
+        var userId: Int?
+    }
+
+    func getSearchReports(params: SearchReportsParams = SearchReportsParams()) async throws -> SearchReportsResponse {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
+        if AppConfig.isUITestMode {
+            return uiTestStore.searchReportsResponse()
+        }
+        var comp = URLComponents(string: "\(baseURL)/api/reports/searches")!
+        var items: [URLQueryItem] = []
+        if let v = params.startDate, !v.isEmpty { items.append(URLQueryItem(name: "start_date", value: v)) }
+        if let v = params.endDate, !v.isEmpty { items.append(URLQueryItem(name: "end_date", value: v)) }
+        if let v = params.occasion, !v.isEmpty { items.append(URLQueryItem(name: "occasion", value: v)) }
+        if let v = params.season, !v.isEmpty { items.append(URLQueryItem(name: "season", value: v)) }
+        if let v = params.style, !v.isEmpty { items.append(URLQueryItem(name: "style", value: v)) }
+        if let userId = params.userId { items.append(URLQueryItem(name: "user_id", value: "\(userId)")) }
+        else if let v = params.user, !v.isEmpty { items.append(URLQueryItem(name: "user", value: v)) }
+        comp.queryItems = items.isEmpty ? nil : items
+        guard let url = comp.url else { throw APIServiceError.invalidURL }
+        var request = URLRequest(url: url)
+        setAuthIfNeeded(&request)
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
+            throw APIServiceError.invalidResponse
+        }
+        return try JSONDecoder().decode(SearchReportsResponse.self, from: data)
     }
     
     /// Health check
@@ -702,6 +796,7 @@ struct AccessLogStatsResponse: Codable {
     let unique_ip_addresses: Int?
     let average_response_time_ms: Double?
     let by_country: [CountryCount]?
+    let by_city: [CityCount]?
     let by_endpoint: [EndpointCount]?
     let by_user: [UserCount]?
 }
@@ -713,11 +808,6 @@ struct UserCount: Codable {
     let user_email: String?
     let user_name: String?
     let count: Int
-}
-
-struct AccessLogUsageResponse: Codable {
-    let by_operation_type: [String: Int]?
-    let total_requests: Int?
 }
 
 // MARK: - Outfit Duplicate Check Response
@@ -946,6 +1036,62 @@ final class UITestDataStore {
                     output_tokens: 220
                 )
                 : nil
+        )
+    }
+
+    func accessLogsResponse() -> AccessLogsResponse {
+        AccessLogsResponse(total: 0, limit: 100, offset: 0, logs: [])
+    }
+
+    func accessLogStatsResponse() -> AccessLogStatsResponse {
+        AccessLogStatsResponse(
+            total_requests: 0,
+            unique_ip_addresses: 0,
+            average_response_time_ms: nil,
+            by_country: [],
+            by_city: [],
+            by_endpoint: [],
+            by_user: []
+        )
+    }
+
+    func accessLogUsageResponse() -> AccessLogUsageBreakdown {
+        AccessLogUsageBreakdown(
+            ai_calls: UsageAICalls(
+                outfit_suggestions: 0,
+                wardrobe_analysis: 0,
+                total: 0,
+                unique_users: 0,
+                average_response_time_ms: nil
+            ),
+            wardrobe_operations: UsageWardrobeOperations(
+                add: 0,
+                update: 0,
+                delete: 0,
+                view: 0,
+                check_duplicate: 0,
+                summary: 0,
+                total: 0,
+                unique_users: 0,
+                average_response_time_ms: nil
+            ),
+            outfit_history: UsageOutfitHistory(views: 0, unique_users: 0),
+            top_users: []
+        )
+    }
+
+    func accessLogTimelineResponse() -> AccessLogTimelineResponse {
+        AccessLogTimelineResponse(group_by: "day", timeline: [])
+    }
+
+    func searchReportsResponse() -> SearchReportsResponse {
+        SearchReportsResponse(
+            total_searches: 0,
+            by_occasion: [],
+            by_season: [],
+            by_style: [],
+            timeline: [],
+            recent: []
         )
     }
 

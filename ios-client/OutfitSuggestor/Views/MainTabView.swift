@@ -79,6 +79,7 @@ struct MainTabView: View {
     @StateObject private var viewModel = OutfitViewModel()
     @ObservedObject private var auth = AuthService.shared
     @ObservedObject private var routeCoordinator = RouteCoordinator.shared
+    @ObservedObject private var requestActivity = AppRequestActivity.shared
 
     private var isAdmin: Bool { auth.currentUser?.is_admin == true }
 
@@ -147,6 +148,14 @@ struct MainTabView: View {
         .environmentObject(viewModel)
         .tint(AppTheme.accent)
         .preferredColorScheme(.dark)
+        .overlay {
+            if requestActivity.isBusy {
+                Color.clear
+                    .ignoresSafeArea()
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityIdentifier("global.loadingLock")
+            }
+        }
         .onChange(of: auth.isAuthenticated) { isAuthenticated in
             if isAuthenticated {
                 routeCoordinator.selectedTab = .suggest

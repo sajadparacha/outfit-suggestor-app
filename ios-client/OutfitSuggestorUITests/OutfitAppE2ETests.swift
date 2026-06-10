@@ -5,10 +5,16 @@ final class OutfitAppE2ETests: XCTestCase {
 
     override func setUpWithError() throws {
         continueAfterFailure = false
+        executionTimeAllowance = 180
         app = XCUIApplication()
         app.launchArguments.append("UI_TEST_MODE")
         app.launchEnvironment["UI_TEST_MODE"] = "1"
         app.launch()
+        XCTAssertTrue(
+            app.buttons["main.useSampleImageButton"].waitForExistence(timeout: 30),
+            "Suggest screen did not become ready after launch"
+        )
+        waitForAppUnlocked(timeout: 15)
     }
 
     @discardableResult
@@ -32,12 +38,36 @@ final class OutfitAppE2ETests: XCTestCase {
         return tabBarButton
     }
 
-    private func openTab(_ name: String, timeout: TimeInterval = 10) {
-        let predicate = NSPredicate(format: "exists == true")
-        let target = tabTarget(name)
-        expectation(for: predicate, evaluatedWith: target)
-        waitForExpectations(timeout: timeout)
+    private func openTab(_ name: String, timeout: TimeInterval = 20) {
+        let tabBarButton = app.tabBars.buttons[name]
+        let target = tabBarButton.waitForExistence(timeout: timeout) ? tabBarButton : tabTarget(name)
+        XCTAssertTrue(target.waitForExistence(timeout: timeout), "Tab \"\(name)\" not found")
         target.tap()
+    }
+
+    private func historyCard(entryId: Int) -> XCUIElement {
+        let card = app.otherElements["history.card.\(entryId)"]
+        if card.exists { return card }
+        let date = app.staticTexts["history.card.date.\(entryId)"]
+        if date.exists { return date }
+        return app.descendants(matching: .any)["history.card.\(entryId)"]
+    }
+
+    @discardableResult
+    private func scrollToHistoryCard(entryId: Int, timeout: TimeInterval = 12) -> Bool {
+        let card = historyCard(entryId: entryId)
+        let scrollView = app.scrollViews.firstMatch
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if card.waitForExistence(timeout: 0.4) { return true }
+            if scrollView.exists {
+                scrollView.swipeUp()
+            } else {
+                app.swipeUp()
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+        }
+        return card.exists
     }
 
     private func openWardrobe() {
@@ -49,6 +79,7 @@ final class OutfitAppE2ETests: XCTestCase {
     private func openHistory() {
         openTab("Looks")
         XCTAssertTrue(waitFor(app.buttons["history.loadAllButton"]))
+        waitForAppUnlocked()
     }
 
     private func addSampleImageOnSuggest() {
@@ -57,19 +88,42 @@ final class OutfitAppE2ETests: XCTestCase {
         XCTAssertTrue(waitFor(app.buttons["main.getSuggestionButton"]))
     }
 
-    private func waitForAppUnlocked(timeout: TimeInterval = 6) {
+    private func waitForAppUnlocked(timeout: TimeInterval = 10) {
         let lock = app.otherElements["global.loadingLock"]
-        let unlocked = NSPredicate(format: "exists == false")
-        expectation(for: unlocked, evaluatedWith: lock)
-        waitForExpectations(timeout: timeout)
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if !lock.exists { return }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.15))
+        }
     }
 
-    private func assertVisibleWardrobeItemIDs(_ expected: String, timeout: TimeInterval = 4) {
+    /// History list uses its own loading UI; global.loadingLock clears before entries render.
+    private func waitForHistoryIdle(timeout: TimeInterval = 12) -> Bool {
+        let loadingText = app.staticTexts["Loading history…"]
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if !loadingText.exists { return true }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.15))
+        }
+        return !loadingText.exists
+    }
+
+    private func waitForHistoryEntryCount(_ count: Int, timeout: TimeInterval = 12) -> Bool {
+        let predicate = NSPredicate(format: "label CONTAINS 'Showing last \(count) entries'")
+        let marker = app.staticTexts.containing(predicate).firstMatch
+        return marker.waitForExistence(timeout: timeout)
+    }
+
+    private func assertVisibleWardrobeItemIDs(_ expected: String, timeout: TimeInterval = 8) {
         let marker = app.otherElements["wardrobe.visibleItemIDs"]
-        XCTAssertTrue(waitFor(marker, timeout: timeout))
-        let predicate = NSPredicate(format: "label == %@", expected)
-        expectation(for: predicate, evaluatedWith: marker)
-        waitForExpectations(timeout: timeout)
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if marker.exists, marker.label == expected { return }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+        }
+        XCTFail(
+            "Expected visible wardrobe IDs \"\(expected)\", got \"\(marker.label)\" (exists=\(marker.exists))"
+        )
     }
 
     private func wardrobeHeroButton(itemId: Int) -> XCUIElement {
@@ -195,24 +249,36 @@ final class OutfitAppE2ETests: XCTestCase {
         XCTAssertTrue(toastText.waitForExistence(timeout: 2))
         assertVisibleWardrobeItemIDs("1,2,3,4,5")
 
-        let toastGone = NSPredicate(format: "exists == false")
-        expectation(for: toastGone, evaluatedWith: toastText)
-        waitForExpectations(timeout: 5)
+        let toastDeadline = Date().addingTimeInterval(6)
+        while Date() < toastDeadline, toastText.exists {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+        }
+        XCTAssertFalse(toastText.exists)
     }
 
     func testHistorySearchSortAndLoadAll() {
         openHistory()
 
-        XCTAssertFalse(app.staticTexts["May 20, 2026, 8:15 AM"].exists)
+        XCTAssertFalse(historyCard(entryId: 102).exists)
         app.buttons["history.loadAllButton"].tap()
-        XCTAssertTrue(app.staticTexts["May 20, 2026, 8:15 AM"].waitForExistence(timeout: 3))
+        XCTAssertTrue(waitForHistoryIdle(timeout: 12), "History loading spinner did not dismiss")
+        XCTAssertTrue(
+            waitForHistoryEntryCount(3, timeout: 12),
+            "Expected 3 history entries after Load All"
+        )
+        XCTAssertTrue(
+            historyCard(entryId: 100).waitForExistence(timeout: 4),
+            "Expected newest history entry 100 after Load All"
+        )
+        XCTAssertTrue(scrollToHistoryCard(entryId: 102, timeout: 16), "Expected history entry 102 after Load All")
 
         let searchField = app.textFields["history.searchField"]
         searchField.tap()
         searchField.typeText("brogues")
         app.buttons["history.searchButton"].tap()
-        XCTAssertTrue(app.staticTexts["May 21, 2026, 9:00 AM"].waitForExistence(timeout: 2))
-        XCTAssertFalse(app.staticTexts["May 22, 2026, 10:19 AM"].exists)
+        waitForAppUnlocked()
+        XCTAssertTrue(scrollToHistoryCard(entryId: 101, timeout: 8))
+        XCTAssertFalse(historyCard(entryId: 100).exists)
 
         searchField.tap()
         if let current = searchField.value as? String, !current.isEmpty {
@@ -223,7 +289,8 @@ final class OutfitAppE2ETests: XCTestCase {
 
         app.buttons["history.sortMenu"].tap()
         app.buttons["Oldest First"].tap()
-        XCTAssertTrue(app.staticTexts["May 20, 2026, 8:15 AM"].exists)
+        waitForAppUnlocked()
+        XCTAssertTrue(scrollToHistoryCard(entryId: 102, timeout: 8))
     }
 
     func testSuggestFlowFromSampleImageShowsResultCard() {

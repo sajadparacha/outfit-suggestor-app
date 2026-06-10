@@ -30,6 +30,9 @@ class OutfitHistory(Base):
 
     # Optional metadata about the request
     text_input: Mapped[str | None] = mapped_column(Text, nullable=True)
+    occasion: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    season: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
+    style: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     
     # Store the uploaded image as base64 string
     image_data: Mapped[str | None] = mapped_column(Text, nullable=True)

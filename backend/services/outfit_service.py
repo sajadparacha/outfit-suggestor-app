@@ -26,7 +26,10 @@ class OutfitService:
         text_input: str,
         image_data: str,
         model_image: Optional[str],
-        suggestion: OutfitSuggestion
+        suggestion: OutfitSuggestion,
+        occasion: Optional[str] = None,
+        season: Optional[str] = None,
+        style: Optional[str] = None,
     ) -> OutfitHistory:
         """
         Save outfit suggestion to history
@@ -64,6 +67,9 @@ class OutfitService:
             "shoes_id": getattr(suggestion, "shoes_id", None),
             "belt_id": getattr(suggestion, "belt_id", None),
             "source_wardrobe_item_id": getattr(suggestion, "source_wardrobe_item_id", None),
+            "occasion": occasion,
+            "season": season,
+            "style": style,
         }
         for key, value in optional_history_fields.items():
             if key in columns:
@@ -151,6 +157,9 @@ class OutfitService:
             "shoes_id",
             "belt_id",
             "source_wardrobe_item_id",
+            "occasion",
+            "season",
+            "style",
         ]
         select_columns = [column for column in select_preference if column in columns]
         if not select_columns:

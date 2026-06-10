@@ -168,6 +168,9 @@ class OutfitController:
         use_wardrobe_only: bool = False,
         source_wardrobe_item_id: Optional[int] = None,
         previous_outfit_text: Optional[str] = None,
+        occasion: Optional[str] = None,
+        season: Optional[str] = None,
+        style: Optional[str] = None,
         db: Session = None,
         current_user: Optional[User] = None,
         guest_session_id: Optional[str] = None,
@@ -310,7 +313,10 @@ class OutfitController:
                 text_input=text_input,
                 image_data=image_base64,
                 model_image=suggestion.model_image,
-                suggestion=suggestion
+                suggestion=suggestion,
+                occasion=occasion,
+                season=season,
+                style=style,
             )
             
             # Ensure cost_info has model_image_cost set
@@ -421,7 +427,10 @@ class OutfitController:
                 text_input=combined_text_input,
                 image_data=None,
                 model_image=None,
-                suggestion=suggestion
+                suggestion=suggestion,
+                occasion=occasion,
+                season=season,
+                style=style,
             )
 
             # Ensure cost info fields

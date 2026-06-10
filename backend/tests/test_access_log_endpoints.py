@@ -171,6 +171,112 @@ class TestAccessLogEndpoints:
         data = response.json()
         assert len(data["logs"]) <= 1000
     
+    def test_get_access_logs_timeline_admin(self, client, auth_headers, db):
+        """Test /api/access-logs/timeline returns grouped counts for admin."""
+        log_entry = AccessLog(
+            ip_address="127.0.0.1",
+            endpoint="/api/suggest-outfit",
+            method="POST",
+            operation_type="ai_outfit_suggestion",
+            city="London",
+            country="United Kingdom",
+            status_code=200,
+        )
+        db.add(log_entry)
+        db.commit()
+
+        response = client.get(
+            "/api/access-logs/timeline?group_by=day&city=London",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["group_by"] == "day"
+        assert isinstance(data["timeline"], list)
+        assert sum(point["count"] for point in data["timeline"]) >= 1
+
+    def test_get_access_logs_timeline_forbidden_non_admin(self, client, non_admin_auth_headers):
+        response = client.get("/api/access-logs/timeline", headers=non_admin_auth_headers)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_get_access_logs_usage_filters_by_user_email(
+        self, client, auth_headers, db, test_user
+    ):
+        log_entry = AccessLog(
+            ip_address="127.0.0.1",
+            endpoint="/api/suggest-outfit",
+            method="POST",
+            operation_type="ai_outfit_suggestion",
+            user_id=test_user.id,
+            status_code=200,
+        )
+        db.add(log_entry)
+        db.commit()
+
+        response = client.get(
+            "/api/access-logs/usage?user=test",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["ai_calls"]["outfit_suggestions"] >= 1
+
+    def test_get_access_logs_stats_filters_by_user_email(
+        self, client, auth_headers, db, test_user
+    ):
+        log_entry = AccessLog(
+            ip_address="127.0.0.1",
+            endpoint="/api/wardrobe",
+            method="GET",
+            operation_type="wardrobe_view",
+            user_id=test_user.id,
+            status_code=200,
+        )
+        db.add(log_entry)
+        db.commit()
+
+        response = client.get(
+            "/api/access-logs/stats?user=test",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["total_requests"] >= 1
+
+    def test_get_access_logs_timeline_filters_by_user_email(
+        self, client, auth_headers, db, test_user
+    ):
+        log_entry = AccessLog(
+            ip_address="127.0.0.1",
+            endpoint="/api/suggest-outfit",
+            method="POST",
+            operation_type="ai_outfit_suggestion",
+            user_id=test_user.id,
+            status_code=200,
+        )
+        db.add(log_entry)
+        db.commit()
+
+        response = client.get(
+            "/api/access-logs/timeline?group_by=day&user=test",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert sum(point["count"] for point in data["timeline"]) >= 1
+
+    def test_get_access_logs_usage_returns_empty_for_unknown_user(
+        self, client, auth_headers
+    ):
+        response = client.get(
+            "/api/access-logs/usage?user=nonexistent-user-xyz",
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["ai_calls"]["total"] == 0
+        assert data["top_users"] == []
+
     def test_get_access_logs_exceeds_max_limit(self, client, auth_headers):
         """Test getting access logs exceeding maximum limit"""
         response = client.get(
