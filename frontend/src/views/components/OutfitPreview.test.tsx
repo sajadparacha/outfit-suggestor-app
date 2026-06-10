@@ -80,7 +80,7 @@ describe('OutfitPreview', () => {
   });
 
   describe('empty state (no suggestion)', () => {
-    it('shows ready message when no suggestion', () => {
+    it('shows headline and subline when no suggestion', () => {
       render(
         <OutfitPreview
           suggestion={null}
@@ -89,8 +89,10 @@ describe('OutfitPreview', () => {
           {...defaultActionProps}
         />
       );
-      expect(screen.getByText(/Ready for Style Magic?/i)).toBeInTheDocument();
-      expect(screen.getByText(/Your AI-styled outfit preview will appear here/i)).toBeInTheDocument();
+      expect(screen.getByText('Your outfit appears here')).toBeInTheDocument();
+      expect(
+        screen.getByText('Upload a photo on the left, then tap Generate Outfit')
+      ).toBeInTheDocument();
     });
   });
 

@@ -150,8 +150,12 @@ struct MainTabView: View {
         .onChange(of: auth.isAuthenticated) { isAuthenticated in
             if isAuthenticated {
                 routeCoordinator.selectedTab = .suggest
-            } else if routeCoordinator.selectedTab == .wardrobe || routeCoordinator.selectedTab == .history {
-                routeCoordinator.selectedTab = .suggest
+            } else {
+                viewModel.resetSessionState()
+                Task { await viewModel.refreshGuestUsage() }
+                if routeCoordinator.selectedTab == .wardrobe || routeCoordinator.selectedTab == .history {
+                    routeCoordinator.selectedTab = .suggest
+                }
             }
         }
     }

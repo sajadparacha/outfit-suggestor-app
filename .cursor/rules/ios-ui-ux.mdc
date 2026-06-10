@@ -41,6 +41,34 @@ Views → ViewModels → Services → Models. Keep views declarative; state and 
 
 Behavior and copy must match the active spec and web implementation. Sync contract files with web when models, API calls, or progress steps change.
 
+## iPhone / iPad parity (required)
+
+Keep iPhone and iPad UX **the same** — one app, not two designs.
+
+### Same on all devices
+
+- Navigation (`TabView` + `NavigationStack`) — no iPad-only sidebar or `NavigationSplitView`
+- Flows, copy, buttons, auth gates, and API behavior
+- Feature availability (no iPad-only or iPhone-only features)
+
+### Layout-only differences (allowed)
+
+Use `@Environment(\.horizontalSizeClass)` or `.adaptiveContent(maxWidth:)` — **never** `UIDevice` / `userInterfaceIdiom` checks for UX branching.
+
+| Allowed | Avoid |
+|---------|--------|
+| Max content width (e.g. 980–1080pt on regular width) | Different screens or navigation per device |
+| Slightly larger images / spacing | Different labels, actions, or flows |
+| Horizontal toolbar when regular width (e.g. History search row) | Split-view master/detail |
+| Adaptive grid column minimums (same cards) | iPad-only feature flags |
+
+**Rule:** Adapt **layout**, not **behavior**. If a change would feel different on iPad vs iPhone beyond spacing/width, it needs explicit product approval in the spec.
+
+### Existing patterns (reuse)
+
+- `AppTheme.adaptiveContent(maxWidth:)` — cap width on regular horizontal size class
+- `isRegularWidth` (`horizontalSizeClass == .regular`) — minor layout tweaks in `MainFlowView`, `WardrobeListView`, `HistoryListView`, `OutfitSuggestionView`
+
 ## Tests (Twin UI — required)
 
 - Unit/Integration: `ios-client/OutfitSuggestorTests/`

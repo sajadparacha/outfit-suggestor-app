@@ -25,6 +25,8 @@ struct MainFlowView: View {
     @State private var showAiPromptResponse = true
     @State private var transientMessage: String?
     @AppStorage("guest_first_outfit_prompt_shown") private var guestFirstOutfitPromptShown = false
+    @AppStorage(FirstRunCoachCopy.storageKeyDismissed) private var firstRunCoachDismissed = false
+    @AppStorage(FirstRunCoachCopy.storageKeyPrefsExpanded) private var firstRunPrefsExpanded = false
     @State private var showFirstOutfitBanner = false
     @State private var showGuestAuthSheet = false
     @State private var guestAuthContext: AuthPromptContext = .like
@@ -55,6 +57,28 @@ struct MainFlowView: View {
         horizontalSizeClass == .regular
     }
 
+    private var showsFirstRunCoach: Bool {
+        FirstRunCoachLogic.shouldShowCoach(dismissed: firstRunCoachDismissed)
+    }
+
+    private var showsCollapsedPreferences: Bool {
+        FirstRunCoachLogic.shouldCollapsePreferences(
+            coachDismissed: firstRunCoachDismissed,
+            prefsExpanded: firstRunPrefsExpanded
+        )
+    }
+
+    private var showsEmptyOutfitPreview: Bool {
+        viewModel.currentSuggestion == nil && !viewModel.isLoading
+    }
+
+    private var showsGuestLimitGate: Bool {
+        MainFlowGuestLimitLogic.showsGuestLimitGate(
+            isAuthenticated: auth.isAuthenticated,
+            isGuestBlocked: viewModel.isGuestBlocked
+        )
+    }
+
     var body: some View {
         ZStack {
             LinearGradient(
@@ -70,7 +94,9 @@ struct MainFlowView: View {
                         onNavigateToProfile?()
                     }
 
-                    if screenState == .creation {
+                    if showsGuestLimitGate {
+                        guestLimitGateSection
+                    } else if screenState == .creation {
                         creationSection
                     } else {
                         resultSection
@@ -123,7 +149,7 @@ struct MainFlowView: View {
             if isAuthenticated {
                 viewModel.clearGuestUsageState()
             } else {
-                Task { await viewModel.refreshGuestUsage() }
+                showFirstOutfitBanner = false
             }
         }
         .onChange(of: viewModel.sourceWardrobeItem?.id) { newId in
@@ -210,6 +236,9 @@ struct MainFlowView: View {
             GuestAuthSheetView(context: guestAuthContext, destination: guestAuthDestination)
         }
         .onChange(of: viewModel.currentSuggestion != nil) { hasSuggestion in
+            if hasSuggestion {
+                firstRunCoachDismissed = true
+            }
             guard hasSuggestion,
                   !auth.isAuthenticated,
                   !guestFirstOutfitPromptShown else { return }
@@ -255,6 +284,15 @@ struct MainFlowView: View {
                     .padding(.horizontal)
             }
 
+            if showsFirstRunCoach {
+                FirstRunCoachView(
+                    hasImage: viewModel.selectedImage != nil,
+                    hasSuggestion: false,
+                    isRegularWidth: isRegularWidth,
+                    onDismiss: { firstRunCoachDismissed = true }
+                )
+            }
+
             ImageUploadView(
                 selectedImage: Binding(
                     get: { viewModel.selectedImage },
@@ -271,15 +309,16 @@ struct MainFlowView: View {
                 pickerSourceType: $pickerSourceType
             )
 
-            FiltersView(
-                filters: $viewModel.filters,
-                preferenceText: $viewModel.preferenceText,
-                layout: .grid
-            )
-
-            if !auth.isAuthenticated, viewModel.isGuestBlocked {
-                guestLimitReachedCard
-                    .padding(.horizontal)
+            if showsCollapsedPreferences {
+                CollapsedPreferencesRow {
+                    firstRunPrefsExpanded = true
+                }
+            } else {
+                FiltersView(
+                    filters: $viewModel.filters,
+                    preferenceText: $viewModel.preferenceText,
+                    layout: .grid
+                )
             }
 
             VStack(spacing: 10) {
@@ -340,14 +379,18 @@ struct MainFlowView: View {
                     }
                 }
 
-                if !canRequestSuggestion {
-                    Text(guestBlockedHelperText)
+                if let helperText = creationHelperText {
+                    Text(helperText)
                         .font(.caption)
                         .foregroundColor(AppTheme.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
             .padding(.horizontal)
+
+            if showsEmptyOutfitPreview {
+                EmptyOutfitPreviewView()
+            }
 
             if auth.isAuthenticated {
                 moreOptionsSection
@@ -445,11 +488,6 @@ struct MainFlowView: View {
                     firstOutfitAuthBanner
                         .padding(.horizontal)
                         .transition(.opacity)
-                }
-
-                if !auth.isAuthenticated, viewModel.isGuestBlocked {
-                    guestLimitReachedCard
-                        .padding(.horizontal)
                 }
 
                 VStack(spacing: 10) {
@@ -653,23 +691,41 @@ struct MainFlowView: View {
         .accessibilityIdentifier("main.wardrobeSourceBanner")
     }
 
-    private var guestBlockedHelperText: String {
+    private var creationHelperText: String? {
+        if canRequestSuggestion {
+            return FirstRunCoachCopy.readyToGenerateHint
+        }
         if !auth.isAuthenticated, viewModel.isGuestBlocked {
             return "Create an account to keep using AI outfit suggestions."
         }
-        return "Add a photo to enable outfit suggestions."
+        if viewModel.selectedImage == nil {
+            return "Add a photo to enable outfit suggestions."
+        }
+        return nil
+    }
+
+    private var guestLimitGateSection: some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: isRegularWidth ? 80 : 48)
+            guestLimitReachedCard
+                .padding(.horizontal)
+            Spacer(minLength: isRegularWidth ? 80 : 48)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     private var guestLimitReachedCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("You've used your 3 free AI outfit suggestions. Create an account to keep using the app.")
+        let copy = AuthPromptCopy.content(for: .guestLimit)
+
+        return VStack(alignment: .leading, spacing: 12) {
+            Text(copy.headline)
                 .font(.subheadline.weight(.semibold))
                 .foregroundColor(AppTheme.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 10) {
                 Button {
-                    openGuestAuthSheet(context: .firstOutfit, destination: .register)
+                    openGuestAuthSheet(context: .guestLimit, destination: .register)
                 } label: {
                     Text("Create account")
                         .font(.subheadline.weight(.semibold))
@@ -677,9 +733,10 @@ struct MainFlowView: View {
                         .padding(.vertical, 10)
                 }
                 .buttonStyle(GradientButtonStyle())
+                .accessibilityIdentifier("main.guestLimitCreateAccountButton")
 
                 Button {
-                    openGuestAuthSheet(context: .firstOutfit, destination: .login)
+                    openGuestAuthSheet(context: .guestLimit, destination: .login)
                 } label: {
                     Text("Sign in")
                         .font(.subheadline.weight(.semibold))
@@ -687,6 +744,7 @@ struct MainFlowView: View {
                         .padding(.vertical, 10)
                 }
                 .buttonStyle(.bordered)
+                .accessibilityIdentifier("main.guestLimitSignInButton")
             }
         }
         .padding(14)

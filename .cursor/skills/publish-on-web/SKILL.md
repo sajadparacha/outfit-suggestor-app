@@ -1,10 +1,10 @@
 ---
 name: publish-on-web
 description: >-
-  Run full web, backend, and iOS test suites; on success commit the current
-  branch, push to GitHub, publish frontend to GitHub Pages, and deploy backend
-  to Railway. Use when the user says "publish on web", "Publish on web", or
-  wants to ship the web app after tests pass.
+  Run full web, backend, and iOS test suites; on success commit and push the
+  current branch (do not merge to main), publish frontend to GitHub Pages, and
+  deploy backend to Railway. Use when the user says "publish on web",
+  "Publish on web", or wants to ship the web app after tests pass.
 disable-model-invocation: true
 ---
 
@@ -13,6 +13,8 @@ disable-model-invocation: true
 End-to-end release workflow for **outfit-suggestor-app**: test → commit → push → GitHub Pages → Railway.
 
 **Stop immediately** if any test suite fails. Do **not** commit, push, or deploy on failure.
+
+**Do not merge to `main`.** Ship from the **current branch** only — commit, push `HEAD`, then deploy. Never `git merge main`, `git checkout main && git merge …`, or open/complete a merge-to-main step as part of this workflow.
 
 ---
 
@@ -45,11 +47,11 @@ If Railway is not linked, run `railway link` from repo root (user may need to ap
 ## Workflow checklist
 
 ```
-- [ ] 1. Record branch name (`git branch --show-current`)
+- [ ] 1. Record branch name (`git branch --show-current`) — stay on this branch; do not merge to main
 - [ ] 2. Run all test suites (gate)
 - [ ] 3. If all pass → inspect changes, draft commit message
 - [ ] 4. Stage, commit (exclude secrets & build artifacts)
-- [ ] 5. Push current branch to origin
+- [ ] 5. Push current branch to origin (`git push -u origin HEAD`) — not a merge to main
 - [ ] 6. Publish GitHub Pages
 - [ ] 7. Deploy backend to Railway
 - [ ] 8. Verify deployments
@@ -128,13 +130,15 @@ Do **not** amend unless a hook auto-modified files and rules allow it.
 
 ## Step 3 — Push to GitHub
 
+Push the **same branch** you tested and committed on — do **not** merge into `main` first.
+
 ```bash
 git push -u origin HEAD
 ```
 
 Use `required_permissions: ["all"]` / network if the environment blocks push.
 
-Pushing **`main`** also triggers [.github/workflows/deploy.yml](../../../.github/workflows/deploy.yml) (GitHub Actions build → gh-pages).
+GitHub Pages deploy (step 4) uses `npm run deploy` from the current branch’s `frontend/` tree. A push to **`main`** may *also* trigger [.github/workflows/deploy.yml](../../../.github/workflows/deploy.yml), but that is optional CI — **not** a required step in this workflow.
 
 ---
 
@@ -222,6 +226,7 @@ Always post this summary to the user:
 | Failure | Action |
 |---------|--------|
 | Tests fail | Stop. Show failing test names. No deploy. |
+| User or agent about to merge to `main` | **Stop.** Publish ships from the current branch only. |
 | Nothing to commit | Skip commit; ask user if they still want push/deploy. |
 | Push rejected | Report error; do not deploy. |
 | `npm run deploy` fails | Report; backend may still be on Railway from prior deploy. |

@@ -179,7 +179,7 @@ describe('Mobile-friendly layout and touch targets', () => {
           {...mockActionProps}
         />
       );
-      expect(screen.getByText(/Ready for Style Magic?/i)).toBeInTheDocument();
+      expect(screen.getByText('Your outfit appears here')).toBeInTheDocument();
       const emptyCard = container.querySelector('.p-6');
       expect(emptyCard).toBeInTheDocument();
       expect(emptyCard?.getAttribute('class')).toMatch(/sm:p-8|lg:p-12/);

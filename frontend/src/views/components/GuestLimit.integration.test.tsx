@@ -1,7 +1,7 @@
 /**
  * Integration tests for guest AI call limit UX.
  */
-import { screen, waitFor, fireEvent } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { rest } from 'msw';
 import { renderApp } from '../../test/renderWithRouter';
 import ApiService from '../../services/ApiService';
@@ -54,7 +54,7 @@ describe('Guest AI call limit (App integration)', () => {
     });
   });
 
-  it('shows blocking card and disables generate when limit reached', async () => {
+  it('shows only guest-limit AuthGateCard and hides main creation UI when limit reached', async () => {
     server.use(
       rest.get('http://localhost:8001/api/guest-usage', (_req, res, ctx) =>
         res(ctx.json({ limit: 3, used: 3, remaining: 0, requires_signup: true }))
@@ -71,12 +71,13 @@ describe('Guest AI call limit (App integration)', () => {
       ).toBeInTheDocument();
     });
 
-    const file = new File(['x'.repeat(2048)], 'shirt.jpg', { type: 'image/jpeg' });
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
-    fireEvent.change(input, { target: { files: [file] } });
-
-    const generateBtn = screen.getByRole('button', { name: /Get AI outfit suggestion/i });
-    await waitFor(() => expect(generateBtn).toBeDisabled());
+    expect(screen.getByRole('button', { name: 'Create account' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Sign Up' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Login' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Get AI outfit suggestion/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('How it works')).not.toBeInTheDocument();
+    expect(document.querySelector('input[type="file"]')).not.toBeInTheDocument();
     expect(ApiService.getSuggestion).not.toHaveBeenCalled();
   });
 });

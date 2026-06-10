@@ -4,8 +4,14 @@ import { isValidImageSize, formatFileSize, createImagePreviewUrl, revokeImagePre
 import { CLIENT_MAX_SIZE_MB } from '../../constants/imageLimits';
 import ModernSwitch from './suggestion/ModernSwitch';
 import AnalysisPreferences from './AnalysisPreferences';
+import FirstRunCoach from './FirstRunCoach';
 import { DEFAULT_FILTERS } from '../../utils/outfitPreferences';
 import { MICRO_HELP } from '../../utils/microHelpCopy';
+import {
+  isFirstRunCoachDismissed,
+  isFirstRunPrefsExpanded,
+  setFirstRunPrefsExpanded,
+} from '../../utils/firstRunCoach';
 
 interface Filters {
   occasion: string;
@@ -112,6 +118,7 @@ interface SidebarProps {
   onClearSourceWardrobeItem?: () => void;
   guestRemaining?: number | null;
   guestLimitReached?: boolean;
+  hasSuggestion?: boolean;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -147,6 +154,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   onClearSourceWardrobeItem,
   guestRemaining = null,
   guestLimitReached = false,
+  hasSuggestion = false,
 }) => {
   const generateButtonRef = useRef<HTMLButtonElement>(null);
   const generateDisabled = !image || loading || guestLimitReached;
@@ -158,6 +166,16 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [showCamera, setShowCamera] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [showEnlargeImage, setShowEnlargeImage] = useState(false);
+  const [coachDismissed, setCoachDismissed] = useState(() => isFirstRunCoachDismissed());
+  const [prefsManuallyExpanded, setPrefsManuallyExpanded] = useState(() => isFirstRunPrefsExpanded());
+
+  const showCollapsedPrefs = !coachDismissed && !hasSuggestion && !prefsManuallyExpanded;
+
+  useEffect(() => {
+    if (hasSuggestion && !coachDismissed) {
+      setCoachDismissed(true);
+    }
+  }, [hasSuggestion, coachDismissed]);
 
   const imagePreviewUrl = useMemo(() => (image ? createImagePreviewUrl(image) : null), [image]);
 
@@ -365,6 +383,17 @@ const Sidebar: React.FC<SidebarProps> = ({
         Upload a clothing item and get complete outfit suggestions tailored to you.
       </p>
 
+      {!coachDismissed && (
+        <FirstRunCoach
+          hasImage={!!image}
+          hasSuggestion={hasSuggestion}
+          onDismiss={() => {
+            setCoachDismissed(true);
+            setPrefsManuallyExpanded(true);
+          }}
+        />
+      )}
+
       {sourceWardrobeItem && imagePreviewUrl && (
         <div
           className="mt-5 rounded-2xl border border-brand-blue/40 bg-brand-gradient-soft p-4"
@@ -490,14 +519,36 @@ const Sidebar: React.FC<SidebarProps> = ({
         JPG, PNG, WebP up to {CLIENT_MAX_SIZE_MB}MB
       </p>
 
-      <AnalysisPreferences
-        filters={filters}
-        setFilters={setFilters}
-        preferenceText={preferenceText}
-        setPreferenceText={setPreferenceText}
-        onClear={handleClearPreferences}
-        variant="sidebar"
-      />
+      {showCollapsedPrefs ? (
+        <button
+          type="button"
+          onClick={() => {
+            setFirstRunPrefsExpanded();
+            setPrefsManuallyExpanded(true);
+          }}
+          className="mt-5 flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-left transition hover:border-brand-blue/40 hover:bg-white/[0.05]"
+          aria-expanded="false"
+          aria-controls="outfit-preferences"
+          data-testid="first-run-prefs-collapsed"
+        >
+          <span className="text-sm text-slate-300">Occasion, season, style (optional)</span>
+          <span className="flex items-center gap-1 text-xs font-medium text-brand-blue">
+            Expand
+            <span className="text-slate-500" aria-hidden>
+              ▼
+            </span>
+          </span>
+        </button>
+      ) : (
+        <AnalysisPreferences
+          filters={filters}
+          setFilters={setFilters}
+          preferenceText={preferenceText}
+          setPreferenceText={setPreferenceText}
+          onClear={handleClearPreferences}
+          variant="sidebar"
+        />
+      )}
 
       {showModelGenerationControls && setGenerateModelImage && (
         <div className="mt-5 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">

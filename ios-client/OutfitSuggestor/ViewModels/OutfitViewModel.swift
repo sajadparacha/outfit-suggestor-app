@@ -141,6 +141,24 @@ class OutfitViewModel: ObservableObject {
         clearLoadingState()
     }
 
+    /// Clears main suggest-flow session state (e.g. on logout). Does not touch guest session id or first-run coach keys.
+    func resetSessionState() {
+        cancelOperation()
+        selectedImage = nil
+        sourceWardrobeItem = nil
+        highlightGenerateButton = false
+        currentSuggestion = nil
+        errorMessage = nil
+        showError = false
+        filters = OutfitFilters()
+        preferenceText = ""
+        useWardrobeOnly = false
+        showDuplicateModal = false
+        existingDuplicateSuggestion = nil
+        hasLoadedHistory = false
+        cachedHistory = []
+    }
+
     func startGetSuggestion(skipDuplicateCheck: Bool = false) {
         runCancellableOperation { await self.getSuggestion(skipDuplicateCheck: skipDuplicateCheck) }
     }

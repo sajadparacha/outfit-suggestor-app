@@ -50,6 +50,7 @@ import {
 } from './utils/authPromptCopy';
 import { INSIGHTS_COPY } from './utils/insightsCopy';
 import { MICRO_HELP } from './utils/microHelpCopy';
+import { dismissFirstRunCoach, isFirstRunCoachDismissed } from './utils/firstRunCoach';
 
 function App() {
   const navigate = useNavigate();
@@ -144,8 +145,12 @@ function App() {
     handleUseCachedSuggestion,
     handleGetNewSuggestion,
     cancelOperation,
+    resetMainFlowState,
   } = useOutfitController({
     onSuggestionSuccess: async () => {
+      if (!isFirstRunCoachDismissed()) {
+        dismissFirstRunCoach();
+      }
       if (!isAuthenticated) {
         if (!localStorage.getItem(FIRST_OUTFIT_PROMPT_KEY)) {
           localStorage.setItem(FIRST_OUTFIT_PROMPT_KEY, 'true');
@@ -187,6 +192,23 @@ function App() {
   const { analyzeImage, addItem, loading: wardrobeLoading } = useWardrobeController();
   const [addingToWardrobe, setAddingToWardrobe] = useState(false);
   const wardrobeAnalysisAbortRef = useRef<AbortController | null>(null);
+  const wasAuthenticatedRef = useRef<boolean | null>(null);
+
+  const clearMainFlowOnLogout = useCallback(() => {
+    resetMainFlowState();
+    setShowFirstOutfitBanner(false);
+    setShowAddWardrobeModal(false);
+    setWardrobeFormData(null);
+    setWardrobeImageToAdd(null);
+    setShowWardrobeDuplicateModal(false);
+    setDuplicateWardrobeItem(null);
+    setWardrobeGapResult(null);
+    wardrobeAnalysisAbortRef.current?.abort();
+    wardrobeAnalysisAbortRef.current = null;
+    setWardrobeGapLoading(false);
+    setShowWardrobeAnalysisModeModal(false);
+    setHighlightGenerateButton(false);
+  }, [resetMainFlowState]);
 
   // Turn off model generation when neither URL flag nor admin access applies
   React.useEffect(() => {
@@ -208,6 +230,15 @@ function App() {
     }
     refreshGuestUsage();
   }, [authLoading, isAuthenticated, refreshGuestUsage]);
+
+  React.useEffect(() => {
+    if (authLoading) return;
+    const wasAuthenticated = wasAuthenticatedRef.current;
+    wasAuthenticatedRef.current = isAuthenticated;
+    if (wasAuthenticated === true && !isAuthenticated) {
+      clearMainFlowOnLogout();
+    }
+  }, [authLoading, isAuthenticated, clearMainFlowOnLogout]);
 
   const closeAuthModal = () => {
     setShowRegister(false);
@@ -460,6 +491,7 @@ function App() {
   };
 
   const handleLogout = () => {
+    clearMainFlowOnLogout();
     logout();
     showToast('Logged out successfully', 'success');
   };
@@ -499,6 +531,7 @@ function App() {
         isAuthenticated={isAuthenticated}
         user={user}
         testRunnerEnabled={testRunnerEnabled}
+        hideGuestAuthActions={guestLimitReached}
         onLogin={() => {
           setLoginPromptContext(null);
           setShowRegister(false);
@@ -520,17 +553,16 @@ function App() {
           <Route
             path={ROUTES.MAIN}
             element={
+          guestLimitReached ? (
+            <div className="flex min-h-[60vh] items-center justify-center">
+              <AuthGateCard
+                contextKey="guest-limit"
+                onCreateAccount={() => openAuthPromptRegister('guest-limit')}
+                onSignIn={() => openAuthPromptSignIn('guest-limit')}
+              />
+            </div>
+          ) : (
           <>
-            {!isAuthenticated && guestLimitReached && (
-              <div className="mb-8">
-                <AuthGateCard
-                  contextKey="guest-limit"
-                  onCreateAccount={() => openAuthPromptRegister('guest-limit')}
-                  onSignIn={() => openAuthPromptSignIn('guest-limit')}
-                />
-              </div>
-            )}
-
             {/* Hero section — 2 columns on desktop */}
             <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-2 lg:gap-12">
               <Sidebar
@@ -566,6 +598,7 @@ function App() {
                 onClearSourceWardrobeItem={() => setSourceWardrobeItem(null)}
                 guestRemaining={guestRemaining}
                 guestLimitReached={guestLimitReached}
+                hasSuggestion={!!currentSuggestion}
                 onAddToWardrobe={async () => {
                   if (!image) {
                     showToast('Please upload an image first to add it to your wardrobe', 'error');
@@ -679,6 +712,7 @@ function App() {
               onViewAll={() => navigate(ROUTES.HISTORY)}
             />
           </>
+          )
             }
           />
 

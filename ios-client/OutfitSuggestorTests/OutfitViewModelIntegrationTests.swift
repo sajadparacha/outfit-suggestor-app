@@ -177,6 +177,56 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
         XCTAssertTrue(OutfitViewModel.OutfitVariationModifier.wardrobeOnly.forcesWardrobeOnly)
     }
 
+    func testResetSessionStateClearsMainFlowOnLogout() {
+        let viewModel = OutfitViewModel(apiService: MockAPIService())
+        viewModel.selectedImage = makeTestImage()
+        viewModel.currentSuggestion = makePreviousSuggestion()
+        viewModel.sourceWardrobeItem = OutfitViewModel.WardrobeSourceContext(id: 42, category: "shirt", color: "blue")
+        viewModel.highlightGenerateButton = true
+        viewModel.errorMessage = "Something went wrong"
+        viewModel.showError = true
+        viewModel.isLoading = true
+        viewModel.loadingMessage = "Working..."
+        viewModel.loadingContext = .suggestion
+        viewModel.filters.occasion = "business"
+        viewModel.filters.season = "summer"
+        viewModel.filters.style = "vintage"
+        viewModel.preferenceText = "navy and brown"
+        viewModel.useWardrobeOnly = true
+        viewModel.showDuplicateModal = true
+        viewModel.existingDuplicateSuggestion = makePreviousSuggestion()
+
+        viewModel.resetSessionState()
+
+        XCTAssertNil(viewModel.selectedImage)
+        XCTAssertNil(viewModel.currentSuggestion)
+        XCTAssertNil(viewModel.sourceWardrobeItem)
+        XCTAssertFalse(viewModel.highlightGenerateButton)
+        XCTAssertNil(viewModel.errorMessage)
+        XCTAssertFalse(viewModel.showError)
+        XCTAssertFalse(viewModel.isLoading)
+        XCTAssertNil(viewModel.loadingMessage)
+        XCTAssertNil(viewModel.loadingContext)
+        XCTAssertEqual(viewModel.filters.occasion, "casual")
+        XCTAssertEqual(viewModel.filters.season, "all")
+        XCTAssertEqual(viewModel.filters.style, "modern")
+        XCTAssertEqual(viewModel.preferenceText, "")
+        XCTAssertFalse(viewModel.useWardrobeOnly)
+        XCTAssertFalse(viewModel.showDuplicateModal)
+        XCTAssertNil(viewModel.existingDuplicateSuggestion)
+    }
+
+    func testResetSessionStatePreservesGuestSessionId() {
+        let sessionIdBefore = GuestSession.sessionId()
+        let viewModel = OutfitViewModel(apiService: MockAPIService())
+        viewModel.selectedImage = makeTestImage()
+        viewModel.currentSuggestion = makePreviousSuggestion()
+
+        viewModel.resetSessionState()
+
+        XCTAssertEqual(GuestSession.sessionId(), sessionIdBefore)
+    }
+
     private func makePreviousSuggestion() -> OutfitSuggestion {
         OutfitSuggestion(
             shirt: "White oxford shirt",

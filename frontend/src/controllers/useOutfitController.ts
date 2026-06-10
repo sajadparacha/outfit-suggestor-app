@@ -60,6 +60,7 @@ interface UseOutfitControllerReturn {
   setSourceWardrobeItem: (item: SourceWardrobeItem | null) => void;
   clearPreferences: () => void;
   cancelOperation: () => void;
+  resetMainFlowState: () => void;
   onSuggestionSuccess?: () => void | Promise<void>; // Callback for when suggestion is successful
 }
 
@@ -387,6 +388,22 @@ export const useOutfitController = (options?: {
     abortControllerRef.current = null;
   }, []);
 
+  const resetMainFlowState = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setImage(null);
+    setCurrentSuggestion(null);
+    setSourceWardrobeItem(null);
+    setError(null);
+    setShowDuplicateModal(false);
+    setExistingSuggestion(null);
+    setLoading(false);
+    setLoadingMessage(null);
+    setActiveOperation(null);
+    setUseWardrobeOnly(false);
+    clearPreferences();
+  }, [clearPreferences]);
+
   return {
     // State
     image,
@@ -421,6 +438,7 @@ export const useOutfitController = (options?: {
     setSourceWardrobeItem,
     clearPreferences,
     cancelOperation,
+    resetMainFlowState,
     onSuggestionSuccess: options?.onSuggestionSuccess
   };
 };

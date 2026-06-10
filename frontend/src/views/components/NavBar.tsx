@@ -6,6 +6,7 @@ interface NavBarProps {
   isAuthenticated: boolean;
   user?: { full_name?: string | null; email?: string; is_admin?: boolean } | null;
   testRunnerEnabled?: boolean;
+  hideGuestAuthActions?: boolean;
   onLogin: () => void;
   onSignUp: () => void;
   onLogout: () => void;
@@ -48,6 +49,7 @@ const NavBar: React.FC<NavBarProps> = ({
   isAuthenticated,
   user,
   testRunnerEnabled = false,
+  hideGuestAuthActions = false,
   onLogin,
   onSignUp,
   onLogout,
@@ -148,7 +150,7 @@ const NavBar: React.FC<NavBarProps> = ({
                   Logout
                 </button>
               </div>
-            ) : (
+            ) : !hideGuestAuthActions ? (
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
@@ -165,7 +167,7 @@ const NavBar: React.FC<NavBarProps> = ({
                   Login
                 </button>
               </div>
-            )}
+            ) : null}
           </div>
       </div>
     </header>

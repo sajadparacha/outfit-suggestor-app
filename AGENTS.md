@@ -47,6 +47,18 @@ Report template: `.cursor/specs/_test-report-template.md`
 Twin UI:
 
 Add a heart on suggestion results to save favorites. Empty state when none saved. Require login.
+
+iOS: keep iPhone and iPad UX identical — layout/spacing tweaks via horizontalSizeClass only.
+```
+
+## iPhone / iPad (iOS)
+
+On every Twin UI feature, keep **iPhone and iPad the same UX** (flows, copy, actions). Only layout/spacing may differ on regular horizontal size class. See `.cursor/rules/ios-ui-ux.mdc` and the **iPhone / iPad** section in `.cursor/specs/_template.md`.
+
+Optional one-liner to append to any Twin UI prompt:
+
+```text
+iOS: keep iPhone and iPad UX identical — layout/spacing tweaks via horizontalSizeClass only.
 ```
 
 ## Repository layout
@@ -66,7 +78,7 @@ Add a heart on suggestion results to save favorites. Empty state when none saved
 | `.cursor/rules/web-ui-ux.mdc` | Web scope (`frontend/**`) |
 | `.cursor/rules/ios-ui-ux.mdc` | iOS scope (`ios-client/**`) |
 | `.cursor/skills/parallel-ui-ux/SKILL.md` | Workflow, prompts, test requirements |
-| `.cursor/skills/publish-on-web/SKILL.md` | Test → commit → push → GitHub Pages + Railway |
+| `.cursor/skills/publish-on-web/SKILL.md` | Test → commit → push → GitHub Pages + Railway (current branch; **no merge to main**) |
 | `.cursor/specs/_template.md` | Spec + Tests (required) template |
 | `.cursor/specs/_test-report-template.md` | End-of-run Test Execution Report |
 
@@ -76,6 +88,7 @@ Agents commit only when you explicitly ask.
 
 ## Further reading
 
+- [AGENT_WORKFLOWS.md](AGENT_WORKFLOWS.md) — Twin UI & Publish on Web writeup
 - [IOS_WEB_FEATURE_PARITY.md](IOS_WEB_FEATURE_PARITY.md)
 - [ARCHITECTURE.md](ARCHITECTURE.md)
 - [WEB_USER_INTERACTION.md](WEB_USER_INTERACTION.md)

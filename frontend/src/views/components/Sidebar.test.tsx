@@ -5,6 +5,10 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Sidebar from './Sidebar';
 import { MICRO_HELP } from '../../utils/microHelpCopy';
+import {
+  FIRST_RUN_COACH_DISMISSED_KEY,
+  FIRST_RUN_PREFS_EXPANDED_KEY,
+} from '../../utils/firstRunCoach';
 
 describe('Sidebar file validation', () => {
   const defaultProps = {
@@ -26,6 +30,7 @@ describe('Sidebar file validation', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    localStorage.clear();
   });
 
   it('calls setImage when valid file is selected', () => {
@@ -211,6 +216,54 @@ describe('Sidebar file validation', () => {
 
       expect(screen.queryByText(MICRO_HELP.MODEL_PREVIEW)).not.toBeInTheDocument();
       expect(screen.queryByText(/Advanced options/i)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('first-run coach and preferences', () => {
+    it('shows coach strip for first-time guests', () => {
+      render(<Sidebar {...defaultProps} />);
+      expect(screen.getByTestId('first-run-coach')).toBeInTheDocument();
+    });
+
+    it('hides coach when first_run_coach_dismissed is set', () => {
+      localStorage.setItem(FIRST_RUN_COACH_DISMISSED_KEY, 'true');
+      render(<Sidebar {...defaultProps} />);
+      expect(screen.queryByTestId('first-run-coach')).not.toBeInTheDocument();
+    });
+
+    it('marks coach step 1 complete after image upload', () => {
+      const file = new File(['x'.repeat(1024)], 'test.jpg', { type: 'image/jpeg' });
+      render(<Sidebar {...defaultProps} image={file} />);
+      expect(screen.getByTestId('first-run-coach-step-1')).toHaveAttribute('data-complete', 'true');
+    });
+
+    it('shows collapsed preferences on first run', () => {
+      render(<Sidebar {...defaultProps} />);
+      expect(screen.getByTestId('first-run-prefs-collapsed')).toBeInTheDocument();
+      expect(screen.getByText('Occasion, season, style (optional)')).toBeInTheDocument();
+      expect(screen.queryByLabelText('Select occasion')).not.toBeInTheDocument();
+    });
+
+    it('expand reveals occasion, season, and style controls', () => {
+      render(<Sidebar {...defaultProps} />);
+      fireEvent.click(screen.getByTestId('first-run-prefs-collapsed'));
+      expect(localStorage.getItem(FIRST_RUN_PREFS_EXPANDED_KEY)).toBe('true');
+      expect(screen.getByLabelText('Select occasion')).toBeInTheDocument();
+      expect(screen.getByLabelText('Select season')).toBeInTheDocument();
+      expect(screen.getByLabelText('Select style preference')).toBeInTheDocument();
+    });
+
+    it('shows full preferences after first suggestion', () => {
+      render(<Sidebar {...defaultProps} hasSuggestion={true} />);
+      expect(screen.queryByTestId('first-run-prefs-collapsed')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Select occasion')).toBeInTheDocument();
+    });
+
+    it('shows full preferences after coach dismiss', () => {
+      render(<Sidebar {...defaultProps} />);
+      fireEvent.click(screen.getByTestId('first-run-coach-dismiss'));
+      expect(screen.queryByTestId('first-run-prefs-collapsed')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Select occasion')).toBeInTheDocument();
     });
   });
 

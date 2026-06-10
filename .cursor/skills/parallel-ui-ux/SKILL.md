@@ -204,6 +204,8 @@ FORBIDDEN: `frontend/**`, `backend/**`.
 
 Rules: `.cursor/rules/ios-ui-ux.mdc`
 
+IPHONE / IPAD: Same UX on all devices — identical flows, copy, and actions. Layout-only tweaks via horizontalSizeClass / adaptiveContent; no iPad-only navigation or features.
+
 TESTS (required before returning):
 - Add/update OutfitSuggestorTests per spec Tests section
 - Build: xcodebuild -scheme OutfitSuggestor -destination 'platform=iOS Simulator,name=iPhone 17' build
@@ -227,6 +229,8 @@ Return: files changed, spec compliance, test files added, build/test summary.
 Twin UI:
 
 [Describe screens, flows, copy, and behavior]
+
+iOS: keep iPhone and iPad UX identical — layout/spacing tweaks via horizontalSizeClass only.
 ```
 
 ## References

@@ -306,11 +306,13 @@ final class OutfitAppE2ETests: XCTestCase {
         addSampleImageOnSuggest()
         app.buttons["main.getSuggestionButton"].tap()
 
-        let progressPanel = app.otherElements["ai.progressPanel"]
-        let progressTitle = app.staticTexts["Creating your outfit"]
-        let sawProgress = progressPanel.waitForExistence(timeout: 4)
-            || progressTitle.waitForExistence(timeout: 1)
-        XCTAssertTrue(sawProgress)
+        let progressPanel = app.descendants(matching: .any)["ai.progressPanel"]
+        let progressTitle = app.staticTexts["ai.progressTitle"]
+        let cancelButton = app.buttons["ai.progressCancelButton"]
+        let sawProgress = progressTitle.waitForExistence(timeout: 8)
+            || progressPanel.waitForExistence(timeout: 2)
+            || cancelButton.waitForExistence(timeout: 2)
+        XCTAssertTrue(sawProgress, "Expected AI progress panel during suggestion")
 
         let historyTarget = tabTarget("Looks")
         XCTAssertTrue(waitFor(historyTarget, timeout: 2))
@@ -318,7 +320,7 @@ final class OutfitAppE2ETests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Looks"].waitForExistence(timeout: 3))
 
         openTab("Suggest")
-        XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 12))
     }
 
     func testAdminPremiumInsightsShowsCostPromptAndResponse() {

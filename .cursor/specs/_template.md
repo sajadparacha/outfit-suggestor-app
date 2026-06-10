@@ -43,6 +43,17 @@ As a user, I want … so that …
 - Animation / feedback (haptics on iOS; hover/focus on web where relevant)
 - Theme: dark slate background, blue-purple gradient accents (`#4facfe` → `#c471ed`)
 
+### iPhone / iPad (iOS)
+
+- **Same UX** on iPhone and iPad: identical flows, copy, and actions.
+- **Layout-only** adjustments on regular horizontal size class (wider max width, spacing, optional horizontal toolbars).
+- **No** iPad-specific navigation, screens, or feature differences unless explicitly called out below.
+
+| Device | Expected difference |
+|--------|---------------------|
+| iPhone (compact) | Default full-width layout |
+| iPad / regular width | Same UI; optional width caps and spacing per iOS adaptive patterns |
+
 ---
 
 ## API and contract

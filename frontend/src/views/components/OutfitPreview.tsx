@@ -228,10 +228,12 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
             <span className="text-4xl drop-shadow-lg sm:text-5xl" role="img" aria-label="Jacket">🧥</span>
             <span className="text-4xl drop-shadow-lg sm:text-5xl" role="img" aria-label="Jeans">👖</span>
           </div>
-          <p className="relative mt-8 text-center text-sm text-slate-400 sm:text-base">
-            Your AI-styled outfit preview will appear here
+          <h3 className="relative mt-8 text-center text-lg font-semibold text-white sm:text-xl">
+            Your outfit appears here
+          </h3>
+          <p className="relative mt-2 text-center text-sm text-slate-400 sm:text-base">
+            Upload a photo on the left, then tap Generate Outfit
           </p>
-          <p className="sr-only">Ready for Style Magic?</p>
         </div>
       </div>
     );

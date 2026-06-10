@@ -27,6 +27,9 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 | **Settings** | ✅ | ✅ | Change password, account info, logout |
 | **About** | ✅ | ✅ | App info, links |
 | **Admin UX gating** | ✅ | ✅ | Non-admins never see prompts/cost/diagnostics/model selector/reports/tests; Guide/About admin sections hidden; web admin routes redirect silently |
+| **60s first-run coach (Phase A)** | ✅ | ✅ | 3-step coach strip, collapsed optional preferences, empty-preview directional copy; `first_run_coach_dismissed` persistence |
+| **Guest limit auth UX** | ✅ | ✅ | At 3/3 free tries: single auth surface on Suggest; nav Sign Up/Login hidden; no duplicate CTAs |
+| **Logout clears main flow** | ✅ | ✅ | Logout resets image, result, prefs on Suggest |
 
 ---
 

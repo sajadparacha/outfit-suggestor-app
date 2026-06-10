@@ -25,6 +25,7 @@ struct AiProgressPanelView: View {
                     Text(AiProgressSteps.title(for: operationType))
                         .font(.headline)
                         .foregroundColor(AppTheme.textPrimary)
+                        .accessibilityIdentifier("ai.progressTitle")
                     Text("Elapsed \(AiProgressSteps.formatDuration(seconds: tracker.elapsedSeconds)) · Usually ~\(AiProgressSteps.formatDuration(seconds: tracker.estimatedTotalSeconds)) total")
                         .font(.caption)
                         .foregroundColor(AppTheme.textSecondary)
@@ -101,8 +102,7 @@ struct AiProgressPanelView: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .shadow(color: Color.black.opacity(0.45), radius: 24, y: 10)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("AI progress")
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("ai.progressPanel")
         .onAppear {
             tracker.start(operation: operationType, message: message)

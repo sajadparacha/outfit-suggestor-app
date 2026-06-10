@@ -15,6 +15,7 @@ enum AuthPromptContext: String, CaseIterable {
     case wardrobe
     case insights
     case settings
+    case guestLimit = "guest-limit"
 }
 
 struct AuthPromptContent {
@@ -64,12 +65,18 @@ enum AuthPromptCopy {
                 subheadline: "Sign in to sync wardrobe, history, and settings.",
                 primaryCTA: "Sign in"
             )
+        case .guestLimit:
+            return AuthPromptContent(
+                headline: "You've used your 3 free AI outfit suggestions. Create an account to keep using the app.",
+                subheadline: nil,
+                primaryCTA: "Create account"
+            )
         }
     }
 
     static func prefersRegister(for context: AuthPromptContext) -> Bool {
         switch context {
-        case .firstOutfit, .history, .wardrobe:
+        case .firstOutfit, .history, .wardrobe, .guestLimit:
             return true
         case .like, .insights, .settings:
             return false
