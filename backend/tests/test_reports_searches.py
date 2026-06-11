@@ -95,6 +95,39 @@ class TestReportsSearchesEndpoint:
         assert data["recent"][0]["user_email"] == test_user.email
 
 
+def test_suggest_outfit_persists_filter_fields(client, auth_headers, db, test_user, sample_image):
+    response = client.post(
+        "/api/suggest-outfit",
+        headers=auth_headers,
+        data={
+            "text_input": "business look",
+            "generate_model_image": "false",
+            "occasion": "business",
+            "season": "summer",
+            "style": "modern",
+        },
+        files={"image": sample_image},
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    row = db.execute(
+        text(
+            """
+            SELECT occasion, season, style
+            FROM outfit_history
+            WHERE user_id = :user_id
+            ORDER BY id DESC
+            LIMIT 1
+            """
+        ),
+        {"user_id": test_user.id},
+    ).fetchone()
+    assert row is not None
+    assert row.occasion == "business"
+    assert row.season == "summer"
+    assert row.style == "modern"
+
+
 def test_save_outfit_history_persists_filter_fields(db, test_user):
     service = OutfitService()
     suggestion = OutfitSuggestion(

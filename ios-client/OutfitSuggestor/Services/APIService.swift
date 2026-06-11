@@ -17,14 +17,20 @@ protocol APIServiceProtocol {
         imageModel: String,
         location: String?,
         previousOutfitText: String?,
-        sourceWardrobeItemId: Int?
+        sourceWardrobeItemId: Int?,
+        occasion: String?,
+        season: String?,
+        style: String?
     ) async throws -> OutfitSuggestion
     func getSuggestionFromWardrobeItem(
         itemId: Int,
         textInput: String,
         generateModelImage: Bool,
         imageModel: String,
-        location: String?
+        location: String?,
+        occasion: String?,
+        season: String?,
+        style: String?
     ) async throws -> OutfitSuggestion
     func getOutfitHistory(limit: Int) async throws -> [OutfitHistoryEntry]
     func checkOutfitDuplicate(image: UIImage) async throws -> OutfitDuplicateResponse
@@ -110,7 +116,10 @@ class APIService {
         imageModel: String = "dalle3",
         location: String? = nil,
         previousOutfitText: String? = nil,
-        sourceWardrobeItemId: Int? = nil
+        sourceWardrobeItemId: Int? = nil,
+        occasion: String? = nil,
+        season: String? = nil,
+        style: String? = nil
     ) async throws -> OutfitSuggestion {
         await beginRequestActivity()
         defer { endRequestActivity() }
@@ -172,6 +181,13 @@ class APIService {
             body.append("\(sourceWardrobeItemId)".data(using: .utf8)!)
             body.append("\r\n".data(using: .utf8)!)
         }
+        for (field, value) in [("occasion", occasion), ("season", season), ("style", style)] {
+            guard let value, !value.isEmpty else { continue }
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"\(field)\"\r\n\r\n".data(using: .utf8)!)
+            body.append(value.data(using: .utf8)!)
+            body.append("\r\n".data(using: .utf8)!)
+        }
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
         request.httpBody = body
         
@@ -191,7 +207,10 @@ class APIService {
         textInput: String = "",
         generateModelImage: Bool = false,
         imageModel: String = "dalle3",
-        location: String? = nil
+        location: String? = nil,
+        occasion: String? = nil,
+        season: String? = nil,
+        style: String? = nil
     ) async throws -> OutfitSuggestion {
         await beginRequestActivity()
         defer { endRequestActivity() }
@@ -212,6 +231,10 @@ class APIService {
         ]
         if let loc = location, !loc.isEmpty {
             parts.append("location=\(loc.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")")
+        }
+        for (key, value) in [("occasion", occasion), ("season", season), ("style", style)] {
+            guard let value, !value.isEmpty else { continue }
+            parts.append("\(key)=\(value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")")
         }
         request.httpBody = parts.joined(separator: "&").data(using: .utf8)
         

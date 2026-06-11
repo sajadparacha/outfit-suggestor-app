@@ -172,6 +172,9 @@ class ApiService {
     useWardrobeOnly: boolean = false,
     sourceWardrobeItemId: number | null = null,
     previousOutfitText: string | null = null,
+    occasion?: string,
+    season?: string,
+    style?: string,
     signal?: AbortSignal
   ): Promise<OutfitResponse> {
     try {
@@ -181,6 +184,9 @@ class ApiService {
       formData.append('generate_model_image', generateModelImage.toString());
       formData.append('image_model', imageModel);
       formData.append('use_wardrobe_only', useWardrobeOnly.toString());
+      if (occasion) formData.append('occasion', occasion);
+      if (season) formData.append('season', season);
+      if (style) formData.append('style', style);
       if (sourceWardrobeItemId !== null) {
         formData.append('source_wardrobe_item_id', sourceWardrobeItemId.toString());
       }
@@ -400,7 +406,10 @@ class ApiService {
     generateModelImage: boolean = false,
     location: string | null = null,
     imageModel: string = 'dalle3',
-    useWardrobeOnly: boolean = false
+    useWardrobeOnly: boolean = false,
+    occasion?: string,
+    season?: string,
+    style?: string
   ): Promise<OutfitResponse> {
     try {
       const formData = new FormData();
@@ -408,6 +417,9 @@ class ApiService {
       formData.append('generate_model_image', generateModelImage.toString());
       formData.append('image_model', imageModel);
       formData.append('use_wardrobe_only', useWardrobeOnly.toString());
+      if (occasion) formData.append('occasion', occasion);
+      if (season) formData.append('season', season);
+      if (style) formData.append('style', style);
       if (location) {
         formData.append('location', location);
       }

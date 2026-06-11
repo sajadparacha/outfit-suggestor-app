@@ -60,6 +60,29 @@ describe('ApiService.getSuggestion', () => {
     expect(fd.get('source_wardrobe_item_id')).toBeNull();
   });
 
+  it('appends occasion, season, and style to FormData when provided', async () => {
+    const file = new File(['x'], 'photo.jpg', { type: 'image/jpeg' });
+    await apiService.getSuggestion(
+      file,
+      '',
+      false,
+      null,
+      'dalle3',
+      false,
+      null,
+      null,
+      'business',
+      'summer',
+      'modern'
+    );
+
+    const init = (global.fetch as jest.Mock).mock.calls[0][1] as RequestInit;
+    const fd = init.body as FormData;
+    expect(fd.get('occasion')).toBe('business');
+    expect(fd.get('season')).toBe('summer');
+    expect(fd.get('style')).toBe('modern');
+  });
+
   it('appends previous_outfit_text when asking for an alternate outfit', async () => {
     const file = new File(['x'], 'photo.jpg', { type: 'image/jpeg' });
     await apiService.getSuggestion(

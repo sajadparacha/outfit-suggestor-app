@@ -179,6 +179,7 @@ export const useOutfitController = (options?: {
         }
       }
 
+      const resolvedFilters = resolveFilters(filters);
       let prompt = buildSuggestionPrompt(filters, preferenceText);
       if (variationOptions?.promptModifier) {
         prompt = `${prompt}\n\n${variationOptions.promptModifier}`;
@@ -197,6 +198,9 @@ export const useOutfitController = (options?: {
         effectiveUseWardrobeOnly,
         sourceWardrobeItemId,
         previousOutfitText,
+        resolvedFilters.occasion,
+        resolvedFilters.season,
+        resolvedFilters.style,
         signal
       );
 

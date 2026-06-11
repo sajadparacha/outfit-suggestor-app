@@ -274,7 +274,10 @@ class OutfitViewModel: ObservableObject {
                 imageModel: imageModel,
                 location: location,
                 previousOutfitText: nil,
-                sourceWardrobeItemId: sourceWardrobeItem?.id
+                sourceWardrobeItemId: sourceWardrobeItem?.id,
+                occasion: filters.occasion.lowercased(),
+                season: filters.season.lowercased(),
+                style: filters.style.lowercased()
             )
             currentSuggestion = suggestion
             highlightGenerateButton = false
@@ -367,7 +370,10 @@ class OutfitViewModel: ObservableObject {
                 imageModel: imageModel,
                 location: location,
                 previousOutfitText: previousOutfitText,
-                sourceWardrobeItemId: sourceWardrobeItem?.id
+                sourceWardrobeItemId: sourceWardrobeItem?.id,
+                occasion: filters.occasion.lowercased(),
+                season: filters.season.lowercased(),
+                style: filters.style.lowercased()
             )
             currentSuggestion = suggestion
             hasLoadedHistory = false

@@ -147,6 +147,9 @@ async def suggest_outfit_from_wardrobe_item(
     image_model: str = Form("dalle3"),
     use_wardrobe_only: str = Form("false"),
     source_wardrobe_item_id: int | None = Form(None),
+    occasion: str = Form(""),
+    season: str = Form(""),
+    style: str = Form(""),
     outfit_controller: OutfitController = Depends(get_outfit_controller),
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_optional_user)
@@ -179,6 +182,9 @@ async def suggest_outfit_from_wardrobe_item(
         image_model=image_model,
         use_wardrobe_only=use_wardrobe_only_bool,
         source_wardrobe_item_id=source_wardrobe_item_id,
+        occasion=occasion.strip() or None,
+        season=season.strip() or None,
+        style=style.strip() or None,
         db=db,
         current_user=current_user
     )

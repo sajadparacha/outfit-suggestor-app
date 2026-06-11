@@ -304,7 +304,10 @@ private final class MockAPIService: APIServiceProtocol {
         imageModel: String,
         location: String?,
         previousOutfitText: String?,
-        sourceWardrobeItemId: Int?
+        sourceWardrobeItemId: Int?,
+        occasion: String?,
+        season: String?,
+        style: String?
     ) async throws -> OutfitSuggestion {
         suggestionCalls.append(
             RecordedSuggestionCall(
@@ -321,7 +324,10 @@ private final class MockAPIService: APIServiceProtocol {
         textInput: String,
         generateModelImage: Bool,
         imageModel: String,
-        location: String?
+        location: String?,
+        occasion: String?,
+        season: String?,
+        style: String?
     ) async throws -> OutfitSuggestion {
         throw APIServiceError.invalidResponse
     }
