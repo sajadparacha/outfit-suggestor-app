@@ -114,6 +114,9 @@ export interface OutfitHistoryEntry {
   shoes: string;
   belt: string;
   reasoning: string;
+  occasion?: string | null;
+  season?: string | null;
+  style?: string | null;
   shirt_id?: number | null;
   trouser_id?: number | null;
   blazer_id?: number | null;
@@ -122,4 +125,6 @@ export interface OutfitHistoryEntry {
   source_wardrobe_item_id?: number | null;
   matching_wardrobe_items?: MatchingWardrobeItems;
 }
+
+export type InputPanelSource = 'history' | 'wardrobe' | 'upload' | null;
 

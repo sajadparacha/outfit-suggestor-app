@@ -44,11 +44,11 @@ struct EmptyOutfitPreviewView: View {
                     }
 
                     VStack(spacing: 6) {
-                        Text(FirstRunCoachCopy.emptyPreviewHeadline)
+                        Text(MainFlowUxCopy.emptyPreviewHeadline)
                             .font(.subheadline.weight(.semibold))
                             .foregroundColor(AppTheme.textPrimary)
                             .multilineTextAlignment(.center)
-                        Text(FirstRunCoachCopy.emptyPreviewSubline)
+                        Text(MainFlowUxCopy.emptyPreviewSubline)
                             .font(.caption)
                             .foregroundColor(AppTheme.textSecondary)
                             .multilineTextAlignment(.center)

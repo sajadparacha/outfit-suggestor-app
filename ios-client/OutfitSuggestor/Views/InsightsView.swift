@@ -44,7 +44,8 @@ struct InsightsView: View {
                     FiltersView(
                         filters: $viewModel.filters,
                         preferenceText: $viewModel.preferenceText,
-                        layout: .form
+                        layout: .form,
+                        showWardrobeOnly: false
                     )
                     .padding(.horizontal)
                 }

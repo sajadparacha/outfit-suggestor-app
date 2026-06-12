@@ -19,6 +19,7 @@ interface WardrobeProps {
   outfitController?: {
     setImage: (image: File | null) => void;
     setSourceWardrobeItem?: (item: SourceWardrobeItem | null) => void;
+    prepareStyleFromWardrobeItem?: (item: WardrobeItem) => Promise<void>;
     getSuggestion: (
       skipDuplicateCheck?: boolean,
       sourceImage?: File | null,
@@ -207,7 +208,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
     setFlowTipDismissed(true);
   };
 
-  const applyWardrobeItemToMainFlow = async (item: WardrobeItem) => {
+  const loadWardrobeItemImageIntoFlow = async (item: WardrobeItem) => {
     if (!item.image_data || !outfitController) return;
 
     const response = await fetch(`data:image/jpeg;base64,${item.image_data}`);
@@ -221,6 +222,18 @@ const Wardrobe: React.FC<WardrobeProps> = ({
     });
     outfitController.setImage(file);
     onSourceImageLoaded?.();
+  };
+
+  const applyWardrobeItemToMainFlow = async (item: WardrobeItem) => {
+    if (!outfitController) return;
+
+    if (outfitController.prepareStyleFromWardrobeItem) {
+      await outfitController.prepareStyleFromWardrobeItem(item);
+      onSourceImageLoaded?.();
+      return;
+    }
+
+    await loadWardrobeItemImageIntoFlow(item);
   };
 
   const historyEntryReferencesItem = React.useCallback((entry: OutfitHistoryEntry, item: WardrobeItem): boolean => {
@@ -589,7 +602,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
 
     try {
       if (outfitController) {
-        await applyWardrobeItemToMainFlow(historySourceItem);
+        await loadWardrobeItemImageIntoFlow(historySourceItem);
       }
 
       const suggestion = historyEntryToSuggestion(entry);

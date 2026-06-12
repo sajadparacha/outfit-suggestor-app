@@ -2,6 +2,7 @@ import React from 'react';
 import { Filters } from '../../models/OutfitModels';
 import { FILTER_OPTIONS } from '../../utils/constants';
 import { DEFAULT_FILTERS } from '../../utils/outfitPreferences';
+import { MICRO_HELP } from '../../utils/microHelpCopy';
 
 interface AnalysisPreferencesProps {
   filters: Filters;
@@ -11,6 +12,9 @@ interface AnalysisPreferencesProps {
   onClear?: () => void;
   variant?: 'sidebar' | 'insights';
   showSharedHint?: boolean;
+  useWardrobeOnly?: boolean;
+  setUseWardrobeOnly?: (v: boolean) => void;
+  showWardrobeOnly?: boolean;
 }
 
 const FilterSelect: React.FC<{
@@ -51,6 +55,9 @@ const AnalysisPreferences: React.FC<AnalysisPreferencesProps> = ({
   onClear,
   variant = 'insights',
   showSharedHint = true,
+  useWardrobeOnly = false,
+  setUseWardrobeOnly,
+  showWardrobeOnly = false,
 }) => {
   const handleFilterChange = (key: keyof Filters, value: string) => {
     setFilters({ ...filters, [key]: value });
@@ -82,7 +89,7 @@ const AnalysisPreferences: React.FC<AnalysisPreferencesProps> = ({
       <div id="outfit-preferences" className="mt-5 space-y-3">
         {sharedHint}
         <div
-          className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5"
+          className="grid grid-cols-2 gap-2 lg:grid-cols-4"
           role="group"
           aria-label="Outfit preferences"
         >
@@ -125,13 +132,28 @@ const AnalysisPreferences: React.FC<AnalysisPreferencesProps> = ({
             ))}
           </FilterSelect>
 
-          <div className="rounded-2xl border border-white/15 bg-white/[0.04] px-3 py-2.5">
-            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Colors</span>
-            <p className="text-sm font-medium text-white">No Preference</p>
-          </div>
-
           <NotesCell preferenceText={preferenceText} setPreferenceText={setPreferenceText} />
         </div>
+
+        {showWardrobeOnly && setUseWardrobeOnly && (
+          <label
+            htmlFor="wardrobe-mode"
+            className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3"
+          >
+            <input
+              type="checkbox"
+              id="wardrobe-mode"
+              checked={useWardrobeOnly}
+              onChange={(event) => setUseWardrobeOnly(event.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-white/20 bg-slate-800 text-brand-blue focus:ring-brand-blue focus:ring-offset-slate-900"
+              aria-label="Use my wardrobe only"
+            />
+            <span className="min-w-0">
+              <span className="block text-sm font-medium text-slate-100">Use my wardrobe only</span>
+              <span className="mt-1 block text-xs text-slate-400">{MICRO_HELP.WARDROBE_ONLY}</span>
+            </span>
+          </label>
+        )}
       </div>
     );
   }

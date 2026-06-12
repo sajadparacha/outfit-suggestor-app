@@ -141,14 +141,15 @@ describe('Mobile-friendly layout and touch targets', () => {
           loading={false}
           error={null}
           {...mockActionProps}
+          onSaveLook={jest.fn()}
           hasImage={true}
         />
       );
 
       const generateBtn = screen.getAllByRole('button', { name: /Generate another look/i })[0];
-      const formalBtn = screen.getByRole('button', { name: /Make it more formal/i });
+      const saveBtn = screen.getAllByRole('button', { name: /Save Look/i })[0];
 
-      [generateBtn, formalBtn].forEach((btn) => {
+      [generateBtn, saveBtn].forEach((btn) => {
         const cls = btn.getAttribute('class') ?? '';
         expect(cls).toMatch(/min-h-\[(40|44|48)px\]/);
         expect(cls).toMatch(/touch-manipulation/);
@@ -185,22 +186,21 @@ describe('Mobile-friendly layout and touch targets', () => {
       expect(emptyCard?.getAttribute('class')).toMatch(/sm:p-8|lg:p-12/);
     });
 
-    it('Add to Wardrobe button when authenticated has touch-friendly classes', () => {
+    it('sticky mobile action bar includes Save Look and Refine', () => {
       render(
         <OutfitPreview
           suggestion={baseSuggestion}
           loading={false}
           error={null}
           {...mockActionProps}
-          isAuthenticated={true}
-          onAddToWardrobe={jest.fn()}
+          onSaveLook={jest.fn()}
           hasImage={true}
         />
       );
-      const addBtn = screen.getByRole('button', { name: /Add new item to your wardrobe/i });
-      const cls = addBtn.getAttribute('class') ?? '';
-      expect(cls).toMatch(/min-h-\[48px\]/);
-      expect(cls).toMatch(/touch-manipulation/);
+      const stickyBar = screen.getByTestId('result-sticky-mobile-actions');
+      expect(stickyBar).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: /Save Look/i }).length).toBeGreaterThan(0);
+      expect(screen.getAllByTestId('refine-menu-trigger').length).toBeGreaterThan(0);
     });
   });
 

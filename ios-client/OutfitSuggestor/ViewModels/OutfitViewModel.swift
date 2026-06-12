@@ -26,6 +26,14 @@ class OutfitViewModel: ObservableObject {
         case randomHistory
     }
 
+    enum InputPanelSource: Equatable {
+        case none
+        case upload
+        case wardrobe
+        case wardrobeRandom
+        case history
+    }
+
     enum OutfitVariationModifier {
         case moreFormal
         case moreCasual
@@ -48,6 +56,14 @@ class OutfitViewModel: ObservableObject {
     }
 
     @Published var selectedImage: UIImage?
+    /// Left-panel preview when suggestion came from random/history (no user upload).
+    @Published var flowPreviewImage: UIImage?
+    /// When true, item cards must not treat `selectedImage` as the upload source.
+    @Published var loadedFromRandomPick = false
+    @Published var inputPanelSource: InputPanelSource = .none
+    /// Snapshot of filters for compact summary when viewing a loaded result (e.g. random history).
+    @Published var summaryFilters: OutfitFilters?
+    @Published var summaryPreferenceText: String?
     @Published var sourceWardrobeItem: WardrobeSourceContext?
     @Published var highlightGenerateButton = false
     @Published var currentSuggestion: OutfitSuggestion?
@@ -101,6 +117,42 @@ class OutfitViewModel: ObservableObject {
         return false
     }
 
+    /// Image shown in the input panel (upload or random/history preview).
+    var inputPanelImage: UIImage? {
+        selectedImage ?? flowPreviewImage
+    }
+
+    var compactSummaryFilters: OutfitFilters {
+        summaryFilters ?? filters
+    }
+
+    var compactSummaryPreferenceText: String {
+        summaryPreferenceText ?? preferenceText
+    }
+
+    /// Maps iOS-only `.wardrobeRandom` to web contract value `.wardrobe`.
+    private var regeneratePanelSource: InputPanelSource? {
+        switch inputPanelSource {
+        case .wardrobeRandom: return .wardrobe
+        default: return inputPanelSource
+        }
+    }
+
+    var canGenerateAnotherFromResult: Bool {
+        MainFlowResultRegenerateLogic.canGenerateAnotherFromResult(
+            inputPanelSource: regeneratePanelSource,
+            hasUploadedImage: selectedImage != nil,
+            hasFlowPreview: flowPreviewImage != nil,
+            hasSuggestion: currentSuggestion != nil
+        )
+    }
+
+    var canRefineWardrobeOnlyFromResult: Bool {
+        guard isAuthenticated, currentSuggestion != nil else { return false }
+        if selectedImage != nil { return true }
+        return inputPanelSource == .wardrobe || inputPanelSource == .wardrobeRandom
+    }
+
     func refreshGuestUsage() async {
         guard !isAuthenticated else {
             guestRemaining = nil
@@ -145,6 +197,11 @@ class OutfitViewModel: ObservableObject {
     func resetSessionState() {
         cancelOperation()
         selectedImage = nil
+        flowPreviewImage = nil
+        loadedFromRandomPick = false
+        inputPanelSource = .none
+        summaryFilters = nil
+        summaryPreferenceText = nil
         sourceWardrobeItem = nil
         highlightGenerateButton = false
         currentSuggestion = nil
@@ -168,15 +225,21 @@ class OutfitViewModel: ObservableObject {
     }
 
     func startGenerateAnotherLook() {
-        startGetNextSuggestion()
+        runCancellableOperation { await self.generateAnotherFromResult() }
     }
 
     func startMakeMoreFormal() {
-        runCancellableOperation { await self.getNextSuggestion(variation: .moreFormal) }
+        runCancellableOperation {
+            guard await self.prepareForVariationRegenerate() else { return }
+            await self.getNextSuggestion(variation: .moreFormal)
+        }
     }
 
     func startMakeMoreCasual() {
-        runCancellableOperation { await self.getNextSuggestion(variation: .moreCasual) }
+        runCancellableOperation {
+            guard await self.prepareForVariationRegenerate() else { return }
+            await self.getNextSuggestion(variation: .moreCasual)
+        }
     }
 
     func startUseWardrobeOnlyFromResult() {
@@ -184,7 +247,45 @@ class OutfitViewModel: ObservableObject {
             showErrorMessage("Log in to use wardrobe-only suggestions.")
             return
         }
-        runCancellableOperation { await self.getNextSuggestion(variation: .wardrobeOnly) }
+        runCancellableOperation { await self.regenerateWithWardrobeOnlyVariation() }
+    }
+
+    /// Clears result state and starts a fresh upload flow (exits compact result layout).
+    func startFreshUpload(image: UIImage) {
+        currentSuggestion = nil
+        loadedFromRandomPick = false
+        inputPanelSource = .none
+        summaryFilters = nil
+        summaryPreferenceText = nil
+        flowPreviewImage = nil
+        clearWardrobeSource()
+        selectedImage = image
+    }
+
+    func generateAnotherFromResult() async {
+        guard currentSuggestion != nil else {
+            showErrorMessage("No current suggestion to get an alternate for")
+            return
+        }
+        guard guardGuestCanUseAI() else { return }
+
+        if (inputPanelSource == .wardrobe || inputPanelSource == .wardrobeRandom), selectedImage == nil {
+            await getRandomFromWardrobe()
+            return
+        }
+
+        if inputPanelSource == .history, selectedImage == nil {
+            guard hydrateFlowPreviewForRegenerate() else {
+                showErrorMessage("No image available to generate another look from")
+                return
+            }
+        }
+
+        if selectedImage != nil {
+            await getNextSuggestion()
+        } else {
+            showErrorMessage("No current suggestion to get an alternate for")
+        }
     }
 
     func startGenerateAnotherAfterOccasionChange() {
@@ -223,6 +324,8 @@ class OutfitViewModel: ObservableObject {
             return
         }
         guard guardGuestCanUseAI() else { return }
+        loadedFromRandomPick = false
+        flowPreviewImage = nil
         isLoading = true
         loadingContext = .suggestion
         loadingMessage = generateModelImage
@@ -281,6 +384,7 @@ class OutfitViewModel: ObservableObject {
             )
             currentSuggestion = suggestion
             highlightGenerateButton = false
+            captureInputSnapshotForResult(source: sourceWardrobeItem != nil ? .wardrobe : .upload)
             // Suggestion flow may add new history entries server-side; mark cache stale.
             hasLoadedHistory = false
             if !isAuthenticated {
@@ -325,6 +429,7 @@ class OutfitViewModel: ObservableObject {
         if variation == .wardrobeOnly {
             useWardrobeOnly = true
         }
+        loadedFromRandomPick = false
         isLoading = true
         loadingContext = .nextSuggestion
         loadingMessage = generateModelImage
@@ -376,6 +481,7 @@ class OutfitViewModel: ObservableObject {
                 style: filters.style.lowercased()
             )
             currentSuggestion = suggestion
+            captureInputSnapshotForResult(source: sourceWardrobeItem != nil ? .wardrobe : .upload)
             hasLoadedHistory = false
             if !isAuthenticated {
                 await refreshGuestUsage()
@@ -432,6 +538,11 @@ class OutfitViewModel: ObservableObject {
         errorMessage = nil
         showError = false
         currentSuggestion = nil
+        flowPreviewImage = nil
+        loadedFromRandomPick = false
+        inputPanelSource = .none
+        summaryFilters = nil
+        summaryPreferenceText = nil
         selectedImage = image
         sourceWardrobeItem = WardrobeSourceContext(
             id: item.id,
@@ -449,6 +560,11 @@ class OutfitViewModel: ObservableObject {
 
     func clearSelectedImage() {
         selectedImage = nil
+        flowPreviewImage = nil
+        loadedFromRandomPick = false
+        inputPanelSource = .none
+        summaryFilters = nil
+        summaryPreferenceText = nil
         clearWardrobeSource()
     }
 
@@ -456,6 +572,103 @@ class OutfitViewModel: ObservableObject {
         let cleaned = payload.replacingOccurrences(of: "\\s", with: "", options: .regularExpression)
         guard let data = Data(base64Encoded: cleaned) else { return nil }
         return UIImage(data: data)
+    }
+
+    private static func previewImageFromWardrobeMatches(_ suggestion: OutfitSuggestion) -> UIImage? {
+        for category in ["shirt", "trouser", "blazer", "shoes", "belt"] {
+            let match = OutfitItemThumbnail.resolveMatchingItem(suggestion: suggestion, category: category)
+            if let image = OutfitItemThumbnail.wardrobeUIImage(from: match) {
+                return image
+            }
+        }
+        return nil
+    }
+
+    private static func allMatchingItems(from suggestion: OutfitSuggestion) -> [MatchingWardrobeItem] {
+        guard let items = suggestion.matching_wardrobe_items else { return [] }
+        return [items.shirt, items.trouser, items.blazer, items.shoes, items.belt]
+            .compactMap { $0 }
+            .flatMap { $0 }
+    }
+
+    private static func resolveWardrobeSource(
+        from entry: OutfitHistoryEntry,
+        suggestion: OutfitSuggestion,
+        itemId: Int
+    ) -> WardrobeSourceContext {
+        if let item = allMatchingItems(from: suggestion).first(where: { $0.id == itemId }) {
+            return WardrobeSourceContext(id: item.id, category: item.category, color: item.color)
+        }
+        let category = inferredSourceCategory(from: entry, itemId: itemId) ?? "item"
+        return WardrobeSourceContext(id: itemId, category: category, color: nil)
+    }
+
+    private static func inferredSourceCategory(from entry: OutfitHistoryEntry, itemId: Int) -> String? {
+        if entry.shirt_id == itemId { return "shirt" }
+        if entry.trouser_id == itemId { return "trouser" }
+        if entry.blazer_id == itemId { return "blazer" }
+        if entry.shoes_id == itemId { return "shoes" }
+        if entry.belt_id == itemId { return "belt" }
+        return nil
+    }
+
+    private func captureInputSnapshotForResult(source: InputPanelSource) {
+        inputPanelSource = source
+        summaryFilters = filters
+        summaryPreferenceText = preferenceText
+    }
+
+    @discardableResult
+    private func hydrateFlowPreviewForRegenerate() -> Bool {
+        guard selectedImage == nil, let preview = flowPreviewImage else { return false }
+        selectedImage = preview
+        flowPreviewImage = nil
+        loadedFromRandomPick = false
+        return true
+    }
+
+    private func prepareForVariationRegenerate() async -> Bool {
+        guard currentSuggestion != nil else { return false }
+        guard guardGuestCanUseAI() else { return false }
+
+        if selectedImage == nil {
+            guard hydrateFlowPreviewForRegenerate() else {
+                showErrorMessage("No image available to refine this look")
+                return false
+            }
+        }
+        return true
+    }
+
+    private func regenerateWithWardrobeOnlyVariation() async {
+        guard currentSuggestion != nil else { return }
+        guard guardGuestCanUseAI() else { return }
+
+        if (inputPanelSource == .wardrobe || inputPanelSource == .wardrobeRandom), selectedImage == nil {
+            useWardrobeOnly = true
+            await getRandomFromWardrobe()
+            return
+        }
+
+        guard hydrateFlowPreviewForRegenerate() || selectedImage != nil else {
+            showErrorMessage("No image available to refine this look")
+            return
+        }
+        await getNextSuggestion(variation: .wardrobeOnly)
+    }
+
+    private static func filtersFromHistoryEntry(_ entry: OutfitHistoryEntry, fallback: OutfitFilters) -> OutfitFilters {
+        var snapshot = fallback
+        if let occasion = entry.occasion, !occasion.isEmpty {
+            snapshot.occasion = occasion
+        }
+        if let season = entry.season, !season.isEmpty {
+            snapshot.season = season
+        }
+        if let style = entry.style, !style.isEmpty {
+            snapshot.style = style
+        }
+        return snapshot
     }
     
     /// Random outfit from wardrobe (auth required)
@@ -474,12 +687,18 @@ class OutfitViewModel: ObservableObject {
         }
         do {
             try Task.checkCancellation()
+            selectedImage = nil
+            flowPreviewImage = nil
+            sourceWardrobeItem = nil
+            loadedFromRandomPick = true
             let suggestion = try await apiService.getRandomOutfit(
                 occasion: filters.occasion.lowercased(),
                 season: filters.season.lowercased(),
                 style: filters.style.lowercased()
             )
             currentSuggestion = suggestion
+            flowPreviewImage = Self.previewImageFromWardrobeMatches(suggestion)
+            captureInputSnapshotForResult(source: .wardrobeRandom)
             hasLoadedHistory = false
         } catch is CancellationError {
             return
@@ -517,7 +736,20 @@ class OutfitViewModel: ObservableObject {
                 showErrorMessage("No history yet. Get some outfit suggestions first.")
                 return
             }
-            currentSuggestion = entry.toOutfitSuggestion()
+            selectedImage = nil
+            flowPreviewImage = nil
+            sourceWardrobeItem = nil
+            loadedFromRandomPick = true
+            inputPanelSource = .history
+            summaryFilters = Self.filtersFromHistoryEntry(entry, fallback: filters)
+            summaryPreferenceText = entry.text_input ?? ""
+            let suggestion = entry.toOutfitSuggestion()
+            currentSuggestion = suggestion
+            flowPreviewImage = entry.image_data.flatMap { Self.decodeBase64Image($0) }
+                ?? Self.previewImageFromWardrobeMatches(suggestion)
+            if let sourceId = entry.source_wardrobe_item_id {
+                sourceWardrobeItem = Self.resolveWardrobeSource(from: entry, suggestion: suggestion, itemId: sourceId)
+            }
         } catch is CancellationError {
             return
         } catch {

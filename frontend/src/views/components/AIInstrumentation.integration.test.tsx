@@ -1,6 +1,6 @@
 /**
- * Integration-style tests for recent AI instrumentation changes:
- * - Admin gating for AI prompt/response panel and AI suggestion cost panel
+ * Integration-style tests for AI instrumentation placement:
+ * admin cost/prompt panels belong on the input side only, not in the result panel.
  */
 import React from 'react';
 import { render, screen } from '@testing-library/react';
@@ -32,43 +32,12 @@ const baseSuggestion = {
 };
 
 describe('AI instrumentation integration', () => {
-  it('shows AI Suggestion Cost only for admins', () => {
+  it('does not show AI Suggestion Cost in result panel even for admins', () => {
     const suggestionWithCost = {
       ...baseSuggestion,
       cost: { gpt4_cost: 0.0123, total_cost: 0.0123, model_image_cost: 0 },
-    };
-
-    const { rerender } = render(
-      <OutfitPreview
-        suggestion={suggestionWithCost as any}
-        loading={false}
-        error={null}
-        {...mockActionProps}
-        hasImage={true}
-        isAdmin={false}
-      />
-    );
-
-    expect(screen.queryByText(/AI Suggestion Cost/i)).not.toBeInTheDocument();
-
-    rerender(
-      <OutfitPreview
-        suggestion={suggestionWithCost as any}
-        loading={false}
-        error={null}
-        {...mockActionProps}
-        hasImage={true}
-        isAdmin={true}
-      />
-    );
-
-    expect(screen.getByText(/AI Suggestion Cost/i)).toBeInTheDocument();
-  });
-
-  it('hides AI Prompt & Response panel when showAiPromptResponse is false', () => {
-    const suggestionWithCost = {
-      ...baseSuggestion,
-      cost: { gpt4_cost: 0.0123, total_cost: 0.0123, model_image_cost: 0 },
+      ai_prompt: 'hidden prompt',
+      ai_raw_response: '{"shirt":"Shirt"}',
     };
 
     render(
@@ -78,14 +47,11 @@ describe('AI instrumentation integration', () => {
         error={null}
         {...mockActionProps}
         hasImage={true}
-        isAdmin={true}
-        showAiPromptResponse={false}
       />
     );
 
-    expect(
-      screen.queryByText(/AI Prompt & Response \(only available to Admin\)/i)
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/AI Suggestion Cost/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Advanced options/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/AI Prompt & Response/i)).not.toBeInTheDocument();
   });
 });
-

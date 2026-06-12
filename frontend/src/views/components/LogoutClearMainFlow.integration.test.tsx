@@ -97,7 +97,7 @@ describe('Logout clears main flow (App integration)', () => {
     });
 
     expect(screen.getByText(/Your outfit appears here/i)).toBeInTheDocument();
-    expect(screen.getByText(/Upload a photo on the left/i)).toBeInTheDocument();
+    expect(screen.getByText(/Upload a photo, set preferences, then tap Generate Outfit/i)).toBeInTheDocument();
     expect(screen.queryByAltText(/Uploaded clothing/i)).not.toBeInTheDocument();
     expect(localStorage.getItem('guest_session_id')).toBe('persist-guest-id');
     expect(localStorage.getItem(FIRST_OUTFIT_PROMPT_KEY)).toBe('true');

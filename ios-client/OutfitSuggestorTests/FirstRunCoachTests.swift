@@ -19,11 +19,8 @@ final class FirstRunCoachTests: XCTestCase {
             "Occasion, season, style (optional)"
         )
         XCTAssertEqual(FirstRunCoachCopy.expandButton, "Expand")
-        XCTAssertEqual(FirstRunCoachCopy.emptyPreviewHeadline, "Your outfit appears here")
-        XCTAssertEqual(
-            FirstRunCoachCopy.emptyPreviewSubline,
-            "Upload a photo above, then tap Generate Outfit"
-        )
+        XCTAssertEqual(FirstRunCoachCopy.emptyPreviewHeadline, MainFlowUxCopy.emptyPreviewHeadline)
+        XCTAssertEqual(FirstRunCoachCopy.emptyPreviewSubline, MainFlowUxCopy.emptyPreviewSubline)
         XCTAssertEqual(FirstRunCoachCopy.readyToGenerateHint, "Ready — tap Generate Outfit")
     }
 

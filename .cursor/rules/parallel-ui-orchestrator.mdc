@@ -43,6 +43,8 @@ Create `.cursor/specs/<feature-slug>.md` from `_template.md` **before** spawning
 
 Fill the **Tests (required)** section with concrete cases per platform.
 
+In the spec, note whether **About** and **Guide** need updates (user-visible flow/copy/capability changes). If yes, agents update platform Guide + About when implementing.
+
 ## 3. Contract and backend first
 
 If API, validation, or shared client contract changes are needed, orchestrator updates `backend/` and both client contract layers **before** step 4.
@@ -63,7 +65,7 @@ In **one message**, spawn **exactly two** Task subagents (`subagent_type: genera
 | **Web** | `frontend/**` | `ios-client/**`, `backend/**` |
 | **iOS** | `ios-client/**` | `frontend/**`, `backend/**` |
 
-Each prompt must include: spec path, branch name, allowed/forbidden dirs, `IOS_WEB_FEATURE_PARITY.md`, platform rule paths, and **mandatory test instructions** (see skill).
+Each prompt must include: spec path, branch name, allowed/forbidden dirs, `IOS_WEB_FEATURE_PARITY.md`, platform rule paths, **mandatory test instructions** (see skill), and **About/Guide update** when the spec marks it needed.
 
 Each agent **must** add/update tests and run them before returning. No feature is done without passing tests.
 
@@ -74,10 +76,11 @@ Each agent **must** add/update tests and run them before returning. No feature i
 After both agents complete:
 
 1. Compare implementation vs spec (behavior, copy, API usage)
-2. Update `IOS_WEB_FEATURE_PARITY.md` if feature parity changed
-3. **Ask user to confirm** before running full test suites (web + iOS always; backend if changed). Do not auto-run — full suites take several minutes. See skill for the confirmation prompt.
+2. Verify **About** and **Guide** were updated on both platforms when the spec required it
+3. Update `IOS_WEB_FEATURE_PARITY.md` if feature parity changed
+4. **Ask user to confirm** before running full test suites (web + iOS always; backend if changed). Do not auto-run — full suites take several minutes. See skill for the confirmation prompt.
 
-4. **Run full test suites** (only after user confirms):
+5. **Run full test suites** (only after user confirms):
 
 | Layer | Command | When |
 |-------|---------|------|
@@ -85,9 +88,9 @@ After both agents complete:
 | Web | `cd frontend && npm test -- --watchAll=false --passWithNoTests` | **Always** — all unit + integration tests |
 | iOS | See skill: full `OutfitSuggestorTests` + `OutfitSuggestorUITests` via `xcodebuild test` | **Always** — all unit + integration (+ UITest) suites |
 
-5. Mark spec **Tests** checkboxes and parity checklist
-6. Publish the **Test Execution Report** (required — use template in skill)
-7. Report parity gaps and missing new-behavior tests
+6. Mark spec **Tests** checkboxes and parity checklist
+7. Publish the **Test Execution Report** (required — use template in skill)
+8. Report parity gaps, missing About/Guide updates, and missing new-behavior tests
 
 **Do not report "done"** if any full suite fails, or if new behavior has no tests added. If the user declined the full-suite run, report implementation status but note verification is pending.
 

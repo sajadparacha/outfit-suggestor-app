@@ -42,8 +42,6 @@ describe('Suggested by AI integration', () => {
         error={null}
         onGenerateAnother={jest.fn()}
         hasImage={false}
-        isAdmin={false}
-        showAiPromptResponse={false}
       />
     );
 

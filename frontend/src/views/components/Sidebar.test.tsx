@@ -9,6 +9,7 @@ import {
   FIRST_RUN_COACH_DISMISSED_KEY,
   FIRST_RUN_PREFS_EXPANDED_KEY,
 } from '../../utils/firstRunCoach';
+import { MAIN_FLOW_UX_COPY } from '../../utils/mainFlowUxCopy';
 
 describe('Sidebar file validation', () => {
   const defaultProps = {
@@ -109,7 +110,7 @@ describe('Sidebar file validation', () => {
       />
     );
 
-    fireEvent.click(screen.getByText('Wardrobe & picks'));
+    fireEvent.click(screen.getByText('Random picks'));
 
     const button = screen.getByRole('button', { name: /get random outfit from wardrobe/i });
     expect(button).toBeInTheDocument();
@@ -127,7 +128,7 @@ describe('Sidebar file validation', () => {
       />
     );
 
-    fireEvent.click(screen.getByText('Wardrobe & picks'));
+    fireEvent.click(screen.getByText('Random picks'));
 
     const button = screen.getByRole('button', { name: /show random outfit from your history/i });
     expect(button).toBeInTheDocument();
@@ -161,7 +162,38 @@ describe('Sidebar file validation', () => {
   });
 
   describe('contextual micro-help', () => {
-    it('shows static wardrobe-only micro-help regardless of toggle state', () => {
+    it('uses checkbox for wardrobe-only control in Preferences, not Wardrobe', () => {
+      const setUseWardrobeOnly = jest.fn();
+      render(
+        <Sidebar
+          {...defaultProps}
+          isAuthenticated
+          setUseWardrobeOnly={setUseWardrobeOnly}
+          useWardrobeOnly={false}
+          hasSuggestion={true}
+          onAddToWardrobe={jest.fn()}
+        />
+      );
+
+      expect(screen.queryByText('Colors')).not.toBeInTheDocument();
+
+      const checkbox = screen.getByRole('checkbox', { name: /use my wardrobe only/i });
+      expect(checkbox).toBeInTheDocument();
+      expect(checkbox).not.toBeChecked();
+
+      const preferencesSection = document.getElementById('outfit-preferences');
+      expect(preferencesSection).toContainElement(checkbox);
+
+      fireEvent.click(checkbox);
+      expect(setUseWardrobeOnly).toHaveBeenCalledWith(true);
+
+      fireEvent.click(screen.getByText('Wardrobe'));
+      const wardrobeSection = screen.getByText('Wardrobe').closest('details');
+      expect(wardrobeSection?.querySelector('input[type="checkbox"]')).toBeNull();
+      expect(wardrobeSection?.querySelector('[role="switch"]')).toBeNull();
+    });
+
+    it('shows static wardrobe-only micro-help in Preferences regardless of toggle state', () => {
       const setUseWardrobeOnly = jest.fn();
       const { rerender } = render(
         <Sidebar
@@ -169,10 +201,10 @@ describe('Sidebar file validation', () => {
           isAuthenticated
           setUseWardrobeOnly={setUseWardrobeOnly}
           useWardrobeOnly={false}
+          hasSuggestion={true}
         />
       );
 
-      fireEvent.click(screen.getByText('Wardrobe & picks'));
       expect(screen.getByText(MICRO_HELP.WARDROBE_ONLY)).toBeInTheDocument();
       expect(screen.queryByText(/AI may suggest items you do not own/i)).not.toBeInTheDocument();
       expect(screen.queryByText(/Only your wardrobe items are used/i)).not.toBeInTheDocument();
@@ -183,6 +215,7 @@ describe('Sidebar file validation', () => {
           isAuthenticated
           setUseWardrobeOnly={setUseWardrobeOnly}
           useWardrobeOnly={true}
+          hasSuggestion={true}
         />
       );
       expect(screen.getByText(MICRO_HELP.WARDROBE_ONLY)).toBeInTheDocument();
@@ -199,6 +232,7 @@ describe('Sidebar file validation', () => {
         />
       );
 
+      fireEvent.click(screen.getByText('Advanced options'));
       expect(screen.getByText(MICRO_HELP.MODEL_PREVIEW)).toBeInTheDocument();
       expect(screen.queryByText(/This may take longer/i)).not.toBeInTheDocument();
     });
@@ -244,13 +278,14 @@ describe('Sidebar file validation', () => {
       expect(screen.queryByLabelText('Select occasion')).not.toBeInTheDocument();
     });
 
-    it('expand reveals occasion, season, and style controls', () => {
+    it('expand reveals occasion, season, and style controls without Colors field', () => {
       render(<Sidebar {...defaultProps} />);
       fireEvent.click(screen.getByTestId('first-run-prefs-collapsed'));
       expect(localStorage.getItem(FIRST_RUN_PREFS_EXPANDED_KEY)).toBe('true');
       expect(screen.getByLabelText('Select occasion')).toBeInTheDocument();
       expect(screen.getByLabelText('Select season')).toBeInTheDocument();
       expect(screen.getByLabelText('Select style preference')).toBeInTheDocument();
+      expect(screen.queryByText('Colors')).not.toBeInTheDocument();
     });
 
     it('shows full preferences after first suggestion', () => {
@@ -267,6 +302,88 @@ describe('Sidebar file validation', () => {
     });
   });
 
+  describe('wardrobe style from item', () => {
+    const wardrobeFile = new File(['x'.repeat(1024)], 'wardrobe-shirt.jpg', { type: 'image/jpeg' });
+
+    it('shows Generate Outfit when sourceWardrobeItem and image are set without a suggestion', () => {
+      render(
+        <Sidebar
+          {...defaultProps}
+          image={wardrobeFile}
+          sourceWardrobeItem={{ id: 1, category: 'shirt', color: 'Blue' }}
+          hasSuggestion={false}
+        />
+      );
+
+      expect(
+        screen.getByRole('button', { name: MAIN_FLOW_UX_COPY.primaryCtaAria })
+      ).toBeInTheDocument();
+      expect(screen.getByText(MAIN_FLOW_UX_COPY.primaryCta)).toBeInTheDocument();
+    });
+
+    it('hides From your wardrobe banner in compact mode', () => {
+      render(
+        <Sidebar
+          {...defaultProps}
+          isAuthenticated
+          hasSuggestion={true}
+          sourceWardrobeItem={{ id: 1, category: 'shirt', color: 'Blue' }}
+          flowPreviewUrl="data:image/jpeg;base64,preview"
+          inputPanelSource="history"
+          flowPreviewCaption="From history"
+        />
+      );
+
+      expect(screen.queryByText('From your wardrobe')).not.toBeInTheDocument();
+      expect(screen.getByText('From history')).toBeInTheDocument();
+    });
+
+    it('shows compact upload actions and generate another in compact result mode', () => {
+      const onStartFreshUpload = jest.fn();
+      const onGenerateAnother = jest.fn();
+      render(
+        <Sidebar
+          {...defaultProps}
+          isAuthenticated
+          hasSuggestion={true}
+          flowPreviewUrl="data:image/jpeg;base64,preview"
+          inputPanelSource="history"
+          flowPreviewCaption="From history"
+          onStartFreshUpload={onStartFreshUpload}
+          onGenerateAnother={onGenerateAnother}
+        />
+      );
+
+      expect(screen.getByTestId('compact-upload-actions')).toBeInTheDocument();
+      expect(screen.getByLabelText(MAIN_FLOW_UX_COPY.uploadNewItem)).toBeInTheDocument();
+      expect(screen.getByText(MAIN_FLOW_UX_COPY.compactUploadHint)).toBeInTheDocument();
+      expect(screen.getByTestId('compact-generate-another')).toBeInTheDocument();
+
+      const file = new File(['x'.repeat(1024)], 'fresh.jpg', { type: 'image/jpeg' });
+      const input = document.querySelector('input[type="file"]');
+      fireEvent.change(input!, { target: { files: [file] } });
+      expect(onStartFreshUpload).toHaveBeenCalledWith(file);
+
+      fireEvent.click(screen.getByTestId('compact-generate-another'));
+      expect(onGenerateAnother).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows Generate Outfit when styling a new wardrobe item despite stale hasSuggestion', () => {
+      render(
+        <Sidebar
+          {...defaultProps}
+          image={wardrobeFile}
+          sourceWardrobeItem={{ id: 2, category: 'trouser', color: 'Navy' }}
+          hasSuggestion={true}
+        />
+      );
+
+      expect(
+        screen.getByRole('button', { name: MAIN_FLOW_UX_COPY.primaryCtaAria })
+      ).toBeInTheDocument();
+    });
+  });
+
   describe('section hint tooltips', () => {
     it('renders Preferences tooltip with occasion/season/style summary', () => {
       render(<Sidebar {...defaultProps} />);
@@ -277,7 +394,7 @@ describe('Sidebar file validation', () => {
       expect(prefs?.textContent).toMatch(/Style: Modern/);
     });
 
-    it('renders Wardrobe & picks tooltip with wardrobe and random pick hints when authenticated', () => {
+    it('renders wardrobe and random pick tooltip hints when authenticated', () => {
       const setUseWardrobeOnly = jest.fn();
       render(
         <Sidebar

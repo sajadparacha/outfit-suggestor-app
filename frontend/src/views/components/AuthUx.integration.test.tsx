@@ -86,7 +86,7 @@ describe('Persuasive auth UX (App integration)', () => {
       expect(screen.getByText('White linen shirt')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Like this outfit/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /Save Look/i })[0]);
 
     await waitFor(() => {
       expect(

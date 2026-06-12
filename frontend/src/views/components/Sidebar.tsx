@@ -1,12 +1,18 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
-import { SourceWardrobeItem } from '../../models/OutfitModels';
+import { InputPanelSource, SourceWardrobeItem } from '../../models/OutfitModels';
 import { isValidImageSize, formatFileSize, createImagePreviewUrl, revokeImagePreviewUrl } from '../../utils/imageUtils';
 import { CLIENT_MAX_SIZE_MB } from '../../constants/imageLimits';
 import ModernSwitch from './suggestion/ModernSwitch';
 import AnalysisPreferences from './AnalysisPreferences';
 import FirstRunCoach from './FirstRunCoach';
+import MainFlowCompactSummary from './MainFlowCompactSummary';
 import { DEFAULT_FILTERS } from '../../utils/outfitPreferences';
 import { MICRO_HELP } from '../../utils/microHelpCopy';
+import { MAIN_FLOW_UX_COPY } from '../../utils/mainFlowUxCopy';
+import {
+  canGenerateAnotherFromResult,
+  shouldShowCompactUploadActions,
+} from '../../utils/mainFlowResultRegenerate';
 import {
   isFirstRunCoachDismissed,
   isFirstRunPrefsExpanded,
@@ -116,9 +122,16 @@ interface SidebarProps {
   highlightGenerateButton?: boolean;
   onChangeWardrobeItem?: () => void;
   onClearSourceWardrobeItem?: () => void;
+  flowPreviewUrl?: string | null;
+  flowPreviewCaption?: string | null;
+  inputPanelSource?: InputPanelSource;
+  summaryFilters?: Filters | null;
+  summaryPreferenceText?: string | null;
   guestRemaining?: number | null;
   guestLimitReached?: boolean;
   hasSuggestion?: boolean;
+  onStartFreshUpload?: (file: File) => void;
+  onGenerateAnother?: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -152,9 +165,16 @@ const Sidebar: React.FC<SidebarProps> = ({
   highlightGenerateButton = false,
   onChangeWardrobeItem,
   onClearSourceWardrobeItem,
+  flowPreviewUrl = null,
+  flowPreviewCaption = null,
+  inputPanelSource = null,
+  summaryFilters = null,
+  summaryPreferenceText = null,
   guestRemaining = null,
   guestLimitReached = false,
   hasSuggestion = false,
+  onStartFreshUpload,
+  onGenerateAnother,
 }) => {
   const generateButtonRef = useRef<HTMLButtonElement>(null);
   const generateDisabled = !image || loading || guestLimitReached;
@@ -178,6 +198,19 @@ const Sidebar: React.FC<SidebarProps> = ({
   }, [hasSuggestion, coachDismissed]);
 
   const imagePreviewUrl = useMemo(() => (image ? createImagePreviewUrl(image) : null), [image]);
+  const effectivePreviewUrl = imagePreviewUrl ?? flowPreviewUrl ?? null;
+  const previewCaption = useMemo(() => {
+    if (inputPanelSource === 'history') {
+      return flowPreviewCaption ?? MAIN_FLOW_UX_COPY.fromHistory;
+    }
+    if (inputPanelSource === 'wardrobe') {
+      return flowPreviewCaption ?? undefined;
+    }
+    if (sourceWardrobeItem) {
+      return `Wardrobe · ${sourceWardrobeItem.category}`;
+    }
+    return image?.name ?? flowPreviewCaption ?? undefined;
+  }, [inputPanelSource, sourceWardrobeItem, image, flowPreviewCaption]);
 
   useEffect(() => {
     if (!highlightGenerateButton || !generateButtonRef.current) return;
@@ -207,6 +240,23 @@ const Sidebar: React.FC<SidebarProps> = ({
     };
   }, [stream]);
 
+  const compactMode = hasSuggestion && !(sourceWardrobeItem && image);
+  const showCompactUploadActions = compactMode && shouldShowCompactUploadActions(hasSuggestion);
+  const showGenerateAnotherInSidebar = canGenerateAnotherFromResult(
+    inputPanelSource,
+    !!image,
+    !!effectivePreviewUrl,
+    hasSuggestion
+  );
+
+  const applySelectedFile = (file: File) => {
+    if (compactMode && onStartFreshUpload) {
+      onStartFreshUpload(file);
+    } else {
+      setImage(file);
+    }
+  };
+
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -215,7 +265,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         event.target.value = '';
         return;
       }
-      setImage(file);
+      applySelectedFile(file);
     }
   };
 
@@ -257,7 +307,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           onFileReject?.(`Image must be under ${CLIENT_MAX_SIZE_MB}MB (current: ${formatFileSize(file.size)})`);
           return;
         }
-        setImage(file);
+        applySelectedFile(file);
       }
     }
   };
@@ -288,7 +338,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         canvas.toBlob((blob) => {
           if (blob) {
-            setImage(new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' }));
+            applySelectedFile(new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' }));
             closeCamera();
           }
         }, 'image/jpeg', 0.9);
@@ -324,12 +374,20 @@ const Sidebar: React.FC<SidebarProps> = ({
     return lines.join('\n');
   }, [onAddToWardrobe, image, setUseWardrobeOnly, useWardrobeOnly]);
 
-  const showSecondaryOptions =
-    isAuthenticated &&
-    (onAddToWardrobe || setUseWardrobeOnly || onGetRandomSuggestion || onGetRandomFromHistory);
+  const showWardrobeSection =
+    isAuthenticated && (onAddToWardrobe || !!sourceWardrobeItem);
+
+  const wardrobePrefsProps = {
+    useWardrobeOnly,
+    setUseWardrobeOnly,
+    showWardrobeOnly: isAuthenticated && !!setUseWardrobeOnly,
+  };
+
+  const showRandomPicksSection =
+    isAuthenticated && (onGetRandomSuggestion || onGetRandomFromHistory);
 
   const showAdvancedOptions = isAdmin;
-  const showModelGenerationControls = isAdmin;
+  const showModelGenerationControls = isAdmin && modelGenerationEnabled;
 
   const advancedOptionsHoverTitle = useMemo(() => {
     const lines: string[] = [];
@@ -371,19 +429,100 @@ const Sidebar: React.FC<SidebarProps> = ({
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      {/* Hero copy */}
-      <span className="inline-block rounded-full border border-brand-blue/30 bg-brand-gradient-soft px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-blue">
-        AI-Powered Style
-      </span>
-      <h1 className="mt-4 text-3xl font-bold leading-tight text-white sm:text-4xl lg:text-[2.75rem]">
-        Dress Better.{' '}
-        <span className="text-brand-gradient">Every Day.</span>
-      </h1>
-      <p className="mt-3 max-w-lg text-sm leading-relaxed text-slate-400 sm:text-base">
-        Upload a clothing item and get complete outfit suggestions tailored to you.
-      </p>
+      {!compactMode && (
+        <>
+          <span className="inline-block rounded-full border border-brand-blue/30 bg-brand-gradient-soft px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-blue">
+            AI-Powered Style
+          </span>
+          <h1 className="mt-4 text-3xl font-bold leading-tight text-white sm:text-4xl lg:text-[2.75rem]">
+            Dress Better.{' '}
+            <span className="text-brand-gradient">Every Day.</span>
+          </h1>
+          <p className="mt-3 max-w-lg text-sm leading-relaxed text-slate-400 sm:text-base">
+            Upload a clothing item and get complete outfit suggestions tailored to you.
+          </p>
+        </>
+      )}
 
-      {!coachDismissed && (
+      {compactMode && effectivePreviewUrl && (
+        <MainFlowCompactSummary
+          filters={filters}
+          preferenceText={preferenceText}
+          imagePreviewUrl={effectivePreviewUrl}
+          sourceWardrobeItem={inputPanelSource === 'history' ? null : sourceWardrobeItem}
+          previewCaption={previewCaption}
+          inputSource={inputPanelSource}
+          summaryFilters={summaryFilters}
+          summaryPreferenceText={summaryPreferenceText}
+        />
+      )}
+
+      {showCompactUploadActions && (
+        <>
+          <div className="mt-4 grid grid-cols-2 gap-3" data-testid="compact-upload-actions">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className={`flex flex-col items-center gap-2 rounded-2xl border p-4 transition touch-manipulation ${
+                isDragging
+                  ? 'border-brand-blue/60 bg-brand-gradient-soft'
+                  : 'border-white/10 bg-white/[0.03] hover:border-brand-blue/40 hover:bg-white/[0.05]'
+              }`}
+              aria-label={MAIN_FLOW_UX_COPY.uploadNewItem}
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradient-soft text-brand-blue">
+                <UploadIcon />
+              </div>
+              <span className="text-sm font-medium text-white">{MAIN_FLOW_UX_COPY.uploadNewItem}</span>
+            </button>
+
+            {hasCamera ? (
+              <button
+                type="button"
+                onClick={openCamera}
+                className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-brand-blue/40 hover:bg-white/[0.05] touch-manipulation"
+                aria-label="Take photo with camera"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradient-soft text-brand-blue">
+                  <CameraIcon />
+                </div>
+                <span className="text-sm font-medium text-white">Take Photo</span>
+              </button>
+            ) : (
+              <div
+                className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.02] p-4 opacity-50"
+                aria-hidden
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-slate-500">
+                  <CameraIcon />
+                </div>
+                <span className="text-sm font-medium text-slate-500">Take Photo</span>
+              </div>
+            )}
+          </div>
+          <p className="mt-2 text-center text-xs text-slate-500">{MAIN_FLOW_UX_COPY.compactUploadHint}</p>
+        </>
+      )}
+
+      {showCompactUploadActions && showGenerateAnotherInSidebar && onGenerateAnother && (
+        <button
+          type="button"
+          onClick={onGenerateAnother}
+          disabled={loading || guestLimitReached}
+          className={`mt-4 flex w-full min-h-[48px] touch-manipulation items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-semibold text-white transition-all duration-200 ${
+            loading || guestLimitReached
+              ? 'cursor-not-allowed bg-white/10 text-slate-500'
+              : 'btn-brand'
+          }`}
+          aria-label={MAIN_FLOW_UX_COPY.generateAnother}
+          data-testid="compact-generate-another"
+        >
+          <SparkleIcon />
+          {MAIN_FLOW_UX_COPY.generateAnother}
+        </button>
+      )}
+
+      {!coachDismissed && !compactMode && (
         <FirstRunCoach
           hasImage={!!image}
           hasSuggestion={hasSuggestion}
@@ -394,7 +533,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         />
       )}
 
-      {sourceWardrobeItem && imagePreviewUrl && (
+      {!compactMode && sourceWardrobeItem && effectivePreviewUrl && (
         <div
           className="mt-5 rounded-2xl border border-brand-blue/40 bg-brand-gradient-soft p-4"
           role="status"
@@ -439,8 +578,8 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
       )}
 
-      {/* Image preview when uploaded */}
-      {imagePreviewUrl && (
+      {/* Image preview when uploaded (creation mode only) */}
+      {!compactMode && effectivePreviewUrl && (
         <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
           <button
             type="button"
@@ -449,21 +588,20 @@ const Sidebar: React.FC<SidebarProps> = ({
             aria-label="View full size image"
           >
             <img
-              src={imagePreviewUrl}
+              src={effectivePreviewUrl}
               alt={sourceWardrobeItem ? `Wardrobe ${sourceWardrobeItem.category}` : 'Uploaded clothing'}
               className="mx-auto max-h-36 object-contain"
             />
           </button>
           <p className="mt-2 truncate text-center text-xs text-slate-400">
-            {sourceWardrobeItem
-              ? `Wardrobe · ${sourceWardrobeItem.category}`
-              : image?.name}
+            {previewCaption}
           </p>
           <p className="sr-only">JPG, PNG, WebP up to {CLIENT_MAX_SIZE_MB}MB</p>
         </div>
       )}
 
-      {/* Action cards */}
+      {/* Action cards — creation mode only */}
+      {!compactMode && (
       <div className="mt-5 grid grid-cols-2 gap-3">
         <button
           type="button"
@@ -505,6 +643,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         )}
       </div>
+      )}
 
       <input
         ref={fileInputRef}
@@ -515,11 +654,31 @@ const Sidebar: React.FC<SidebarProps> = ({
         aria-label="File input for clothing photo"
       />
 
-      <p className="mt-2 text-center text-xs text-slate-500">
-        JPG, PNG, WebP up to {CLIENT_MAX_SIZE_MB}MB
-      </p>
+      {!compactMode && (
+        <p className="mt-2 text-center text-xs text-slate-500">
+          JPG, PNG, WebP up to {CLIENT_MAX_SIZE_MB}MB
+        </p>
+      )}
 
-      {showCollapsedPrefs ? (
+      {compactMode ? (
+        <details className={`${detailsClass} mt-4`} open>
+          <summary className={summaryClass}>
+            <span>{MAIN_FLOW_UX_COPY.preferencesSection}</span>
+            <span className="text-slate-500 transition-transform group-open:rotate-180">▼</span>
+          </summary>
+          <div className="border-t border-white/10 px-4 py-4">
+            <AnalysisPreferences
+              filters={filters}
+              setFilters={setFilters}
+              preferenceText={preferenceText}
+              setPreferenceText={setPreferenceText}
+              onClear={handleClearPreferences}
+              variant="sidebar"
+              {...wardrobePrefsProps}
+            />
+          </div>
+        </details>
+      ) : showCollapsedPrefs ? (
         <button
           type="button"
           onClick={() => {
@@ -547,78 +706,61 @@ const Sidebar: React.FC<SidebarProps> = ({
           setPreferenceText={setPreferenceText}
           onClear={handleClearPreferences}
           variant="sidebar"
+          {...wardrobePrefsProps}
         />
       )}
 
-      {showModelGenerationControls && setGenerateModelImage && (
-        <div className="mt-5 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
-          <ModernSwitch
-            id="include-model-preview"
-            checked={generateModelImage}
-            onChange={(value) => setGenerateModelImage(value)}
-            label="Include AI model preview"
-            description={MICRO_HELP.MODEL_PREVIEW}
-          />
-        </div>
-      )}
-
       {/* Primary: generate outfit */}
-      {!isAuthenticated && guestRemaining !== null && guestRemaining > 0 && (
+      {!compactMode && !isAuthenticated && guestRemaining !== null && guestRemaining > 0 && (
         <p className="mt-5 text-center text-xs text-slate-400">
           {guestRemaining} of 3 free AI suggestions left
         </p>
       )}
 
-      <button
-        ref={generateButtonRef}
-        onClick={onGetSuggestion}
-        disabled={generateDisabled}
-        className={`${!isAuthenticated && guestRemaining !== null && guestRemaining > 0 ? 'mt-2' : 'mt-5'} flex w-full min-h-[48px] touch-manipulation items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-semibold text-white transition-all duration-200 ${
-          generateDisabled
-            ? 'cursor-not-allowed bg-white/10 text-slate-500'
-            : highlightGenerateButton
-              ? 'btn-brand animate-pulse ring-2 ring-brand-blue ring-offset-2 ring-offset-slate-900'
-              : 'btn-brand'
-        }`}
-        aria-label="Get AI outfit suggestion"
-      >
-        {loading ? (
-          <>
-            <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-            Styling your outfit...
-          </>
-        ) : (
-          <>
-            <SparkleIcon />
-            Generate Outfit
-          </>
-        )}
-      </button>
+      {(!compactMode || (sourceWardrobeItem && image)) && (
+        <button
+          ref={generateButtonRef}
+          onClick={onGetSuggestion}
+          disabled={generateDisabled}
+          className={`${!isAuthenticated && guestRemaining !== null && guestRemaining > 0 ? 'mt-2' : 'mt-5'} flex w-full min-h-[48px] touch-manipulation items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-semibold text-white transition-all duration-200 ${
+            generateDisabled
+              ? 'cursor-not-allowed bg-white/10 text-slate-500'
+              : highlightGenerateButton
+                ? 'btn-brand animate-pulse ring-2 ring-brand-blue ring-offset-2 ring-offset-slate-900'
+                : 'btn-brand'
+          }`}
+          aria-label={MAIN_FLOW_UX_COPY.primaryCtaAria}
+        >
+          {loading ? (
+            <>
+              <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Styling your outfit...
+            </>
+          ) : (
+            <>
+              <SparkleIcon />
+              {MAIN_FLOW_UX_COPY.primaryCta}
+            </>
+          )}
+        </button>
+      )}
 
-      <p className="mt-3 text-center text-xs text-slate-500">
-        Your images are private and secure.
-      </p>
+      {!compactMode && (
+        <p className="mt-3 text-center text-xs text-slate-500">
+          Your images are private and secure.
+        </p>
+      )}
 
-      {/* Secondary: wardrobe & quick picks */}
-      {showSecondaryOptions && (
-        <details className={`${detailsClass} mt-5`}>
+      {showWardrobeSection && (
+        <details className={`${detailsClass} ${compactMode ? 'mt-4' : 'mt-5'}`}>
           <summary className={summaryClass}>
-            <span>Wardrobe & picks</span>
+            <span>{MAIN_FLOW_UX_COPY.wardrobeSection}</span>
             <span className="text-slate-500 transition-transform group-open:rotate-180">▼</span>
           </summary>
           <div className="space-y-4 border-t border-white/10 px-4 py-4">
-            {setUseWardrobeOnly && (
-              <ModernSwitch
-                id="wardrobe-mode"
-                checked={useWardrobeOnly}
-                onChange={(value) => setUseWardrobeOnly(value)}
-                label="Use my wardrobe only"
-                description={MICRO_HELP.WARDROBE_ONLY}
-              />
-            )}
             {onAddToWardrobe && (
               <button
                 onClick={onAddToWardrobe}
@@ -633,37 +775,44 @@ const Sidebar: React.FC<SidebarProps> = ({
                 {addingToWardrobe ? 'Adding...' : 'Add to Wardrobe'}
               </button>
             )}
-            {(onGetRandomSuggestion || onGetRandomFromHistory) && (
-              <div className="space-y-2">
-                {onGetRandomSuggestion && (
-                  <button
-                    onClick={onGetRandomSuggestion}
-                    disabled={loading}
-                    className={`w-full rounded-xl px-4 py-2.5 text-sm font-medium transition ${
-                      loading
-                        ? 'cursor-not-allowed border border-white/10 bg-white/10 text-slate-500'
-                        : 'border border-white/15 bg-white/5 text-slate-200 hover:border-brand-purple/40 hover:bg-brand-purple/10'
-                    }`}
-                    aria-label="Get random outfit from wardrobe"
-                  >
-                    Random from Wardrobe
-                  </button>
-                )}
-                {onGetRandomFromHistory && (
-                  <button
-                    onClick={onGetRandomFromHistory}
-                    disabled={loading}
-                    className={`w-full rounded-xl px-4 py-2.5 text-sm font-medium transition ${
-                      loading
-                        ? 'cursor-not-allowed border border-white/10 bg-white/10 text-slate-500'
-                        : 'border border-white/15 bg-white/5 text-slate-200 hover:border-brand-blue/40 hover:bg-brand-blue/10'
-                    }`}
-                    aria-label="Show random outfit from your history"
-                  >
-                    Random from History
-                  </button>
-                )}
-              </div>
+          </div>
+        </details>
+      )}
+
+      {showRandomPicksSection && (
+        <details className={detailsClass}>
+          <summary className={summaryClass}>
+            <span>{MAIN_FLOW_UX_COPY.randomPicksSection}</span>
+            <span className="text-slate-500 transition-transform group-open:rotate-180">▼</span>
+          </summary>
+          <div className="space-y-2 border-t border-white/10 px-4 py-4">
+            {onGetRandomSuggestion && (
+              <button
+                onClick={onGetRandomSuggestion}
+                disabled={loading}
+                className={`w-full rounded-xl px-4 py-2.5 text-sm font-medium transition ${
+                  loading
+                    ? 'cursor-not-allowed border border-white/10 bg-white/10 text-slate-500'
+                    : 'border border-white/15 bg-white/5 text-slate-200 hover:border-brand-purple/40 hover:bg-brand-purple/10'
+                }`}
+                aria-label="Get random outfit from wardrobe"
+              >
+                Random from Wardrobe
+              </button>
+            )}
+            {onGetRandomFromHistory && (
+              <button
+                onClick={onGetRandomFromHistory}
+                disabled={loading}
+                className={`w-full rounded-xl px-4 py-2.5 text-sm font-medium transition ${
+                  loading
+                    ? 'cursor-not-allowed border border-white/10 bg-white/10 text-slate-500'
+                    : 'border border-white/15 bg-white/5 text-slate-200 hover:border-brand-blue/40 hover:bg-brand-blue/10'
+                }`}
+                aria-label="Show random outfit from your history"
+              >
+                Random from History
+              </button>
             )}
           </div>
         </details>
@@ -673,10 +822,19 @@ const Sidebar: React.FC<SidebarProps> = ({
       {showAdvancedOptions && (
         <details className={detailsClass}>
           <summary className={summaryClass}>
-            <span>Advanced options</span>
+            <span>{MAIN_FLOW_UX_COPY.advancedOptionsSection}</span>
             <span className="text-slate-500 transition-transform group-open:rotate-180">▼</span>
           </summary>
           <div className="space-y-4 border-t border-white/10 px-4 py-4">
+            {showModelGenerationControls && setGenerateModelImage && (
+              <ModernSwitch
+                id="include-model-preview"
+                checked={generateModelImage}
+                onChange={(value) => setGenerateModelImage(value)}
+                label="Include AI model preview"
+                description={MICRO_HELP.MODEL_PREVIEW}
+              />
+            )}
             {showModelGenerationControls && generateModelImage && (
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-200">Image model</label>
@@ -705,16 +863,18 @@ const Sidebar: React.FC<SidebarProps> = ({
         </details>
       )}
 
-      <button
-        type="button"
-        onClick={handleClearPreferences}
-        className="mt-3 w-full py-2 text-xs text-slate-500 transition hover:text-slate-300"
-        aria-label="Clear preferences"
-      >
-        Clear preferences
-      </button>
+      {!compactMode && (
+        <button
+          type="button"
+          onClick={handleClearPreferences}
+          className="mt-3 w-full py-2 text-xs text-slate-500 transition hover:text-slate-300"
+          aria-label="Clear preferences"
+        >
+          Clear preferences
+        </button>
+      )}
 
-      {isAuthenticated && onOpenInsights && (
+      {!compactMode && isAuthenticated && onOpenInsights && (
         <button
           type="button"
           onClick={onOpenInsights}
@@ -762,7 +922,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
       )}
 
-      {showEnlargeImage && imagePreviewUrl && (
+      {showEnlargeImage && effectivePreviewUrl && (
         <div
           className="fixed inset-0 z-50 flex cursor-pointer items-center justify-center bg-black/90 p-4"
           role="dialog"
@@ -778,7 +938,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             ✕
           </button>
           <img
-            src={imagePreviewUrl}
+            src={effectivePreviewUrl}
             alt="Uploaded clothing - full size"
             className="max-h-full max-w-full object-contain"
             onClick={(e) => e.stopPropagation()}
@@ -790,7 +950,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       <div role="tooltip" className="sr-only">
         {preferencesHoverTitle}
       </div>
-      {showSecondaryOptions && (
+      {(showWardrobeSection || showRandomPicksSection) && (
         <div role="tooltip" className="sr-only">
           {secondaryOptionsHoverTitle}
         </div>

@@ -28,13 +28,13 @@ import Register from './views/components/Register';
 import ChangePassword from './views/components/ChangePassword';
 import { useOutfitController } from './controllers/useOutfitController';
 import { OUTFIT_VARIATION_MODIFIERS } from './utils/outfitPromptUtils';
+import { canGenerateAnotherFromResult } from './utils/mainFlowResultRegenerate';
 import { useHistoryController } from './controllers/useHistoryController';
 import { useHistorySearchController } from './controllers/useHistorySearchController';
 import { useToastController } from './controllers/useToastController';
 import { useAuthController } from './controllers/useAuthController';
 import { useWardrobeController } from './controllers/useWardrobeController';
 import ApiService from './services/ApiService';
-import { historyEntryToSuggestion } from './utils/historyUtils';
 import WardrobeGapAnalysis from './views/components/WardrobeGapAnalysis';
 import AnalysisPreferences from './views/components/AnalysisPreferences';
 import { WardrobeGapAnalysisResponse } from './models/WardrobeModels';
@@ -51,6 +51,7 @@ import {
 import { INSIGHTS_COPY } from './utils/insightsCopy';
 import { MICRO_HELP } from './utils/microHelpCopy';
 import { dismissFirstRunCoach, isFirstRunCoachDismissed } from './utils/firstRunCoach';
+import { MAIN_FLOW_UX_COPY } from './utils/mainFlowUxCopy';
 
 function App() {
   const navigate = useNavigate();
@@ -139,13 +140,24 @@ function App() {
     setUseWardrobeOnly,
     sourceWardrobeItem,
     setSourceWardrobeItem,
+    flowPreviewUrl,
+    setFlowPreviewUrl,
+    flowPreviewCaption,
+    setFlowPreviewCaption,
+    inputPanelSource,
+    summaryFilters,
+    summaryPreferenceText,
     clearPreferences,
     getSuggestion,
     getRandomSuggestion,
+    loadRandomFromHistory,
     handleUseCachedSuggestion,
     handleGetNewSuggestion,
     cancelOperation,
     resetMainFlowState,
+    startFreshUpload,
+    generateAnotherFromResult,
+    prepareStyleFromWardrobeItem,
   } = useOutfitController({
     onSuggestionSuccess: async () => {
       if (!isFirstRunCoachDismissed()) {
@@ -161,6 +173,9 @@ function App() {
       if (!isAuthenticated) {
         await refreshGuestUsage();
       }
+      requestAnimationFrame(() => {
+        document.getElementById('outfit-result-hero')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+      });
     },
     onGuestLimitReached: handleGuestLimitReached,
   });
@@ -282,12 +297,12 @@ function App() {
 
   const authModalCopy = loginPromptContext ? getAuthPromptCopy(loginPromptContext) : null;
 
-  const handleLikeOutfit = () => {
+  const handleSaveLook = () => {
     if (!isAuthenticated) {
       openAuthPrompt('like');
       return;
     }
-    showToast('Outfit saved to favorites! ❤️', 'success');
+    showToast(MAIN_FLOW_UX_COPY.saveLookToast, 'success');
   };
 
   const dismissFirstOutfitBanner = () => {
@@ -304,44 +319,52 @@ function App() {
     await getSuggestion();
   };
 
-  const requireImageForAlternate = (): boolean => {
-    if (!image) {
+  const hasFlowPreview = !!(flowPreviewUrl || currentSuggestion?.imageUrl);
+  const canGenerateAnother = canGenerateAnotherFromResult(
+    inputPanelSource,
+    !!image,
+    hasFlowPreview,
+    !!currentSuggestion
+  );
+
+  const requireCanGenerateAnother = (): boolean => {
+    if (!canGenerateAnother) {
       showToast('Please upload an image first', 'error');
       return false;
     }
     return true;
   };
 
-  /** Generate another look using the current outfit as context (same photo). */
+  /** Generate another look using the current outfit as context (same source). */
   const handleGenerateAnother = async () => {
     if (guestLimitReached) return;
-    if (!requireImageForAlternate()) return;
-    await getSuggestion(true, undefined, !!currentSuggestion);
+    if (!requireCanGenerateAnother()) return;
+    await generateAnotherFromResult();
   };
 
   const handleMakeMoreFormal = async () => {
     if (guestLimitReached) return;
-    if (!requireImageForAlternate()) return;
-    await getSuggestion(true, undefined, !!currentSuggestion, {
+    if (!requireCanGenerateAnother()) return;
+    await generateAnotherFromResult({
       promptModifier: OUTFIT_VARIATION_MODIFIERS.moreFormal,
     });
   };
 
   const handleMakeMoreCasual = async () => {
     if (guestLimitReached) return;
-    if (!requireImageForAlternate()) return;
-    await getSuggestion(true, undefined, !!currentSuggestion, {
+    if (!requireCanGenerateAnother()) return;
+    await generateAnotherFromResult({
       promptModifier: OUTFIT_VARIATION_MODIFIERS.moreCasual,
     });
   };
 
   const handleUseWardrobeOnlyFromResult = async () => {
-    if (!requireImageForAlternate()) return;
+    if (!requireCanGenerateAnother()) return;
     if (!isAuthenticated) {
       showToast('Please log in to use wardrobe-only suggestions.', 'error');
       return;
     }
-    await getSuggestion(true, undefined, !!currentSuggestion, {
+    await generateAnotherFromResult({
       promptModifier: OUTFIT_VARIATION_MODIFIERS.wardrobeOnly,
       forceWardrobeOnly: true,
     });
@@ -349,11 +372,13 @@ function App() {
 
   const handleChangeOccasion = () => {
     document.getElementById('outfit-preferences')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    showToast('Update occasion in Preferences, then tap Generate Another Look.', 'success');
+    showToast(MAIN_FLOW_UX_COPY.changeOccasionHint, 'success');
   };
 
   const handleSetImage = (file: File | null) => {
     setSourceWardrobeItem(null);
+    setFlowPreviewUrl(null);
+    setFlowPreviewCaption(null);
     setImage(file);
     setHighlightGenerateButton(false);
   };
@@ -376,14 +401,11 @@ function App() {
 
   const handleGetRandomFromHistory = async () => {
     try {
-      const fullHistory = await ensureFullHistory();
-      if (fullHistory.length === 0) {
+      const result = await loadRandomFromHistory(ensureFullHistory);
+      if (result === 'empty') {
         showToast('No history yet. Get some outfit suggestions first! 📋', 'error');
         return;
       }
-      const randomEntry = fullHistory[Math.floor(Math.random() * fullHistory.length)];
-      const suggestion = historyEntryToSuggestion(randomEntry);
-      setCurrentSuggestion(suggestion);
       navigate(ROUTES.MAIN);
       showToast('Random outfit from your history! 📋', 'success');
     } catch (err) {
@@ -596,9 +618,16 @@ function App() {
                   isAuthenticated ? () => navigate(ROUTES.WARDROBE) : undefined
                 }
                 onClearSourceWardrobeItem={() => setSourceWardrobeItem(null)}
+                flowPreviewUrl={flowPreviewUrl}
+                flowPreviewCaption={flowPreviewCaption}
+                inputPanelSource={inputPanelSource}
+                summaryFilters={summaryFilters}
+                summaryPreferenceText={summaryPreferenceText}
                 guestRemaining={guestRemaining}
                 guestLimitReached={guestLimitReached}
                 hasSuggestion={!!currentSuggestion}
+                onStartFreshUpload={startFreshUpload}
+                onGenerateAnother={handleGenerateAnother}
                 onAddToWardrobe={async () => {
                   if (!image) {
                     showToast('Please upload an image first to add it to your wardrobe', 'error');
@@ -644,55 +673,18 @@ function App() {
                 suggestion={currentSuggestion}
                 loading={loading}
                 error={error}
+                filters={filters}
                 hasImage={!!image}
-                isAdmin={!!user?.is_admin}
+                canGenerateAnother={canGenerateAnother}
                 onGenerateAnother={handleGenerateAnother}
                 onMakeMoreFormal={handleMakeMoreFormal}
                 onMakeMoreCasual={handleMakeMoreCasual}
                 onUseWardrobeOnly={handleUseWardrobeOnlyFromResult}
                 onChangeOccasion={handleChangeOccasion}
-                onLike={handleLikeOutfit}
+                onSaveLook={handleSaveLook}
                 showWardrobeOnlyAction={isAuthenticated}
-                onNavigateToWardrobe={(category?: string) => {
-                  navigate(wardrobePath(category));
-                }}
-                showAiPromptResponse={!!user?.is_admin && showAiPromptResponse}
                 isAuthenticated={isAuthenticated}
                 guestLimitReached={guestLimitReached}
-                onAddToWardrobe={async () => {
-                  if (!image) {
-                    showToast('No image to add. Please upload an image first.', 'error');
-                    return;
-                  }
-
-                  setAddingToWardrobe(true);
-                  try {
-                    const duplicateCheck = await ApiService.checkWardrobeDuplicate(image);
-                    
-                    if (duplicateCheck.is_duplicate && duplicateCheck.existing_item) {
-                      setDuplicateWardrobeItem(duplicateCheck.existing_item);
-                      setWardrobeImageToAdd(image);
-                      setShowWardrobeDuplicateModal(true);
-                      setAddingToWardrobe(false);
-                      return;
-                    }
-                    
-                    const properties = await analyzeImage(image, 'blip');
-                    
-                    setWardrobeFormData({
-                      category: properties.category || 'shirt',
-                      color: properties.color || '',
-                      description: properties.description || '',
-                    });
-                    setWardrobeImageToAdd(image);
-                    setShowAddWardrobeModal(true);
-                  } catch (err) {
-                    const errorMessage = err instanceof Error ? err.message : 'Failed to process image';
-                    showToast(errorMessage, 'error');
-                  } finally {
-                    setAddingToWardrobe(false);
-                  }
-                }}
               />
             </div>
 
@@ -745,6 +737,7 @@ function App() {
                 outfitController={{
                   setImage,
                   setSourceWardrobeItem,
+                  prepareStyleFromWardrobeItem,
                   getSuggestion,
                   loading,
                   error,

@@ -41,6 +41,13 @@ Views → Controllers (hooks) → Services → Models. Keep views thin; put orch
 
 Behavior and copy must match the active spec and iOS implementation. Sync contract files with iOS when models, API calls, or progress steps change.
 
+## About & Guide (Twin UI — when spec requires)
+
+- `frontend/src/views/components/UserGuide.tsx` — step-by-step walkthroughs
+- `frontend/src/views/components/About.tsx` — feature list and app description
+- Update when user-visible flows, copy, or capabilities change; skip for layout-only tweaks
+- Tests: `GuideAndFooter.integration.test.tsx` if Guide copy changes
+
 ## Tests (Twin UI — required)
 
 - Unit: `*.test.tsx` / `*.test.ts` colocated or under `src/`

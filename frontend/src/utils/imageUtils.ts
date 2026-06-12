@@ -172,3 +172,14 @@ export const compressImageForOutfit = (file: File): Promise<File> => {
 export const compressImageForWardrobe = (file: File): Promise<File> => {
   return compressImage(file, WARDROBE_MAX_WIDTH, WARDROBE_MAX_HEIGHT, WARDROBE_QUALITY, WARDROBE_MAX_SIZE_MB);
 };
+
+/** Convert a data URL (e.g. history preview) into a File for outfit API calls. */
+export async function dataUrlToFile(
+  dataUrl: string,
+  filename: string = 'image.jpg'
+): Promise<File> {
+  const response = await fetch(dataUrl);
+  const blob = await response.blob();
+  const type = blob.type || 'image/jpeg';
+  return new File([blob], filename, { type });
+}

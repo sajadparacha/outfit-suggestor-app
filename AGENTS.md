@@ -17,7 +17,7 @@ Twin UI:
 1. Orchestrator writes `.cursor/specs/<feature-slug>.md` (includes **Tests required** section)
 2. Orchestrator handles `backend/` + **pytest** (if API/logic changes)
 3. **Two subagents** run in parallel — web (`frontend/`) and iOS (`ios-client/`)
-4. Each agent **adds tests** for new behavior before returning
+4. Each agent **adds tests** for new behavior before returning; updates **About** and **Guide** when the spec says user-visible docs need it
 5. Orchestrator **asks for confirmation** before running full web + iOS test suites (and backend if changed)
 6. After user confirms: run **full web + iOS test suites** (all unit + integration; iOS includes UITests)
 7. Orchestrator runs full `pytest` if backend changed this feature
@@ -55,10 +55,11 @@ iOS: keep iPhone and iPad UX identical — layout/spacing tweaks via horizontalS
 
 On every Twin UI feature, keep **iPhone and iPad the same UX** (flows, copy, actions). Only layout/spacing may differ on regular horizontal size class. See `.cursor/rules/ios-ui-ux.mdc` and the **iPhone / iPad** section in `.cursor/specs/_template.md`.
 
-Optional one-liner to append to any Twin UI prompt:
+Optional lines to append to any Twin UI prompt:
 
 ```text
 iOS: keep iPhone and iPad UX identical — layout/spacing tweaks via horizontalSizeClass only.
+Update About and Guide if user-facing behavior or copy changes.
 ```
 
 ## Repository layout

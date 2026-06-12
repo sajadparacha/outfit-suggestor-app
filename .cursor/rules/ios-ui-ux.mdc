@@ -69,6 +69,13 @@ Use `@Environment(\.horizontalSizeClass)` or `.adaptiveContent(maxWidth:)` — *
 - `AppTheme.adaptiveContent(maxWidth:)` — cap width on regular horizontal size class
 - `isRegularWidth` (`horizontalSizeClass == .regular`) — minor layout tweaks in `MainFlowView`, `WardrobeListView`, `HistoryListView`, `OutfitSuggestionView`
 
+## About & Guide (Twin UI — when spec requires)
+
+- `ios-client/OutfitSuggestor/Views/UserGuideView.swift` — step-by-step walkthroughs
+- `ios-client/OutfitSuggestor/Views/AboutView.swift` — feature list and app description
+- Update when user-visible flows, copy, or capabilities change; keep aligned with web Guide/About
+- Skip for layout-only tweaks
+
 ## Tests (Twin UI — required)
 
 - Unit/Integration: `ios-client/OutfitSuggestorTests/`

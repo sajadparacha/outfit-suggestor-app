@@ -166,7 +166,7 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
             <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-5 ring-1 ring-white/5">
               <p className="text-xs font-bold uppercase tracking-wider text-brand-blue/90 mb-2">No account needed</p>
               <p className="text-slate-300">
-                Upload a clothing photo and tap <span className="text-white font-medium">Get AI outfit suggestion</span>.
+                Upload a clothing photo and tap <span className="text-white font-medium">Generate Outfit</span>.
                 You will get a full outfit idea right away.
               </p>
             </div>
@@ -195,7 +195,7 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               'Open Preferences when you want: pick occasion, season, style, and add notes. Hover the section titles for a quick reminder of what is included.',
               'Logged in? In the Wardrobe block, switch Use my wardrobe only on to only mix pieces you own—or leave it off for fresh ideas from anywhere.',
               'If model image generation is on, you may see a short confirmation before the app creates a preview image.',
-              'Press Get AI outfit suggestion and watch the right panel—your outfit appears when ready.',
+              'Press Generate Outfit and watch the right panel—your outfit appears when ready.',
             ]}
           />
           <TipBox>

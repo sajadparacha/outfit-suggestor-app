@@ -105,6 +105,62 @@ describe('useOutfitController getSuggestion variations', () => {
   });
 });
 
+describe('useOutfitController prepareStyleFromWardrobeItem', () => {
+  beforeEach(() => {
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      blob: async () => new Blob(['image'], { type: 'image/jpeg' }),
+    } as Response);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('loads image, sets source item, and clears previous result and preview state', async () => {
+    const hook = renderHook(() => useOutfitController());
+    const uploadFile = new File(['photo-bytes'], 'shirt.jpg', { type: 'image/jpeg' });
+
+    act(() => {
+      hook.result.current.setImage(uploadFile);
+      hook.result.current.setCurrentSuggestion({
+        id: 'prev-1',
+        ...mockApiResponse,
+      });
+      hook.result.current.setFlowPreviewUrl('blob:preview');
+      hook.result.current.setFlowPreviewCaption('Random from wardrobe');
+    });
+
+    await act(async () => {
+      await hook.result.current.prepareStyleFromWardrobeItem({
+        id: 7,
+        category: 'shirt',
+        color: 'Blue',
+        image_data: 'base64-image-data',
+        name: null,
+        description: null,
+        brand: null,
+        size: null,
+        tags: null,
+        condition: null,
+        wear_count: 0,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      });
+    });
+
+    expect(hook.result.current.currentSuggestion).toBeNull();
+    expect(hook.result.current.flowPreviewUrl).toBeNull();
+    expect(hook.result.current.flowPreviewCaption).toBeNull();
+    expect(hook.result.current.sourceWardrobeItem).toEqual({
+      id: 7,
+      category: 'shirt',
+      color: 'Blue',
+    });
+    expect(hook.result.current.image).toBeInstanceOf(File);
+    expect(hook.result.current.image?.name).toBe('wardrobe-item-7.jpg');
+  });
+});
+
 describe('useOutfitController resetMainFlowState', () => {
   const uploadFile = new File(['photo-bytes'], 'shirt.jpg', { type: 'image/jpeg' });
 

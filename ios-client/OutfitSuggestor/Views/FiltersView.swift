@@ -16,18 +16,19 @@ struct FiltersView: View {
     @Binding var filters: OutfitFilters
     @Binding var preferenceText: String
     var layout: Layout = .form
+    var useWardrobeOnly: Binding<Bool>? = nil
+    var showWardrobeOnly: Bool = false
 
     @State private var activeSheet: FilterSheet?
 
     private enum FilterSheet: Identifiable {
-        case occasion, season, style, colors, notes
+        case occasion, season, style, notes
 
         var id: String {
             switch self {
             case .occasion: return "occasion"
             case .season: return "season"
             case .style: return "style"
-            case .colors: return "colors"
             case .notes: return "notes"
             }
         }
@@ -101,12 +102,13 @@ struct FiltersView: View {
                 gridCell(title: "Style", value: displayStyle, icon: "paintbrush") {
                     activeSheet = .style
                 }
-                gridCell(title: "Colors", value: filters.colorPreference, icon: "paintpalette") {
-                    activeSheet = .colors
-                }
                 gridCell(title: "Notes", value: notesSummary, icon: "note.text") {
                     activeSheet = .notes
                 }
+            }
+
+            if showWardrobeOnly, let useWardrobeOnly {
+                wardrobeOnlyCheckbox(binding: useWardrobeOnly)
             }
         }
         .padding(.horizontal)
@@ -155,7 +157,35 @@ struct FiltersView: View {
             .glassCard()
         }
         .buttonStyle(.plain)
-        .accessibilityIdentifier("home.filter.\(title.lowercased())")
+        .accessibilityIdentifier(GridContract.filterAccessibilityId(for: title))
+    }
+
+    @ViewBuilder
+    private func wardrobeOnlyCheckbox(binding: Binding<Bool>) -> some View {
+        let label = VStack(alignment: .leading, spacing: 2) {
+            Text(GridContract.wardrobeOnlyTitle)
+                .font(.subheadline.weight(.medium))
+                .foregroundColor(AppTheme.textPrimary)
+            Text(MicroHelpCopy.wardrobeOnly)
+                .font(.caption)
+                .foregroundColor(AppTheme.textSecondary)
+        }
+
+        Button {
+            binding.wrappedValue.toggle()
+        } label: {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: binding.wrappedValue ? "checkmark.square.fill" : "square")
+                    .font(.title3)
+                    .foregroundColor(binding.wrappedValue ? AppTheme.accent : AppTheme.textSecondary)
+                label
+                Spacer(minLength: 0)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(GridContract.wardrobeOnlyCheckboxAccessibilityId)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityValue(binding.wrappedValue ? "checked" : "unchecked")
     }
 
     @ViewBuilder
@@ -169,8 +199,6 @@ struct FiltersView: View {
                     pickerRows(Season.allCases.map { ($0.rawValue, $0.apiValue) }, selection: $filters.season)
                 case .style:
                     pickerRows(Style.allCases.map { ($0.rawValue, $0.apiValue) }, selection: $filters.style)
-                case .colors:
-                    pickerRows(ColorPreference.allCases.map { ($0.rawValue, $0.rawValue) }, selection: $filters.colorPreference)
                 case .notes:
                     Section {
                         TextField("Add style notes or preferences", text: $preferenceText, axis: .vertical)
@@ -230,8 +258,23 @@ struct FiltersView: View {
         case .occasion: return "Occasion"
         case .season: return "Season"
         case .style: return "Style"
-        case .colors: return "Colors"
         case .notes: return "Notes"
+        }
+    }
+}
+
+extension FiltersView {
+    enum GridContract {
+        static let fieldTitles = ["Occasion", "Season", "Style", "Notes"]
+        static let wardrobeOnlyTitle = "Use my wardrobe only"
+        static let wardrobeOnlyCheckboxAccessibilityId = "main.wardrobeOnlyCheckbox"
+
+        static func filterAccessibilityId(for title: String) -> String {
+            "home.filter.\(title.lowercased())"
+        }
+
+        static func shouldShowWardrobeOnlyCheckbox(showWardrobeOnly: Bool, bindingProvided: Bool) -> Bool {
+            showWardrobeOnly && bindingProvided
         }
     }
 }

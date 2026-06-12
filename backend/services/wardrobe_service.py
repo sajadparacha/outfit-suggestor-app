@@ -442,6 +442,7 @@ class WardrobeService:
                 color = chosen.color or ""
                 text = f"{color} {category}".strip() + (f" - {desc}" if desc else "")
                 result[category] = text
+                result[f"{category}_id"] = chosen.id
                 matching_items[category] = [{
                     "id": chosen.id,
                     "category": chosen.category,

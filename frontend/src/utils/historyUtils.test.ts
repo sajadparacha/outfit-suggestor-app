@@ -1,7 +1,8 @@
 /**
  * Unit tests for historyUtils - history entry to suggestion conversion
  */
-import { historyEntryToSuggestion } from './historyUtils';
+import { historyEntrySummaryFilters, historyEntryToSuggestion } from './historyUtils';
+import { DEFAULT_FILTERS } from './outfitPreferences';
 import type { OutfitHistoryEntry } from '../models/OutfitModels';
 
 describe('historyEntryToSuggestion', () => {
@@ -86,5 +87,38 @@ describe('historyEntryToSuggestion', () => {
     expect(suggestion.trouser_id).toBe(22);
     expect(suggestion.source_wardrobe_item_id).toBe(11);
     expect(suggestion.matching_wardrobe_items?.shirt[0]?.id).toBe(11);
+  });
+
+  it('maps occasion, season, and style from history entry when present', () => {
+    const entry: OutfitHistoryEntry = {
+      ...baseEntry,
+      occasion: 'formal',
+      season: 'winter',
+      style: 'classic',
+    };
+
+    const summary = historyEntrySummaryFilters(entry);
+    expect(summary.occasion).toBe('formal');
+    expect(summary.season).toBe('winter');
+    expect(summary.style).toBe('classic');
+  });
+
+  it('falls back to provided filters when occasion/season/style are absent', () => {
+    const fallback = { occasion: 'party', season: 'summer', style: 'bold' };
+    const summary = historyEntrySummaryFilters(baseEntry, fallback);
+
+    expect(summary).toEqual(fallback);
+  });
+
+  it('falls back to default filters when entry fields are empty strings', () => {
+    const entry: OutfitHistoryEntry = {
+      ...baseEntry,
+      occasion: '  ',
+      season: '',
+      style: null,
+    };
+
+    const summary = historyEntrySummaryFilters(entry, DEFAULT_FILTERS);
+    expect(summary).toEqual(DEFAULT_FILTERS);
   });
 });

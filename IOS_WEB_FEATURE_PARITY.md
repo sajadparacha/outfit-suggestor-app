@@ -2,7 +2,7 @@
 
 This document tracks feature parity between the **web app** and the **iOS app** so both offer the same functionality. Use it as a checklist when implementing or syncing features.
 
-**Branch**: `feature/admin-reports`
+**Branch**: `feature/main-page-ui-improvements`
 
 ---
 
@@ -11,6 +11,10 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 | Area | Web | iOS | Notes |
 |------|-----|-----|--------|
 | **Auth** | ✅ | ✅ | Register, login, logout, change password (Settings) |
+| **Main flow simplified UX** | ✅ | ✅ | Shared contract `docs/main-flow-ux-contract.md`; creation → result; 3 actions (Generate Another, Save Look, Refine); advanced options input-side only |
+| **Random picks thumbnails + input sync** | ✅ | ✅ | Item card thumbs from `matching_wardrobe_items`; left preview replaces stale upload; wardrobe-only **checkbox** (not switch) |
+| **Random pick result: regenerate + upload** | ✅ | ✅ | Compact result shows upload new item + Generate Another; shared `mainFlowResultRegenerate` / `MainFlowResultRegenerateLogic` |
+| **Preferences layout** | ✅ | ✅ | Occasion, season, style, notes; **Use my wardrobe only** last (auth); Colors removed from UI |
 | **Get suggestion (photo)** | ✅ | ✅ | Upload image → AI suggestion |
 | **Filters / preference text** | ✅ | ✅ | Occasion, season, style; free text |
 | **Wardrobe-only mode** | ✅ | ✅ | Toggle when logged in (Main flow) |
@@ -18,7 +22,7 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 | **Wardrobe** | ✅ | ✅ | List, add, edit, delete, category filter, search, "Get suggestion" from item |
 | **Outfit history** | ✅ | ✅ | List, search, sort (newest/oldest), delete, load into main view |
 | **Random from wardrobe** | ✅ | ✅ | Button on Main; GET /api/wardrobe/random-outfit |
-| **Random from history** | ✅ | ✅ | Button on Main; client picks from history |
+| **Random from history** | ✅ | ✅ | Button on Main; client picks from history; **Your inputs** syncs preview + **From history** caption + entry filters |
 | **Duplicate detection** | ✅ | ✅ | Check before suggestion; use cached or force new |
 | **Next / Alternate outfit** | ✅ | ✅ | Button after suggestion; requests a different outfit |
 | **Wardrobe Insights** | ✅ | ✅ | Wardrobe gap analysis by category; user-facing modes **Quick Wardrobe Check** (free) and **AI Stylist Review** (premium); results use fashion-assistant copy (e.g. *What's Missing From My Wardrobe?*, *What to Buy Next*) |
@@ -59,7 +63,17 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 
 ## 2. Get Outfit Suggestion (Photo Upload)
 
-**Web**: Upload image (drag/drop or pick), optional preference text, occasion/season/style filters, “Get AI Suggestion”, loading state, display result (shirt, trouser, blazer, shoes, belt, reasoning). Optional: generate model image.
+**Shared UX contract**: `docs/main-flow-ux-contract.md` + `mainFlowUxCopy.ts` / `MainFlowUxCopy.swift`
+
+**Flow (both platforms)**:
+1. **Creation** — upload, preferences (occasion/season/style/notes), **Generate Outfit** CTA; wardrobe / random picks / advanced options collapsed on input side
+2. **Result** — styled look hero (model image or placeholder, not upload repeat), context line (`Style · Season`), simplified item cards with source tags, **Why this works** bullets
+3. **Actions** — **Generate Another Look**, **Save Look**, **Refine** (formal / casual / wardrobe-only / change occasion inside menu)
+4. **Layout** — web two-column on desktop; iOS two-column on iPad regular width; mobile scroll-to-result
+
+**Web**: Upload image (drag/drop or pick), optional preference text, occasion/season/style filters, **Generate Outfit**, loading state, display result. Optional: generate model image (advanced, input side).
+
+**iOS**: Same flow in `MainFlowView` + `OutfitSuggestionView`; sticky bottom Save Look + Generate Another on result.
 
 **iOS status**: Implemented (image + text/filters → suggestion). Missing: auth header, wardrobe-only flag, model image option.
 
@@ -158,16 +172,11 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 
 **Web**: Sidebar “Random from History”. Client fetches full history (or a slice), picks a random entry, maps it to suggestion format, shows in main view.
 
-**iOS status**: Not implemented.
+**iOS**: Same flow on Main.
+
+**Input panel sync** (`random-history-input-summary-sync`): clear stale upload/wardrobe preview; compact **Your inputs** shows entry preview, **From history** caption, and `summaryFilters` from entry occasion/season/style; wardrobe banner hidden in compact result mode.
 
 **API**: `GET /api/outfit-history` (e.g. limit=50 or similar to get a usable list).
-
-**iOS work**:
-
-- [ ] Fetch history (e.g. limit 50).
-- [ ] Pick random entry; map to `OutfitSuggestion` (or equivalent) including image URLs/data if available.
-- [ ] Show in main suggestion view.
-- [ ] Handle empty history (e.g. “No history yet” message).
 
 ---
 

@@ -14,7 +14,7 @@ enum FirstRunCoachCopy {
     static let collapsedPreferencesLabel = "Occasion, season, style (optional)"
     static let expandButton = "Expand"
     static let emptyPreviewHeadline = "Your outfit appears here"
-    static let emptyPreviewSubline = "Upload a photo above, then tap Generate Outfit"
+    static let emptyPreviewSubline = "Upload a photo, set preferences, then tap Generate Outfit"
     static let readyToGenerateHint = "Ready — tap Generate Outfit"
 
     enum Step: Int, CaseIterable {

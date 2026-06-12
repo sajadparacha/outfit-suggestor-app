@@ -19,10 +19,10 @@ All triggers use the **strict** workflow: orchestrator never edits `frontend/**`
 
 ```
 - [ ] 1. Confirm branch (`git branch --show-current`)
-- [ ] 2. Create spec with Tests (required) section filled
+- [ ] 2. Create spec with Tests (required) section filled; mark if **About** / **Guide** need updates
 - [ ] 3. Orchestrator: backend/contract + backend pytest (if needed)
 - [ ] 4. Spawn web + iOS Task subagents in ONE message (required)
-- [ ] 5. Parity review vs spec and IOS_WEB_FEATURE_PARITY.md
+- [ ] 5. Parity review vs spec, About/Guide (when required), and IOS_WEB_FEATURE_PARITY.md
 - [ ] 6. **Ask user to confirm** before running full web + iOS test suites
 - [ ] 7. Orchestrator: run FULL web + iOS test suites (only after user confirms)
 - [ ] 8. Publish Test Execution Report (required format below)
@@ -189,7 +189,12 @@ TESTS (required before returning):
 - Run: cd frontend && npm test -- --watchAll=false --passWithNoTests
 - Fix failures; do not skip tests
 
-Return: files changed, spec compliance, test files added, test run summary.
+ABOUT / GUIDE (when spec requires):
+- Update `frontend/src/views/components/UserGuide.tsx` and `About.tsx` if the feature changes user-visible flows, copy, or capabilities described there
+- Skip for pure layout/styling with no user-facing behavior change
+- Update or add tests if Guide/About assertions exist (e.g. `GuideAndFooter.integration.test.tsx`)
+
+Return: files changed, spec compliance, test files added, test run summary, About/Guide updated (yes/no).
 ```
 
 ### iOS subagent
@@ -212,7 +217,12 @@ TESTS (required before returning):
 - Run new test classes if added
 - Fix failures; do not skip tests
 
-Return: files changed, spec compliance, test files added, build/test summary.
+ABOUT / GUIDE (when spec requires):
+- Update `ios-client/OutfitSuggestor/Views/UserGuideView.swift` and `AboutView.swift` if the feature changes user-visible flows, copy, or capabilities described there
+- Skip for pure layout/styling with no user-facing behavior change
+- Keep Guide/About copy aligned with web where both document the same feature
+
+Return: files changed, spec compliance, test files added, build/test summary, About/Guide updated (yes/no).
 ```
 
 ## Contract pairs (sync when spec requires)
@@ -231,6 +241,7 @@ Twin UI:
 [Describe screens, flows, copy, and behavior]
 
 iOS: keep iPhone and iPad UX identical — layout/spacing tweaks via horizontalSizeClass only.
+Update About and Guide if user-facing behavior or copy changes.
 ```
 
 ## References

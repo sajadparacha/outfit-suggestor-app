@@ -68,10 +68,24 @@
 		F1R2U3N4C5O6A7C8H900007 /* CollapsedPreferencesRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1R2U3N4C5O6A7C8H900008 /* CollapsedPreferencesRow.swift */; };
 		F1R2U3N4C5O6A7C8H900009 /* FirstRunCoachTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1R2U3N4C5O6A7C8H90000A /* FirstRunCoachTests.swift */; };
 		G1U2E3S4T5L6I7M8I900001 /* MainFlowGuestLimitLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = G1U2E3S4T5L6I7M8I900002 /* MainFlowGuestLimitLogic.swift */; };
+		M1F2L3A4Y5O6U7T8L9O0G01 /* MainFlowLayoutLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1F2L3A4Y5O6U7T8L9O0G02 /* MainFlowLayoutLogic.swift */; };
 		G1U2E3S4T5L6I7M8I900003 /* GuestLimitAuthUxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = G1U2E3S4T5L6I7M8I900004 /* GuestLimitAuthUxTests.swift */; };
 		A1R2E3P4O5R6T7M8O9D0E02 /* ReportsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1R2E3P4O5R6T7M8O9D0E01 /* ReportsModels.swift */; };
 		A1R2E3P4O5R6T7M8O9D0E04 /* ReportsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1R2E3P4O5R6T7M8O9D0E03 /* ReportsViewModel.swift */; };
 		A1R2E3P4O5R6T7M8O9D0E06 /* ReportsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1R2E3P4O5R6T7M8O9D0E05 /* ReportsViewModelTests.swift */; };
+		M1F2L3O4W5U6X7C8O9P0Y01 /* MainFlowUxCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1F2L3O4W5U6X7C8O9P0Y02 /* MainFlowUxCopy.swift */; };
+		M1F2L3O4W5U6X7C8O9P0Y03 /* ReasoningBullets.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1F2L3O4W5U6X7C8O9P0Y04 /* ReasoningBullets.swift */; };
+		M1F2L3O4W5U6X7C8O9P0Y05 /* OutfitContextLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1F2L3O4W5U6X7C8O9P0Y06 /* OutfitContextLine.swift */; };
+		M1F2L3O4W5U6X7C8O9P0Y07 /* OutfitItemCardText.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1F2L3O4W5U6X7C8O9P0Y08 /* OutfitItemCardText.swift */; };
+		M1F2L3O4W5U6X7C8O9P0Y09 /* OutfitItemCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1F2L3O4W5U6X7C8O9P0Y0A /* OutfitItemCardView.swift */; };
+		M1F2L3O4W5U6X7C8O9P0Y0B /* RefineMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1F2L3O4W5U6X7C8O9P0Y0C /* RefineMenuView.swift */; };
+		M1F2L3O4W5U6X7C8O9P0Y0D /* MainFlowCompactSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1F2L3O4W5U6X7C8O9P0Y0E /* MainFlowCompactSummaryView.swift */; };
+		M1F2L3O4W5U6X7C8O9P0Y0F /* MainFlowUxContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1F2L3O4W5U6X7C8O9P0Y10 /* MainFlowUxContractTests.swift */; };
+		R1E2G3E4N5L6O7G8I9C001 /* MainFlowResultRegenerateLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = R1E2G3E4N5L6O7G8I9C002 /* MainFlowResultRegenerateLogic.swift */; };
+		R1E2G3E4N5L6O7G8I9C003 /* MainFlowResultRegenerateLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = R1E2G3E4N5L6O7G8I9C004 /* MainFlowResultRegenerateLogicTests.swift */; };
+		F1L2T3E4R5V6I7E8W900001 /* FiltersViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L2T3E4R5V6I7E8W900002 /* FiltersViewTests.swift */; };
+		O1I2T3H4U5M6B7N8A9I0L02 /* OutfitItemThumbnail.swift in Sources */ = {isa = PBXBuildFile; fileRef = O1I2T3H4U5M6B7N8A9I0L01 /* OutfitItemThumbnail.swift */; };
+		O1I2T3H4U5M6B7N8A9I0L04 /* OutfitItemThumbnailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = O1I2T3H4U5M6B7N8A9I0L03 /* OutfitItemThumbnailTests.swift */; };
 /* End PBXBuildFile section */
 		C4AA4111F038841A8E622B9A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -155,10 +169,24 @@
 		F1R2U3N4C5O6A7C8H900008 /* CollapsedPreferencesRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollapsedPreferencesRow.swift; sourceTree = "<group>"; };
 		F1R2U3N4C5O6A7C8H90000A /* FirstRunCoachTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunCoachTests.swift; sourceTree = "<group>"; };
 		G1U2E3S4T5L6I7M8I900002 /* MainFlowGuestLimitLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlowGuestLimitLogic.swift; sourceTree = "<group>"; };
+		M1F2L3A4Y5O6U7T8L9O0G02 /* MainFlowLayoutLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlowLayoutLogic.swift; sourceTree = "<group>"; };
 		G1U2E3S4T5L6I7M8I900004 /* GuestLimitAuthUxTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuestLimitAuthUxTests.swift; sourceTree = "<group>"; };
 		A1R2E3P4O5R6T7M8O9D0E01 /* ReportsModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportsModels.swift; sourceTree = "<group>"; };
 		A1R2E3P4O5R6T7M8O9D0E03 /* ReportsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportsViewModel.swift; sourceTree = "<group>"; };
 		A1R2E3P4O5R6T7M8O9D0E05 /* ReportsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportsViewModelTests.swift; sourceTree = "<group>"; };
+		M1F2L3O4W5U6X7C8O9P0Y02 /* MainFlowUxCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlowUxCopy.swift; sourceTree = "<group>"; };
+		M1F2L3O4W5U6X7C8O9P0Y04 /* ReasoningBullets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReasoningBullets.swift; sourceTree = "<group>"; };
+		M1F2L3O4W5U6X7C8O9P0Y06 /* OutfitContextLine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitContextLine.swift; sourceTree = "<group>"; };
+		M1F2L3O4W5U6X7C8O9P0Y08 /* OutfitItemCardText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitItemCardText.swift; sourceTree = "<group>"; };
+		M1F2L3O4W5U6X7C8O9P0Y0A /* OutfitItemCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitItemCardView.swift; sourceTree = "<group>"; };
+		M1F2L3O4W5U6X7C8O9P0Y0C /* RefineMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RefineMenuView.swift; sourceTree = "<group>"; };
+		M1F2L3O4W5U6X7C8O9P0Y0E /* MainFlowCompactSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlowCompactSummaryView.swift; sourceTree = "<group>"; };
+		M1F2L3O4W5U6X7C8O9P0Y10 /* MainFlowUxContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlowUxContractTests.swift; sourceTree = "<group>"; };
+		R1E2G3E4N5L6O7G8I9C002 /* MainFlowResultRegenerateLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlowResultRegenerateLogic.swift; sourceTree = "<group>"; };
+		R1E2G3E4N5L6O7G8I9C004 /* MainFlowResultRegenerateLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlowResultRegenerateLogicTests.swift; sourceTree = "<group>"; };
+		F1L2T3E4R5V6I7E8W900002 /* FiltersViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FiltersViewTests.swift; sourceTree = "<group>"; };
+		O1I2T3H4U5M6B7N8A9I0L01 /* OutfitItemThumbnail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitItemThumbnail.swift; sourceTree = "<group>"; };
+		O1I2T3H4U5M6B7N8A9I0L03 /* OutfitItemThumbnailTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitItemThumbnailTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 		384222D780F1291F491220F0 /* OutfitSuggestorTests */ = {
 			isa = PBXGroup;
@@ -174,6 +202,10 @@
 				F1R2U3N4C5O6A7C8H90000A /* FirstRunCoachTests.swift */,
 				G1U2E3S4T5L6I7M8I900004 /* GuestLimitAuthUxTests.swift */,
 				A1R2E3P4O5R6T7M8O9D0E05 /* ReportsViewModelTests.swift */,
+				M1F2L3O4W5U6X7C8O9P0Y10 /* MainFlowUxContractTests.swift */,
+				R1E2G3E4N5L6O7G8I9C004 /* MainFlowResultRegenerateLogicTests.swift */,
+				F1L2T3E4R5V6I7E8W900002 /* FiltersViewTests.swift */,
+				O1I2T3H4U5M6B7N8A9I0L03 /* OutfitItemThumbnailTests.swift */,
 			);
 			path = OutfitSuggestorTests;
 			sourceTree = "<group>";
@@ -224,6 +256,9 @@
 				3C4C31A8216581E9E830B306 /* UserGuideView.swift */,
 				B35421E2E5C40F12D828A0A4 /* WardrobeFormView.swift */,
 				66828E50349EE49EE62FFFFD /* WardrobeListView.swift */,
+				M1F2L3O4W5U6X7C8O9P0Y0A /* OutfitItemCardView.swift */,
+				M1F2L3O4W5U6X7C8O9P0Y0C /* RefineMenuView.swift */,
+				M1F2L3O4W5U6X7C8O9P0Y0E /* MainFlowCompactSummaryView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -265,6 +300,13 @@
 				M1A2B3C4D5E6F708192A3B53 /* MicroHelpCopy.swift */,
 				F1R2U3N4C5O6A7C8H900002 /* FirstRunCoachLogic.swift */,
 				G1U2E3S4T5L6I7M8I900002 /* MainFlowGuestLimitLogic.swift */,
+				M1F2L3A4Y5O6U7T8L9O0G02 /* MainFlowLayoutLogic.swift */,
+				R1E2G3E4N5L6O7G8I9C002 /* MainFlowResultRegenerateLogic.swift */,
+				M1F2L3O4W5U6X7C8O9P0Y02 /* MainFlowUxCopy.swift */,
+				M1F2L3O4W5U6X7C8O9P0Y04 /* ReasoningBullets.swift */,
+				M1F2L3O4W5U6X7C8O9P0Y06 /* OutfitContextLine.swift */,
+				M1F2L3O4W5U6X7C8O9P0Y08 /* OutfitItemCardText.swift */,
+				O1I2T3H4U5M6B7N8A9I0L01 /* OutfitItemThumbnail.swift */,
 				W1A2B3C4D5E6F708192A3B50 /* WardrobeCardUx.swift */,
 				585D224C3BAB35D9CD03EA3B /* AppConfig.swift */,
 				E3016CC9235E918186E85387 /* ImagePicker.swift */,
@@ -496,8 +538,18 @@
 				F1R2U3N4C5O6A7C8H900005 /* EmptyOutfitPreviewView.swift in Sources */,
 				F1R2U3N4C5O6A7C8H900007 /* CollapsedPreferencesRow.swift in Sources */,
 				G1U2E3S4T5L6I7M8I900001 /* MainFlowGuestLimitLogic.swift in Sources */,
+				M1F2L3A4Y5O6U7T8L9O0G01 /* MainFlowLayoutLogic.swift in Sources */,
+				R1E2G3E4N5L6O7G8I9C001 /* MainFlowResultRegenerateLogic.swift in Sources */,
 				A1R2E3P4O5R6T7M8O9D0E02 /* ReportsModels.swift in Sources */,
 				A1R2E3P4O5R6T7M8O9D0E04 /* ReportsViewModel.swift in Sources */,
+				M1F2L3O4W5U6X7C8O9P0Y01 /* MainFlowUxCopy.swift in Sources */,
+				M1F2L3O4W5U6X7C8O9P0Y03 /* ReasoningBullets.swift in Sources */,
+				M1F2L3O4W5U6X7C8O9P0Y05 /* OutfitContextLine.swift in Sources */,
+				M1F2L3O4W5U6X7C8O9P0Y07 /* OutfitItemCardText.swift in Sources */,
+				M1F2L3O4W5U6X7C8O9P0Y09 /* OutfitItemCardView.swift in Sources */,
+				M1F2L3O4W5U6X7C8O9P0Y0B /* RefineMenuView.swift in Sources */,
+				M1F2L3O4W5U6X7C8O9P0Y0D /* MainFlowCompactSummaryView.swift in Sources */,
+				O1I2T3H4U5M6B7N8A9I0L02 /* OutfitItemThumbnail.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -516,6 +568,10 @@
 				F1R2U3N4C5O6A7C8H900009 /* FirstRunCoachTests.swift in Sources */,
 				G1U2E3S4T5L6I7M8I900003 /* GuestLimitAuthUxTests.swift in Sources */,
 				A1R2E3P4O5R6T7M8O9D0E06 /* ReportsViewModelTests.swift in Sources */,
+				M1F2L3O4W5U6X7C8O9P0Y0F /* MainFlowUxContractTests.swift in Sources */,
+				R1E2G3E4N5L6O7G8I9C003 /* MainFlowResultRegenerateLogicTests.swift in Sources */,
+				F1L2T3E4R5V6I7E8W900001 /* FiltersViewTests.swift in Sources */,
+				O1I2T3H4U5M6B7N8A9I0L04 /* OutfitItemThumbnailTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

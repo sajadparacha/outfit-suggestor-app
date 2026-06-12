@@ -3,7 +3,9 @@ import TagBadge from './TagBadge';
 
 interface OutfitItemCardProps {
   title: string;
-  description: string;
+  description?: string;
+  shortName?: string;
+  oneLineReason?: string | null;
   imageSrc?: string | null;
   imageAlt: string;
   tag: string;
@@ -15,6 +17,8 @@ interface OutfitItemCardProps {
 const OutfitItemCard: React.FC<OutfitItemCardProps> = ({
   title,
   description,
+  shortName,
+  oneLineReason,
   imageSrc,
   imageAlt,
   tag,
@@ -22,8 +26,11 @@ const OutfitItemCard: React.FC<OutfitItemCardProps> = ({
   onImageClick,
   legacyHint,
 }) => {
+  const displayName = shortName ?? description ?? '';
+  const reasonLine = oneLineReason ?? null;
+
   return (
-    <article className="group flex h-full flex-col rounded-2xl border border-white/10 bg-slate-900/70 p-4 transition-all duration-300 hover:-translate-y-1 hover:border-brand-blue/50 hover:shadow-[0_0_30px_rgba(79, 172, 254, 0.16)]">
+    <article className="group flex h-full flex-col rounded-2xl border border-white/10 bg-slate-900/70 p-4 transition-all duration-300 hover:-translate-y-1 hover:border-brand-blue/50 hover:shadow-[0_0_30px_rgba(79,172,254,0.16)]">
       <div className="mb-3 overflow-hidden rounded-xl border border-white/10 bg-slate-800/80">
         {imageSrc ? (
           <button
@@ -40,7 +47,12 @@ const OutfitItemCard: React.FC<OutfitItemCardProps> = ({
         )}
       </div>
       <h3 className="text-base font-semibold text-white">{title}</h3>
-      <p className="mt-1 min-h-[2.5rem] overflow-hidden text-sm leading-5 text-slate-300">{description}</p>
+      {displayName && <p className="mt-1 text-sm font-medium text-white">{displayName}</p>}
+      {reasonLine && (
+        <p className="mt-1 min-h-[1.25rem] overflow-hidden text-sm leading-5 text-slate-400 line-clamp-2">
+          {reasonLine}
+        </p>
+      )}
       {legacyHint && <p className="mt-1 text-[11px] text-slate-400">{legacyHint}</p>}
       <div className="mt-3">
         <TagBadge label={tag} tone={tagTone} />

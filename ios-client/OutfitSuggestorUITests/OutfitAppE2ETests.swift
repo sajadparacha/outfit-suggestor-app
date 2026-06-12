@@ -296,37 +296,39 @@ final class OutfitAppE2ETests: XCTestCase {
     func testSuggestFlowFromSampleImageShowsResultCard() {
         addSampleImageOnSuggest()
         app.buttons["main.getSuggestionButton"].tap()
-        XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 6))
+        XCTAssertTrue(app.staticTexts["Your Styled Look"].waitForExistence(timeout: 6))
     }
 
     func testResultActionButtonsAreVisibleAfterSuggestion() {
         addSampleImageOnSuggest()
         app.buttons["main.getSuggestionButton"].tap()
-        XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 6))
+        XCTAssertTrue(app.staticTexts["Your Styled Look"].waitForExistence(timeout: 6))
 
         XCTAssertTrue(app.buttons["main.generateAnotherButton"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.buttons["main.makeMoreFormalButton"].exists)
-        XCTAssertTrue(app.buttons["main.makeMoreCasualButton"].exists)
-        XCTAssertTrue(app.buttons["main.changeOccasionButton"].exists)
+        XCTAssertTrue(app.buttons["main.saveLookButton"].exists)
+        XCTAssertTrue(app.buttons["main.refineButton"].exists)
+        XCTAssertFalse(app.buttons["main.likeButton"].exists)
     }
 
     func testChangeOccasionOpensPickerSheet() {
         addSampleImageOnSuggest()
         app.buttons["main.getSuggestionButton"].tap()
-        XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 6))
+        XCTAssertTrue(app.staticTexts["Your Styled Look"].waitForExistence(timeout: 6))
 
-        app.buttons["main.changeOccasionButton"].tap()
-        XCTAssertTrue(app.navigationBars["Change Occasion"].waitForExistence(timeout: 4))
+        app.buttons["main.refineButton"].tap()
+        XCTAssertTrue(app.buttons["main.refineChangeOccasionButton"].waitForExistence(timeout: 4))
+        app.buttons["main.refineChangeOccasionButton"].tap()
+        XCTAssertTrue(app.navigationBars["Change occasion"].waitForExistence(timeout: 4))
     }
 
     func testGenerateAnotherLookKeepsResultVisible() {
         addSampleImageOnSuggest()
         app.buttons["main.getSuggestionButton"].tap()
-        XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 6))
+        XCTAssertTrue(app.staticTexts["Your Styled Look"].waitForExistence(timeout: 6))
 
         app.buttons["main.generateAnotherButton"].tap()
         waitForAppUnlocked(timeout: 8)
-        XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 6))
+        XCTAssertTrue(app.staticTexts["Your Styled Look"].waitForExistence(timeout: 6))
     }
 
     private func focusWardrobeItem(_ itemId: Int) {
@@ -354,7 +356,7 @@ final class OutfitAppE2ETests: XCTestCase {
         )
         XCTAssertTrue(app.buttons["main.getSuggestionButton"].waitForExistence(timeout: 4))
         app.buttons["main.getSuggestionButton"].tap()
-        XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 6))
+        XCTAssertTrue(app.staticTexts["Your Styled Look"].waitForExistence(timeout: 6))
 
         openWardrobe()
         focusWardrobeItem(wardrobeItemId)
@@ -366,7 +368,7 @@ final class OutfitAppE2ETests: XCTestCase {
         ).firstMatch
         XCTAssertTrue(waitFor(suggestionEntry, timeout: 12), "Expected wardrobe history entries")
         tapWardrobeHistoryUseThis()
-        XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 6))
+        XCTAssertTrue(app.staticTexts["Your Styled Look"].waitForExistence(timeout: 6))
     }
 
     func testAiProgressPanelAppearsDuringSuggestionAndTabsStayUsable() {
@@ -387,7 +389,7 @@ final class OutfitAppE2ETests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Looks"].waitForExistence(timeout: 3))
 
         openTab("Suggest")
-        XCTAssertTrue(app.staticTexts["Your Perfect Outfit"].waitForExistence(timeout: 12))
+        XCTAssertTrue(app.staticTexts["Your Styled Look"].waitForExistence(timeout: 12))
     }
 
     func testAdminPremiumInsightsShowsCostPromptAndResponse() {

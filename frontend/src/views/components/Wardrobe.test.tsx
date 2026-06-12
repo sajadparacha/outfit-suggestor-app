@@ -222,7 +222,7 @@ describe('Wardrobe page', () => {
     expect(screen.queryByText(/Build outfit from this item/i)).not.toBeInTheDocument();
   });
 
-  it('Style this item prepares suggest flow via outfitController', async () => {
+  it('Style this item prepares suggest flow via prepareStyleFromWardrobeItem', async () => {
     const itemWithImage: WardrobeItem = {
       ...mockWardrobeItem,
       image_data: 'base64-image-a',
@@ -231,20 +231,16 @@ describe('Wardrobe page', () => {
 
     const onNavigateToMain = jest.fn();
     const onSourceImageLoaded = jest.fn();
-    const setImage = jest.fn();
-    const setSourceWardrobeItem = jest.fn();
-
-    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
-      blob: async () => new Blob(['image'], { type: 'image/jpeg' }),
-    } as Response);
+    const prepareStyleFromWardrobeItem = jest.fn().mockResolvedValue(undefined);
 
     render(
       <Wardrobe
         onNavigateToMain={onNavigateToMain}
         onSourceImageLoaded={onSourceImageLoaded}
         outfitController={{
-          setImage,
-          setSourceWardrobeItem,
+          setImage: jest.fn(),
+          setSourceWardrobeItem: jest.fn(),
+          prepareStyleFromWardrobeItem,
           getSuggestion: jest.fn(),
           loading: false,
           error: null,
@@ -257,15 +253,12 @@ describe('Wardrobe page', () => {
     fireEvent.click(screen.getByRole('button', { name: /Style this item with AI/i }));
 
     await waitFor(() => {
-      expect(setSourceWardrobeItem).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 1, category: 'shirt' })
+      expect(prepareStyleFromWardrobeItem).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 1, category: 'shirt', image_data: 'base64-image-a' })
       );
-      expect(setImage).toHaveBeenCalledTimes(1);
       expect(onSourceImageLoaded).toHaveBeenCalledTimes(1);
       expect(onNavigateToMain).toHaveBeenCalledTimes(1);
     });
-
-    fetchSpy.mockRestore();
   });
 
   it('shows undo toast on delete via menu and restores item when undo is tapped', async () => {

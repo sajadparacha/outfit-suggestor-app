@@ -93,6 +93,24 @@ As a user, I want … so that …
 
 ---
 
+## User-facing docs (About & Guide)
+
+Mark whether agents should update in-app documentation for this feature.
+
+| Platform | Files |
+|----------|--------|
+| Web | `frontend/src/views/components/UserGuide.tsx`, `About.tsx` |
+| iOS | `ios-client/OutfitSuggestor/Views/UserGuideView.swift`, `AboutView.swift` |
+
+- [ ] **No** — layout/styling only; no change to flows or copy users read in Guide/About
+- [ ] **Yes** — describe what to update:
+  - Guide: …
+  - About: …
+
+When **Yes**, both agents update their platform files before returning. Orchestrator verifies in parity review.
+
+---
+
 ## Platform-specific notes
 
 ### Web only
@@ -156,6 +174,7 @@ After user confirms, publish filled report using `.cursor/specs/_test-report-tem
 ## Parity checklist
 
 - [ ] Same user-visible behavior on web and iOS
+- [ ] About & Guide updated on both platforms (if spec required)
 - [ ] Same copy and error messages
 - [ ] Equivalent loading / empty / error UI
 - [ ] API client methods match on both platforms

@@ -54,12 +54,12 @@ Keep iPhone and iPad UX the same — adapt layout, not behavior. Optional one-li
 ### What happens (step by step)
 
 1. **Confirm branch** — work stays on the current git branch (e.g. `feature/ui-ux-final-touches`).
-2. **Write spec** — orchestrator creates `.cursor/specs/<feature-slug>.md` from the template, including a **Tests (required)** section.
+2. **Write spec** — orchestrator creates `.cursor/specs/<feature-slug>.md` from the template, including **Tests (required)** and whether **About** / **Guide** need updates.
 3. **Backend first (if needed)** — orchestrator updates `backend/` and runs `pytest` when API or business logic changes. Skipped for pure UI work.
 4. **Two parallel subagents** (single message, required):
-   - **Web agent** → `frontend/**` only
-   - **iOS agent** → `ios-client/**` only
-5. **Parity review** — orchestrator compares both implementations to the spec and updates `IOS_WEB_FEATURE_PARITY.md` when capability changes.
+   - **Web agent** → `frontend/**` only (includes `UserGuide.tsx` / `About.tsx` when spec requires)
+   - **iOS agent** → `ios-client/**` only (includes `UserGuideView.swift` / `AboutView.swift` when spec requires)
+5. **Parity review** — orchestrator compares both implementations to the spec, verifies About/Guide when required, and updates `IOS_WEB_FEATURE_PARITY.md` when capability changes.
 6. **Ask before full tests** — orchestrator asks you to confirm before running complete suites (~several minutes).
 7. **Full test gate** (after you confirm):
    - Web: all Jest unit + integration tests
@@ -89,8 +89,8 @@ The orchestrator **must not** edit platform UI directly:
 | Owner | Requirement |
 |-------|-------------|
 | Orchestrator | Backend tests when `backend/` changes |
-| Web agent | At least one new unit or integration test for new behavior |
-| iOS agent | At least one new unit/integration test (UITest optional for E2E) |
+| Web agent | At least one new unit or integration test for new behavior; update Guide/About when spec requires |
+| iOS agent | At least one new unit/integration test (UITest optional for E2E); update Guide/About when spec requires |
 | Orchestrator (end) | Full web + iOS suites after your confirmation |
 
 **A Twin UI feature is not complete** if the full web or iOS suite fails, new behavior has no tests, or the Test Execution Report is missing.

@@ -19,6 +19,9 @@ struct OutfitHistoryEntry: Codable, Identifiable {
     let shoes: String
     let belt: String
     let reasoning: String
+    let occasion: String?
+    let season: String?
+    let style: String?
     let source_wardrobe_item_id: Int?
     let shirt_id: Int?
     let trouser_id: Int?
@@ -38,6 +41,9 @@ struct OutfitHistoryEntry: Codable, Identifiable {
         case shoes
         case belt
         case reasoning
+        case occasion
+        case season
+        case style
         case source_wardrobe_item_id
         case shirt_id
         case trouser_id
@@ -59,6 +65,9 @@ struct OutfitHistoryEntry: Codable, Identifiable {
         shoes = try c.decodeIfPresent(String.self, forKey: .shoes) ?? ""
         belt = try c.decodeIfPresent(String.self, forKey: .belt) ?? ""
         reasoning = try c.decodeIfPresent(String.self, forKey: .reasoning) ?? ""
+        occasion = try c.decodeIfPresent(String.self, forKey: .occasion)
+        season = try c.decodeIfPresent(String.self, forKey: .season)
+        style = try c.decodeIfPresent(String.self, forKey: .style)
         source_wardrobe_item_id = try c.decodeIfPresent(Int.self, forKey: .source_wardrobe_item_id)
         shirt_id = try c.decodeIfPresent(Int.self, forKey: .shirt_id)
         trouser_id = try c.decodeIfPresent(Int.self, forKey: .trouser_id)
@@ -79,6 +88,9 @@ struct OutfitHistoryEntry: Codable, Identifiable {
         shoes: String,
         belt: String,
         reasoning: String,
+        occasion: String? = nil,
+        season: String? = nil,
+        style: String? = nil,
         source_wardrobe_item_id: Int? = nil,
         shirt_id: Int? = nil,
         trouser_id: Int? = nil,
@@ -97,6 +109,9 @@ struct OutfitHistoryEntry: Codable, Identifiable {
         self.shoes = shoes
         self.belt = belt
         self.reasoning = reasoning
+        self.occasion = occasion
+        self.season = season
+        self.style = style
         self.source_wardrobe_item_id = source_wardrobe_item_id
         self.shirt_id = shirt_id
         self.trouser_id = trouser_id

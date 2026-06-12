@@ -31,13 +31,25 @@ const mockOutfitResponse = {
 };
 
 describe('Main suggestion flow integration', () => {
+  let scrollIntoViewMock: jest.Mock;
+
   beforeEach(() => {
+    scrollIntoViewMock = jest.fn();
+    HTMLElement.prototype.scrollIntoView = scrollIntoViewMock;
     jest.spyOn(ApiService, 'checkDuplicate').mockResolvedValue({ is_duplicate: false });
     jest.spyOn(ApiService, 'getSuggestion').mockResolvedValue(mockOutfitResponse);
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
+  });
+
+  it('shows Generate Outfit CTA in creation state', async () => {
+    renderApp();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Get AI outfit suggestion/i })).toBeInTheDocument();
+      expect(screen.getByText(/Your outfit appears here/i)).toBeInTheDocument();
+    });
   });
 
   it('displays suggestion after uploading image and clicking Get Suggestion', async () => {
@@ -58,7 +70,7 @@ describe('Main suggestion flow integration', () => {
 
     await waitFor(
       () => {
-        expect(screen.getByText(/Your Perfect Outfit/i)).toBeInTheDocument();
+        expect(screen.getAllByText(/Your Styled Look/i).length).toBeGreaterThan(0);
         expect(screen.getByText('White linen shirt')).toBeInTheDocument();
       },
       { timeout: 15000 }
@@ -66,5 +78,9 @@ describe('Main suggestion flow integration', () => {
 
     expect(ApiService.checkDuplicate).toHaveBeenCalledTimes(1);
     expect(ApiService.getSuggestion).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(scrollIntoViewMock).toHaveBeenCalled();
+    });
+    expect(document.getElementById('outfit-result-hero')).toBeInTheDocument();
   });
 });

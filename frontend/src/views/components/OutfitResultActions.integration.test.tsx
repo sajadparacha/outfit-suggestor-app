@@ -114,10 +114,16 @@ describe('Outfit result actions (App integration)', () => {
     );
   };
 
+  const openRefineAndClick = (label: RegExp | string) => {
+    const refineTriggers = screen.getAllByTestId('refine-menu-trigger');
+    fireEvent.click(refineTriggers[0]);
+    fireEvent.click(screen.getByRole('menuitem', { name: label }));
+  };
+
   it('Make it more formal sends modifier and previous outfit context', async () => {
     await uploadAndGenerateFirstSuggestion();
 
-    fireEvent.click(screen.getByRole('button', { name: /Make it more formal/i }));
+    openRefineAndClick(/Make it more formal/i);
 
     await waitFor(
       () => {
@@ -135,7 +141,9 @@ describe('Outfit result actions (App integration)', () => {
   it('Use wardrobe items only requires login', async () => {
     await uploadAndGenerateFirstSuggestion();
 
-    expect(screen.queryByRole('button', { name: /Use wardrobe items only/i })).not.toBeInTheDocument();
+    const refineTriggers = screen.getAllByTestId('refine-menu-trigger');
+    fireEvent.click(refineTriggers[0]);
+    expect(screen.queryByRole('menuitem', { name: /Use wardrobe items only/i })).not.toBeInTheDocument();
   });
 
   it('Use wardrobe items only sends wardrobe flag when authenticated', async () => {
@@ -159,10 +167,10 @@ describe('Outfit result actions (App integration)', () => {
     await uploadAndGenerateFirstSuggestion();
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Use wardrobe items only/i })).toBeInTheDocument();
+      expect(screen.getAllByTestId('refine-menu-trigger').length).toBeGreaterThan(0);
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Use wardrobe items only/i }));
+    openRefineAndClick(/Use wardrobe items only/i);
 
     await waitFor(() => {
       expect(suggestCalls.length).toBeGreaterThanOrEqual(2);
@@ -176,7 +184,7 @@ describe('Outfit result actions (App integration)', () => {
   it('Change occasion scrolls to preferences and shows guidance toast', async () => {
     await uploadAndGenerateFirstSuggestion();
 
-    fireEvent.click(screen.getByRole('button', { name: /Change occasion/i }));
+    openRefineAndClick(/Change occasion/i);
 
     expect(scrollIntoViewMock).toHaveBeenCalled();
     expect(
