@@ -21,6 +21,32 @@ def _make_base64_image(width: int, height: int, r: int, g: int, b: int, quality:
     return base64.b64encode(buf.getvalue()).decode("utf-8")
 
 
+class TestWardrobeServiceCategoryStyles:
+    """Styles suggested per category must stay within that category's library."""
+
+    def test_casual_shirt_targets_exclude_shoe_styles(self):
+        ws = WardrobeService()
+        targets = ws._target_styles("shirt", "casual", "classic")
+        assert "clean sneakers" not in targets
+        assert "driving shoes" not in targets
+        assert "oxford" in targets
+
+    def test_casual_shoes_targets_include_sneakers_not_shirt_styles(self):
+        ws = WardrobeService()
+        targets = ws._target_styles("shoes", "casual", "classic")
+        assert "clean sneakers" in targets
+        assert "oxford" not in targets
+        assert "linen" not in targets
+
+    def test_filter_styles_for_category_removes_cross_category_tags(self):
+        ws = WardrobeService()
+        filtered = ws._filter_styles_for_category(
+            "shirt",
+            ["oxford", "linen", "clean sneakers", "loafers"],
+        )
+        assert filtered == ["oxford", "linen"]
+
+
 class TestWardrobeServiceSimilarity:
     """Tests for wardrobe item similarity and reordering"""
 

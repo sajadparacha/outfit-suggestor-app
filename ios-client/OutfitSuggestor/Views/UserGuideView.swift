@@ -114,14 +114,17 @@ struct UserGuideView: View {
                     title: "Wardrobe Insights",
                     color: .teal,
                     steps: [
-                        "Go to the Insights tab to see what's missing from your wardrobe.",
-                        "Set your context (occasion, season, style) and tap \"Analyze My Wardrobe\".",
-                        "Choose Quick Check for a fast snapshot or AI Stylist for deeper advice.",
-                        "Review colors to add, styles to try, and what to buy next."
+                        "Open Insights from Profile to get an AI-powered wardrobe analysis.",
+                        "Set occasion, season, and style, then tap Analyze My Wardrobe.",
+                        "Review your gap score, top priorities, and items to add next.",
+                        "Check the coverage dashboard for category health at a glance.",
+                        "Tap a category in Detailed category analysis for recommendations.",
+                        "Tap a best color to search Google Shopping for that category and color.",
+                        "Tap Shop similar on any item to search Google Shopping."
                     ],
                     tip: isAdmin
                         ? GuideCopy.adminDiagnosticsTip
-                        : "Use AI Stylist Review for deeper styling advice tailored to your occasion and wardrobe."
+                        : "After analysis, preferences collapse into a context bar — tap Change preferences to re-run."
                 )
                 
                 GuideSection(
@@ -156,7 +159,7 @@ struct UserGuideView: View {
                         color: .gray,
                         steps: [
                             "Settings — Email, name, password, and shortcuts to Insights and Guide.",
-                            "Insights — Dedicated wardrobe gap analysis with category recommendations.",
+                            "Insights — Action-focused wardrobe analysis with gap score, coverage dashboard, and buy-next guidance.",
                             "Guide — Step-by-step help and tips (this page).",
                             "About — Product story, features, and creator links.",
                             "Reports — \(GuideCopy.reportsNavDescription)"

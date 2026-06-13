@@ -255,12 +255,13 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
         >
           <StepList
             items={[
-              'Open the Insights tab to use the dedicated wardrobe analysis workspace.',
-              'Set occasion, season, style, and optional notes in Analysis Preferences.',
+              'Open the Insights tab for the Wardrobe Insights workspace—summary-first layout with gap score and top priorities.',
+              'Before your first run, set occasion, season, style, and optional notes in Analysis Preferences.',
               'You can also start from Wardrobe by clicking Analyze My Wardrobe in the header.',
               'Choose Quick Wardrobe Check (rules-based) or AI Stylist Review (deeper AI styling advice).',
-              'The app locks during analysis and shows a progress message, similar to Get AI Suggestion.',
-              'Review category cards for owned colors/styles, colors to add, styles to try, and buy-next recommendations.',
+              'After analysis, preferences collapse into an Analyzed for bar—tap Change preferences to edit and re-run.',
+              'Review the summary card, Top items to add, Wardrobe coverage dashboard, and expand Detailed category analysis for specifics.',
+              'Tap a best color on any item card to search Google Shopping for that category and color. Use Shop similar for a broader search.',
             ]}
           />
           {isAdmin && (
@@ -333,7 +334,7 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
           <div className="grid gap-3 sm:grid-cols-2">
             {[
               { k: 'Settings', d: 'Email, name, password, and a shortcut to your wardrobe.' },
-              { k: 'Insights', d: 'Dedicated wardrobe gap analysis page with category recommendations.' },
+              { k: 'Insights', d: 'Wardrobe Insights—gap score, priorities, coverage dashboard, and actionable buy-next cards.' },
               { k: 'Guide', d: 'Step-by-step help and tips (this page).' },
               { k: 'About', d: 'Product story, features, and creator links—open from the page footer.' },
               ...(isAdmin

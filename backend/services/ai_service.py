@@ -326,14 +326,19 @@ Required JSON shape:
             categories = parsed.get("analysis_by_category", {})
             if not isinstance(categories, dict):
                 categories = {}
+            from services.wardrobe_service import WardrobeService
+
+            style_filter = WardrobeService()
             for category in required_categories:
                 entry = categories.get(category, {})
+                owned_styles = entry.get("owned_styles", []) if isinstance(entry, dict) else []
+                missing_styles = entry.get("missing_styles", []) if isinstance(entry, dict) else []
                 categories[category] = {
                     "category": category,
                     "owned_colors": entry.get("owned_colors", []) if isinstance(entry, dict) else [],
-                    "owned_styles": entry.get("owned_styles", []) if isinstance(entry, dict) else [],
+                    "owned_styles": style_filter._filter_styles_for_category(category, owned_styles),
                     "missing_colors": entry.get("missing_colors", []) if isinstance(entry, dict) else [],
-                    "missing_styles": entry.get("missing_styles", []) if isinstance(entry, dict) else [],
+                    "missing_styles": style_filter._filter_styles_for_category(category, missing_styles),
                     "recommended_purchases": entry.get("recommended_purchases", []) if isinstance(entry, dict) else [],
                     "item_count": entry.get("item_count", 0) if isinstance(entry, dict) else 0,
                 }

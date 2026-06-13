@@ -742,21 +742,57 @@ class WardrobeService:
                 ordered.append(normalized)
         return ordered
 
+    def _allowed_styles_for_category(self, category: str) -> Set[str]:
+        return {tag.strip().lower() for tag in self.STYLE_LIBRARY.get(category, []) if tag.strip()}
+
+    def _filter_styles_for_category(self, category: str, styles: List[str]) -> List[str]:
+        allowed = self._allowed_styles_for_category(category)
+        if not allowed:
+            return styles
+        filtered: List[str] = []
+        seen: Set[str] = set()
+        for style_tag in styles:
+            tag = style_tag.strip().lower()
+            if tag and tag in allowed and tag not in seen:
+                seen.add(tag)
+                filtered.append(tag)
+        return filtered
+
     def _target_styles(self, category: str, occasion: str, style: str) -> List[str]:
         defaults = list(self.STYLE_LIBRARY.get(category, ["smart casual"]))
         if occasion == "business":
-            defaults.extend(["tailored", "formal leather"] if category in {"trouser", "belt"} else ["smart casual"])
+            if category in {"trouser", "belt"}:
+                defaults.extend(["tailored", "formal leather"])
+            elif category == "shirt":
+                defaults.extend(["smart casual"])
         elif occasion == "formal":
-            defaults.extend(["tailored", "formal leather"])
+            if category in {"trouser", "blazer"}:
+                defaults.extend(["tailored"])
+            elif category == "belt":
+                defaults.extend(["formal leather"])
         elif occasion == "party":
-            defaults.extend(["textured", "unstructured"])
+            if category == "shirt":
+                defaults.extend(["textured"])
+            elif category == "blazer":
+                defaults.extend(["textured", "unstructured"])
         elif occasion == "casual":
-            defaults.extend(["relaxed-fit", "clean sneakers"])
+            if category in {"shirt", "trouser", "blazer"}:
+                defaults.extend(["relaxed-fit"])
+            elif category == "shoes":
+                defaults.extend(["clean sneakers"])
 
         if style in {"classic", "minimalist"}:
-            defaults.extend(["oxford", "tailored"])
+            if category == "shirt":
+                defaults.extend(["oxford"])
+            elif category in {"trouser", "blazer"}:
+                defaults.extend(["tailored"])
         elif style in {"bold", "trendy"}:
-            defaults.extend(["textured", "driving shoes"])
+            if category == "shirt":
+                defaults.extend(["textured"])
+            elif category == "shoes":
+                defaults.extend(["driving shoes"])
+            elif category == "blazer":
+                defaults.extend(["textured"])
 
         seen: Set[str] = set()
         ordered: List[str] = []
@@ -765,7 +801,7 @@ class WardrobeService:
             if tag and tag not in seen:
                 seen.add(tag)
                 ordered.append(tag)
-        return ordered
+        return self._filter_styles_for_category(category, ordered)
 
     def _priority_label(self, score: int) -> str:
         if score >= 8:
@@ -887,16 +923,21 @@ class WardrobeService:
                 for normalized in (self._normalize_color(item.color) for item in items)
                 if normalized
             })
-            owned_styles = sorted({
-                tag
-                for item in items
-                for tag in self._extract_style_tags(item.description)
-            })
+            owned_styles = self._filter_styles_for_category(
+                category,
+                sorted({
+                    tag
+                    for item in items
+                    for tag in self._extract_style_tags(item.description)
+                }),
+            )
 
             target_colors = self._target_colors(category, occasion.lower(), season.lower(), style.lower())
             target_styles = self._target_styles(category, occasion.lower(), style.lower())
             missing_colors = [color for color in target_colors if color not in owned_colors]
-            missing_styles = [style_tag for style_tag in target_styles if style_tag not in owned_styles]
+            missing_styles = [
+                style_tag for style_tag in target_styles if style_tag not in owned_styles
+            ]
 
             recommendations: List[str] = []
             recommendation_line = self._recommendation_line(category, missing_colors, missing_styles, occasion)

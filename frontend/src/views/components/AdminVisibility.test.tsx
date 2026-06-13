@@ -8,7 +8,8 @@ import { server } from '../../test/msw/server';
 import { ROUTES } from '../../navigation/routes';
 import UserGuide from './UserGuide';
 import Sidebar from './Sidebar';
-import WardrobeGapAnalysis from './WardrobeGapAnalysis';
+import WardrobeInsightsPage from './insights/WardrobeInsightsPage';
+import { DEFAULT_FILTERS } from '../../utils/outfitPreferences';
 import { INSIGHTS_COPY } from '../../utils/insightsCopy';
 
 const API_BASE = 'http://localhost:8001';
@@ -106,14 +107,21 @@ describe('Admin visibility gating', () => {
     });
   });
 
-  describe('WardrobeGapAnalysis (unit)', () => {
+  describe('WardrobeInsightsPage (unit)', () => {
     it('does not render admin diagnostics for non-admins even with premium metadata', () => {
       renderComponent(
-        <WardrobeGapAnalysis
+        <WardrobeInsightsPage
           result={premiumAnalysisPayload as any}
           loading={false}
           error={null}
           isAdmin={false}
+          filters={DEFAULT_FILTERS}
+          setFilters={() => undefined}
+          preferenceText=""
+          setPreferenceText={() => undefined}
+          onAnalyze={() => undefined}
+          onNavigateToGuide={() => undefined}
+          onNavigateToWardrobe={() => undefined}
         />
       );
 

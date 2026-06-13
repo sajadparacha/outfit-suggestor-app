@@ -17,6 +17,15 @@ struct AboutView: View {
                     .foregroundColor(.secondary)
                 Text("Upload a photo of any clothing item and get outfit recommendations. When logged in, manage your wardrobe, view history, and use Random from Wardrobe or Random from History.")
                     .padding(.vertical, 8)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Features")
+                        .font(.headline)
+                    Text("• Wardrobe Insights — AI-powered gap analysis with a summary score, top priorities, coverage dashboard, and shopping actions via color taps and Shop similar (not a debug report).")
+                    Text("• Outfit suggestions with occasion, season, and style filters")
+                    Text("• Digital wardrobe and outfit history when logged in")
+                }
+                .font(.subheadline)
+                .foregroundColor(.secondary)
                 Text(AboutCopy.techStackDescription(isAdmin: isAdmin))
                     .font(.caption)
                     .foregroundColor(.secondary)

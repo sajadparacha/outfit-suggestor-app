@@ -25,7 +25,7 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 | **Random from history** | ✅ | ✅ | Button on Main; client picks from history; **Your inputs** syncs preview + **From history** caption + entry filters |
 | **Duplicate detection** | ✅ | ✅ | Check before suggestion; use cached or force new |
 | **Next / Alternate outfit** | ✅ | ✅ | Button after suggestion; requests a different outfit |
-| **Wardrobe Insights** | ✅ | ✅ | Wardrobe gap analysis by category; user-facing modes **Quick Wardrobe Check** (free) and **AI Stylist Review** (premium); results use fashion-assistant copy (e.g. *What's Missing From My Wardrobe?*, *What to Buy Next*) |
+| **Wardrobe Insights** | ✅ | ✅ | Premium summary-first redesign: gap score + label, top 3 priorities, **Top items to add** cards (tap **Best colors** → Google Shopping; **Shop similar** per item), **Wardrobe coverage** dashboard (7 categories), collapsible **Detailed category analysis** with owned/missing color & style counts, quick tip; no outfit-generation CTAs from insights; preferences collapse to context bar after analysis; admin/debug gated; modes **Quick Wardrobe Check** (free) and **AI Stylist Review** (premium) in expanded preferences |
 | **User Guide** | ✅ | ✅ | In-app documentation with feature walkthroughs |
 | **Integration Tests (Admin)** | ✅ | ✅ | Admin-only test runner (list/run/run-all) |
 | **Settings** | ✅ | ✅ | Change password, account info, logout |

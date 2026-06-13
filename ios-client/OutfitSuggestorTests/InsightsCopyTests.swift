@@ -3,7 +3,8 @@ import XCTest
 
 final class InsightsCopyTests: XCTestCase {
     func testPrimaryLabelsMatchSpec() {
-        XCTAssertEqual(InsightsCopy.pageTitle, "What's Missing From My Wardrobe?")
+        XCTAssertEqual(InsightsCopy.pageTitle, "Wardrobe Insights")
+        XCTAssertEqual(InsightsCopy.pageSubtitle, "AI-powered analysis of your wardrobe to help you dress better.")
         XCTAssertEqual(InsightsCopy.shoppingSectionTitle, "What to Buy Next")
     }
 

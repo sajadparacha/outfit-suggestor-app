@@ -86,6 +86,24 @@
 		F1L2T3E4R5V6I7E8W900001 /* FiltersViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L2T3E4R5V6I7E8W900002 /* FiltersViewTests.swift */; };
 		O1I2T3H4U5M6B7N8A9I0L02 /* OutfitItemThumbnail.swift in Sources */ = {isa = PBXBuildFile; fileRef = O1I2T3H4U5M6B7N8A9I0L01 /* OutfitItemThumbnail.swift */; };
 		O1I2T3H4U5M6B7N8A9I0L04 /* OutfitItemThumbnailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = O1I2T3H4U5M6B7N8A9I0L03 /* OutfitItemThumbnailTests.swift */; };
+		WIR01BF0000000000000001 /* WardrobeInsightResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = WIR01FR0000000000000001 /* WardrobeInsightResult.swift */; };
+		NWI01BF0000000000000001 /* NormalizeWardrobeInsight.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWI01FR0000000000000001 /* NormalizeWardrobeInsight.swift */; };
+		WIP01BF0000000000000001 /* WardrobeInsightsPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = WIP01FR0000000000000001 /* WardrobeInsightsPresentation.swift */; };
+		ISV01BF0000000000000001 /* InsightsSharedViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = ISV01FR0000000000000001 /* InsightsSharedViews.swift */; };
+		IHV01BF0000000000000001 /* InsightsHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = IHV01FR0000000000000001 /* InsightsHeaderView.swift */; };
+		ACB01BF0000000000000001 /* AnalysisContextBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACB01FR0000000000000001 /* AnalysisContextBarView.swift */; };
+		APV01BF0000000000000001 /* AnalysisPreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = APV01FR0000000000000001 /* AnalysisPreferencesView.swift */; };
+		ISC01BF0000000000000001 /* InsightSummaryCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ISC01FR0000000000000001 /* InsightSummaryCardView.swift */; };
+		TMI01BF0000000000000001 /* TopMissingItemsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TMI01FR0000000000000001 /* TopMissingItemsView.swift */; };
+		MIC01BF0000000000000001 /* MissingItemCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = MIC01FR0000000000000001 /* MissingItemCardView.swift */; };
+		WCG01BF0000000000000001 /* WardrobeCoverageGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCG01FR0000000000000001 /* WardrobeCoverageGridView.swift */; };
+		CSC01BF0000000000000001 /* CoverageStatusCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CSC01FR0000000000000001 /* CoverageStatusCardView.swift */; };
+		CDA01BF0000000000000001 /* CategoryDetailAccordionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDA01FR0000000000000001 /* CategoryDetailAccordionView.swift */; };
+		QTC01BF0000000000000001 /* QuickTipCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = QTC01FR0000000000000001 /* QuickTipCardView.swift */; };
+		ADV01BF0000000000000001 /* AdminDebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADV01FR0000000000000001 /* AdminDebugView.swift */; };
+		WIV01BF0000000000000001 /* WardrobeInsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WIV01FR0000000000000001 /* WardrobeInsightsView.swift */; };
+		NWIT01BF000000000000001 /* NormalizeWardrobeInsightTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWIT01FR000000000000001 /* NormalizeWardrobeInsightTests.swift */; };
+		WIVT01BF000000000000001 /* WardrobeInsightsViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WIVT01FR000000000000001 /* WardrobeInsightsViewTests.swift */; };
 /* End PBXBuildFile section */
 		C4AA4111F038841A8E622B9A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -187,6 +205,24 @@
 		F1L2T3E4R5V6I7E8W900002 /* FiltersViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FiltersViewTests.swift; sourceTree = "<group>"; };
 		O1I2T3H4U5M6B7N8A9I0L01 /* OutfitItemThumbnail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitItemThumbnail.swift; sourceTree = "<group>"; };
 		O1I2T3H4U5M6B7N8A9I0L03 /* OutfitItemThumbnailTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitItemThumbnailTests.swift; sourceTree = "<group>"; };
+		WIR01FR0000000000000001 /* WardrobeInsightResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeInsightResult.swift; sourceTree = "<group>"; };
+		NWI01FR0000000000000001 /* NormalizeWardrobeInsight.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NormalizeWardrobeInsight.swift; sourceTree = "<group>"; };
+		WIP01FR0000000000000001 /* WardrobeInsightsPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeInsightsPresentation.swift; sourceTree = "<group>"; };
+		ISV01FR0000000000000001 /* InsightsSharedViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsSharedViews.swift; sourceTree = "<group>"; };
+		IHV01FR0000000000000001 /* InsightsHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsHeaderView.swift; sourceTree = "<group>"; };
+		ACB01FR0000000000000001 /* AnalysisContextBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisContextBarView.swift; sourceTree = "<group>"; };
+		APV01FR0000000000000001 /* AnalysisPreferencesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisPreferencesView.swift; sourceTree = "<group>"; };
+		ISC01FR0000000000000001 /* InsightSummaryCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightSummaryCardView.swift; sourceTree = "<group>"; };
+		TMI01FR0000000000000001 /* TopMissingItemsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopMissingItemsView.swift; sourceTree = "<group>"; };
+		MIC01FR0000000000000001 /* MissingItemCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MissingItemCardView.swift; sourceTree = "<group>"; };
+		WCG01FR0000000000000001 /* WardrobeCoverageGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCoverageGridView.swift; sourceTree = "<group>"; };
+		CSC01FR0000000000000001 /* CoverageStatusCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverageStatusCardView.swift; sourceTree = "<group>"; };
+		CDA01FR0000000000000001 /* CategoryDetailAccordionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryDetailAccordionView.swift; sourceTree = "<group>"; };
+		QTC01FR0000000000000001 /* QuickTipCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickTipCardView.swift; sourceTree = "<group>"; };
+		ADV01FR0000000000000001 /* AdminDebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminDebugView.swift; sourceTree = "<group>"; };
+		WIV01FR0000000000000001 /* WardrobeInsightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeInsightsView.swift; sourceTree = "<group>"; };
+		NWIT01FR000000000000001 /* NormalizeWardrobeInsightTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NormalizeWardrobeInsightTests.swift; sourceTree = "<group>"; };
+		WIVT01FR000000000000001 /* WardrobeInsightsViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeInsightsViewTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 		384222D780F1291F491220F0 /* OutfitSuggestorTests */ = {
 			isa = PBXGroup;
@@ -206,6 +242,8 @@
 				R1E2G3E4N5L6O7G8I9C004 /* MainFlowResultRegenerateLogicTests.swift */,
 				F1L2T3E4R5V6I7E8W900002 /* FiltersViewTests.swift */,
 				O1I2T3H4U5M6B7N8A9I0L03 /* OutfitItemThumbnailTests.swift */,
+				NWIT01FR000000000000001 /* NormalizeWardrobeInsightTests.swift */,
+				WIVT01FR000000000000001 /* WardrobeInsightsViewTests.swift */,
 			);
 			path = OutfitSuggestorTests;
 			sourceTree = "<group>";
@@ -227,9 +265,30 @@
 			path = Navigation;
 			sourceTree = "<group>";
 		};
+		INS01GRP0000000000000001 /* Insights */ = {
+			isa = PBXGroup;
+			children = (
+				ISV01FR0000000000000001 /* InsightsSharedViews.swift */,
+				IHV01FR0000000000000001 /* InsightsHeaderView.swift */,
+				ACB01FR0000000000000001 /* AnalysisContextBarView.swift */,
+				APV01FR0000000000000001 /* AnalysisPreferencesView.swift */,
+				ISC01FR0000000000000001 /* InsightSummaryCardView.swift */,
+				TMI01FR0000000000000001 /* TopMissingItemsView.swift */,
+				MIC01FR0000000000000001 /* MissingItemCardView.swift */,
+				WCG01FR0000000000000001 /* WardrobeCoverageGridView.swift */,
+				CSC01FR0000000000000001 /* CoverageStatusCardView.swift */,
+				CDA01FR0000000000000001 /* CategoryDetailAccordionView.swift */,
+				QTC01FR0000000000000001 /* QuickTipCardView.swift */,
+				ADV01FR0000000000000001 /* AdminDebugView.swift */,
+				WIV01FR0000000000000001 /* WardrobeInsightsView.swift */,
+			);
+			path = Insights;
+			sourceTree = "<group>";
+		};
 		48DB226138D7502CAC1BBDC4 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				INS01GRP0000000000000001 /* Insights */,
 				E3A4B5C6D7E8F90A394A5B6E /* AdminIntegrationTestRunnerView.swift */,
 				60FB09DAD00AB05C5F220D23 /* AboutView.swift */,
 				B2C3D4E5F60718293A4B5C6D /* AiProgressPanelView.swift */,
@@ -297,6 +356,8 @@
 				A1V2I3S4B5I6L7I8T9Y0A02 /* AdminVisibility.swift */,
 				D4E5F60718293A4B5C6D8E1 /* AuthPromptCopy.swift */,
 				I1A2B3C4D5E6F708192A3B52 /* InsightsCopy.swift */,
+				NWI01FR0000000000000001 /* NormalizeWardrobeInsight.swift */,
+				WIP01FR0000000000000001 /* WardrobeInsightsPresentation.swift */,
 				M1A2B3C4D5E6F708192A3B53 /* MicroHelpCopy.swift */,
 				F1R2U3N4C5O6A7C8H900002 /* FirstRunCoachLogic.swift */,
 				G1U2E3S4T5L6I7M8I900002 /* MainFlowGuestLimitLogic.swift */,
@@ -359,6 +420,7 @@
 				4BC8F20C54523955442C7FFF /* OutfitModels.swift */,
 				A1R2E3P4O5R6T7M8O9D0E01 /* ReportsModels.swift */,
 				CAD5EBF0712C9529021C41B8 /* WardrobeModels.swift */,
+				WIR01FR0000000000000001 /* WardrobeInsightResult.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -550,6 +612,22 @@
 				M1F2L3O4W5U6X7C8O9P0Y0B /* RefineMenuView.swift in Sources */,
 				M1F2L3O4W5U6X7C8O9P0Y0D /* MainFlowCompactSummaryView.swift in Sources */,
 				O1I2T3H4U5M6B7N8A9I0L02 /* OutfitItemThumbnail.swift in Sources */,
+				WIR01BF0000000000000001 /* WardrobeInsightResult.swift in Sources */,
+				NWI01BF0000000000000001 /* NormalizeWardrobeInsight.swift in Sources */,
+				WIP01BF0000000000000001 /* WardrobeInsightsPresentation.swift in Sources */,
+				ISV01BF0000000000000001 /* InsightsSharedViews.swift in Sources */,
+				IHV01BF0000000000000001 /* InsightsHeaderView.swift in Sources */,
+				ACB01BF0000000000000001 /* AnalysisContextBarView.swift in Sources */,
+				APV01BF0000000000000001 /* AnalysisPreferencesView.swift in Sources */,
+				ISC01BF0000000000000001 /* InsightSummaryCardView.swift in Sources */,
+				TMI01BF0000000000000001 /* TopMissingItemsView.swift in Sources */,
+				MIC01BF0000000000000001 /* MissingItemCardView.swift in Sources */,
+				WCG01BF0000000000000001 /* WardrobeCoverageGridView.swift in Sources */,
+				CSC01BF0000000000000001 /* CoverageStatusCardView.swift in Sources */,
+				CDA01BF0000000000000001 /* CategoryDetailAccordionView.swift in Sources */,
+				QTC01BF0000000000000001 /* QuickTipCardView.swift in Sources */,
+				ADV01BF0000000000000001 /* AdminDebugView.swift in Sources */,
+				WIV01BF0000000000000001 /* WardrobeInsightsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -572,6 +650,8 @@
 				R1E2G3E4N5L6O7G8I9C003 /* MainFlowResultRegenerateLogicTests.swift in Sources */,
 				F1L2T3E4R5V6I7E8W900001 /* FiltersViewTests.swift in Sources */,
 				O1I2T3H4U5M6B7N8A9I0L04 /* OutfitItemThumbnailTests.swift in Sources */,
+				NWIT01BF000000000000001 /* NormalizeWardrobeInsightTests.swift in Sources */,
+				WIVT01BF000000000000001 /* WardrobeInsightsViewTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

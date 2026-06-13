@@ -50,10 +50,11 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               to complete your look. If you upload a combination, it identifies what's already there 
               and suggests the missing elements. Choose your suggestion mode: <strong className="text-white">use wardrobe only</strong> 
               (AI suggests outfits only from items in your wardrobe) or <strong className="text-white">free generation</strong> 
-              (AI can suggest any outfit). The app also includes a dedicated <strong className="text-white">Insights</strong> page for
-              <strong className="text-white"> Analyze My Wardrobe</strong> with two modes:
-              <strong className="text-white"> Quick Wardrobe Check</strong> (fast rules-based snapshot) and{' '}
-              <strong className="text-white">AI Stylist Review</strong> (deeper AI-powered styling advice).
+              (AI can suggest any outfit).               The app also includes a dedicated <strong className="text-white">Wardrobe Insights</strong> page—an
+              action-focused analysis that shows your gap score, top priorities, items to add, and a coverage
+              dashboard. Choose <strong className="text-white">Quick Wardrobe Check</strong> (fast rules-based snapshot) or{' '}
+              <strong className="text-white">AI Stylist Review</strong> (deeper AI-powered styling advice), then
+              generate outfits or shop similar pieces from the results.
               The app features a <strong className="text-white">smart wardrobe management system</strong> that learns your collection and makes recommendations practical and personalized.
             </p>
             <p className="text-slate-200 leading-relaxed">
@@ -112,8 +113,8 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
                 <div className="flex items-start space-x-3">
                   <span className="text-2xl">🧠</span>
                   <div>
-                    <h4 className="font-semibold text-white">Insights: Wardrobe Analysis</h4>
-                    <p className="text-sm text-slate-300">Run category-wise gap analysis (shirts, trousers, blazers, shoes, belts) on the dedicated Insights page, set occasion/season/style/notes, and see owned colors/styles, missing pieces, and buy-next recommendations.</p>
+                    <h4 className="font-semibold text-white">Wardrobe Insights</h4>
+                    <p className="text-sm text-slate-300">Get an AI-powered wardrobe gap score, top 3 priorities, high-impact items to add, and a coverage dashboard across shirts, trousers, shoes, blazers, belts, colors, and styles. Collapse preferences after analysis, then tap best colors to shop on Google or use Shop similar for broader searches.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">

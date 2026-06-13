@@ -132,7 +132,7 @@ struct WardrobeCategoryGap: Codable {
     let item_count: Int
 }
 
-struct WardrobeGapAnalysisCost: Codable {
+struct WardrobeGapAnalysisCost: Codable, Equatable {
     let gpt4_cost: Double?
     let model_image_cost: Double?
     let total_cost: Double?

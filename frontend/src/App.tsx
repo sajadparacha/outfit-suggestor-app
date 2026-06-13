@@ -35,8 +35,7 @@ import { useToastController } from './controllers/useToastController';
 import { useAuthController } from './controllers/useAuthController';
 import { useWardrobeController } from './controllers/useWardrobeController';
 import ApiService from './services/ApiService';
-import WardrobeGapAnalysis from './views/components/WardrobeGapAnalysis';
-import AnalysisPreferences from './views/components/AnalysisPreferences';
+import WardrobeInsightsPage from './views/components/insights/WardrobeInsightsPage';
 import { WardrobeGapAnalysisResponse } from './models/WardrobeModels';
 import { resolveFilters } from './utils/outfitPreferences';
 import { LOGIN_REDIRECT_STATE, ROUTES, wardrobePath } from './navigation/routes';
@@ -755,61 +754,21 @@ function App() {
             path={ROUTES.INSIGHTS}
             element={
           isAuthenticated ? (
-            <div className="max-w-5xl mx-auto">
-              <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-6 mb-6">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div>
-                    <h2 className="text-2xl font-bold text-white">Wardrobe Insights</h2>
-                    <p className="text-slate-300 mt-1">
-                      {MICRO_HELP.INSIGHTS}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => navigate(ROUTES.WARDROBE)}
-                    className="px-4 py-2.5 rounded-xl font-medium bg-white/10 text-slate-200 hover:bg-white/20 border border-white/15 transition-colors w-fit"
-                  >
-                    Open Wardrobe
-                  </button>
-                </div>
-              </div>
-
-              <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-6 mb-6">
-                <h3 className="text-lg font-semibold text-white mb-1">Analysis Preferences</h3>
-                <p className="text-sm text-slate-300 mb-4">
-                  Tell us your context so the analysis matches your event, season, and style needs.
-                </p>
-
-                <AnalysisPreferences
-                  filters={filters}
-                  setFilters={setFilters}
-                  preferenceText={preferenceText}
-                  setPreferenceText={setPreferenceText}
-                  onClear={clearPreferences}
-                  variant="insights"
-                />
-
-                <div className="mt-4 flex justify-end">
-                  <button
-                    onClick={handleAnalyzeWardrobe}
-                    disabled={wardrobeGapLoading}
-                    className={`px-4 py-2.5 rounded-xl font-semibold transition-all ${
-                      wardrobeGapLoading
-                        ? 'cursor-not-allowed bg-white/10 text-slate-500 border border-white/10'
-                        : 'btn-brand'
-                    }`}
-                  >
-                    {wardrobeGapLoading ? 'Analyzing...' : 'Analyze My Wardrobe'}
-                  </button>
-                </div>
-              </div>
-
-              <WardrobeGapAnalysis
-                result={wardrobeGapResult}
-                loading={wardrobeGapLoading}
-                error={wardrobeGapError}
-                isAdmin={!!user?.is_admin}
-              />
-            </div>
+            <WardrobeInsightsPage
+              result={wardrobeGapResult}
+              loading={wardrobeGapLoading}
+              error={wardrobeGapError}
+              isAdmin={!!user?.is_admin}
+              filters={filters}
+              setFilters={setFilters}
+              preferenceText={preferenceText}
+              setPreferenceText={setPreferenceText}
+              onClearPreferences={clearPreferences}
+              onAnalyze={handleAnalyzeWardrobe}
+              onNavigateToGuide={() => navigate(ROUTES.GUIDE)}
+              onNavigateToWardrobe={() => navigate(ROUTES.WARDROBE)}
+              onNewAnalysis={() => setWardrobeGapResult(null)}
+            />
           ) : (
             <AuthGateCard
               contextKey="insights"

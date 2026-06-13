@@ -54,6 +54,26 @@ final class OutfitAppE2ETests: XCTestCase {
     }
 
     @discardableResult
+    private func scrollToInsightsAdminSection(timeout: TimeInterval = 12) -> Bool {
+        let adminMarker = app.descendants(matching: .any)["insights.adminDebug"]
+        let costTitle = app.staticTexts["Analysis Cost"]
+        let scrollView = app.scrollViews.firstMatch
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if adminMarker.waitForExistence(timeout: 0.3) { return true }
+            if costTitle.waitForExistence(timeout: 0.3) { return true }
+            if app.staticTexts["Admin diagnostics"].waitForExistence(timeout: 0.3) { return true }
+            if scrollView.exists {
+                scrollView.swipeUp()
+            } else {
+                app.swipeUp()
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+        }
+        return adminMarker.exists || costTitle.exists || app.staticTexts["Admin diagnostics"].exists
+    }
+
+    @discardableResult
     private func scrollToHistoryCard(entryId: Int, timeout: TimeInterval = 12) -> Bool {
         let card = historyCard(entryId: entryId)
         let scrollView = app.scrollViews.firstMatch
@@ -397,34 +417,40 @@ final class OutfitAppE2ETests: XCTestCase {
         XCTAssertTrue(waitFor(app.buttons["profile.insightsLink"]))
         app.buttons["profile.insightsLink"].tap()
         XCTAssertTrue(waitFor(app.buttons["insights.analyzeButton"]))
-        XCTAssertTrue(app.staticTexts["What's Missing From My Wardrobe?"].waitForExistence(timeout: 4))
+        XCTAssertTrue(app.staticTexts["Wardrobe Insights"].waitForExistence(timeout: 4))
+        XCTAssertTrue(
+            app.staticTexts["How would you like to check your wardrobe?"].waitForExistence(timeout: 4)
+        )
         XCTAssertTrue(app.buttons["Quick Check"].waitForExistence(timeout: 2))
 
-        let premiumSegment = app.segmentedControls["insights.analysisMode"].buttons.element(boundBy: 1)
-        if premiumSegment.waitForExistence(timeout: 2) {
-            premiumSegment.tap()
-        } else if app.buttons["AI Stylist"].waitForExistence(timeout: 2) {
+        if app.buttons["AI Stylist"].waitForExistence(timeout: 2) {
             app.buttons["AI Stylist"].tap()
+        } else {
+            let premiumSegment = app.segmentedControls.element(boundBy: 0).buttons.element(boundBy: 1)
+            XCTAssertTrue(premiumSegment.waitForExistence(timeout: 2))
+            premiumSegment.tap()
         }
 
         app.buttons["insights.analyzeButton"].tap()
         waitForAppUnlocked(timeout: 8)
 
+        XCTAssertTrue(app.otherElements["insights.results"].waitForExistence(timeout: 8))
         let summary = app.staticTexts.containing(
             NSPredicate(format: "label CONTAINS %@", "Premium wardrobe analysis completed")
         ).firstMatch
-        XCTAssertTrue(summary.waitForExistence(timeout: 8))
+        XCTAssertTrue(summary.waitForExistence(timeout: 4))
 
-        let scrollView = app.scrollViews.firstMatch
-        for _ in 0..<4 where !app.staticTexts["Analysis Cost"].exists {
-            if scrollView.exists {
-                scrollView.swipeUp()
-            } else {
-                app.swipeUp()
-            }
-        }
+        XCTAssertTrue(
+            scrollToInsightsAdminSection(timeout: 12),
+            "Expected admin diagnostics section after scrolling insights results"
+        )
 
-        XCTAssertTrue(app.buttons["insights.adminDiagnostics"].waitForExistence(timeout: 4))
+        let adminDiagnostics = app.descendants(matching: .any)["insights.adminDiagnostics"]
+        let adminDebugPanel = app.descendants(matching: .any)["insights.adminDebug"]
+        XCTAssertTrue(
+            adminDiagnostics.waitForExistence(timeout: 2) || adminDebugPanel.waitForExistence(timeout: 2)
+                || app.staticTexts["Admin diagnostics"].waitForExistence(timeout: 2)
+        )
         XCTAssertTrue(app.staticTexts["Analysis Cost"].waitForExistence(timeout: 4))
         XCTAssertTrue(
             app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "$0.012")).firstMatch.exists
