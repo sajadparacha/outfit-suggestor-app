@@ -10,6 +10,7 @@ import CategoryDetailAccordion from './CategoryDetailAccordion';
 import InsightSummaryCard from './InsightSummaryCard';
 import InsightsHeader from './InsightsHeader';
 import QuickTipCard from './QuickTipCard';
+import ShoppingListTable from './ShoppingListTable';
 import TopMissingItemsSection from './TopMissingItemsSection';
 import WardrobeCoverageDashboard from './WardrobeCoverageDashboard';
 
@@ -45,9 +46,14 @@ const WardrobeInsightsPage: React.FC<WardrobeInsightsPageProps> = ({
   onNewAnalysis,
 }) => {
   const [preferencesExpanded, setPreferencesExpanded] = React.useState(!result);
+  const [showShoppingList, setShowShoppingList] = React.useState(false);
 
   React.useEffect(() => {
     setPreferencesExpanded(!result);
+  }, [result]);
+
+  React.useEffect(() => {
+    setShowShoppingList(false);
   }, [result]);
 
   const insight: WardrobeInsightResult | null = React.useMemo(
@@ -112,7 +118,14 @@ const WardrobeInsightsPage: React.FC<WardrobeInsightsPageProps> = ({
             <AnalysisContextBar context={insight.context} onChangePreferences={handleChangePreferences} />
           )}
 
-          <InsightSummaryCard score={insight.score} topPriorities={insight.topPriorities} />
+          <InsightSummaryCard
+            score={insight.score}
+            topPriorities={insight.topPriorities}
+            showShoppingList={showShoppingList}
+            onViewShoppingList={() => setShowShoppingList((open) => !open)}
+          />
+
+          {showShoppingList && <ShoppingListTable categories={insight.categoryHealth} />}
 
           <TopMissingItemsSection
             items={insight.missingItems}

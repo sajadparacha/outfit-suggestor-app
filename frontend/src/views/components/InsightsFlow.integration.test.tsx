@@ -115,12 +115,23 @@ describe('Insights flow integration', () => {
       expect(screen.getByText(/You should add brighter shirts/i)).toBeInTheDocument();
       expect(screen.getByTestId('analysis-context-bar')).toBeInTheDocument();
       expect(screen.getByTestId('insight-summary-card')).toBeInTheDocument();
-      expect(screen.getByText('Top items to add')).toBeInTheDocument();
+      expect(screen.getByTestId('top-missing-items-section')).toBeInTheDocument();
+      expect(screen.getByTestId('view-shopping-list')).toBeInTheDocument();
+      expect(screen.queryByTestId('shopping-list-table')).not.toBeInTheDocument();
       expect(screen.getByText('Wardrobe coverage')).toBeInTheDocument();
       expect(screen.getByText('Detailed category analysis')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /Generate outfits using these gaps/i })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /Create outfits/i })).not.toBeInTheDocument();
-      expect(screen.getAllByRole('button', { name: /Shop similar/i }).length).toBeGreaterThan(0);
+    });
+
+    fireEvent.click(screen.getByTestId('view-shopping-list'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('shopping-list-table')).toBeInTheDocument();
+      expect(
+        screen.getByText(/After analyzing your wardrobe, below is the list of items you need to buy/i)
+      ).toBeInTheDocument();
+      expect(screen.getByTestId('shopping-list-export-csv')).toBeInTheDocument();
     });
 
     expect(screen.queryByTestId('admin-diagnostics')).not.toBeInTheDocument();

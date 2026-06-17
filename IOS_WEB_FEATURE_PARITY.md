@@ -25,7 +25,7 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 | **Random from history** | ✅ | ✅ | Button on Main; client picks from history; **Your inputs** syncs preview + **From history** caption + entry filters |
 | **Duplicate detection** | ✅ | ✅ | Check before suggestion; use cached or force new |
 | **Next / Alternate outfit** | ✅ | ✅ | Button after suggestion; requests a different outfit |
-| **Wardrobe Insights** | ✅ | ✅ | Premium summary-first redesign: gap score + label, top 3 priorities, **Top items to add** cards (tap **Best colors** → Google Shopping; **Shop similar** per item), **Wardrobe coverage** dashboard (7 categories), collapsible **Detailed category analysis** with owned/missing color & style counts, quick tip; no outfit-generation CTAs from insights; preferences collapse to context bar after analysis; admin/debug gated; modes **Quick Wardrobe Check** (free) and **AI Stylist Review** (premium) in expanded preferences |
+| **Wardrobe Insights** | ✅ | ✅ | Premium summary-first redesign: gap score + label, top 3 priorities, **Top items to add** cards (color chips → Google Shopping; Shop similar), **on-demand shopping list** table from summary **View shopping list** (all missing style×color rows; Export CSV + WhatsApp); **Wardrobe coverage** dashboard (7 categories), collapsible **Detailed category analysis** with owned/missing color & style counts, quick tip; no outfit-generation CTAs from insights; preferences collapse to context bar after analysis; admin/debug gated; modes **Quick Wardrobe Check** (free) and **AI Stylist Review** (premium) in expanded preferences |
 | **User Guide** | ✅ | ✅ | In-app documentation with feature walkthroughs |
 | **Integration Tests (Admin)** | ✅ | ✅ | Admin-only test runner (list/run/run-all) |
 | **Settings** | ✅ | ✅ | Change password, account info, logout |
@@ -112,7 +112,7 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 
 **Web**: List wardrobe items, add (with optional AI analysis), edit, delete, filter by category, get suggestion from a single item. Duplicate check before add. Full-screen image view.
 
-**Wardrobe item card actions (web + iOS)**: Primary **Style this item** + overflow menu (View image, Edit, **Past Suggestions**, Delete). Past Suggestions opens per-item outfit history modal/sheet.
+**Wardrobe item card actions (web + iOS)**: Primary **Style this item** + overflow menu (View image, Edit, **Past Suggestions**, Delete). **Thumbnail tap** opens full-screen image viewer (same as View image). Past Suggestions opens per-item outfit history modal/sheet.
 
 **iOS status**: Full parity. List, add (with "Analyze with AI" and duplicate check), edit, delete, category filter, "Get suggestion" from item; history has full-screen image viewer.
 

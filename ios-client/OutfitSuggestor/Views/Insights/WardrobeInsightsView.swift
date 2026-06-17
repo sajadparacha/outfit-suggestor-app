@@ -10,13 +10,20 @@ import SwiftUI
 struct WardrobeInsightsView: View {
     let result: WardrobeInsightResult
     let isAdmin: Bool
+    @State private var showShoppingList = false
 
     var body: some View {
         VStack(spacing: 24) {
             InsightSummaryCardView(
                 score: result.score,
-                topPriorities: result.topPriorities
+                topPriorities: result.topPriorities,
+                showShoppingList: showShoppingList,
+                onViewShoppingList: { showShoppingList.toggle() }
             )
+
+            if WardrobeInsightsPresentation.shouldShowShoppingListTable(showShoppingList: showShoppingList) {
+                ShoppingListTableView(categoryHealth: result.categoryHealth)
+            }
 
             TopMissingItemsView(
                 items: result.missingItems,

@@ -31,6 +31,14 @@ enum WardrobeInsightsPresentation {
     static func shouldShowResults(hasResult: Bool) -> Bool {
         hasResult
     }
+
+    static func shoppingListToggleLabel(showShoppingList: Bool) -> String {
+        showShoppingList ? InsightsCopy.hideShoppingListButton : InsightsCopy.viewShoppingListButton
+    }
+
+    static func shouldShowShoppingListTable(showShoppingList: Bool) -> Bool {
+        showShoppingList
+    }
 }
 
 enum WardrobeCategoryIcon {

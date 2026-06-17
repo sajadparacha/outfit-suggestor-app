@@ -719,17 +719,23 @@ struct WardrobeCardView: View {
     private var imageBlock: some View {
         Group {
             if let image {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 130, height: 130)
-                    .clipped()
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(AppTheme.accent, lineWidth: 2)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .accessibilityHidden(true)
+                Button {
+                    onShowImage(image)
+                } label: {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 130, height: 130)
+                        .clipped()
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(AppTheme.accent, lineWidth: 2)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(WardrobeCardUx.thumbnailAccessibilityLabel)
+                .accessibilityIdentifier(WardrobeCardUx.thumbnailIdentifier(itemId: item.id))
             } else {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(Color.white.opacity(0.06))

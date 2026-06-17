@@ -512,4 +512,37 @@ describe('Wardrobe page', () => {
 
     expect(screen.getByAltText('Full size view')).toBeInTheDocument();
   });
+
+  it('opens full-screen image viewer when thumbnail is clicked', () => {
+    mockWardrobeItems.push({
+      ...mockWardrobeItem,
+      image_data: 'base64-image-a',
+    });
+    render(<Wardrobe />);
+
+    fireEvent.click(screen.getByTestId('wardrobe-thumbnail-1'));
+
+    expect(screen.getByAltText('Full size view')).toBeInTheDocument();
+  });
+
+  it('does not open full-screen viewer when placeholder thumbnail is clicked', () => {
+    mockWardrobeItems.push(mockWardrobeItem);
+    render(<Wardrobe />);
+
+    expect(screen.queryByTestId('wardrobe-thumbnail-1')).not.toBeInTheDocument();
+    expect(screen.queryByAltText('Full size view')).not.toBeInTheDocument();
+  });
+
+  it('thumbnail button has testid and accessible name', () => {
+    mockWardrobeItems.push({
+      ...mockWardrobeItem,
+      image_data: 'base64-image-a',
+    });
+    render(<Wardrobe />);
+
+    const thumbnail = screen.getByTestId('wardrobe-thumbnail-1');
+    expect(thumbnail).toBeInTheDocument();
+    expect(thumbnail.tagName).toBe('BUTTON');
+    expect(screen.getByRole('button', { name: /View full size image/i })).toBe(thumbnail);
+  });
 });

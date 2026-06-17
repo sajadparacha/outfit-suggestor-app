@@ -260,8 +260,9 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               'You can also start from Wardrobe by clicking Analyze My Wardrobe in the header.',
               'Choose Quick Wardrobe Check (rules-based) or AI Stylist Review (deeper AI styling advice).',
               'After analysis, preferences collapse into an Analyzed for bar—tap Change preferences to edit and re-run.',
-              'Review the summary card, Top items to add, Wardrobe coverage dashboard, and expand Detailed category analysis for specifics.',
-              'Tap a best color on any item card to search Google Shopping for that category and color. Use Shop similar for a broader search.',
+              'Review the summary card and top items to add cards, then tap View shopping list on the summary when you need a take-along table (Category | Style | Color).',
+              'Open Wardrobe coverage dashboard and expand Detailed category analysis for specifics.',
+              'From the shopping list, export as CSV or send to WhatsApp before you head to the store. Tap a best color in category details to search Google Shopping.',
             ]}
           />
           {isAdmin && (
@@ -334,7 +335,7 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
           <div className="grid gap-3 sm:grid-cols-2">
             {[
               { k: 'Settings', d: 'Email, name, password, and a shortcut to your wardrobe.' },
-              { k: 'Insights', d: 'Wardrobe Insights—gap score, priorities, coverage dashboard, and actionable buy-next cards.' },
+              { k: 'Insights', d: 'Wardrobe Insights—gap score, priorities, top items to add, and on-demand shopping list with CSV/WhatsApp export.' },
               { k: 'Guide', d: 'Step-by-step help and tips (this page).' },
               { k: 'About', d: 'Product story, features, and creator links—open from the page footer.' },
               ...(isAdmin

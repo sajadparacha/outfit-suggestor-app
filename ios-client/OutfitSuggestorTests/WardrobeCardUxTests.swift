@@ -74,4 +74,13 @@ final class WardrobeCardUxTests: XCTestCase {
     func testFlowTipMentionsStyleThisItem() {
         XCTAssertTrue(WardrobeCardUx.flowTipStep2Fragment.contains("Style this item"))
     }
+
+    func testThumbnailAccessibilityLabel() {
+        XCTAssertEqual(WardrobeCardUx.thumbnailAccessibilityLabel, "View full size image")
+    }
+
+    func testThumbnailIdentifier() {
+        XCTAssertEqual(WardrobeCardUx.thumbnailIdentifier(itemId: 42), "wardrobe.thumbnail.42")
+        XCTAssertEqual(WardrobeCardUx.thumbnailIdentifier(itemId: 7), "wardrobe.thumbnail.7")
+    }
 }

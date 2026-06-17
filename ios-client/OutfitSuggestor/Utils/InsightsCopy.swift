@@ -26,8 +26,23 @@ enum InsightsCopy {
     // MARK: - Summary card
 
     static let topPrioritiesTitle = "Top priorities"
+    static let viewShoppingListButton = "View shopping list"
+    static let hideShoppingListButton = "Hide shopping list"
 
-    // MARK: - Top missing items
+    // MARK: - Shopping list table
+
+    static let shoppingListTitle = "Shopping list"
+    static let shoppingListIntro =
+        "After analyzing your wardrobe, below is the list of items you need to buy."
+    static let shoppingListEmptyMessage =
+        "Your wardrobe looks complete for this analysis — nothing urgent to buy."
+    static let shoppingListColumnCategory = "Category"
+    static let shoppingListColumnStyle = "Style"
+    static let shoppingListColumnColor = "Color"
+    static let exportCsvButton = "Export CSV"
+    static let sendWhatsAppButton = "Send to WhatsApp"
+
+    // MARK: - Top missing items (legacy card copy)
 
     static let topItemsTitle = "Top items to add"
     static let topItemsSubtitle = "High impact pieces that will level up your wardrobe."

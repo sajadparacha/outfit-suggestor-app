@@ -4,6 +4,8 @@ import { WardrobeInsightScore, WardrobeTopPriority } from '../../../models/Wardr
 interface InsightSummaryCardProps {
   score: WardrobeInsightScore;
   topPriorities: WardrobeTopPriority[];
+  showShoppingList?: boolean;
+  onViewShoppingList?: () => void;
 }
 
 const scoreRingColor = (label: WardrobeInsightScore['label']): string => {
@@ -21,7 +23,12 @@ const scoreRingColor = (label: WardrobeInsightScore['label']): string => {
   }
 };
 
-const InsightSummaryCard: React.FC<InsightSummaryCardProps> = ({ score, topPriorities }) => (
+const InsightSummaryCard: React.FC<InsightSummaryCardProps> = ({
+  score,
+  topPriorities,
+  showShoppingList = false,
+  onViewShoppingList,
+}) => (
   <section
     className="rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/90 to-slate-950/95 p-6 shadow-[0_16px_48px_rgba(2,8,23,0.5)] sm:p-8"
     data-testid="insight-summary-card"
@@ -82,6 +89,20 @@ const InsightSummaryCard: React.FC<InsightSummaryCardProps> = ({ score, topPrior
         </ol>
       </div>
     </div>
+
+    {onViewShoppingList && (
+      <div className="mt-6 border-t border-white/10 pt-6">
+        <button
+          type="button"
+          onClick={onViewShoppingList}
+          className="rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+          data-testid="view-shopping-list"
+          aria-label="insights.viewShoppingList"
+        >
+          {showShoppingList ? 'Hide shopping list' : 'View shopping list'}
+        </button>
+      </div>
+    )}
   </section>
 );
 

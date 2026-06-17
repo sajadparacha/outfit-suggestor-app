@@ -226,6 +226,56 @@ final class WardrobeInsightsViewTests: XCTestCase {
         XCTAssertEqual(InsightsCopy.noMissingStylesMessage, "Your style coverage looks balanced for this category.")
     }
 
+    func testShoppingListCopyMatchesSpec() {
+        XCTAssertEqual(InsightsCopy.shoppingListTitle, "Shopping list")
+        XCTAssertEqual(InsightsCopy.viewShoppingListButton, "View shopping list")
+        XCTAssertEqual(InsightsCopy.hideShoppingListButton, "Hide shopping list")
+        XCTAssertEqual(
+            InsightsCopy.shoppingListIntro,
+            "After analyzing your wardrobe, below is the list of items you need to buy."
+        )
+        XCTAssertEqual(
+            InsightsCopy.shoppingListEmptyMessage,
+            "Your wardrobe looks complete for this analysis — nothing urgent to buy."
+        )
+        XCTAssertEqual(InsightsCopy.shoppingListColumnCategory, "Category")
+        XCTAssertEqual(InsightsCopy.shoppingListColumnStyle, "Style")
+        XCTAssertEqual(InsightsCopy.shoppingListColumnColor, "Color")
+        XCTAssertEqual(InsightsCopy.exportCsvButton, "Export CSV")
+        XCTAssertEqual(InsightsCopy.sendWhatsAppButton, "Send to WhatsApp")
+    }
+
+    func testShoppingListHiddenByDefaultAndToggleLabel() {
+        XCTAssertFalse(WardrobeInsightsPresentation.shouldShowShoppingListTable(showShoppingList: false))
+        XCTAssertTrue(WardrobeInsightsPresentation.shouldShowShoppingListTable(showShoppingList: true))
+        XCTAssertEqual(
+            WardrobeInsightsPresentation.shoppingListToggleLabel(showShoppingList: false),
+            "View shopping list"
+        )
+        XCTAssertEqual(
+            WardrobeInsightsPresentation.shoppingListToggleLabel(showShoppingList: true),
+            "Hide shopping list"
+        )
+    }
+
+    func testTopMissingItemsSectionCopyPresent() {
+        XCTAssertEqual(InsightsCopy.topItemsTitle, "Top items to add")
+        XCTAssertEqual(InsightsCopy.topItemsSubtitle, "High impact pieces that will level up your wardrobe.")
+        let result = NormalizeWardrobeInsight.normalize(makeMinimalResponse())
+        XCTAssertFalse(result.missingItems.isEmpty)
+    }
+
+    func testShoppingListRowsFromNormalizedResult() {
+        let rows = BuildShoppingListRows.build(
+            from: NormalizeWardrobeInsight.normalize(makeMinimalResponse()).categoryHealth
+        )
+        XCTAssertFalse(rows.isEmpty)
+        XCTAssertTrue(rows.contains { $0.categoryKey == "trouser" && $0.category == "Pant" })
+        XCTAssertTrue(rows.contains { $0.categoryKey == "blazer" && $0.category == "Jacket" })
+        XCTAssertFalse(rows.contains { $0.categoryKey == "colors" })
+        XCTAssertFalse(rows.contains { $0.categoryKey == "styles" })
+    }
+
     private func makeMinimalResponse() -> WardrobeGapAnalysisResponse {
         WardrobeGapAnalysisResponse(
             occasion: "casual",

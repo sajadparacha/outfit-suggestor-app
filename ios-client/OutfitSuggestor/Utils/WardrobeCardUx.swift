@@ -39,6 +39,7 @@ enum WardrobeCardUx {
     static let pastSuggestionsAccessibilityLabel = "Past Suggestions"
     static let pastSuggestionsLoadingAccessibilityLabel = "Loading…"
     static let menuTriggerAccessibilityLabel = "More actions"
+    static let thumbnailAccessibilityLabel = "View full size image"
 
     /// Overflow menu order for wardrobe card actions.
     /// WardrobeCardView uses native SwiftUI `Menu`; the system popover presents outside
@@ -51,6 +52,10 @@ enum WardrobeCardUx {
 
     static func heroButtonIdentifier(itemId: Int) -> String {
         "wardrobe.getSuggestion.\(itemId)"
+    }
+
+    static func thumbnailIdentifier(itemId: Int) -> String {
+        "wardrobe.thumbnail.\(itemId)"
     }
 
     static func pastSuggestionsButtonIdentifier(itemId: Int) -> String {

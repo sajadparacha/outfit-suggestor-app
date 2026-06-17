@@ -83,13 +83,14 @@ describe('WardrobeGapAnalysis (deprecated wrapper)', () => {
 
     expect(screen.getByTestId('insight-summary-card')).toBeInTheDocument();
     expect(screen.getByText(/Best next purchases are in blazer and shoes/i)).toBeInTheDocument();
-    expect(screen.getByText('Top items to add')).toBeInTheDocument();
+    expect(screen.getByTestId('top-missing-items-section')).toBeInTheDocument();
+    expect(screen.getByTestId('view-shopping-list')).toBeInTheDocument();
+    expect(screen.queryByTestId('shopping-list-table')).not.toBeInTheDocument();
     expect(screen.getByText('Wardrobe coverage')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Create outfits/i })).not.toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: /Shop similar/i }).length).toBeGreaterThan(0);
   });
 
-  it('opens shopping search from missing item card', () => {
+  it('opens shopping search from category missing color chip', () => {
     const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
     const result: WardrobeGapAnalysisResponse = {
       occasion: 'casual',
@@ -111,7 +112,12 @@ describe('WardrobeGapAnalysis (deprecated wrapper)', () => {
 
     render(<WardrobeInsightsPage {...pageProps} result={result} />);
 
-    fireEvent.click(screen.getAllByRole('button', { name: /Shop similar/i })[0]);
+    const shirtRow = screen.getByTestId('category-row-shirt');
+    fireEvent.click(shirtRow.querySelector('button') as HTMLButtonElement);
+
+    const missingSection = screen.getByTestId('category-missing-colors-shirt');
+    const missingButton = missingSection.querySelector('button[data-testid="insight-color-chip"]') as HTMLButtonElement;
+    fireEvent.click(missingButton);
 
     expect(openSpy).toHaveBeenCalled();
     const url = String(openSpy.mock.calls[0][0]);

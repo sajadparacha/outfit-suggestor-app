@@ -806,13 +806,20 @@ const Wardrobe: React.FC<WardrobeProps> = ({
               >
                 <div className="flex gap-3 sm:gap-4">
                   {item.image_data ? (
-                    <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl border border-white/10 bg-slate-800/80 sm:h-32 sm:w-32">
+                    <button
+                      type="button"
+                      onClick={() => handleViewImage(item.image_data!)}
+                      className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl border border-white/10 bg-slate-800/80 cursor-pointer hover:opacity-90 transition-opacity sm:h-32 sm:w-32"
+                      title="Click to view full size"
+                      aria-label="View full size image"
+                      data-testid={`wardrobe-thumbnail-${item.id}`}
+                    >
                       <img
                         src={`data:image/jpeg;base64,${item.image_data}`}
                         alt={item.category}
                         className="h-full w-full object-cover"
                       />
-                    </div>
+                    </button>
                   ) : (
                     <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-slate-800/80 sm:h-32 sm:w-32">
                       <span className="text-3xl text-slate-400 sm:text-4xl">📷</span>

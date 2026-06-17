@@ -116,11 +116,12 @@ struct UserGuideView: View {
                     steps: [
                         "Open Insights from Profile to get an AI-powered wardrobe analysis.",
                         "Set occasion, season, and style, then tap Analyze My Wardrobe.",
-                        "Review your gap score, top priorities, and items to add next.",
+                        "Review your gap score, top priorities, and top items to add cards.",
+                        "Tap View shopping list on the summary card when you want the full take-along table.",
+                        "Use Export CSV or Send to WhatsApp on the shopping list to take it with you.",
                         "Check the coverage dashboard for category health at a glance.",
                         "Tap a category in Detailed category analysis for recommendations.",
-                        "Tap a best color to search Google Shopping for that category and color.",
-                        "Tap Shop similar on any item to search Google Shopping."
+                        "Tap a best color to search Google Shopping for that category and color."
                     ],
                     tip: isAdmin
                         ? GuideCopy.adminDiagnosticsTip

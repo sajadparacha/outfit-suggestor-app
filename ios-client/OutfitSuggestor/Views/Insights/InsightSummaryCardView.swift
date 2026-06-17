@@ -8,6 +8,8 @@ import SwiftUI
 struct InsightSummaryCardView: View {
     let score: WardrobeInsightScore
     let topPriorities: [WardrobeInsightPriority]
+    var showShoppingList: Bool = false
+    var onViewShoppingList: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -43,6 +45,17 @@ struct InsightSummaryCardView: View {
                         }
                     }
                 }
+            }
+
+            if let onViewShoppingList {
+                Divider()
+                    .background(AppTheme.border)
+
+                InsightsSecondaryButton(
+                    title: WardrobeInsightsPresentation.shoppingListToggleLabel(showShoppingList: showShoppingList),
+                    action: onViewShoppingList
+                )
+                .accessibilityIdentifier("insights.viewShoppingList")
             }
         }
         .padding(16)

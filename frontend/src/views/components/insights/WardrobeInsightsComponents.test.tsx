@@ -76,6 +76,34 @@ describe('InsightSummaryCard', () => {
     expect(screen.getByTestId('top-priorities-list')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Generate outfits using these gaps/i })).not.toBeInTheDocument();
   });
+
+  it('renders view shopping list toggle when callback provided', () => {
+    const onViewShoppingList = jest.fn();
+    const { rerender } = render(
+      <InsightSummaryCard
+        score={insight.score}
+        topPriorities={insight.topPriorities}
+        showShoppingList={false}
+        onViewShoppingList={onViewShoppingList}
+      />
+    );
+
+    const button = screen.getByTestId('view-shopping-list');
+    expect(button).toHaveTextContent('View shopping list');
+
+    fireEvent.click(button);
+    expect(onViewShoppingList).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <InsightSummaryCard
+        score={insight.score}
+        topPriorities={insight.topPriorities}
+        showShoppingList
+        onViewShoppingList={onViewShoppingList}
+      />
+    );
+    expect(screen.getByTestId('view-shopping-list')).toHaveTextContent('Hide shopping list');
+  });
 });
 
 describe('MissingItemCard', () => {
@@ -362,5 +390,33 @@ describe('WardrobeInsightsPage layout states', () => {
     expect(screen.getByTestId('analysis-context-bar')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Change preferences/i })).toBeInTheDocument();
     expect(screen.queryByTestId('analysis-preferences-card')).not.toBeInTheDocument();
+  });
+
+  it('shows top missing items by default and reveals shopping list on CTA', () => {
+    render(
+      <WardrobeInsightsPage
+        filters={DEFAULT_FILTERS}
+        setFilters={jest.fn()}
+        preferenceText=""
+        setPreferenceText={jest.fn()}
+        onAnalyze={jest.fn()}
+        onNavigateToGuide={jest.fn()}
+        onNavigateToWardrobe={jest.fn()}
+        result={sampleResponse}
+        loading={false}
+        error={null}
+      />
+    );
+
+    expect(screen.getByTestId('top-missing-items-section')).toBeInTheDocument();
+    expect(screen.getByTestId('view-shopping-list')).toBeInTheDocument();
+    expect(screen.queryByTestId('shopping-list-table')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('view-shopping-list'));
+
+    expect(screen.getByTestId('shopping-list-table')).toBeInTheDocument();
+    expect(screen.getByTestId('shopping-list-row-shirt-Linen-Black-0')).toBeInTheDocument();
+    expect(screen.queryByTestId('shopping-list-row-belt')).not.toBeInTheDocument();
+    expect(screen.getByTestId('view-shopping-list')).toHaveTextContent('Hide shopping list');
   });
 });
