@@ -43,57 +43,21 @@ const shouldIncludeRow = (item: WardrobeCategoryHealth): boolean => {
   return hasMissingStyle || hasMissingColor || isWeakOrMissing;
 };
 
-const rowKey = (categoryKey: string, style: string, color: string, index: number): string =>
-  `${categoryKey}-${style}-${color}-${index}`;
-
-const buildRowsForCategory = (
+const buildRowForCategory = (
   categoryKey: string,
   item: WardrobeCategoryHealth
-): ShoppingListRow[] => {
+): ShoppingListRow => {
   const category = categoryDisplayLabel(categoryKey);
-  const styles = item.missingStyles.map(prettyLabel);
-  const colors = item.missingColors.map(prettyLabel);
+  const style =
+    item.missingStyles.length > 0
+      ? item.missingStyles.map(prettyLabel).join(', ')
+      : EMPTY_CELL;
+  const color =
+    item.missingColors.length > 0
+      ? item.missingColors.map(prettyLabel).join(', ')
+      : EMPTY_CELL;
 
-  if (styles.length > 0 && colors.length > 0) {
-    let index = 0;
-    return styles.flatMap((style) =>
-      colors.map((color) => {
-        const row = { categoryKey, category, style, color, key: rowKey(categoryKey, style, color, index) };
-        index += 1;
-        return row;
-      })
-    );
-  }
-
-  if (styles.length > 0) {
-    return styles.map((style, index) => ({
-      categoryKey,
-      category,
-      style,
-      color: EMPTY_CELL,
-      key: rowKey(categoryKey, style, EMPTY_CELL, index),
-    }));
-  }
-
-  if (colors.length > 0) {
-    return colors.map((color, index) => ({
-      categoryKey,
-      category,
-      style: EMPTY_CELL,
-      color,
-      key: rowKey(categoryKey, EMPTY_CELL, color, index),
-    }));
-  }
-
-  return [
-    {
-      categoryKey,
-      category,
-      style: EMPTY_CELL,
-      color: EMPTY_CELL,
-      key: rowKey(categoryKey, EMPTY_CELL, EMPTY_CELL, 0),
-    },
-  ];
+  return { categoryKey, category, style, color, key: categoryKey };
 };
 
 export const buildShoppingListRows = (
@@ -107,7 +71,7 @@ export const buildShoppingListRows = (
     const item = byId.get(categoryKey);
     if (!item || !shouldIncludeRow(item)) return [];
 
-    return buildRowsForCategory(categoryKey, item);
+    return [buildRowForCategory(categoryKey, item)];
   });
 };
 
@@ -137,7 +101,7 @@ export const buildWhatsAppShoppingMessage = (rows: ShoppingListRow[]): string =>
     const colorPart = row.color !== EMPTY_CELL ? row.color : null;
 
     let detail = EMPTY_CELL;
-    if (stylePart && colorPart) detail = `${stylePart}, ${colorPart}`;
+    if (stylePart && colorPart) detail = `${stylePart}; ${colorPart}`;
     else if (stylePart) detail = stylePart;
     else if (colorPart) detail = colorPart;
 

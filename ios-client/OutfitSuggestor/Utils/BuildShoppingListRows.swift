@@ -37,13 +37,13 @@ enum BuildShoppingListRows {
     static func build(from categoryHealth: [WardrobeInsightCategoryHealth]) -> [ShoppingListRow] {
         let byId = Dictionary(uniqueKeysWithValues: categoryHealth.map { ($0.id, $0) })
 
-        return categoryOrder.flatMap { categoryKey -> [ShoppingListRow] in
+        return categoryOrder.compactMap { categoryKey -> ShoppingListRow? in
             guard clothingCategoryIds.contains(categoryKey),
                   let item = byId[categoryKey],
                   shouldIncludeRow(item)
-            else { return [] }
+            else { return nil }
 
-            return buildRowsForCategory(categoryKey: categoryKey, item: item)
+            return buildRowForCategory(categoryKey: categoryKey, item: item)
         }
     }
 
@@ -67,7 +67,7 @@ enum BuildShoppingListRows {
             let detail: String
             switch (stylePart, colorPart) {
             case let (style?, color?):
-                detail = "\(style), \(color)"
+                detail = "\(style); \(color)"
             case let (style?, nil):
                 detail = style
             case let (nil, color?):
@@ -91,72 +91,25 @@ enum BuildShoppingListRows {
 
     // MARK: - Private
 
-    private static func rowKey(
-        _ categoryKey: String,
-        style: String,
-        color: String,
-        index: Int
-    ) -> String {
-        "\(categoryKey)-\(style)-\(color)-\(index)"
-    }
-
-    private static func buildRowsForCategory(
+    private static func buildRowForCategory(
         categoryKey: String,
         item: WardrobeInsightCategoryHealth
-    ) -> [ShoppingListRow] {
+    ) -> ShoppingListRow {
         let category = categoryDisplayLabel(categoryKey)
-        let styles = item.missingStyles.map(prettyLabel)
-        let colors = item.missingColors.map(prettyLabel)
+        let style = item.missingStyles.isEmpty
+            ? emptyCell
+            : item.missingStyles.map(prettyLabel).joined(separator: ", ")
+        let color = item.missingColors.isEmpty
+            ? emptyCell
+            : item.missingColors.map(prettyLabel).joined(separator: ", ")
 
-        if !styles.isEmpty && !colors.isEmpty {
-            var index = 0
-            var rows: [ShoppingListRow] = []
-            for style in styles {
-                for color in colors {
-                    rows.append(ShoppingListRow(
-                        categoryKey: categoryKey,
-                        category: category,
-                        style: style,
-                        color: color,
-                        key: rowKey(categoryKey, style: style, color: color, index: index)
-                    ))
-                    index += 1
-                }
-            }
-            return rows
-        }
-
-        if !styles.isEmpty {
-            return styles.enumerated().map { index, style in
-                ShoppingListRow(
-                    categoryKey: categoryKey,
-                    category: category,
-                    style: style,
-                    color: emptyCell,
-                    key: rowKey(categoryKey, style: style, color: emptyCell, index: index)
-                )
-            }
-        }
-
-        if !colors.isEmpty {
-            return colors.enumerated().map { index, color in
-                ShoppingListRow(
-                    categoryKey: categoryKey,
-                    category: category,
-                    style: emptyCell,
-                    color: color,
-                    key: rowKey(categoryKey, style: emptyCell, color: color, index: index)
-                )
-            }
-        }
-
-        return [ShoppingListRow(
+        return ShoppingListRow(
             categoryKey: categoryKey,
             category: category,
-            style: emptyCell,
-            color: emptyCell,
-            key: rowKey(categoryKey, style: emptyCell, color: emptyCell, index: 0)
-        )]
+            style: style,
+            color: color,
+            key: categoryKey
+        )
     }
 
     private static func categoryDisplayLabel(_ categoryKey: String) -> String {

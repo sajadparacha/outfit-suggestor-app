@@ -34,14 +34,14 @@ final class BuildShoppingListRowsTests: XCTestCase {
                 category: "Shirt",
                 style: "Oxford",
                 color: "Navy",
-                key: "shirt-Oxford-Navy-0"
+                key: "shirt"
             ),
             ShoppingListRow(
                 categoryKey: "trouser",
                 category: "Pant",
                 style: "Chino",
                 color: "Charcoal",
-                key: "trouser-Chino-Charcoal-0"
+                key: "trouser"
             ),
         ])
     }
@@ -69,14 +69,14 @@ final class BuildShoppingListRowsTests: XCTestCase {
                 category: "Shoes",
                 style: "—",
                 color: "—",
-                key: "shoes-—-—-0"
+                key: "shoes"
             ),
             ShoppingListRow(
                 categoryKey: "belt",
                 category: "Belt",
                 style: "—",
                 color: "—",
-                key: "belt-—-—-0"
+                key: "belt"
             ),
         ])
     }
@@ -105,12 +105,12 @@ final class BuildShoppingListRowsTests: XCTestCase {
                 category: "Sweater",
                 style: "—",
                 color: "Burgundy",
-                key: "sweater-—-Burgundy-0"
+                key: "sweater"
             ),
         ])
     }
 
-    func testBuildsCartesianProductForAllMissingStylesAndColors() {
+    func testBuildsOneMergedRowWhenBothMissingStylesAndColorsExist() {
         let categories = [
             makeCategory(
                 id: "shirt",
@@ -120,40 +120,19 @@ final class BuildShoppingListRowsTests: XCTestCase {
         ]
 
         let rows = BuildShoppingListRows.build(from: categories)
-        XCTAssertEqual(rows.count, 4)
+        XCTAssertEqual(rows.count, 1)
         XCTAssertEqual(rows, [
             ShoppingListRow(
                 categoryKey: "shirt",
                 category: "Shirt",
-                style: "Linen",
-                color: "Black",
-                key: "shirt-Linen-Black-0"
-            ),
-            ShoppingListRow(
-                categoryKey: "shirt",
-                category: "Shirt",
-                style: "Linen",
-                color: "Blue",
-                key: "shirt-Linen-Blue-1"
-            ),
-            ShoppingListRow(
-                categoryKey: "shirt",
-                category: "Shirt",
-                style: "Oxford",
-                color: "Black",
-                key: "shirt-Oxford-Black-2"
-            ),
-            ShoppingListRow(
-                categoryKey: "shirt",
-                category: "Shirt",
-                style: "Oxford",
-                color: "Blue",
-                key: "shirt-Oxford-Blue-3"
+                style: "Linen, Oxford",
+                color: "Black, Blue",
+                key: "shirt"
             ),
         ])
     }
 
-    func testBuildsOneRowPerMissingStyleWhenNoMissingColors() {
+    func testBuildsOneMergedRowWhenOnlyMissingStylesExist() {
         let categories = [
             makeCategory(id: "shirt", missingStyles: ["linen", "oxford"]),
         ]
@@ -162,21 +141,14 @@ final class BuildShoppingListRowsTests: XCTestCase {
             ShoppingListRow(
                 categoryKey: "shirt",
                 category: "Shirt",
-                style: "Linen",
+                style: "Linen, Oxford",
                 color: "—",
-                key: "shirt-Linen-—-0"
-            ),
-            ShoppingListRow(
-                categoryKey: "shirt",
-                category: "Shirt",
-                style: "Oxford",
-                color: "—",
-                key: "shirt-Oxford-—-1"
+                key: "shirt"
             ),
         ])
     }
 
-    func testBuildsOneRowPerMissingColorWhenNoMissingStyles() {
+    func testBuildsOneMergedRowWhenOnlyMissingColorsExist() {
         let categories = [
             makeCategory(id: "shirt", missingColors: ["black", "blue"]),
         ]
@@ -186,15 +158,8 @@ final class BuildShoppingListRowsTests: XCTestCase {
                 categoryKey: "shirt",
                 category: "Shirt",
                 style: "—",
-                color: "Black",
-                key: "shirt-—-Black-0"
-            ),
-            ShoppingListRow(
-                categoryKey: "shirt",
-                category: "Shirt",
-                style: "—",
-                color: "Blue",
-                key: "shirt-—-Blue-1"
+                color: "Black, Blue",
+                key: "shirt"
             ),
         ])
     }
@@ -206,14 +171,14 @@ final class BuildShoppingListRowsTests: XCTestCase {
                 category: "Shirt",
                 style: "Oxford",
                 color: "Navy",
-                key: "shirt-Oxford-Navy-0"
+                key: "shirt"
             ),
             ShoppingListRow(
                 categoryKey: "shoes",
                 category: "Shoes",
                 style: "—",
                 color: "Black",
-                key: "shoes-—-Black-0"
+                key: "shoes"
             ),
         ])
 
@@ -225,22 +190,22 @@ final class BuildShoppingListRowsTests: XCTestCase {
             ShoppingListRow(
                 categoryKey: "shirt",
                 category: "Shirt",
-                style: "Oxford",
-                color: "Navy",
-                key: "shirt-Oxford-Navy-0"
+                style: "Oxford, Linen, Overshirt",
+                color: "Beige",
+                key: "shirt"
             ),
             ShoppingListRow(
                 categoryKey: "trouser",
                 category: "Pant",
                 style: "Chino",
                 color: "Charcoal",
-                key: "trouser-Chino-Charcoal-0"
+                key: "trouser"
             ),
         ])
 
         XCTAssertEqual(
             message,
-            "Shopping list (wardrobe analysis)\n\n• Shirt — Oxford, Navy\n• Pant — Chino, Charcoal"
+            "Shopping list (wardrobe analysis)\n\n• Shirt — Oxford, Linen, Overshirt; Beige\n• Pant — Chino; Charcoal"
         )
     }
 
@@ -251,7 +216,7 @@ final class BuildShoppingListRowsTests: XCTestCase {
                 category: "Shirt",
                 style: "Oxford",
                 color: "Navy",
-                key: "shirt-Oxford-Navy-0"
+                key: "shirt"
             ),
         ]
         let url = BuildShoppingListRows.whatsAppURL(for: rows)

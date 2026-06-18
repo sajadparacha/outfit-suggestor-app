@@ -43,10 +43,10 @@ describe('ShoppingListTable', () => {
     expect(screen.getByRole('columnheader', { name: 'Category' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Style' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Color' })).toBeInTheDocument();
-    expect(screen.getByTestId('shopping-list-row-shirt-Oxford-Navy-0')).toHaveTextContent('Shirt');
-    expect(screen.getByTestId('shopping-list-row-shirt-Oxford-Navy-0')).toHaveTextContent('Oxford');
-    expect(screen.getByTestId('shopping-list-row-shirt-Oxford-Navy-0')).toHaveTextContent('Navy');
-    expect(screen.getByTestId('shopping-list-row-trouser-Chino-Charcoal-0')).toHaveTextContent('Pant');
+    expect(screen.getByTestId('shopping-list-row-shirt')).toHaveTextContent('Shirt');
+    expect(screen.getByTestId('shopping-list-row-shirt')).toHaveTextContent('Oxford');
+    expect(screen.getByTestId('shopping-list-row-shirt')).toHaveTextContent('Navy');
+    expect(screen.getByTestId('shopping-list-row-trouser')).toHaveTextContent('Pant');
     expect(screen.queryByTestId('shopping-list-row-belt')).not.toBeInTheDocument();
   });
 
@@ -86,8 +86,8 @@ describe('ShoppingListTable', () => {
     expect(url).toContain('https://wa.me/?text=');
     const decoded = decodeURIComponent(url.replace('https://wa.me/?text=', ''));
     expect(decoded).toContain('Shopping list (wardrobe analysis)');
-    expect(decoded).toContain('• Shirt — Oxford, Navy');
-    expect(decoded).toContain('• Pant — Chino, Charcoal');
+    expect(decoded).toContain('• Shirt — Oxford; Navy');
+    expect(decoded).toContain('• Pant — Chino; Charcoal');
 
     openSpy.mockRestore();
   });

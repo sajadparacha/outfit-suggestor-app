@@ -41,14 +41,14 @@ describe('buildShoppingListRows', () => {
         category: 'Shirt',
         style: 'Oxford',
         color: 'Navy',
-        key: 'shirt-Oxford-Navy-0',
+        key: 'shirt',
       },
       {
         categoryKey: 'trouser',
         category: 'Pant',
         style: 'Chino',
         color: 'Charcoal',
-        key: 'trouser-Chino-Charcoal-0',
+        key: 'trouser',
       },
     ]);
   });
@@ -87,14 +87,14 @@ describe('buildShoppingListRows', () => {
         category: 'Shoes',
         style: '—',
         color: '—',
-        key: 'shoes-—-—-0',
+        key: 'shoes',
       },
       {
         categoryKey: 'belt',
         category: 'Belt',
         style: '—',
         color: '—',
-        key: 'belt-—-—-0',
+        key: 'belt',
       },
     ]);
   });
@@ -139,12 +139,12 @@ describe('buildShoppingListRows', () => {
         category: 'Sweater',
         style: '—',
         color: 'Burgundy',
-        key: 'sweater-—-Burgundy-0',
+        key: 'sweater',
       },
     ]);
   });
 
-  it('emits cartesian product when both missing styles and colors exist', () => {
+  it('emits one row per category with comma-separated styles and colors', () => {
     const categories: WardrobeCategoryHealth[] = [
       makeCategory({
         id: 'shirt',
@@ -154,16 +154,17 @@ describe('buildShoppingListRows', () => {
     ];
 
     const rows = buildShoppingListRows(categories);
-    expect(rows).toHaveLength(4);
-    expect(rows).toEqual([
-      expect.objectContaining({ style: 'Linen', color: 'Black', key: 'shirt-Linen-Black-0' }),
-      expect.objectContaining({ style: 'Linen', color: 'Blue', key: 'shirt-Linen-Blue-1' }),
-      expect.objectContaining({ style: 'Oxford', color: 'Black', key: 'shirt-Oxford-Black-2' }),
-      expect.objectContaining({ style: 'Oxford', color: 'Blue', key: 'shirt-Oxford-Blue-3' }),
-    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toEqual({
+      categoryKey: 'shirt',
+      category: 'Shirt',
+      style: 'Linen, Oxford',
+      color: 'Black, Blue',
+      key: 'shirt',
+    });
   });
 
-  it('emits one row per missing style when only styles exist', () => {
+  it('emits one row with comma-separated styles when only styles exist', () => {
     const categories: WardrobeCategoryHealth[] = [
       makeCategory({
         id: 'shirt',
@@ -176,21 +177,14 @@ describe('buildShoppingListRows', () => {
       {
         categoryKey: 'shirt',
         category: 'Shirt',
-        style: 'Linen',
+        style: 'Linen, Oxford',
         color: '—',
-        key: 'shirt-Linen-—-0',
-      },
-      {
-        categoryKey: 'shirt',
-        category: 'Shirt',
-        style: 'Oxford',
-        color: '—',
-        key: 'shirt-Oxford-—-1',
+        key: 'shirt',
       },
     ]);
   });
 
-  it('emits one row per missing color when only colors exist', () => {
+  it('emits one row with comma-separated colors when only colors exist', () => {
     const categories: WardrobeCategoryHealth[] = [
       makeCategory({
         id: 'shirt',
@@ -204,15 +198,8 @@ describe('buildShoppingListRows', () => {
         categoryKey: 'shirt',
         category: 'Shirt',
         style: '—',
-        color: 'Black',
-        key: 'shirt-—-Black-0',
-      },
-      {
-        categoryKey: 'shirt',
-        category: 'Shirt',
-        style: '—',
-        color: 'Blue',
-        key: 'shirt-—-Blue-1',
+        color: 'Black, Blue',
+        key: 'shirt',
       },
     ]);
   });
@@ -226,18 +213,32 @@ describe('buildShoppingListCsv', () => {
         category: 'Shirt',
         style: 'Oxford',
         color: 'Navy',
-        key: 'shirt-Oxford-Navy-0',
+        key: 'shirt',
       },
       {
         categoryKey: 'shoes',
         category: 'Shoes',
         style: '—',
         color: 'Black',
-        key: 'shoes-—-Black-0',
+        key: 'shoes',
       },
     ]);
 
     expect(csv).toBe('Category,Style,Color\nShirt,Oxford,Navy\nShoes,,Black');
+  });
+
+  it('quotes comma-separated style and color values', () => {
+    const csv = buildShoppingListCsv([
+      {
+        categoryKey: 'shirt',
+        category: 'Shirt',
+        style: 'Linen, Oxford',
+        color: 'Black, Blue',
+        key: 'shirt',
+      },
+    ]);
+
+    expect(csv).toBe('Category,Style,Color\nShirt,"Linen, Oxford","Black, Blue"');
   });
 });
 
@@ -249,19 +250,35 @@ describe('buildWhatsAppShoppingMessage', () => {
         category: 'Shirt',
         style: 'Oxford',
         color: 'Navy',
-        key: 'shirt-Oxford-Navy-0',
+        key: 'shirt',
       },
       {
         categoryKey: 'trouser',
         category: 'Pant',
         style: 'Chino',
         color: 'Charcoal',
-        key: 'trouser-Chino-Charcoal-0',
+        key: 'trouser',
       },
     ]);
 
     expect(message).toBe(
-      'Shopping list (wardrobe analysis)\n\n• Shirt — Oxford, Navy\n• Pant — Chino, Charcoal'
+      'Shopping list (wardrobe analysis)\n\n• Shirt — Oxford; Navy\n• Pant — Chino; Charcoal'
+    );
+  });
+
+  it('uses semicolon between merged styles and colors', () => {
+    const message = buildWhatsAppShoppingMessage([
+      {
+        categoryKey: 'shirt',
+        category: 'Shirt',
+        style: 'Oxford, Linen, Overshirt',
+        color: 'Beige',
+        key: 'shirt',
+      },
+    ]);
+
+    expect(message).toBe(
+      'Shopping list (wardrobe analysis)\n\n• Shirt — Oxford, Linen, Overshirt; Beige'
     );
   });
 });

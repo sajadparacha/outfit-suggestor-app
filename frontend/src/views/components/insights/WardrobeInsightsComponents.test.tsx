@@ -415,7 +415,7 @@ describe('WardrobeInsightsPage layout states', () => {
     fireEvent.click(screen.getByTestId('view-shopping-list'));
 
     expect(screen.getByTestId('shopping-list-table')).toBeInTheDocument();
-    expect(screen.getByTestId('shopping-list-row-shirt-Linen-Black-0')).toBeInTheDocument();
+    expect(screen.getByTestId('shopping-list-row-shirt')).toBeInTheDocument();
     expect(screen.queryByTestId('shopping-list-row-belt')).not.toBeInTheDocument();
     expect(screen.getByTestId('view-shopping-list')).toHaveTextContent('Hide shopping list');
   });
