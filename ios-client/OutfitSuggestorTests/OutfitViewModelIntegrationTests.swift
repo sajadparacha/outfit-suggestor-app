@@ -42,7 +42,41 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
         XCTAssertEqual(mock.randomOutfitCalls, 1)
     }
 
-    func testCompleteOutfitFromWardrobeItemsCallsAPIAndSetsSuggestion() async {
+    func testCompleteOutfitFromOneWardrobeItemCallsAPIAndSetsSuggestion() async {
+        AuthService.shared.authToken = "test-token"
+        AuthService.shared.currentUser = makeUser()
+        let mock = MockAPIService()
+        mock.wardrobeItemsResult = .success(
+            OutfitSuggestion(
+                shirt: "selected blue shirt",
+                trouser: "navy trouser",
+                blazer: "gray blazer",
+                shoes: "black loafers",
+                belt: "black belt",
+                reasoning: "completed around one selected wardrobe piece"
+            )
+        )
+        let viewModel = OutfitViewModel(apiService: mock)
+        viewModel.filters.occasion = "work"
+        viewModel.filters.season = "all-season"
+        viewModel.filters.style = "smart-casual"
+        viewModel.preferenceText = "no sneakers"
+
+        await viewModel.completeOutfitFromWardrobeItems([
+            makeWardrobeItem(id: 11, category: "shirt")
+        ])
+
+        XCTAssertEqual(mock.wardrobeItemsCalls.count, 1)
+        XCTAssertEqual(mock.wardrobeItemsCalls.first?.selectedIds, [11])
+        XCTAssertEqual(mock.wardrobeItemsCalls.first?.textInput, "no sneakers")
+        XCTAssertEqual(mock.wardrobeItemsCalls.first?.occasion, "work")
+        XCTAssertEqual(mock.wardrobeItemsCalls.first?.style, "smart-casual")
+        XCTAssertEqual(viewModel.currentSuggestion?.reasoning, "completed around one selected wardrobe piece")
+        XCTAssertEqual(viewModel.inputPanelSource, .wardrobe)
+        XCTAssertFalse(viewModel.showError)
+    }
+
+    func testCompleteOutfitFromMultipleWardrobeItemsCallsAPIAndSetsSuggestion() async {
         AuthService.shared.authToken = "test-token"
         AuthService.shared.currentUser = makeUser()
         let mock = MockAPIService()

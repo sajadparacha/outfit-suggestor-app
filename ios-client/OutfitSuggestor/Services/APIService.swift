@@ -253,7 +253,7 @@ class APIService {
         return try JSONDecoder().decode(OutfitSuggestion.self, from: data)
     }
 
-    /// Complete an outfit around multiple selected wardrobe items (auth required).
+    /// Complete an outfit around 1-5 selected wardrobe items (auth required).
     func getSuggestionFromWardrobeItems(
         selectedWardrobeItemIds: [Int],
         textInput: String = "",

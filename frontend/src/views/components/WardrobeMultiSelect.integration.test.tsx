@@ -115,6 +115,36 @@ describe('Wardrobe multi-select complete outfit integration', () => {
     localStorage.clear();
   });
 
+  it('sends selected_wardrobe_item_ids for one selected item and shows the existing result UI', async () => {
+    renderApp({ routerProps: { initialEntries: [ROUTES.WARDROBE] } });
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /My Wardrobe/i })).toBeInTheDocument();
+    });
+    expect(await screen.findByText('Blue oxford shirt')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Select at least 1 item/i })).toBeDisabled();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Add shirt to outfit completion/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Complete outfit with AI/i }));
+
+    await waitFor(() => {
+      expect(capturedRequestBody?.selected_wardrobe_item_ids).toEqual([11]);
+      expect(capturedRequestBody).toEqual(
+        expect.objectContaining({
+          occasion: expect.any(String),
+          season: expect.any(String),
+          style: expect.any(String),
+          text_input: expect.any(String),
+        })
+      );
+    });
+
+    await waitFor(() => {
+      expect(document.getElementById('outfit-result-hero')).toBeInTheDocument();
+      expect(screen.getByText('Black loafers')).toBeInTheDocument();
+    });
+  });
+
   it('sends selected_wardrobe_item_ids for two unique-slot selections and shows the existing result UI', async () => {
     renderApp({ routerProps: { initialEntries: [ROUTES.WARDROBE] } });
 
@@ -123,10 +153,10 @@ describe('Wardrobe multi-select complete outfit integration', () => {
     });
     expect(await screen.findByText('Blue oxford shirt')).toBeInTheDocument();
     expect(screen.getByText('Navy trousers')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Select at least 2 items/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Select at least 1 item/i })).toBeDisabled();
 
-    fireEvent.click(await screen.findByRole('button', { name: /Select shirt for outfit completion/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Select trouser for outfit completion/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Add shirt to outfit completion/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Add trouser to outfit completion/i }));
     fireEvent.click(screen.getByRole('button', { name: /Complete outfit with AI/i }));
 
     await waitFor(() => {

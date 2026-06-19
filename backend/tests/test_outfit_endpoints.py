@@ -347,7 +347,7 @@ class TestOutfitEndpoints:
         assert body["matching_wardrobe_items"]["trouser"][0]["id"] == trouser.id
         assert "REQUIRED SELECTED WARDROBE ITEMS" in body["ai_prompt"]
 
-    def test_suggest_outfit_from_selected_wardrobe_items_requires_two_items(
+    def test_suggest_outfit_from_selected_wardrobe_items_allows_one_item(
         self,
         client,
         auth_headers,
@@ -366,8 +366,11 @@ class TestOutfitEndpoints:
             headers=auth_headers,
         )
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "at least 2" in response.json()["detail"]
+        assert response.status_code == status.HTTP_200_OK
+        body = response.json()
+        assert body["shirt_id"] == wardrobe_item.id
+        assert body["source_wardrobe_item_id"] == wardrobe_item.id
+        assert body["matching_wardrobe_items"]["shirt"][0]["id"] == wardrobe_item.id
 
     def test_suggest_outfit_from_selected_wardrobe_items_rejects_other_user_item(
         self,

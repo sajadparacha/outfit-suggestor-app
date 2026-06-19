@@ -285,7 +285,7 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               'Add items with the guided flow: we suggest category, color, and a description—edit anything before saving.',
               'Tap an item anytime to update details or swap the photo.',
               'Tap Style this item to open Suggest with one saved piece loaded, then set preferences and tap Generate Outfit.',
-              'To start from multiple saved pieces, select 2 to 5 wardrobe items across different slots, then tap Complete outfit with AI.',
+              'To start from one or more saved pieces, select 1 to 5 wardrobe items across different slots, then tap Complete outfit with AI.',
               'Choose one item per slot. The AI keeps your selected pieces and fills the missing shirt, trousers, blazer, shoes, or belt slots.',
               'We warn you if a new photo looks like something you already saved—no accidental twins.',
             ]}

@@ -60,7 +60,9 @@ final class AdminVisibilityTests: XCTestCase {
 
     func testGuideAndAboutCopyMentionWardrobeCompletion() {
         XCTAssertTrue(GuideCopy.wardrobeMultiSelectStep.contains("Select items"))
+        XCTAssertTrue(GuideCopy.wardrobeMultiSelectStep.contains("1 to 5"))
         XCTAssertTrue(GuideCopy.wardrobeMultiSelectStep.contains("Complete outfit with AI"))
+        XCTAssertTrue(AboutCopy.wardrobeCompletionFeature.contains("one or more"))
         XCTAssertTrue(AboutCopy.wardrobeCompletionFeature.contains("complete outfits"))
         XCTAssertTrue(AboutCopy.wardrobeCompletionFeature.contains("selected wardrobe pieces"))
     }

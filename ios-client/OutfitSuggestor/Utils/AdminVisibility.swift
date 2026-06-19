@@ -36,7 +36,7 @@ enum AdminVisibility {
 
 enum GuideCopy {
     static let wardrobeMultiSelectStep =
-        "Tap Select items in Wardrobe, choose 2 to 5 eligible pieces with one item per outfit slot, then tap Complete outfit with AI."
+        "Tap Select items in Wardrobe, choose 1 to 5 eligible pieces with one item per outfit slot, then tap Complete outfit with AI."
     static let wardrobeMultiSelectTip =
         "Multi-select keeps your chosen wardrobe pieces and asks AI to fill the missing outfit slots."
     static let adminShowAiPromptTip =
@@ -50,7 +50,7 @@ enum AboutCopy {
     static let generalTechStack =
         "Built with React (web), SwiftUI (iOS), FastAPI, OpenAI GPT-4 Vision, and more."
     static let wardrobeCompletionFeature =
-        "• AI can complete outfits around multiple selected wardrobe pieces when logged in."
+        "• AI can complete outfits around one or more selected wardrobe pieces when logged in."
     static let adminDiagnosticsSuffix = " Includes transparent admin diagnostics for administrators."
 
     static func techStackDescription(isAdmin: Bool) -> String {

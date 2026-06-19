@@ -139,8 +139,6 @@ class OutfitController:
             return {}, []
         if len(ids) != len(set(ids)):
             raise HTTPException(status_code=400, detail="Select each wardrobe item only once")
-        if len(ids) < 2:
-            raise HTTPException(status_code=400, detail="Select at least 2 wardrobe items")
         if len(ids) > 5:
             raise HTTPException(status_code=400, detail="Select no more than 5 wardrobe items")
 

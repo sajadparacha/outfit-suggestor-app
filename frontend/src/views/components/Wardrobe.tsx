@@ -635,8 +635,8 @@ const Wardrobe: React.FC<WardrobeProps> = ({
   };
 
   const handleCompleteOutfitWithAI = async () => {
-    if (selectedCompleteOutfitItems.length < 2) {
-      setSuggestionError('Select at least 2 items');
+    if (selectedCompleteOutfitItems.length < 1) {
+      setSuggestionError('Select at least 1 item');
       return;
     }
 
@@ -726,11 +726,11 @@ const Wardrobe: React.FC<WardrobeProps> = ({
   const completeOutfitActionDisabled =
     completionLoading ||
     (outfitController?.loading ?? false) ||
-    selectedCompleteOutfitItems.length < 2;
+    selectedCompleteOutfitItems.length < 1;
   const completeOutfitActionCopy = completionLoading || (outfitController?.loading ?? false)
     ? 'Completing your outfit...'
-    : selectedCompleteOutfitItems.length < 2
-      ? 'Select at least 2 items'
+    : selectedCompleteOutfitItems.length < 1
+      ? 'Select at least 1 item'
       : 'Complete outfit with AI';
   const selectedSlotSummary = selectedCompleteOutfitItems
     .map((item) => {
@@ -877,7 +877,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
               <div>
                 <p className="text-base font-semibold text-white">Complete an outfit from selected wardrobe pieces</p>
                 <p className="mt-1 text-sm text-slate-200">
-                  Select 2 to 5 items across different slots: shirt, trousers, blazer, shoes, and belt.
+                  Select 1 to 5 items across different slots: shirt, trousers, blazer, shoes, and belt.
                 </p>
                 <p className="mt-2 text-xs font-medium text-slate-300" aria-live="polite">
                   {selectedCompleteOutfitItems.length === 0
@@ -1017,8 +1017,8 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                         aria-pressed={isSelectedForCompleteOutfit}
                         aria-label={
                           isSelectedForCompleteOutfit
-                            ? `Remove ${item.category} from outfit selection`
-                            : `Select ${item.category} for outfit completion`
+                            ? `Remove ${item.category} from outfit completion`
+                            : `Add ${item.category} to outfit completion`
                         }
                         className={`min-h-[40px] w-full rounded-xl border px-3 py-2 text-sm font-semibold transition sm:w-auto ${
                           isSelectedForCompleteOutfit
@@ -1036,16 +1036,19 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                         }
                       >
                         {isSelectedForCompleteOutfit
-                          ? '✓ Selected for outfit'
+                          ? 'Remove from outfit completion'
                           : isCompleteOutfitEligible
-                            ? 'Select for outfit'
-                            : 'Not eligible for completion'}
+                            ? 'Add to outfit completion'
+                            : 'Outfit completion unavailable'}
                       </button>
                     </div>
                   </div>
                 </div>
 
                 <div className="mt-3 border-t border-white/10 pt-3 sm:mt-4">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Single-item styling
+                  </p>
                   <div className="flex items-stretch gap-2">
                     <button
                       onClick={() => handleGetAISuggestion(item)}
@@ -1054,7 +1057,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                         suggestionLoading === item.id ||
                         (outfitController?.loading ?? false)
                       }
-                      className="flex min-h-[48px] flex-1 touch-manipulation flex-col items-center justify-center gap-0.5 rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm btn-brand transition-all disabled:cursor-not-allowed disabled:opacity-50"
+                      className="flex min-h-[48px] flex-1 touch-manipulation flex-col items-center justify-center gap-0.5 rounded-xl border border-brand-blue/30 bg-brand-blue/10 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-brand-blue/20 disabled:cursor-not-allowed disabled:opacity-50"
                       title="Open Suggest with this wardrobe item loaded"
                       aria-label="Style this item with AI"
                     >
@@ -1067,7 +1070,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                         <>
                           <span>✨ Style this item</span>
                           <span className="text-xs font-normal text-white/80">
-                            Opens Suggest — tune options, then Generate Outfit
+                            Single-item Suggest flow
                           </span>
                         </>
                       )}

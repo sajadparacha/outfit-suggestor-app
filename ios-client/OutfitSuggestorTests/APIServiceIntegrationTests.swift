@@ -127,7 +127,47 @@ final class APIServiceIntegrationTests: XCTestCase {
         )
     }
 
-    func testGetSuggestionFromWardrobeItemsEncodesSelectedIds() async throws {
+    func testGetSuggestionFromWardrobeItemsEncodesSingleSelectedId() async throws {
+        let service = makeService { request in
+            XCTAssertEqual(request.url?.path, "/api/suggest-outfit-from-wardrobe")
+            XCTAssertEqual(request.httpMethod, "POST")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
+            let body = try XCTUnwrap(request.httpBody)
+            let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+            XCTAssertEqual(json["selected_wardrobe_item_ids"] as? [Int], [12])
+            return (
+                HTTPURLResponse(
+                    url: request.url!,
+                    statusCode: 200,
+                    httpVersion: nil,
+                    headerFields: nil
+                )!,
+                """
+                {
+                  "shirt":"selected shirt",
+                  "trouser":"navy trouser",
+                  "blazer":"navy blazer",
+                  "shoes":"black loafers",
+                  "belt":"black belt",
+                  "reasoning":"completed around one selected piece"
+                }
+                """.data(using: .utf8)!
+            )
+        }
+
+        let suggestion = try await service.getSuggestionFromWardrobeItems(
+            selectedWardrobeItemIds: [12],
+            textInput: "no sneakers",
+            occasion: "work",
+            season: "all-season",
+            style: "smart-casual"
+        )
+
+        XCTAssertEqual(suggestion.reasoning, "completed around one selected piece")
+    }
+
+    func testGetSuggestionFromWardrobeItemsEncodesMultipleSelectedIds() async throws {
         let service = makeService { request in
             XCTAssertEqual(request.url?.path, "/api/suggest-outfit-from-wardrobe")
             XCTAssertEqual(request.httpMethod, "POST")

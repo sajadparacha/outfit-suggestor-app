@@ -19,7 +19,7 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 | **Filters / preference text** | ✅ | ✅ | Occasion, season, style use shared recommended option vocabulary; free text |
 | **Wardrobe-only mode** | ✅ | ✅ | Toggle when logged in (Main flow) |
 | **Model image generation** | ✅ | ✅ | Toggle + model picker (DALL-E 3, Stable Diffusion, Nano Banana); full-screen view |
-| **Wardrobe** | ✅ | ✅ | List, add, edit, delete, category filter, search, "Get suggestion" from item, multi-select 2-5 items to complete outfit with AI |
+| **Wardrobe** | ✅ | ✅ | List, add, edit, delete, category filter, search, "Get suggestion" from item, select 1-5 items to complete outfit with AI |
 | **Outfit history** | ✅ | ✅ | List, search, sort (newest/oldest), delete, load into main view |
 | **Random from wardrobe** | ✅ | ✅ | Button on Main; GET /api/wardrobe/random-outfit |
 | **Random from history** | ✅ | ✅ | Button on Main; client picks from history; **Your inputs** syncs preview + **From history** caption + entry filters |
@@ -110,7 +110,7 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 
 ## 4. Wardrobe Management
 
-**Web**: List wardrobe items, add (with optional AI analysis), edit, delete, filter by category, get suggestion from a single item, select 2-5 eligible items across unique outfit slots and complete the outfit with AI. Duplicate check before add. Full-screen image view.
+**Web**: List wardrobe items, add (with optional AI analysis), edit, delete, filter by category, get suggestion from a single item, select 1-5 eligible items across unique outfit slots and complete the outfit with AI. Duplicate check before add. Full-screen image view.
 
 **Wardrobe item card actions (web + iOS)**: Primary **Style this item** + overflow menu (View image, Edit, **Past Suggestions**, Delete). Past Suggestions opens per-item outfit history modal/sheet.
 

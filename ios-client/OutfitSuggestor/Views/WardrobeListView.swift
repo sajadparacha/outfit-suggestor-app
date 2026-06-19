@@ -291,7 +291,7 @@ struct WardrobeListView: View {
                         Text("Complete an outfit from your wardrobe")
                             .font(.subheadline.weight(.semibold))
                             .foregroundColor(AppTheme.textPrimary)
-                        Text("Select 2 to 5 shirts, trousers, blazers, shoes, or belts. Choose one item per outfit slot.")
+                        Text("Select 1 to 5 shirts, trousers, blazers, shoes, or belts. Choose one item per outfit slot.")
                             .font(.caption)
                             .foregroundColor(AppTheme.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -413,13 +413,13 @@ struct WardrobeListView: View {
         if result == .selected || result == .deselected {
             completionSelectionMessage = completionSelection.canCompleteOutfit
                 ? nil
-                : "Select at least 2 items"
+                : "Select at least 1 item"
         }
     }
 
     private func completeSelectedOutfit() {
         guard completionSelection.canCompleteOutfit else {
-            completionSelectionMessage = "Select at least 2 items"
+            completionSelectionMessage = "Select at least 1 item"
             return
         }
         onCompleteOutfitFromSelection?(selectedCompletionItems)

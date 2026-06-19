@@ -75,15 +75,25 @@ final class WardrobeCardUxTests: XCTestCase {
         XCTAssertTrue(WardrobeCardUx.flowTipStep2Fragment.contains("Style this item"))
     }
 
-    func testMultiSelectRequiresTwoUniqueSlotsAndPreventsDuplicates() {
+    func testMultiSelectAllowsOneEligibleItem() {
+        var state = WardrobeMultiSelectState()
+        let shirt = wardrobeItem(id: 1, category: "shirt")
+
+        XCTAssertEqual(state.actionTitle, "Select at least 1 item")
+        XCTAssertFalse(state.canCompleteOutfit)
+        XCTAssertEqual(state.toggle(shirt), .selected)
+        XCTAssertTrue(state.canCompleteOutfit)
+        XCTAssertEqual(state.actionTitle, "Complete outfit with AI")
+        XCTAssertEqual(state.selectedItemIds, [1])
+    }
+
+    func testMultiSelectAllowsMultipleUniqueSlotsAndPreventsDuplicates() {
         var state = WardrobeMultiSelectState()
         let shirt = wardrobeItem(id: 1, category: "shirt")
         let duplicateShirt = wardrobeItem(id: 2, category: "shirt")
         let trouser = wardrobeItem(id: 3, category: "trouser")
 
-        XCTAssertEqual(state.actionTitle, "Select at least 2 items")
         XCTAssertEqual(state.toggle(shirt), .selected)
-        XCTAssertFalse(state.canCompleteOutfit)
         XCTAssertEqual(state.toggle(duplicateShirt), .duplicateSlot)
         XCTAssertEqual(state.toggle(duplicateShirt).message, "Choose one item per outfit slot")
         XCTAssertEqual(state.selectedItemIds, [1])
@@ -92,6 +102,26 @@ final class WardrobeCardUxTests: XCTestCase {
         XCTAssertTrue(state.canCompleteOutfit)
         XCTAssertEqual(state.actionTitle, "Complete outfit with AI")
         XCTAssertEqual(state.selectedItemIds, [1, 3])
+    }
+
+    func testMultiSelectAllowsUpToFiveUniqueSlots() {
+        var state = WardrobeMultiSelectState()
+        let items = [
+            wardrobeItem(id: 1, category: "shirt"),
+            wardrobeItem(id: 2, category: "trouser"),
+            wardrobeItem(id: 3, category: "blazer"),
+            wardrobeItem(id: 4, category: "shoes"),
+            wardrobeItem(id: 5, category: "belt")
+        ]
+
+        for item in items {
+            XCTAssertEqual(state.toggle(item), .selected)
+        }
+
+        XCTAssertEqual(WardrobeMultiSelectState.maximumSelectedItems, 5)
+        XCTAssertEqual(state.selectedCount, 5)
+        XCTAssertEqual(state.selectedItemIds, [1, 2, 3, 4, 5])
+        XCTAssertTrue(state.canCompleteOutfit)
     }
 
     func testMultiSelectRejectsUnsupportedCategories() {

@@ -1,4 +1,4 @@
-# Feature Spec: Wardrobe Multi-Item Complete Outfit
+# Feature Spec: Wardrobe Selected-Item Complete Outfit
 
 **Branch:** `cursor/update-preference-options-8b6a`  
 **Slug:** `wardrobe-multi-item-complete-outfit`  
@@ -8,7 +8,7 @@
 
 ## User story
 
-As a logged-in user, I want to select multiple wardrobe items, such as a shirt and trouser or a blazer and shirt, and ask AI to complete the rest of the outfit so that the result keeps my chosen pieces and fills missing slots.
+As a logged-in user, I want to select one or more wardrobe items, such as one shirt, a shirt and trouser, or a blazer and shirt, and ask AI to complete the rest of the outfit so that the result keeps my chosen pieces and fills missing slots.
 
 ---
 
@@ -22,7 +22,7 @@ As a logged-in user, I want to select multiple wardrobe items, such as a shirt a
 ### Flow
 
 1. User opens Wardrobe while logged in.
-2. User enters multi-select mode and selects 2 to 5 eligible outfit-slot items.
+2. User selects 1 to 5 eligible outfit-slot items.
 3. User taps/clicks **Complete outfit with AI**.
 4. Client posts selected wardrobe IDs plus preferences to `/api/suggest-outfit-from-wardrobe`.
 5. AI must keep the selected items in their slots and generate recommendations for missing slots.
@@ -36,7 +36,7 @@ As a logged-in user, I want to select multiple wardrobe items, such as a shirt a
 |-------|----------|------|
 | Empty | No wardrobe items: show existing empty wardrobe state | Unchanged |
 | Selection disabled | Auth required or unsupported item category | Existing auth behavior; unsupported items are not selectable for completion |
-| Too few selected | Disable action until at least two eligible items selected | `Select at least 2 items` |
+| No items selected | Disable action until at least one eligible item is selected | `Select at least 1 item` |
 | Duplicate slot | Do not allow two selected items for the same outfit slot | `Choose one item per outfit slot` |
 | Loading | Existing AI loading UI | `Completing your outfit...` |
 | Success | Existing result UI displays completed outfit | `Complete outfit with AI` action returns full outfit |
@@ -48,7 +48,7 @@ As a logged-in user, I want to select multiple wardrobe items, such as a shirt a
 
 - Add an explicit multi-select affordance in Wardrobe, not hidden behind the existing single-item overflow action.
 - Selected items should show a clear checked/selected state.
-- The action should be available only when 2+ valid, unique-slot items are selected.
+- The action should be available when 1 or more valid, unique-slot items are selected.
 - Keep existing single-item **Style this item** behavior.
 - The result should reuse the existing suggestion/result layout; do not create a separate result screen.
 
@@ -90,7 +90,7 @@ As a logged-in user, I want to select multiple wardrobe items, such as a shirt a
 - Requires authenticated user.
 - `selected_wardrobe_item_ids` is optional for backwards compatibility.
 - When present:
-  - Must contain at least 2 IDs.
+  - Must contain at least 1 ID.
   - Must contain no more than 5 IDs.
   - Every ID must belong to the current user.
   - Every selected item must map to one supported outfit slot: `shirt`, `trouser`, `blazer`, `shoes`, `belt`.
@@ -125,7 +125,7 @@ As a logged-in user, I want to select multiple wardrobe items, such as a shirt a
 
 - [ ] **No** — layout/styling only; no change to flows or copy users read in Guide/About
 - [x] **Yes** — describe what to update:
-  - Guide: explain selecting multiple wardrobe items and completing the outfit with AI.
+  - Guide: explain selecting one or more wardrobe items and completing the outfit with AI.
   - About: mention AI can complete outfits around selected wardrobe pieces if feature lists wardrobe capabilities.
 
 ---
@@ -135,7 +135,7 @@ As a logged-in user, I want to select multiple wardrobe items, such as a shirt a
 ### Web only
 
 - Preserve existing single-card actions and wardrobe filters.
-- Add tests for selecting two items and sending `selected_wardrobe_item_ids` to the API.
+- Add tests for selecting one item and multiple items and sending `selected_wardrobe_item_ids` to the API.
 
 ### iOS only
 
@@ -150,9 +150,9 @@ As a logged-in user, I want to select multiple wardrobe items, such as a shirt a
 
 - [x] Test file: `backend/tests/test_outfit_endpoints.py`
 - [x] Cases:
+  - Authenticated request with one selected item returns 200, pins the selected ID to the correct response slot, and includes the selected item in `matching_wardrobe_items`.
   - Authenticated request with two selected items returns 200, pins selected IDs to the correct response slots, and includes selected items in `matching_wardrobe_items`.
   - Unauthenticated selected-item request returns 401.
-  - Single selected ID returns 400.
   - Selected item not owned by current user returns 404.
   - Duplicate selected outfit slot returns 400.
 
@@ -160,7 +160,8 @@ As a logged-in user, I want to select multiple wardrobe items, such as a shirt a
 
 - [x] Unit/integration tests for wardrobe multi-select.
 - [x] Cases:
-  - Multi-select action is disabled until at least two valid items are selected.
+  - Complete action is disabled until at least one valid item is selected.
+  - Selecting one item calls `/api/suggest-outfit-from-wardrobe` with `selected_wardrobe_item_ids`.
   - Selecting two unique-slot items calls `/api/suggest-outfit-from-wardrobe` with `selected_wardrobe_item_ids`.
   - Duplicate slot selection is prevented or clearly surfaced.
   - Result flow reuses existing suggestion/result display.
@@ -172,7 +173,7 @@ As a logged-in user, I want to select multiple wardrobe items, such as a shirt a
 - [x] Cases:
   - Multi-select state tracks selected IDs and unique slots.
   - Request body includes `selected_wardrobe_item_ids`.
-  - Action is disabled until at least two valid items are selected.
+  - Action is disabled until at least one valid item is selected.
   - Guide/About updates are covered when copy tests exist.
 
 ### Per-feature tests (agents add during implementation)
@@ -212,13 +213,13 @@ After user confirms, publish filled report using `.cursor/specs/_test-report-tem
 
 Targeted verification so far:
 - Backend: `DATABASE_URL='sqlite:///:memory:' pytest tests/test_outfit_endpoints.py -q` passed, 29 tests.
-- Web: `npm test -- --watchAll=false --passWithNoTests` passed, 52 suites / 298 tests.
+- Web: `npm test -- --watchAll=false --passWithNoTests` passed, 52 suites / 300 tests.
 - iOS: `git diff --check -- ios-client` passed; `xcodebuild` is unavailable in this Linux environment.
 
 ---
 
 ## Out of scope
 
-- Combining uploaded image and multi-selected wardrobe items in the same request.
+- Combining uploaded image and selected wardrobe items in the same request.
 - Selecting unsupported categories like tie/suit/sweater for this completion flow.
 - Persisting a new selected-item ID list column in history; selected slot IDs already persist where applicable.

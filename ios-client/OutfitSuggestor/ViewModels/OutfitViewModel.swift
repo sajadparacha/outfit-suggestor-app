@@ -716,7 +716,7 @@ class OutfitViewModel: ObservableObject {
         }
     }
 
-    /// Complete an outfit around 2-5 selected wardrobe items without creating a new result screen.
+    /// Complete an outfit around 1-5 selected wardrobe items without creating a new result screen.
     func completeOutfitFromWardrobeItems(_ items: [WardrobeItem]) async {
         guard isAuthenticated else { showErrorMessage("Please log in"); return }
         var selection = WardrobeMultiSelectState()
@@ -728,7 +728,7 @@ class OutfitViewModel: ObservableObject {
             }
         }
         guard selection.canCompleteOutfit else {
-            showErrorMessage("Select at least 2 items")
+            showErrorMessage("Select at least 1 item")
             return
         }
 

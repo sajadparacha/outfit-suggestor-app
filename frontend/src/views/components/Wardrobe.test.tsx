@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import Wardrobe from './Wardrobe';
 import type { WardrobeItem } from '../../models/WardrobeModels';
 import ApiService from '../../services/ApiService';
@@ -106,6 +106,30 @@ describe('Wardrobe page', () => {
     });
     render(<Wardrobe />);
     expect(screen.getByRole('button', { name: /Style this item with AI/i })).toBeInTheDocument();
+  });
+
+  it('renders one outfit-completion action per card and keeps Style this item distinct', () => {
+    localStorage.setItem('wardrobe_flow_tip_dismissed', 'true');
+    mockWardrobeItems.push({
+      ...mockWardrobeItem,
+      image_data: 'base64-image-a',
+    });
+
+    render(<Wardrobe />);
+
+    const card = screen.getByTestId('wardrobe-item-card-1');
+    const outfitCompletionButtons = within(card)
+      .getAllByRole('button')
+      .filter((button) => /outfit completion/i.test(button.getAttribute('aria-label') ?? ''));
+
+    expect(outfitCompletionButtons).toHaveLength(1);
+    expect(within(card).getByRole('button', { name: /Add shirt to outfit completion/i }))
+      .toHaveTextContent('Add to outfit completion');
+
+    const styleButton = within(card).getByRole('button', { name: /Style this item with AI/i });
+    expect(styleButton).toHaveTextContent('Style this item');
+    expect(styleButton).toHaveTextContent('Single-item Suggest flow');
+    expect(styleButton).not.toHaveTextContent(/Add to outfit completion|Remove from outfit completion/i);
   });
 
   it('opens overflow menu with View image, Edit, Past Suggestions, and Delete in order', () => {
@@ -261,7 +285,7 @@ describe('Wardrobe page', () => {
     });
   });
 
-  it('keeps Complete outfit with AI disabled until two unique-slot items are selected', async () => {
+  it('enables Complete outfit with AI when one eligible item is selected', async () => {
     mockWardrobeItems.push(
       { ...mockWardrobeItem, id: 1, category: 'shirt', description: 'Blue shirt' },
       { ...mockWardrobeItem, id: 2, category: 'trouser', description: 'Navy trousers', color: 'Navy' }
@@ -286,21 +310,17 @@ describe('Wardrobe page', () => {
       />
     );
 
-    const action = screen.getByRole('button', { name: /Select at least 2 items/i });
+    const action = screen.getByRole('button', { name: /Select at least 1 item/i });
     expect(action).toBeDisabled();
 
-    fireEvent.click(screen.getByRole('button', { name: /Select shirt for outfit completion/i }));
-    expect(screen.getByRole('button', { name: /Select at least 2 items/i })).toBeDisabled();
-    expect(completeOutfitFromWardrobeSelection).not.toHaveBeenCalled();
-
-    fireEvent.click(screen.getByRole('button', { name: /Select trouser for outfit completion/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Add shirt to outfit completion/i }));
     const readyAction = screen.getByRole('button', { name: /Complete outfit with AI/i });
     expect(readyAction).not.toBeDisabled();
 
     fireEvent.click(readyAction);
 
     await waitFor(() => {
-      expect(completeOutfitFromWardrobeSelection).toHaveBeenCalledWith([1, 2]);
+      expect(completeOutfitFromWardrobeSelection).toHaveBeenCalledWith([1]);
       expect(onNavigateToMain).toHaveBeenCalledTimes(1);
     });
   });
@@ -313,13 +333,13 @@ describe('Wardrobe page', () => {
 
     render(<Wardrobe />);
 
-    const selectButtons = screen.getAllByRole('button', { name: /Select shirt for outfit completion/i });
+    const selectButtons = screen.getAllByRole('button', { name: /Add shirt to outfit completion/i });
     fireEvent.click(selectButtons[0]);
     fireEvent.click(selectButtons[1]);
 
     expect(screen.getByText('Choose one item per outfit slot')).toBeInTheDocument();
-    expect(screen.getAllByText('✓ Selected for outfit')).toHaveLength(1);
-    expect(screen.getByRole('button', { name: /Select at least 2 items/i })).toBeDisabled();
+    expect(screen.getAllByText('Remove from outfit completion')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /Complete outfit with AI/i })).not.toBeDisabled();
   });
 
   it('shows undo toast on delete via menu and restores item when undo is tapped', async () => {

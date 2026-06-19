@@ -145,14 +145,14 @@ enum WardrobeMultiSelectToggleResult: Equatable {
 
 struct WardrobeMultiSelectState: Equatable {
     static let maximumSelectedItems = 5
-    static let minimumSelectedItems = 2
+    static let minimumSelectedItems = 1
 
     private(set) var selectedItemIds: [Int] = []
     private(set) var selectedSlots: [WardrobeCompletionSlot: Int] = [:]
 
     var selectedCount: Int { selectedItemIds.count }
     var canCompleteOutfit: Bool { selectedCount >= Self.minimumSelectedItems }
-    var actionTitle: String { canCompleteOutfit ? "Complete outfit with AI" : "Select at least 2 items" }
+    var actionTitle: String { canCompleteOutfit ? "Complete outfit with AI" : "Select at least 1 item" }
 
     func isSelected(_ item: WardrobeItem) -> Bool {
         selectedItemIds.contains(item.id)
