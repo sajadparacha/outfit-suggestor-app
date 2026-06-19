@@ -93,3 +93,27 @@ Agents commit only when you explicitly ask.
 - [IOS_WEB_FEATURE_PARITY.md](IOS_WEB_FEATURE_PARITY.md)
 - [ARCHITECTURE.md](ARCHITECTURE.md)
 - [WEB_USER_INTERACTION.md](WEB_USER_INTERACTION.md)
+
+## Cursor Cloud specific instructions
+
+Dependencies (backend `venv`, `node_modules`) are refreshed by the startup update script. The notes below are runtime caveats that the update script intentionally does NOT handle.
+
+### Services (Linux cloud VM)
+
+| Service | Run command (from repo root) | Port | Notes |
+|---|---|---|---|
+| Backend API (FastAPI) | `cd backend && . venv/bin/activate && python main.py` | 8001 | Reads `backend/.env`. Health: `GET /`, `/health`, docs `/docs`. |
+| Web frontend (React/CRACO) | `cd frontend && BROWSER=none npm start` | 3000 | Talks to backend via `REACT_APP_API_URL` (`frontend/.env` → `http://localhost:8001`). |
+| PostgreSQL 16 | `sudo pg_ctlcluster 16 main start` | 5432 | Must be started each session (see below). DB `outfit_suggestor`, user/pass `postgres`/`postgres`. |
+| iOS client (`ios-client/`) | — | — | Requires macOS + Xcode; cannot build/run on this Linux VM. Source-only here. |
+
+### Startup caveats (non-obvious)
+
+- **PostgreSQL is not auto-started.** Run `sudo pg_ctlcluster 16 main start` at the start of each session before launching the backend (the backend auto-creates tables on startup once the DB is reachable). Verify with `pg_lsclusters`.
+- **`backend/.env` and `frontend/.env` are git-ignored** and live only in the VM snapshot. `backend/.env` sets `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/outfit_suggestor` and `EMAIL_ENABLED=false` (so signup works without SMTP). If the snapshot is reset, recreate them from the `.env.example` files.
+- **No `OPENAI_API_KEY` is set by default.** Auth, account creation, and non-AI reads/writes work, but AI-backed endpoints (`/api/suggest-outfit`, wardrobe AI analysis) — and `/api/outfit-history`, which shares the outfit controller dependency — return HTTP 500 with `OPENAI_API_KEY environment variable is not set`. In the web UI this surfaces as a CRA dev "Failed to fetch" error overlay (dismissable, non-blocking). To exercise AI features, add `OPENAI_API_KEY` to `backend/.env` and restart the backend.
+
+### Tests
+
+- Backend: `cd backend && . venv/bin/activate && pytest tests/ -q` (uses in-memory SQLite + mocked AI, so no Postgres/OpenAI needed).
+- Frontend: `cd frontend && CI=true npm test -- --watchAll=false` (MSW-mocked API).
