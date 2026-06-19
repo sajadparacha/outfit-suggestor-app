@@ -172,8 +172,10 @@ After user confirms, publish filled report using `.cursor/specs/_test-report-tem
 - [x] API client methods match on both platforms
 - [x] `IOS_WEB_FEATURE_PARITY.md` updated (if new capability)
 - [x] New-behavior tests added (web + iOS)
-- [ ] Full web suite pass (`npm test -- --watchAll=false`) — orchestrator end gate
+- [x] Full web suite pass (`npm test -- --watchAll=false`) — orchestrator end gate
 - [ ] Full iOS suite pass (`xcodebuild test` OutfitSuggestorTests + UITests) — orchestrator end gate
+
+Full-suite note: web passed on Linux with 51 suites and 295 tests. iOS full-suite execution was blocked because `xcodebuild` is unavailable in this Linux environment.
 
 ---
 
