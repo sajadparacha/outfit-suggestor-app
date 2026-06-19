@@ -11,9 +11,9 @@ import UIKit
 struct OutfitSuggestionView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let suggestion: OutfitSuggestion
-    var occasion: String = "casual"
-    var season: String = "all"
-    var style: String = "modern"
+    var occasion: String = OutfitFilters().occasion
+    var season: String = OutfitFilters().season
+    var style: String = OutfitFilters().style
     var uploadImage: UIImage?
     var onNext: (() -> Void)?
     var onLike: (() -> Void)?

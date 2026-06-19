@@ -13,7 +13,7 @@ import { MAIN_FLOW_UX_COPY } from '../../utils/mainFlowUxCopy';
 
 describe('Sidebar file validation', () => {
   const defaultProps = {
-    filters: { occasion: 'casual', season: 'all', style: 'modern' },
+    filters: { occasion: 'everyday', season: 'all-season', style: 'classic' },
     setFilters: jest.fn(),
     preferenceText: '',
     setPreferenceText: jest.fn(),
@@ -33,6 +33,12 @@ describe('Sidebar file validation', () => {
     jest.clearAllMocks();
     localStorage.clear();
   });
+
+  const optionPairs = (select: HTMLElement) =>
+    Array.from(select.querySelectorAll('option')).map((option) => ({
+      value: option.getAttribute('value'),
+      label: option.textContent,
+    }));
 
   it('calls setImage when valid file is selected', () => {
     const setImage = jest.fn();
@@ -288,6 +294,64 @@ describe('Sidebar file validation', () => {
       expect(screen.queryByText('Colors')).not.toBeInTheDocument();
     });
 
+    it('renders spec preference option labels and values in order and removes old values', () => {
+      localStorage.setItem(FIRST_RUN_PREFS_EXPANDED_KEY, 'true');
+      render(<Sidebar {...defaultProps} />);
+
+      expect(optionPairs(screen.getByLabelText('Select occasion'))).toEqual([
+        { value: 'everyday', label: 'Everyday' },
+        { value: 'work', label: 'Work' },
+        { value: 'date-night', label: 'Date Night' },
+        { value: 'dinner-night-out', label: 'Dinner / Night Out' },
+        { value: 'party', label: 'Party' },
+        { value: 'wedding-guest', label: 'Wedding Guest' },
+        { value: 'formal-event', label: 'Formal Event' },
+        { value: 'travel', label: 'Travel' },
+        { value: 'workout', label: 'Workout' },
+        { value: 'errands', label: 'Errands' },
+        { value: 'lounge', label: 'Lounge' },
+        { value: 'outdoor', label: 'Outdoor' },
+      ]);
+      expect(optionPairs(screen.getByLabelText('Select season'))).toEqual([
+        { value: 'spring', label: 'Spring' },
+        { value: 'summer', label: 'Summer' },
+        { value: 'fall', label: 'Fall' },
+        { value: 'winter', label: 'Winter' },
+        { value: 'transitional', label: 'Transitional' },
+        { value: 'all-season', label: 'All Season' },
+      ]);
+      expect(optionPairs(screen.getByLabelText('Select style preference'))).toEqual([
+        { value: 'classic', label: 'Classic' },
+        { value: 'minimal', label: 'Minimal' },
+        { value: 'smart-casual', label: 'Smart Casual' },
+        { value: 'streetwear', label: 'Streetwear' },
+        { value: 'sporty', label: 'Sporty' },
+        { value: 'preppy', label: 'Preppy' },
+        { value: 'boho', label: 'Boho' },
+        { value: 'edgy', label: 'Edgy' },
+        { value: 'romantic', label: 'Romantic' },
+        { value: 'trendy', label: 'Trendy' },
+        { value: 'vintage', label: 'Vintage' },
+        { value: 'elegant', label: 'Elegant' },
+      ]);
+
+      const allValues = [
+        ...optionPairs(screen.getByLabelText('Select occasion')),
+        ...optionPairs(screen.getByLabelText('Select season')),
+        ...optionPairs(screen.getByLabelText('Select style preference')),
+      ];
+      expect(allValues).not.toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ value: 'casual' }),
+          expect.objectContaining({ value: 'business' }),
+          expect.objectContaining({ label: 'Businees Casual' }),
+          expect.objectContaining({ value: 'modern' }),
+          expect.objectContaining({ value: 'minimalist' }),
+          expect.objectContaining({ value: 'bold' }),
+        ])
+      );
+    });
+
     it('shows full preferences after first suggestion', () => {
       render(<Sidebar {...defaultProps} hasSuggestion={true} />);
       expect(screen.queryByTestId('first-run-prefs-collapsed')).not.toBeInTheDocument();
@@ -388,10 +452,10 @@ describe('Sidebar file validation', () => {
     it('renders Preferences tooltip with occasion/season/style summary', () => {
       render(<Sidebar {...defaultProps} />);
       const tooltips = screen.getAllByRole('tooltip');
-      const prefs = tooltips.find((el) => el.textContent?.includes('Occasion: Casual'));
+      const prefs = tooltips.find((el) => el.textContent?.includes('Occasion: Everyday'));
       expect(prefs).toBeDefined();
-      expect(prefs?.textContent).toMatch(/Season: All Seasons/);
-      expect(prefs?.textContent).toMatch(/Style: Modern/);
+      expect(prefs?.textContent).toMatch(/Season: All Season/);
+      expect(prefs?.textContent).toMatch(/Style: Classic/);
     });
 
     it('renders wardrobe and random pick tooltip hints when authenticated', () => {

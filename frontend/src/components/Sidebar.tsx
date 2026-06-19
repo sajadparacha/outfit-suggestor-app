@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { FILTER_OPTIONS } from '../utils/constants';
 
 interface Filters {
   occasion: string;
@@ -298,12 +299,11 @@ const Sidebar: React.FC<SidebarProps> = ({
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
             aria-label="Select occasion"
           >
-            <option value="casual">Casual</option>
-            <option value="business">Business</option>
-            <option value="formal">Formal</option>
-            <option value="party">Party</option>
-            <option value="date">Date Night</option>
-            <option value="sports">Sports/Active</option>
+            {FILTER_OPTIONS.occasions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -318,11 +318,11 @@ const Sidebar: React.FC<SidebarProps> = ({
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
             aria-label="Select season"
           >
-            <option value="all">All Seasons</option>
-            <option value="spring">Spring</option>
-            <option value="summer">Summer</option>
-            <option value="fall">Fall</option>
-            <option value="winter">Winter</option>
+            {FILTER_OPTIONS.seasons.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -337,14 +337,11 @@ const Sidebar: React.FC<SidebarProps> = ({
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
             aria-label="Select style preference"
           >
-            <option value="Businees Casual">Businees Casual</option>
-            <option value="Casual">Casual</option>
-            <option value="modern">Modern</option>
-            <option value="classic">Classic</option>
-            <option value="trendy">Trendy</option>
-            <option value="minimalist">Minimalist</option>
-            <option value="bold">Bold</option>
-            <option value="vintage">Vintage</option>
+            {FILTER_OPTIONS.styles.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
           </select>
         </div>
       </div>

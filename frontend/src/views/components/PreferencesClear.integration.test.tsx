@@ -7,7 +7,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import Sidebar from './Sidebar';
 
 function SidebarWithState() {
-  const [filters, setFilters] = React.useState({ occasion: 'business', season: 'winter', style: 'classic' });
+  const [filters, setFilters] = React.useState({ occasion: 'work', season: 'winter', style: 'elegant' });
   const [preferenceText, setPreferenceText] = React.useState('no sneakers');
 
   return (
@@ -40,16 +40,16 @@ describe('PreferencesClear integration', () => {
 
     // Verify initial state via sr-only tooltip summary
     const tooltip = screen.getByRole('tooltip');
-    expect(tooltip.textContent).toMatch(/Occasion: Business/);
+    expect(tooltip.textContent).toMatch(/Occasion: Work/);
     expect(tooltip.textContent).toMatch(/Season: Winter/);
-    expect(tooltip.textContent).toMatch(/Style: Classic/);
+    expect(tooltip.textContent).toMatch(/Style: Elegant/);
     expect(tooltip.textContent).toMatch(/Notes: no sneakers/);
 
     fireEvent.click(screen.getByRole('button', { name: /clear preferences/i }));
 
-    expect(tooltip.textContent).toMatch(/Occasion: Casual/);
-    expect(tooltip.textContent).toMatch(/Season: All Seasons/);
-    expect(tooltip.textContent).toMatch(/Style: Modern/);
+    expect(tooltip.textContent).toMatch(/Occasion: Everyday/);
+    expect(tooltip.textContent).toMatch(/Season: All Season/);
+    expect(tooltip.textContent).toMatch(/Style: Classic/);
     expect(tooltip.textContent).toMatch(/Notes: \(none\)/);
   });
 });

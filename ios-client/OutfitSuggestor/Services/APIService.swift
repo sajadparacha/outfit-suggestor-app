@@ -508,7 +508,11 @@ class APIService {
     }
     
     /// Random outfit from wardrobe (auth required)
-    func getRandomOutfit(occasion: String = "casual", season: String = "all", style: String = "modern") async throws -> OutfitSuggestion {
+    func getRandomOutfit(
+        occasion: String = OutfitFilters().occasion,
+        season: String = OutfitFilters().season,
+        style: String = OutfitFilters().style
+    ) async throws -> OutfitSuggestion {
         await beginRequestActivity()
         defer { endRequestActivity() }
         if AppConfig.isUITestMode {

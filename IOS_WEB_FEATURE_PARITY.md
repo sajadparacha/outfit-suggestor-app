@@ -16,7 +16,7 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 | **Random pick result: regenerate + upload** | ✅ | ✅ | Compact result shows upload new item + Generate Another; shared `mainFlowResultRegenerate` / `MainFlowResultRegenerateLogic` |
 | **Preferences layout** | ✅ | ✅ | Occasion, season, style, notes; **Use my wardrobe only** last (auth); Colors removed from UI |
 | **Get suggestion (photo)** | ✅ | ✅ | Upload image → AI suggestion |
-| **Filters / preference text** | ✅ | ✅ | Occasion, season, style; free text |
+| **Filters / preference text** | ✅ | ✅ | Occasion, season, style use shared recommended option vocabulary; free text |
 | **Wardrobe-only mode** | ✅ | ✅ | Toggle when logged in (Main flow) |
 | **Model image generation** | ✅ | ✅ | Toggle + model picker (DALL-E 3, Stable Diffusion, Nano Banana); full-screen view |
 | **Wardrobe** | ✅ | ✅ | List, add, edit, delete, category filter, search, "Get suggestion" from item |

@@ -105,9 +105,9 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
 
     func testSuggestPreferencesCarryToInsightsContext() {
         let viewModel = OutfitViewModel(apiService: MockAPIService())
-        viewModel.filters.occasion = "business"
+        viewModel.filters.occasion = "work"
         viewModel.filters.season = "summer"
-        viewModel.filters.style = "business casual"
+        viewModel.filters.style = "smart-casual"
         viewModel.preferenceText = "navy and brown, no sneakers"
 
         let request = WardrobeGapAnalysisRequest(
@@ -118,15 +118,15 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
             analysis_mode: "free"
         )
 
-        XCTAssertEqual(request.occasion, "business")
+        XCTAssertEqual(request.occasion, "work")
         XCTAssertEqual(request.season, "summer")
-        XCTAssertEqual(request.style, "business casual")
+        XCTAssertEqual(request.style, "smart-casual")
         XCTAssertEqual(request.text_input, "navy and brown, no sneakers")
     }
 
     func testFilterEnumsAlignWithSharedWebOptions() {
-        XCTAssertEqual(Occasion.sports.apiValue, "sports")
-        XCTAssertEqual(Style.businessCasual.apiValue, "business casual")
+        XCTAssertEqual(Occasion.workout.apiValue, "workout")
+        XCTAssertEqual(Style.smartCasual.apiValue, "smart-casual")
         XCTAssertEqual(Style.vintage.apiValue, "vintage")
     }
 
@@ -213,20 +213,20 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
                 shoes: "loafers",
                 belt: "brown belt",
                 reasoning: "smart casual",
-                occasion: "business",
+                occasion: "work",
                 season: "summer",
                 style: "vintage"
             )
         ])
         let viewModel = OutfitViewModel(apiService: mock)
-        viewModel.filters.occasion = "casual"
-        viewModel.filters.season = "all"
-        viewModel.filters.style = "modern"
+        viewModel.filters.occasion = "everyday"
+        viewModel.filters.season = "all-season"
+        viewModel.filters.style = "classic"
 
         await viewModel.getRandomFromHistory()
 
         XCTAssertEqual(viewModel.inputPanelSource, .history)
-        XCTAssertEqual(viewModel.compactSummaryFilters.occasion, "business")
+        XCTAssertEqual(viewModel.compactSummaryFilters.occasion, "work")
         XCTAssertEqual(viewModel.compactSummaryFilters.season, "summer")
         XCTAssertEqual(viewModel.compactSummaryFilters.style, "vintage")
         XCTAssertEqual(viewModel.compactSummaryPreferenceText, "navy and brown")
@@ -413,7 +413,7 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
         viewModel.isLoading = true
         viewModel.loadingMessage = "Working..."
         viewModel.loadingContext = .suggestion
-        viewModel.filters.occasion = "business"
+        viewModel.filters.occasion = "work"
         viewModel.filters.season = "summer"
         viewModel.filters.style = "vintage"
         viewModel.preferenceText = "navy and brown"
@@ -437,9 +437,9 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
         XCTAssertFalse(viewModel.isLoading)
         XCTAssertNil(viewModel.loadingMessage)
         XCTAssertNil(viewModel.loadingContext)
-        XCTAssertEqual(viewModel.filters.occasion, "casual")
-        XCTAssertEqual(viewModel.filters.season, "all")
-        XCTAssertEqual(viewModel.filters.style, "modern")
+        XCTAssertEqual(viewModel.filters.occasion, "everyday")
+        XCTAssertEqual(viewModel.filters.season, "all-season")
+        XCTAssertEqual(viewModel.filters.style, "classic")
         XCTAssertEqual(viewModel.preferenceText, "")
         XCTAssertFalse(viewModel.useWardrobeOnly)
         XCTAssertFalse(viewModel.showDuplicateModal)

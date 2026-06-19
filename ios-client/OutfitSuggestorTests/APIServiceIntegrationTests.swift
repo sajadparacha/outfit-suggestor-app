@@ -32,7 +32,7 @@ final class APIServiceIntegrationTests: XCTestCase {
             )
         }
 
-        let suggestion = try await service.getRandomOutfit(occasion: "casual", season: "all", style: "modern")
+        let suggestion = try await service.getRandomOutfit(occasion: "everyday", season: "all-season", style: "classic")
         XCTAssertEqual(suggestion.shirt, "white oxford shirt")
         XCTAssertEqual(suggestion.belt, "brown belt")
     }
@@ -60,7 +60,7 @@ final class APIServiceIntegrationTests: XCTestCase {
             )
         }
 
-        let suggestion = try await service.getRandomOutfit(occasion: "formal", season: "winter", style: "classic")
+        let suggestion = try await service.getRandomOutfit(occasion: "formal-event", season: "winter", style: "classic")
         XCTAssertEqual(suggestion.shirt, "black shirt")
         XCTAssertEqual(suggestion.reasoning, "formal monochrome look")
     }
@@ -79,7 +79,7 @@ final class APIServiceIntegrationTests: XCTestCase {
         }
 
         do {
-            _ = try await service.getRandomOutfit(occasion: "casual", season: "all", style: "modern")
+            _ = try await service.getRandomOutfit(occasion: "everyday", season: "all-season", style: "classic")
             XCTFail("Expected APIServiceError.serverError for 401")
         } catch let APIServiceError.serverError(message) {
             XCTAssertTrue(message.localizedCaseInsensitiveContains("log in again"))

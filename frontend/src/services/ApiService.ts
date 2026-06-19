@@ -817,9 +817,9 @@ class ApiService {
    * Get a random outfit from wardrobe based on occasion, season, and style
    */
   async getRandomOutfit(
-    occasion: string = 'casual',
-    season: string = 'all',
-    style: string = 'modern'
+    occasion: string = 'everyday',
+    season: string = 'all-season',
+    style: string = 'classic'
   ): Promise<OutfitResponse> {
     try {
       const params = new URLSearchParams({ occasion, season, style });

@@ -1,29 +1,40 @@
 const OCCASION_DISPLAY: Record<string, string> = {
-  casual: 'Casual',
-  business: 'Business',
-  formal: 'Formal',
+  everyday: 'Everyday',
+  work: 'Work',
+  'date-night': 'Date Night',
+  'dinner-night-out': 'Dinner / Night Out',
   party: 'Party',
-  date: 'Date Night',
-  sports: 'Sports/Active',
+  'wedding-guest': 'Wedding Guest',
+  'formal-event': 'Formal Event',
+  travel: 'Travel',
+  workout: 'Workout',
+  errands: 'Errands',
+  lounge: 'Lounge',
+  outdoor: 'Outdoor',
 };
 
 const SEASON_DISPLAY: Record<string, string> = {
-  all: 'All Seasons',
   spring: 'Spring',
   summer: 'Summer',
   fall: 'Fall',
   winter: 'Winter',
+  transitional: 'Transitional',
+  'all-season': 'All Season',
 };
 
 const STYLE_DISPLAY: Record<string, string> = {
-  modern: 'Modern',
   classic: 'Classic',
+  minimal: 'Minimal',
+  'smart-casual': 'Smart Casual',
+  streetwear: 'Streetwear',
+  sporty: 'Sporty',
+  preppy: 'Preppy',
+  boho: 'Boho',
+  edgy: 'Edgy',
+  romantic: 'Romantic',
   trendy: 'Trendy',
-  minimalist: 'Minimalist',
-  bold: 'Bold',
   vintage: 'Vintage',
-  casual: 'Casual',
-  'business casual': 'Business Casual',
+  elegant: 'Elegant',
 };
 
 export function formatOutfitContextLine(filters: {
@@ -34,7 +45,7 @@ export function formatOutfitContextLine(filters: {
   const style = filters.style
     ? STYLE_DISPLAY[filters.style] || filters.style
     : '';
-  const season = filters.season && filters.season !== 'all'
+  const season = filters.season && filters.season !== 'all-season'
     ? SEASON_DISPLAY[filters.season] || filters.season
     : '';
   const occasion = filters.occasion

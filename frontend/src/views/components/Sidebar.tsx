@@ -27,39 +27,50 @@ interface Filters {
 
 function occasionDisplay(v: string): string {
   const m: Record<string, string> = {
-    casual: 'Casual',
-    business: 'Business',
-    formal: 'Formal',
+    everyday: 'Everyday',
+    work: 'Work',
+    'date-night': 'Date Night',
+    'dinner-night-out': 'Dinner / Night Out',
     party: 'Party',
-    date: 'Date Night',
-    sports: 'Sports/Active',
+    'wedding-guest': 'Wedding Guest',
+    'formal-event': 'Formal Event',
+    travel: 'Travel',
+    workout: 'Workout',
+    errands: 'Errands',
+    lounge: 'Lounge',
+    outdoor: 'Outdoor',
   };
-  return v ? m[v] || v : 'Casual';
+  return v ? m[v] || v : 'Everyday';
 }
 
 function seasonDisplay(v: string): string {
   const m: Record<string, string> = {
-    all: 'All Seasons',
     spring: 'Spring',
     summer: 'Summer',
     fall: 'Fall',
     winter: 'Winter',
+    transitional: 'Transitional',
+    'all-season': 'All Season',
   };
-  return v ? m[v] || v : 'All Seasons';
+  return v ? m[v] || v : 'All Season';
 }
 
 function styleDisplay(v: string): string {
   const m: Record<string, string> = {
-    modern: 'Modern',
     classic: 'Classic',
+    minimal: 'Minimal',
+    'smart-casual': 'Smart Casual',
+    streetwear: 'Streetwear',
+    sporty: 'Sporty',
+    preppy: 'Preppy',
+    boho: 'Boho',
+    edgy: 'Edgy',
+    romantic: 'Romantic',
     trendy: 'Trendy',
-    minimalist: 'Minimalist',
-    bold: 'Bold',
     vintage: 'Vintage',
-    casual: 'Casual',
-    'business casual': 'Business Casual',
+    elegant: 'Elegant',
   };
-  return v ? m[v] || v : 'Modern';
+  return v ? m[v] || v : 'Classic';
 }
 
 function preferenceSelectionSummary(filters: Filters, preferenceText: string): string {
