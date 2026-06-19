@@ -105,6 +105,10 @@ struct MainTabView: View {
                                 routeCoordinator.selectedTab = .suggest
                             }
                         },
+                        onCompleteOutfitFromSelection: { items in
+                            routeCoordinator.selectedTab = .suggest
+                            viewModel.startCompleteOutfitFromWardrobeItems(items)
+                        },
                         onSelectHistorySuggestion: { entry in
                             viewModel.loadFromHistory(entry)
                             routeCoordinator.selectedTab = .suggest

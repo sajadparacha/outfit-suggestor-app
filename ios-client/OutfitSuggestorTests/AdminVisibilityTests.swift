@@ -58,6 +58,13 @@ final class AdminVisibilityTests: XCTestCase {
         XCTAssertTrue(GuideCopy.reportsNavDescription.contains("Admins only"))
     }
 
+    func testGuideAndAboutCopyMentionWardrobeCompletion() {
+        XCTAssertTrue(GuideCopy.wardrobeMultiSelectStep.contains("Select items"))
+        XCTAssertTrue(GuideCopy.wardrobeMultiSelectStep.contains("Complete outfit with AI"))
+        XCTAssertTrue(AboutCopy.wardrobeCompletionFeature.contains("complete outfits"))
+        XCTAssertTrue(AboutCopy.wardrobeCompletionFeature.contains("selected wardrobe pieces"))
+    }
+
     // MARK: - Settings admin section visibility pattern
     //
     // SettingsView gates the Admin section with:

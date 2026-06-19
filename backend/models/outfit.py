@@ -62,8 +62,12 @@ class OutfitRequest(BaseModel):
 
 class WardrobeOnlyOutfitRequest(BaseModel):
     """Request body for wardrobe-only outfit suggestion (no uploaded image)."""
-    occasion: str = Field(default="casual", description="Occasion (casual, business, formal, etc.)")
-    season: str = Field(default="all", description="Season (all, spring, summer, fall, winter)")
-    style: str = Field(default="modern", description="Style preference (modern, classic, etc.)")
+    occasion: str = Field(default="everyday", description="Occasion preference")
+    season: str = Field(default="all-season", description="Season preference")
+    style: str = Field(default="classic", description="Style preference")
     text_input: str = Field(default="", description="Optional extra preferences or notes from user")
+    selected_wardrobe_item_ids: list[int] = Field(
+        default_factory=list,
+        description="Optional selected wardrobe item IDs that AI must keep while completing missing outfit slots"
+    )
 

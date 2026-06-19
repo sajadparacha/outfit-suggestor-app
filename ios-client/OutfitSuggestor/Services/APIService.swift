@@ -32,6 +32,13 @@ protocol APIServiceProtocol {
         season: String?,
         style: String?
     ) async throws -> OutfitSuggestion
+    func getSuggestionFromWardrobeItems(
+        selectedWardrobeItemIds: [Int],
+        textInput: String,
+        occasion: String?,
+        season: String?,
+        style: String?
+    ) async throws -> OutfitSuggestion
     func getOutfitHistory(limit: Int) async throws -> [OutfitHistoryEntry]
     func checkOutfitDuplicate(image: UIImage) async throws -> OutfitDuplicateResponse
     func getRandomOutfit(occasion: String, season: String, style: String) async throws -> OutfitSuggestion
@@ -242,6 +249,47 @@ class APIService {
         guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
             if let apiError = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(apiError.detail) }
             throw APIServiceError.invalidResponse
+        }
+        return try JSONDecoder().decode(OutfitSuggestion.self, from: data)
+    }
+
+    /// Complete an outfit around multiple selected wardrobe items (auth required).
+    func getSuggestionFromWardrobeItems(
+        selectedWardrobeItemIds: [Int],
+        textInput: String = "",
+        occasion: String? = nil,
+        season: String? = nil,
+        style: String? = nil
+    ) async throws -> OutfitSuggestion {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
+        if AppConfig.isUITestMode {
+            await maybeSimulateUITestDelay()
+            return uiTestStore.makeSuggestionFromWardrobeItems(itemIds: selectedWardrobeItemIds)
+        }
+        guard let url = URL(string: "\(baseURL)/api/suggest-outfit-from-wardrobe") else { throw APIServiceError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        setAuthIfNeeded(&request)
+        request.timeoutInterval = 30
+
+        let trimmedText = textInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        let body = WardrobeOutfitSuggestionRequest(
+            occasion: occasion?.isEmpty == false ? occasion : nil,
+            season: season?.isEmpty == false ? season : nil,
+            style: style?.isEmpty == false ? style : nil,
+            text_input: trimmedText.isEmpty ? nil : trimmedText,
+            selected_wardrobe_item_ids: selectedWardrobeItemIds
+        )
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw APIServiceError.invalidResponse
+        }
+        guard http.statusCode == 200 else {
+            try throwAPIError(from: data, statusCode: http.statusCode)
         }
         return try JSONDecoder().decode(OutfitSuggestion.self, from: data)
     }
@@ -988,6 +1036,50 @@ final class UITestDataStore {
         )
         appendSuggestionToHistory(suggestion, sourceWardrobeItemId: itemId)
         return suggestion
+    }
+
+    func makeSuggestionFromWardrobeItems(itemIds: [Int]) -> OutfitSuggestion {
+        lock.lock()
+        defer { lock.unlock() }
+        let selectedItems = wardrobeItems.filter { itemIds.contains($0.id) }
+        let matching = MatchingWardrobeItems(
+            shirt: selectedItems
+                .filter { WardrobeCompletionSlot.normalized(from: $0.category) == .shirt }
+                .map(Self.matchingItem),
+            trouser: selectedItems
+                .filter { WardrobeCompletionSlot.normalized(from: $0.category) == .trouser }
+                .map(Self.matchingItem),
+            blazer: selectedItems
+                .filter { WardrobeCompletionSlot.normalized(from: $0.category) == .blazer }
+                .map(Self.matchingItem),
+            shoes: selectedItems
+                .filter { WardrobeCompletionSlot.normalized(from: $0.category) == .shoes }
+                .map(Self.matchingItem),
+            belt: selectedItems
+                .filter { WardrobeCompletionSlot.normalized(from: $0.category) == .belt }
+                .map(Self.matchingItem)
+        )
+        let suggestion = OutfitSuggestion(
+            shirt: "Selected wardrobe shirt with crisp tailoring",
+            trouser: "Selected wardrobe trousers balanced with clean lines",
+            blazer: "Soft navy blazer",
+            shoes: "Polished black loafers",
+            belt: "Matching black leather belt",
+            reasoning: "Completed around your selected wardrobe pieces while filling the missing slots.",
+            matching_wardrobe_items: matching
+        )
+        appendSuggestionToHistory(suggestion, sourceWardrobeItemId: itemIds.first)
+        return suggestion
+    }
+
+    private static func matchingItem(_ item: WardrobeItem) -> MatchingWardrobeItem {
+        MatchingWardrobeItem(
+            id: item.id,
+            category: item.category,
+            color: item.color,
+            description: item.description,
+            image_data: item.image_data
+        )
     }
 
     func makeSuggestionForUpload(

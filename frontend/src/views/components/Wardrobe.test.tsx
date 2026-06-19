@@ -261,6 +261,67 @@ describe('Wardrobe page', () => {
     });
   });
 
+  it('keeps Complete outfit with AI disabled until two unique-slot items are selected', async () => {
+    mockWardrobeItems.push(
+      { ...mockWardrobeItem, id: 1, category: 'shirt', description: 'Blue shirt' },
+      { ...mockWardrobeItem, id: 2, category: 'trouser', description: 'Navy trousers', color: 'Navy' }
+    );
+
+    const completeOutfitFromWardrobeSelection = jest.fn().mockResolvedValue(undefined);
+    const onNavigateToMain = jest.fn();
+
+    render(
+      <Wardrobe
+        onNavigateToMain={onNavigateToMain}
+        outfitController={{
+          setImage: jest.fn(),
+          setSourceWardrobeItem: jest.fn(),
+          getSuggestion: jest.fn(),
+          completeOutfitFromWardrobeSelection,
+          loading: false,
+          error: null,
+          showDuplicateModal: false,
+          handleUseCachedSuggestion: jest.fn(),
+        }}
+      />
+    );
+
+    const action = screen.getByRole('button', { name: /Select at least 2 items/i });
+    expect(action).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: /Select shirt for outfit completion/i }));
+    expect(screen.getByRole('button', { name: /Select at least 2 items/i })).toBeDisabled();
+    expect(completeOutfitFromWardrobeSelection).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: /Select trouser for outfit completion/i }));
+    const readyAction = screen.getByRole('button', { name: /Complete outfit with AI/i });
+    expect(readyAction).not.toBeDisabled();
+
+    fireEvent.click(readyAction);
+
+    await waitFor(() => {
+      expect(completeOutfitFromWardrobeSelection).toHaveBeenCalledWith([1, 2]);
+      expect(onNavigateToMain).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('prevents duplicate outfit-slot selections with clear copy', () => {
+    mockWardrobeItems.push(
+      { ...mockWardrobeItem, id: 1, category: 'shirt', description: 'Blue shirt' },
+      { ...mockWardrobeItem, id: 2, category: 'shirt', description: 'White shirt', color: 'White' }
+    );
+
+    render(<Wardrobe />);
+
+    const selectButtons = screen.getAllByRole('button', { name: /Select shirt for outfit completion/i });
+    fireEvent.click(selectButtons[0]);
+    fireEvent.click(selectButtons[1]);
+
+    expect(screen.getByText('Choose one item per outfit slot')).toBeInTheDocument();
+    expect(screen.getAllByText('✓ Selected for outfit')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /Select at least 2 items/i })).toBeDisabled();
+  });
+
   it('shows undo toast on delete via menu and restores item when undo is tapped', async () => {
     jest.useFakeTimers();
     mockWardrobeItems.push(mockWardrobeItem);

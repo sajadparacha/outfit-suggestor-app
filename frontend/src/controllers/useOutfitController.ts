@@ -72,6 +72,7 @@ interface UseOutfitControllerReturn {
     variationOptions?: { promptModifier?: string; forceWardrobeOnly?: boolean }
   ) => Promise<void>;
   getRandomSuggestion: () => Promise<void>;
+  completeOutfitFromWardrobeSelection: (selectedWardrobeItemIds: number[]) => Promise<void>;
   loadRandomFromHistory: (
     fetchHistory: () => Promise<OutfitHistoryEntry[]>
   ) => Promise<'empty' | 'ok'>;
@@ -423,6 +424,68 @@ export const useOutfitController = (options?: {
     }
   }, [filters.occasion, filters.season, filters.style, preferenceText, options, clearInputPanelSummary]);
 
+  const completeOutfitFromWardrobeSelection = useCallback(async (selectedWardrobeItemIds: number[]) => {
+    abortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    const { signal } = abortController;
+
+    setLoading(true);
+    setError(null);
+    setActiveOperation('wardrobe-outfit');
+    setLoadingMessage('Completing your outfit...');
+    setImage(null);
+    setSourceWardrobeItem(null);
+    clearInputPanelSummary();
+
+    try {
+      const resolved = resolveFilters(filters);
+      const trimmed = preferenceText.trim();
+      const data = await ApiService.getWardrobeOnlySuggestion(
+        resolved.occasion,
+        resolved.season,
+        resolved.style,
+        trimmed,
+        signal,
+        selectedWardrobeItemIds
+      );
+      const suggestion: OutfitSuggestion = {
+        ...data,
+        id: Date.now().toString(),
+        model_image: data.model_image || null,
+        raw: data,
+        matching_wardrobe_items: data.matching_wardrobe_items,
+        meta: {
+          usedPrompt: data.ai_prompt || `Wardrobe selection: Occasion=${resolved.occasion}, Season=${resolved.season}, Style=${resolved.style}${
+            trimmed ? `, Notes=${trimmed}` : ''
+          }`
+        }
+      };
+      const previewUrl = firstWardrobePreviewUrl(suggestion);
+      setFlowPreviewUrl(previewUrl);
+      setFlowPreviewCaption(previewUrl ? 'Selected wardrobe pieces' : null);
+      setInputPanelSource('wardrobe');
+      setSummaryFilters(null);
+      setSummaryPreferenceText(null);
+      setCurrentSuggestion(suggestion);
+      if (options?.onSuggestionSuccess) {
+        await options.onSuggestionSuccess();
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        return;
+      }
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+      setLoadingMessage(null);
+      setActiveOperation(null);
+      abortControllerRef.current = null;
+    }
+  }, [filters, preferenceText, options, clearInputPanelSummary]);
+
   const loadRandomFromHistory = useCallback(
     async (fetchHistory: () => Promise<OutfitHistoryEntry[]>): Promise<'empty' | 'ok'> => {
       const fullHistory = await fetchHistory();
@@ -591,6 +654,7 @@ export const useOutfitController = (options?: {
     setUseWardrobeOnly,
     getSuggestion,
     getRandomSuggestion,
+    completeOutfitFromWardrobeSelection,
     loadRandomFromHistory,
     clearError,
     handleUseCachedSuggestion,

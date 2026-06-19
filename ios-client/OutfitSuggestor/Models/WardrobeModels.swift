@@ -86,6 +86,126 @@ struct WardrobeItem: Codable, Identifiable {
     }
 }
 
+enum WardrobeCompletionSlot: String, CaseIterable {
+    case shirt
+    case trouser
+    case blazer
+    case shoes
+    case belt
+
+    var displayName: String {
+        switch self {
+        case .shirt: return "Shirt"
+        case .trouser: return "Trousers"
+        case .blazer: return "Blazer"
+        case .shoes: return "Shoes"
+        case .belt: return "Belt"
+        }
+    }
+
+    static func normalized(from category: String) -> WardrobeCompletionSlot? {
+        let value = category.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        switch value {
+        case "shirt", "t_shirt", "t-shirt", "polo":
+            return .shirt
+        case "trouser", "trousers", "pants", "jeans", "shorts":
+            return .trouser
+        case "blazer", "jacket", "suit":
+            return .blazer
+        case "shoe", "shoes":
+            return .shoes
+        case "belt", "belts":
+            return .belt
+        default:
+            return nil
+        }
+    }
+}
+
+enum WardrobeMultiSelectToggleResult: Equatable {
+    case selected
+    case deselected
+    case unsupportedCategory
+    case duplicateSlot
+    case maximumReached
+
+    var message: String? {
+        switch self {
+        case .selected, .deselected:
+            return nil
+        case .unsupportedCategory:
+            return "This item cannot be used to complete an outfit."
+        case .duplicateSlot:
+            return "Choose one item per outfit slot"
+        case .maximumReached:
+            return "Select up to 5 items"
+        }
+    }
+}
+
+struct WardrobeMultiSelectState: Equatable {
+    static let maximumSelectedItems = 5
+    static let minimumSelectedItems = 2
+
+    private(set) var selectedItemIds: [Int] = []
+    private(set) var selectedSlots: [WardrobeCompletionSlot: Int] = [:]
+
+    var selectedCount: Int { selectedItemIds.count }
+    var canCompleteOutfit: Bool { selectedCount >= Self.minimumSelectedItems }
+    var actionTitle: String { canCompleteOutfit ? "Complete outfit with AI" : "Select at least 2 items" }
+
+    func isSelected(_ item: WardrobeItem) -> Bool {
+        selectedItemIds.contains(item.id)
+    }
+
+    func slot(for item: WardrobeItem) -> WardrobeCompletionSlot? {
+        WardrobeCompletionSlot.normalized(from: item.category)
+    }
+
+    func isEligible(_ item: WardrobeItem) -> Bool {
+        slot(for: item) != nil
+    }
+
+    mutating func toggle(_ item: WardrobeItem) -> WardrobeMultiSelectToggleResult {
+        if let existingIndex = selectedItemIds.firstIndex(of: item.id) {
+            selectedItemIds.remove(at: existingIndex)
+            if let slot = slot(for: item) {
+                selectedSlots[slot] = nil
+            }
+            return .deselected
+        }
+
+        guard let slot = slot(for: item) else {
+            return .unsupportedCategory
+        }
+
+        if let selectedId = selectedSlots[slot], selectedId != item.id {
+            return .duplicateSlot
+        }
+
+        guard selectedItemIds.count < Self.maximumSelectedItems else {
+            return .maximumReached
+        }
+
+        selectedItemIds.append(item.id)
+        selectedSlots[slot] = item.id
+        return .selected
+    }
+
+    mutating func clear() {
+        selectedItemIds = []
+        selectedSlots = [:]
+    }
+
+    mutating func remove(_ item: WardrobeItem) {
+        guard let existingIndex = selectedItemIds.firstIndex(of: item.id) else { return }
+        selectedItemIds.remove(at: existingIndex)
+        if let slot = slot(for: item), selectedSlots[slot] == item.id {
+            selectedSlots[slot] = nil
+        }
+    }
+}
+
 struct WardrobeSummary: Codable {
     let total_items: Int
     let by_category: [String: Int]
@@ -110,6 +230,14 @@ struct WardrobeAnalyzeResponse: Codable {
     let color: String
     let description: String
     let model_used: String?
+}
+
+struct WardrobeOutfitSuggestionRequest: Encodable {
+    let occasion: String?
+    let season: String?
+    let style: String?
+    let text_input: String?
+    let selected_wardrobe_item_ids: [Int]
 }
 
 // MARK: - Wardrobe Gap Analysis

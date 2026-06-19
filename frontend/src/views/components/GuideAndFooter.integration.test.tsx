@@ -18,6 +18,8 @@ describe('Guide and footer navigation (App)', () => {
       expect(screen.getByRole('heading', { name: /How to use/i })).toBeInTheDocument();
     });
     expect(screen.getByText(/Jump to a section/i)).toBeInTheDocument();
+    expect(screen.getByText(/select 2 to 5 wardrobe items/i)).toBeInTheDocument();
+    expect(screen.getByText(/Complete outfit with AI/i)).toBeInTheDocument();
   });
 
   it('opens About from footer', async () => {
@@ -39,6 +41,7 @@ describe('Guide and footer navigation (App)', () => {
       expect(screen.getByRole('heading', { name: /^AI Outfit Suggestor$/i })).toBeInTheDocument();
     });
     expect(screen.getByText(/Developed by Sajjad Ahmed Paracha/i)).toBeInTheDocument();
+    expect(screen.getByText(/select 2 to 5 saved pieces/i)).toBeInTheDocument();
   });
 
   it('opens User guide from footer link', async () => {

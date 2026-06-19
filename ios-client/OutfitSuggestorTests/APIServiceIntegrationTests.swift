@@ -127,6 +127,50 @@ final class APIServiceIntegrationTests: XCTestCase {
         )
     }
 
+    func testGetSuggestionFromWardrobeItemsEncodesSelectedIds() async throws {
+        let service = makeService { request in
+            XCTAssertEqual(request.url?.path, "/api/suggest-outfit-from-wardrobe")
+            XCTAssertEqual(request.httpMethod, "POST")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
+            let body = try XCTUnwrap(request.httpBody)
+            let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+            XCTAssertEqual(json["occasion"] as? String, "work")
+            XCTAssertEqual(json["season"] as? String, "all-season")
+            XCTAssertEqual(json["style"] as? String, "smart-casual")
+            XCTAssertEqual(json["text_input"] as? String, "no sneakers")
+            XCTAssertEqual(json["selected_wardrobe_item_ids"] as? [Int], [12, 34])
+            return (
+                HTTPURLResponse(
+                    url: request.url!,
+                    statusCode: 200,
+                    httpVersion: nil,
+                    headerFields: nil
+                )!,
+                """
+                {
+                  "shirt":"selected shirt",
+                  "trouser":"selected trouser",
+                  "blazer":"navy blazer",
+                  "shoes":"black loafers",
+                  "belt":"black belt",
+                  "reasoning":"completed around selected pieces"
+                }
+                """.data(using: .utf8)!
+            )
+        }
+
+        let suggestion = try await service.getSuggestionFromWardrobeItems(
+            selectedWardrobeItemIds: [12, 34],
+            textInput: "no sneakers",
+            occasion: "work",
+            season: "all-season",
+            style: "smart-casual"
+        )
+
+        XCTAssertEqual(suggestion.reasoning, "completed around selected pieces")
+    }
+
     private func makeService(
         requestHandler: @escaping MockURLProtocol.RequestHandler
     ) -> APIService {

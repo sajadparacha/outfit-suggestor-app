@@ -219,7 +219,8 @@ async def suggest_outfit_from_wardrobe_only(
         season=body.season,
         style=body.style,
         db=db,
-        current_user=current_user
+        current_user=current_user,
+        selected_wardrobe_item_ids=body.selected_wardrobe_item_ids,
     )
 
 

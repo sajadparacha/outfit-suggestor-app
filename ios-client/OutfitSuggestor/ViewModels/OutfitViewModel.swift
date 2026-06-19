@@ -296,6 +296,10 @@ class OutfitViewModel: ObservableObject {
         runCancellableOperation { await self.getRandomFromWardrobe() }
     }
 
+    func startCompleteOutfitFromWardrobeItems(_ items: [WardrobeItem]) {
+        runCancellableOperation { await self.completeOutfitFromWardrobeItems(items) }
+    }
+
     func startGetRandomFromHistory() {
         runCancellableOperation { await self.getRandomFromHistory() }
     }
@@ -706,6 +710,62 @@ class OutfitViewModel: ObservableObject {
             if (error.errorDescription ?? "").localizedCaseInsensitiveContains("log in again") {
                 AuthService.shared.logout()
             }
+            showErrorMessage(error.errorDescription ?? "An error occurred")
+        } catch {
+            showErrorMessage(error.localizedDescription)
+        }
+    }
+
+    /// Complete an outfit around 2-5 selected wardrobe items without creating a new result screen.
+    func completeOutfitFromWardrobeItems(_ items: [WardrobeItem]) async {
+        guard isAuthenticated else { showErrorMessage("Please log in"); return }
+        var selection = WardrobeMultiSelectState()
+        for item in items {
+            let result = selection.toggle(item)
+            if let message = result.message {
+                showErrorMessage(message)
+                return
+            }
+        }
+        guard selection.canCompleteOutfit else {
+            showErrorMessage("Select at least 2 items")
+            return
+        }
+
+        isLoading = true
+        loadingContext = .wardrobeItem
+        loadingMessage = "Completing your outfit..."
+        errorMessage = nil
+        showError = false
+        defer {
+            if !Task.isCancelled {
+                clearLoadingState()
+                activeOperationTask = nil
+            }
+        }
+
+        do {
+            try Task.checkCancellation()
+            selectedImage = nil
+            flowPreviewImage = nil
+            sourceWardrobeItem = nil
+            loadedFromRandomPick = true
+            highlightGenerateButton = false
+
+            let suggestion = try await apiService.getSuggestionFromWardrobeItems(
+                selectedWardrobeItemIds: selection.selectedItemIds,
+                textInput: preferenceText,
+                occasion: filters.occasion.lowercased(),
+                season: filters.season.lowercased(),
+                style: filters.style.lowercased()
+            )
+            currentSuggestion = suggestion
+            flowPreviewImage = Self.previewImageFromWardrobeMatches(suggestion)
+            captureInputSnapshotForResult(source: .wardrobe)
+            hasLoadedHistory = false
+        } catch is CancellationError {
+            return
+        } catch let error as APIServiceError {
             showErrorMessage(error.errorDescription ?? "An error occurred")
         } catch {
             showErrorMessage(error.localizedDescription)

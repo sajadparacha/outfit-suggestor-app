@@ -74,4 +74,42 @@ final class WardrobeCardUxTests: XCTestCase {
     func testFlowTipMentionsStyleThisItem() {
         XCTAssertTrue(WardrobeCardUx.flowTipStep2Fragment.contains("Style this item"))
     }
+
+    func testMultiSelectRequiresTwoUniqueSlotsAndPreventsDuplicates() {
+        var state = WardrobeMultiSelectState()
+        let shirt = wardrobeItem(id: 1, category: "shirt")
+        let duplicateShirt = wardrobeItem(id: 2, category: "shirt")
+        let trouser = wardrobeItem(id: 3, category: "trouser")
+
+        XCTAssertEqual(state.actionTitle, "Select at least 2 items")
+        XCTAssertEqual(state.toggle(shirt), .selected)
+        XCTAssertFalse(state.canCompleteOutfit)
+        XCTAssertEqual(state.toggle(duplicateShirt), .duplicateSlot)
+        XCTAssertEqual(state.toggle(duplicateShirt).message, "Choose one item per outfit slot")
+        XCTAssertEqual(state.selectedItemIds, [1])
+
+        XCTAssertEqual(state.toggle(trouser), .selected)
+        XCTAssertTrue(state.canCompleteOutfit)
+        XCTAssertEqual(state.actionTitle, "Complete outfit with AI")
+        XCTAssertEqual(state.selectedItemIds, [1, 3])
+    }
+
+    func testMultiSelectRejectsUnsupportedCategories() {
+        var state = WardrobeMultiSelectState()
+        let hat = wardrobeItem(id: 5, category: "hat")
+
+        XCTAssertFalse(state.isEligible(hat))
+        XCTAssertEqual(state.toggle(hat), .unsupportedCategory)
+        XCTAssertTrue(state.selectedItemIds.isEmpty)
+    }
+
+    private func wardrobeItem(id: Int, category: String) -> WardrobeItem {
+        WardrobeItem(
+            id: id,
+            category: category,
+            name: "\(category) \(id)",
+            description: nil,
+            color: nil
+        )
+    }
 }

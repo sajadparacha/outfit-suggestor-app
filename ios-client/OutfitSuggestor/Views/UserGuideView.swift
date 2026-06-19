@@ -64,9 +64,10 @@ struct UserGuideView: View {
                         "Tap \"+\" to add a new item — upload a photo and the AI will analyze it.",
                         "Use category filters or search to find specific items.",
                         "Swipe left on an item to delete, or tap to edit.",
-                        "Tap \"Get suggestion\" on any item to build an outfit around it."
+                        "Tap \"Get suggestion\" on any item to build an outfit around it.",
+                        GuideCopy.wardrobeMultiSelectStep
                     ],
-                    tip: "The app automatically detects duplicate items before adding them to prevent clutter."
+                    tip: GuideCopy.wardrobeMultiSelectTip
                 )
                 
                 GuideSection(

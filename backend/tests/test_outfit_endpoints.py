@@ -7,6 +7,22 @@ import base64
 from io import BytesIO
 from PIL import Image
 
+from models.wardrobe import WardrobeItem
+
+
+def _create_wardrobe_item(db, user_id, category, color, description):
+    item = WardrobeItem(
+        user_id=user_id,
+        category=category,
+        color=color,
+        description=description,
+        image_data=base64.b64encode(f"{category}-{color}".encode("utf-8")).decode("utf-8"),
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
 
 class TestOutfitEndpoints:
     """Test suite for /api/suggest-outfit and related endpoints"""
@@ -242,6 +258,17 @@ class TestOutfitEndpoints:
         response = client.post("/api/suggest-outfit-from-wardrobe", json=payload)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
+    def test_suggest_outfit_from_selected_wardrobe_items_unauthorized(self, client):
+        """Selected wardrobe item completion should require authentication."""
+        payload = {
+            "occasion": "work",
+            "season": "all-season",
+            "style": "smart-casual",
+            "selected_wardrobe_item_ids": [1, 2],
+        }
+        response = client.post("/api/suggest-outfit-from-wardrobe", json=payload)
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
     def test_suggest_outfit_from_wardrobe_only_authenticated(self, client, auth_headers, wardrobe_item):
         """
         Wardrobe-only suggestion with authentication.
@@ -280,3 +307,157 @@ class TestOutfitEndpoints:
         # Auth must still succeed
         assert response.status_code != status.HTTP_401_UNAUTHORIZED
         assert response.status_code != status.HTTP_403_FORBIDDEN
+
+    def test_suggest_outfit_from_selected_wardrobe_items_pins_selected_slots(
+        self,
+        client,
+        auth_headers,
+        db,
+        test_user,
+        wardrobe_item,
+    ):
+        """Two selected wardrobe items are locked into the completed outfit response."""
+        trouser = _create_wardrobe_item(
+            db,
+            test_user.id,
+            "trouser",
+            "Black",
+            "Tailored black wool trousers",
+        )
+        payload = {
+            "occasion": "work",
+            "season": "all-season",
+            "style": "smart-casual",
+            "text_input": "Keep my selected pieces",
+            "selected_wardrobe_item_ids": [wardrobe_item.id, trouser.id],
+        }
+
+        response = client.post(
+            "/api/suggest-outfit-from-wardrobe",
+            json=payload,
+            headers=auth_headers,
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        body = response.json()
+        assert body["shirt_id"] == wardrobe_item.id
+        assert body["trouser_id"] == trouser.id
+        assert body["source_wardrobe_item_id"] == wardrobe_item.id
+        assert body["matching_wardrobe_items"]["shirt"][0]["id"] == wardrobe_item.id
+        assert body["matching_wardrobe_items"]["trouser"][0]["id"] == trouser.id
+        assert "REQUIRED SELECTED WARDROBE ITEMS" in body["ai_prompt"]
+
+    def test_suggest_outfit_from_selected_wardrobe_items_requires_two_items(
+        self,
+        client,
+        auth_headers,
+        wardrobe_item,
+    ):
+        payload = {
+            "occasion": "work",
+            "season": "all-season",
+            "style": "smart-casual",
+            "selected_wardrobe_item_ids": [wardrobe_item.id],
+        }
+
+        response = client.post(
+            "/api/suggest-outfit-from-wardrobe",
+            json=payload,
+            headers=auth_headers,
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "at least 2" in response.json()["detail"]
+
+    def test_suggest_outfit_from_selected_wardrobe_items_rejects_other_user_item(
+        self,
+        client,
+        auth_headers,
+        db,
+        test_user,
+        test_user2,
+        wardrobe_item,
+    ):
+        other_user_trouser = _create_wardrobe_item(
+            db,
+            test_user2.id,
+            "trouser",
+            "Charcoal",
+            "Other user's trousers",
+        )
+        payload = {
+            "occasion": "work",
+            "season": "all-season",
+            "style": "smart-casual",
+            "selected_wardrobe_item_ids": [wardrobe_item.id, other_user_trouser.id],
+        }
+
+        response = client.post(
+            "/api/suggest-outfit-from-wardrobe",
+            json=payload,
+            headers=auth_headers,
+        )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_suggest_outfit_from_selected_wardrobe_items_rejects_duplicate_slot(
+        self,
+        client,
+        auth_headers,
+        db,
+        test_user,
+        wardrobe_item,
+    ):
+        second_shirt = _create_wardrobe_item(
+            db,
+            test_user.id,
+            "shirt",
+            "White",
+            "White oxford shirt",
+        )
+        payload = {
+            "occasion": "work",
+            "season": "all-season",
+            "style": "smart-casual",
+            "selected_wardrobe_item_ids": [wardrobe_item.id, second_shirt.id],
+        }
+
+        response = client.post(
+            "/api/suggest-outfit-from-wardrobe",
+            json=payload,
+            headers=auth_headers,
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "one item per outfit slot" in response.json()["detail"]
+
+    def test_suggest_outfit_from_selected_wardrobe_items_rejects_unsupported_category(
+        self,
+        client,
+        auth_headers,
+        db,
+        test_user,
+        wardrobe_item,
+    ):
+        tie = _create_wardrobe_item(
+            db,
+            test_user.id,
+            "tie",
+            "Navy",
+            "Navy silk tie",
+        )
+        payload = {
+            "occasion": "work",
+            "season": "all-season",
+            "style": "smart-casual",
+            "selected_wardrobe_item_ids": [wardrobe_item.id, tie.id],
+        }
+
+        response = client.post(
+            "/api/suggest-outfit-from-wardrobe",
+            json=payload,
+            headers=auth_headers,
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "shirt, trouser, blazer, shoes, or belt" in response.json()["detail"]

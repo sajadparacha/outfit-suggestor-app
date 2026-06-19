@@ -107,7 +107,7 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
                   <span className="text-2xl">✨</span>
                   <div>
                     <h4 className="font-semibold text-white">Get Suggestions from Wardrobe</h4>
-                    <p className="text-sm text-slate-300">Tap "Build outfit from this item" on any wardrobe piece to load it on Suggest, tune your preferences, then generate — same duplicate detection and filtering as the main flow.</p>
+                    <p className="text-sm text-slate-300">Tap "Style this item" on one wardrobe piece to load it on Suggest, or select 2 to 5 saved pieces across different slots and tap "Complete outfit with AI" so AI keeps those pieces and fills the missing slots.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
