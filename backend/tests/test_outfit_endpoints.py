@@ -347,6 +347,48 @@ class TestOutfitEndpoints:
         assert body["matching_wardrobe_items"]["trouser"][0]["id"] == trouser.id
         assert "REQUIRED SELECTED WARDROBE ITEMS" in body["ai_prompt"]
 
+    def test_suggest_outfit_from_selected_wardrobe_items_accepts_shirt_and_trouser_aliases(
+        self,
+        client,
+        auth_headers,
+        db,
+        test_user,
+    ):
+        """Polo/T-shirt-like items map to shirt; jeans/pants-like items map to trouser."""
+        polo = _create_wardrobe_item(
+            db,
+            test_user.id,
+            "polo",
+            "Navy",
+            "Navy knit polo shirt",
+        )
+        jeans = _create_wardrobe_item(
+            db,
+            test_user.id,
+            "jeans",
+            "Black",
+            "Black straight-leg jeans",
+        )
+        payload = {
+            "occasion": "work",
+            "season": "all-season",
+            "style": "smart-casual",
+            "selected_wardrobe_item_ids": [polo.id, jeans.id],
+        }
+
+        response = client.post(
+            "/api/suggest-outfit-from-wardrobe",
+            json=payload,
+            headers=auth_headers,
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        body = response.json()
+        assert body["shirt_id"] == polo.id
+        assert body["trouser_id"] == jeans.id
+        assert body["matching_wardrobe_items"]["shirt"][0]["id"] == polo.id
+        assert body["matching_wardrobe_items"]["trouser"][0]["id"] == jeans.id
+
     def test_suggest_outfit_from_selected_wardrobe_items_allows_one_item(
         self,
         client,

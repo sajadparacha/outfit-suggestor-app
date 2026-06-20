@@ -14,16 +14,33 @@ import { MAIN_FLOW_UX_COPY } from '../../utils/mainFlowUxCopy';
 const COMPLETE_OUTFIT_SLOTS = ['shirt', 'trouser', 'blazer', 'shoes', 'belt'] as const;
 type CompleteOutfitSlot = typeof COMPLETE_OUTFIT_SLOTS[number];
 
+const COMPLETE_OUTFIT_SLOT_ALIASES: Record<string, CompleteOutfitSlot> = {
+  shirt: 'shirt',
+  shirts: 'shirt',
+  polo: 'shirt',
+  t_shirt: 'shirt',
+  't-shirt': 'shirt',
+  tshirt: 'shirt',
+  tee: 'shirt',
+  trouser: 'trouser',
+  trousers: 'trouser',
+  pant: 'trouser',
+  pants: 'trouser',
+  jeans: 'trouser',
+  shorts: 'trouser',
+  blazer: 'blazer',
+  blazers: 'blazer',
+  jacket: 'blazer',
+  jackets: 'blazer',
+  shoes: 'shoes',
+  shoe: 'shoes',
+  belt: 'belt',
+  belts: 'belt',
+};
+
 const normalizeCompleteOutfitSlot = (category: string): CompleteOutfitSlot | null => {
   const normalized = category.trim().toLowerCase();
-  if (normalized === 'shirts') return 'shirt';
-  if (normalized === 'trousers' || normalized === 'pants' || normalized === 'pant') return 'trouser';
-  if (normalized === 'jackets' || normalized === 'jacket' || normalized === 'blazers') return 'blazer';
-  if (normalized === 'shoe') return 'shoes';
-  if (normalized === 'belts') return 'belt';
-  return (COMPLETE_OUTFIT_SLOTS as readonly string[]).includes(normalized)
-    ? (normalized as CompleteOutfitSlot)
-    : null;
+  return COMPLETE_OUTFIT_SLOT_ALIASES[normalized] ?? null;
 };
 
 const formatCompleteOutfitSlot = (slot: CompleteOutfitSlot): string =>
@@ -1000,6 +1017,15 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                 !!completeOutfitSlot &&
                 selectedCompleteOutfitSlots.has(completeOutfitSlot) &&
                 !isSelectedForCompleteOutfit;
+              const completeOutfitSelectionAction = isSelectedForCompleteOutfit ? 'Remove' : 'Add';
+              const completeOutfitSelectionAriaLabel = isSelectedForCompleteOutfit
+                ? `${completeOutfitSelectionAction} ${item.category} from outfit completion`
+                : `${completeOutfitSelectionAction} ${item.category} to outfit completion`;
+              const completeOutfitSelectionCopy = isSelectedForCompleteOutfit
+                ? 'Remove from outfit completion'
+                : isCompleteOutfitEligible
+                  ? 'Add to outfit completion'
+                  : 'Outfit completion unavailable';
               return (
               <div
                 key={item.id}
@@ -1056,11 +1082,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                         onClick={() => handleToggleCompleteOutfitItem(item)}
                         disabled={!isCompleteOutfitEligible || completionLoading || (outfitController?.loading ?? false)}
                         aria-pressed={isSelectedForCompleteOutfit}
-                        aria-label={
-                          isSelectedForCompleteOutfit
-                            ? `Remove ${item.category} from outfit completion`
-                            : `Add ${item.category} to outfit completion`
-                        }
+                        aria-label={completeOutfitSelectionAriaLabel}
                         className={`min-h-[40px] w-full rounded-xl border px-3 py-2 text-sm font-semibold transition sm:w-auto ${
                           isSelectedForCompleteOutfit
                             ? 'border-brand-blue/50 bg-brand-blue/20 text-white hover:bg-brand-blue/30'
@@ -1076,11 +1098,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                               : undefined
                         }
                       >
-                        {isSelectedForCompleteOutfit
-                          ? 'Remove from outfit completion'
-                          : isCompleteOutfitEligible
-                            ? 'Add to outfit completion'
-                            : 'Outfit completion unavailable'}
+                        {completeOutfitSelectionCopy}
                       </button>
                     </div>
                   </div>

@@ -51,9 +51,11 @@ class OutfitController:
     def _normalize_item_category_for_outfit(self, category: str) -> str:
         """Map wardrobe category variants to outfit categories."""
         normalized = (category or "").lower()
+        if normalized in {"shirts", "polo", "t_shirt", "t-shirt", "tshirt", "tee"}:
+            return "shirt"
         if normalized in {"jacket", "jackets", "blazers"}:
             return "blazer"
-        if normalized in {"jeans", "pants", "pant", "trousers"}:
+        if normalized in {"jeans", "pants", "pant", "trousers", "shorts"}:
             return "trouser"
         if normalized in {"shoe"}:
             return "shoes"

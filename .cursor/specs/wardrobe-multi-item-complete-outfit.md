@@ -94,6 +94,12 @@ As a logged-in user, I want to select one or more wardrobe items, such as one sh
   - Must contain no more than 5 IDs.
   - Every ID must belong to the current user.
   - Every selected item must map to one supported outfit slot: `shirt`, `trouser`, `blazer`, `shoes`, `belt`.
+  - Slot aliases must be accepted:
+    - `shirt`: `shirt`, `shirts`, `polo`, `t_shirt`, `t-shirt`, `tshirt`, `tee`
+    - `trouser`: `trouser`, `trousers`, `pant`, `pants`, `jeans`, `shorts`
+    - `blazer`: `blazer`, `blazers`, `jacket`, `jackets`
+    - `shoes`: `shoes`, `shoe`
+    - `belt`: `belt`, `belts`
   - Only one selected item is allowed per outfit slot.
   - AI prompt must instruct the model to keep selected pieces exactly and complete missing slots.
   - Response must preserve selected item IDs in the matching outfit slot ID fields (`shirt_id`, `trouser_id`, etc.) and include the selected items in `matching_wardrobe_items`.
@@ -152,6 +158,7 @@ As a logged-in user, I want to select one or more wardrobe items, such as one sh
 - [x] Cases:
   - Authenticated request with one selected item returns 200, pins the selected ID to the correct response slot, and includes the selected item in `matching_wardrobe_items`.
   - Authenticated request with two selected items returns 200, pins selected IDs to the correct response slots, and includes selected items in `matching_wardrobe_items`.
+  - Alias categories like `polo` and `t_shirt` pin to `shirt`; `pants` and `jeans` pin to `trouser`.
   - Unauthenticated selected-item request returns 401.
   - Selected item not owned by current user returns 404.
   - Duplicate selected outfit slot returns 400.
@@ -161,6 +168,7 @@ As a logged-in user, I want to select one or more wardrobe items, such as one sh
 - [x] Unit/integration tests for wardrobe multi-select.
 - [x] Cases:
   - Complete action is disabled until at least one valid item is selected.
+  - Alias categories like polo/T-shirt are eligible as shirts and pants/jeans are eligible as trousers.
   - Selecting one item calls `/api/suggest-outfit-from-wardrobe` with `selected_wardrobe_item_ids`.
   - Selecting two unique-slot items calls `/api/suggest-outfit-from-wardrobe` with `selected_wardrobe_item_ids`.
   - Duplicate slot selection is prevented or clearly surfaced.
@@ -172,6 +180,7 @@ As a logged-in user, I want to select one or more wardrobe items, such as one sh
 - [x] Unit/integration tests for API request encoding and wardrobe multi-select state.
 - [x] Cases:
   - Multi-select state tracks selected IDs and unique slots.
+  - Alias categories like polo/T-shirt are eligible as shirts and pants/jeans are eligible as trousers.
   - Request body includes `selected_wardrobe_item_ids`.
   - Action is disabled until at least one valid item is selected.
   - Guide/About updates are covered when copy tests exist.
@@ -212,9 +221,9 @@ After user confirms, publish filled report using `.cursor/specs/_test-report-tem
 - [ ] Full backend pytest pass
 
 Targeted verification so far:
-- Backend: `DATABASE_URL='sqlite:///:memory:' pytest tests/test_outfit_endpoints.py -q` passed, 29 tests.
-- Web: `npm test -- --watchAll=false --passWithNoTests` passed, 52 suites / 300 tests.
-- iOS: `git diff --check -- ios-client` passed; `xcodebuild` is unavailable in this Linux environment.
+- Backend: `DATABASE_URL='sqlite:///:memory:' pytest tests/test_outfit_controller_ai_selected_ids_injection.py tests/test_outfit_endpoints.py -q` passed, 33 tests.
+- Web: `npm test -- --watchAll=false --passWithNoTests` passed, 53 suites / 319 tests.
+- iOS: alias support already present for `polo`, `t_shirt`, `t-shirt`, `pants`, `jeans`, and `shorts`; `git diff --check -- ios-client` passed; `xcodebuild` is unavailable in this Linux environment.
 
 ---
 

@@ -346,17 +346,61 @@ describe('Wardrobe page', () => {
     });
   });
 
-  it('prevents duplicate outfit-slot selections with clear copy', () => {
+  it('treats shirt and trouser aliases as eligible outfit-completion slots', () => {
     mockWardrobeItems.push(
-      { ...mockWardrobeItem, id: 1, category: 'shirt', description: 'Blue shirt' },
-      { ...mockWardrobeItem, id: 2, category: 'shirt', description: 'White shirt', color: 'White' }
+      { ...mockWardrobeItem, id: 1, category: 'polo', description: 'Navy polo' },
+      { ...mockWardrobeItem, id: 2, category: 't-shirt', description: 'White T-shirt', color: 'White' },
+      { ...mockWardrobeItem, id: 3, category: 't_shirt', description: 'Training T-shirt', color: 'Gray' },
+      { ...mockWardrobeItem, id: 4, category: 'pants', description: 'Khaki pants', color: 'Khaki' },
+      { ...mockWardrobeItem, id: 5, category: 'jeans', description: 'Blue jeans', color: 'Blue' },
+      { ...mockWardrobeItem, id: 6, category: 'shorts', description: 'Tan shorts', color: 'Tan' }
     );
 
     render(<Wardrobe />);
 
-    const selectButtons = screen.getAllByRole('button', { name: /Add shirt to outfit completion/i });
-    fireEvent.click(selectButtons[0]);
-    fireEvent.click(selectButtons[1]);
+    const aliasSlots = [
+      { category: 'polo', summary: '1 selected: shirt' },
+      { category: 't-shirt', summary: '1 selected: shirt' },
+      { category: 't_shirt', summary: '1 selected: shirt' },
+      { category: 'pants', summary: '1 selected: trousers' },
+      { category: 'jeans', summary: '1 selected: trousers' },
+      { category: 'shorts', summary: '1 selected: trousers' },
+    ];
+
+    aliasSlots.forEach(({ category }) => {
+      const button = screen.getByRole('button', { name: new RegExp(`Add ${category} to outfit completion`, 'i') });
+      expect(button).toBeEnabled();
+      expect(button).toHaveTextContent('Add to outfit completion');
+    });
+    expect(screen.queryByText('Outfit completion unavailable')).not.toBeInTheDocument();
+
+    aliasSlots.forEach(({ category, summary }) => {
+      fireEvent.click(screen.getByRole('button', { name: new RegExp(`Add ${category} to outfit completion`, 'i') }));
+
+      const selectedButton = screen.getByRole('button', { name: new RegExp(`Remove ${category} from outfit completion`, 'i') });
+      expect(selectedButton).toHaveTextContent('Remove from outfit completion');
+      expect(selectedButton).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent(summary);
+
+      fireEvent.click(selectedButton);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Add polo to outfit completion/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Add pants to outfit completion/i }));
+    expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('2 selected: shirt, trousers');
+    expect(screen.getByRole('button', { name: /Complete outfit with AI/i })).not.toBeDisabled();
+  });
+
+  it('prevents duplicate outfit-slot selections with clear copy', () => {
+    mockWardrobeItems.push(
+      { ...mockWardrobeItem, id: 1, category: 'shirt', description: 'Blue shirt' },
+      { ...mockWardrobeItem, id: 2, category: 'polo', description: 'White polo', color: 'White' }
+    );
+
+    render(<Wardrobe />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Add shirt to outfit completion/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Add polo to outfit completion/i }));
 
     expect(screen.getByText('Choose one item per outfit slot')).toBeInTheDocument();
     expect(screen.getAllByText('Remove from outfit completion')).toHaveLength(1);

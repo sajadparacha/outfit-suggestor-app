@@ -177,6 +177,78 @@ describe('Wardrobe multi-select complete outfit integration', () => {
     });
   });
 
+  it('sends selected_wardrobe_item_ids for shirt and trouser alias categories', async () => {
+    server.use(
+      rest.get(`${API_BASE}/api/wardrobe`, (_req, res, ctx) =>
+        res(
+          ctx.json({
+            items: [
+              {
+                id: 12,
+                category: 't-shirt',
+                color: 'White',
+                description: 'White T-shirt',
+                image_data: 'tshirtImage',
+                name: null,
+              },
+              {
+                id: 34,
+                category: 'polo',
+                color: 'Navy',
+                description: 'Navy polo',
+                image_data: 'poloImage',
+                name: null,
+              },
+              {
+                id: 44,
+                category: 'jeans',
+                color: 'Blue',
+                description: 'Blue jeans',
+                image_data: 'jeansImage',
+                name: null,
+              },
+              {
+                id: 55,
+                category: 'pants',
+                color: 'Khaki',
+                description: 'Khaki pants',
+                image_data: 'pantsImage',
+                name: null,
+              },
+            ],
+            total: 4,
+            limit: 10,
+            offset: 0,
+          })
+        )
+      )
+    );
+
+    renderApp({ routerProps: { initialEntries: [ROUTES.WARDROBE] } });
+
+    expect(await screen.findByText('White T-shirt')).toBeInTheDocument();
+    ['t-shirt', 'polo', 'jeans', 'pants'].forEach((category) => {
+      expect(screen.getByRole('button', { name: new RegExp(`Add ${category} to outfit completion`, 'i') })).toBeEnabled();
+    });
+    expect(screen.queryByText('Outfit completion unavailable')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Add t-shirt to outfit completion/i }));
+    expect(screen.getByRole('button', { name: /Remove t-shirt from outfit completion/i }))
+      .toHaveTextContent('Remove from outfit completion');
+    expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('1 selected: shirt');
+
+    fireEvent.click(screen.getByRole('button', { name: /Add jeans to outfit completion/i }));
+    expect(screen.getByRole('button', { name: /Remove jeans from outfit completion/i }))
+      .toHaveTextContent('Remove from outfit completion');
+    expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('2 selected: shirt, trousers');
+
+    fireEvent.click(screen.getByRole('button', { name: /Complete outfit with AI/i }));
+
+    await waitFor(() => {
+      expect(capturedRequestBody?.selected_wardrobe_item_ids).toEqual([12, 44]);
+    });
+  });
+
   it('renders Preferences on Wardrobe completion panel with filter labels', async () => {
     renderApp({ routerProps: { initialEntries: [ROUTES.WARDROBE] } });
 
@@ -228,9 +300,9 @@ describe('Wardrobe multi-select complete outfit integration', () => {
               },
               {
                 id: 12,
-                category: 'shirt',
+                category: 'polo',
                 color: 'White',
-                description: 'White oxford shirt',
+                description: 'White polo',
                 image_data: 'shirtImage2',
                 name: null,
               },
@@ -249,9 +321,8 @@ describe('Wardrobe multi-select complete outfit integration', () => {
       expect(screen.getByText('Blue oxford shirt')).toBeInTheDocument();
     });
 
-    const selectButtons = await screen.findAllByRole('button', { name: /Add shirt to outfit completion/i });
-    fireEvent.click(selectButtons[0]);
-    fireEvent.click(selectButtons[1]);
+    fireEvent.click(await screen.findByRole('button', { name: /Add shirt to outfit completion/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Add polo to outfit completion/i }));
 
     expect(screen.getByText('Choose one item per outfit slot')).toBeInTheDocument();
     expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('1 selected: shirt');
