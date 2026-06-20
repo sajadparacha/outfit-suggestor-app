@@ -133,6 +133,40 @@ final class WardrobeCardUxTests: XCTestCase {
         XCTAssertTrue(state.selectedItemIds.isEmpty)
     }
 
+    func testMultiSelectSelectionSummaryUsesSlotNames() {
+        var state = WardrobeMultiSelectState()
+        let shirt = wardrobeItem(id: 1, category: "shirt")
+        let trouser = wardrobeItem(id: 3, category: "trouser")
+        let items = [shirt, trouser]
+
+        XCTAssertEqual(state.selectionSummary(for: items), WardrobeCompletionCopy.noItemsSelected)
+        XCTAssertEqual(state.toggle(shirt), .selected)
+        XCTAssertEqual(state.selectionSummary(for: items), "1 selected: shirt")
+        XCTAssertEqual(state.toggle(trouser), .selected)
+        XCTAssertEqual(state.selectionSummary(for: items), "2 selected: shirt, trousers")
+    }
+
+    func testWardrobeCompletionPreferencesCopyContract() {
+        XCTAssertEqual(WardrobeCompletionCopy.noItemsSelected, "No items selected")
+        XCTAssertEqual(WardrobeCompletionCopy.sharedPreferencesHint, InsightsCopy.sharedPreferencesNote)
+        XCTAssertEqual(
+            WardrobeCompletionCopy.filterAccessibilityId(for: "Occasion"),
+            "wardrobe.completion.filter.occasion"
+        )
+        XCTAssertEqual(
+            WardrobeCompletionCopy.filterAccessibilityId(for: "Notes"),
+            "wardrobe.completion.filter.notes"
+        )
+        XCTAssertEqual(
+            WardrobeCompletionCopy.preferencesPanelAccessibilityId,
+            "wardrobe.completion.preferences"
+        )
+        XCTAssertEqual(
+            WardrobeCompletionCopy.wardrobeOnlyCheckboxAccessibilityId,
+            "wardrobe.completion.wardrobeOnlyCheckbox"
+        )
+    }
+
     private func wardrobeItem(id: Int, category: String) -> WardrobeItem {
         WardrobeItem(
             id: id,

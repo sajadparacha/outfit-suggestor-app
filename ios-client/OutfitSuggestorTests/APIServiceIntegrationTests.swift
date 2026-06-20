@@ -2,6 +2,27 @@ import XCTest
 import UIKit
 @testable import OutfitSuggestor
 
+private func httpBodyData(from request: URLRequest) throws -> Data? {
+    if let body = request.httpBody {
+        return body
+    }
+    guard let stream = request.httpBodyStream else { return nil }
+    stream.open()
+    defer { stream.close() }
+    var data = Data()
+    let bufferSize = 4096
+    var buffer = [UInt8](repeating: 0, count: bufferSize)
+    while stream.hasBytesAvailable {
+        let read = stream.read(&buffer, maxLength: bufferSize)
+        if read < 0 {
+            throw stream.streamError ?? URLError(.cannotDecodeContentData)
+        }
+        if read == 0 { break }
+        data.append(buffer, count: read)
+    }
+    return data.isEmpty ? nil : data
+}
+
 final class APIServiceIntegrationTests: XCTestCase {
     override func tearDown() {
         MockURLProtocol.requestHandler = nil
@@ -133,7 +154,7 @@ final class APIServiceIntegrationTests: XCTestCase {
             XCTAssertEqual(request.httpMethod, "POST")
             XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
             XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
-            let body = try XCTUnwrap(request.httpBody)
+            let body = try XCTUnwrap(httpBodyData(from: request))
             let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
             XCTAssertEqual(json["selected_wardrobe_item_ids"] as? [Int], [12])
             return (
@@ -173,7 +194,7 @@ final class APIServiceIntegrationTests: XCTestCase {
             XCTAssertEqual(request.httpMethod, "POST")
             XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
             XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
-            let body = try XCTUnwrap(request.httpBody)
+            let body = try XCTUnwrap(httpBodyData(from: request))
             let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
             XCTAssertEqual(json["occasion"] as? String, "work")
             XCTAssertEqual(json["season"] as? String, "all-season")

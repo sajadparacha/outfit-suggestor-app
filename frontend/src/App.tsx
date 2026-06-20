@@ -721,6 +721,7 @@ function App() {
             <ErrorBoundary label="Wardrobe" resetKey={location.pathname}>
               <Wardrobe 
                 initialCategory={wardrobeCategoryFilter}
+                isAuthenticated={isAuthenticated}
                 onAnalyzeWardrobe={handleAnalyzeWardrobe}
                 analyzingWardrobe={wardrobeGapLoading}
                 onSuggestionReady={(suggestion) => {
@@ -740,11 +741,16 @@ function App() {
                   prepareStyleFromWardrobeItem,
                   completeOutfitFromWardrobeSelection,
                   getSuggestion,
+                  filters,
+                  setFilters,
+                  preferenceText,
+                  setPreferenceText,
                   loading,
                   error,
                   showDuplicateModal,
                   handleUseCachedSuggestion,
-                  useWardrobeOnly
+                  useWardrobeOnly,
+                  setUseWardrobeOnly,
                 }}
               />
             </ErrorBoundary>

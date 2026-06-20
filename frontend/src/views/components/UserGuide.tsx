@@ -199,8 +199,10 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
             ]}
           />
           <TipBox>
-            <strong className="text-white">From your wardrobe:</strong> if you start a suggestion from a saved item,
-            that piece is loaded for you and the result stays linked to your pick.
+            <strong className="text-white">From your wardrobe:</strong> start with one item via{' '}
+            <span className="text-white font-medium">Style this item with AI</span>, or combine several on the Wardrobe tab
+            with <span className="text-white font-medium">Complete outfit with AI</span>—set Preferences there first when you want
+            occasion, season, style, or notes to shape the result.
           </TipBox>
         </SectionCard>
 
@@ -284,12 +286,19 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               'Open the Wardrobe tab to browse shirts, trousers, blazers, shoes, and belts.',
               'Add items with the guided flow: we suggest category, color, and a description—edit anything before saving.',
               'Tap an item anytime to update details or swap the photo.',
-              'Tap Style this item to open Suggest with one saved piece loaded, then set preferences and tap Generate Outfit.',
-              'To start from one or more saved pieces, select 1 to 5 wardrobe items across different slots, then tap Complete outfit with AI.',
-              'Choose one item per slot. The AI keeps your selected pieces and fills the missing shirt, trousers, blazer, shoes, or belt slots.',
+              'For one saved piece, tap Style this item with AI to open Suggest with that item loaded—set preferences and tap Generate Outfit.',
+              'To combine multiple pieces, use Complete an outfit from selected wardrobe pieces: tap Add to outfit completion on item cards (1 to 5 items, one per slot: shirt, trousers, blazer, shoes, belt).',
+              'Expand Preferences on Wardrobe to set occasion, season, style, and notes—the same pickers as Suggest. Logged in? Toggle Use my wardrobe only if you want recommendations limited to saved items.',
+              'Preferences on Wardrobe stay in sync with Suggest and Insights—change them inline without switching tabs first.',
+              'Tap Complete outfit with AI when at least one item is selected. The AI keeps your picks and fills missing shirt, trousers, blazer, shoes, or belt slots.',
               'We warn you if a new photo looks like something you already saved—no accidental twins.',
             ]}
           />
+          <TipBox>
+            <strong className="text-white">One item per slot:</strong> you cannot select two shirts (or two of any slot). If you try,
+            you will see <span className="text-white font-medium">Choose one item per outfit slot</span>—deselect first or pick a
+            different category. Your selection summary shows slots like <span className="text-white font-medium">2 selected: shirt, trousers</span>.
+          </TipBox>
         </SectionCard>
 
         <SectionCard

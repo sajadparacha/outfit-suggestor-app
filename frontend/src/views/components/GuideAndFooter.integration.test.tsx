@@ -18,8 +18,9 @@ describe('Guide and footer navigation (App)', () => {
       expect(screen.getByRole('heading', { name: /How to use/i })).toBeInTheDocument();
     });
     expect(screen.getByText(/Jump to a section/i)).toBeInTheDocument();
-    expect(screen.getByText(/select 1 to 5 wardrobe items/i)).toBeInTheDocument();
-    expect(screen.getByText(/Complete outfit with AI/i)).toBeInTheDocument();
+    expect(screen.getByText(/Add to outfit completion/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Complete outfit with AI/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Choose one item per outfit slot/i)).toBeInTheDocument();
   });
 
   it('opens About from footer', async () => {

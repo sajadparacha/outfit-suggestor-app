@@ -1,13 +1,15 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useWardrobeController } from '../../controllers/useWardrobeController';
 import { WardrobeItem, WardrobeItemCreate, WardrobeItemUpdate } from '../../models/WardrobeModels';
-import { OutfitHistoryEntry, SourceWardrobeItem } from '../../models/OutfitModels';
+import { Filters, OutfitHistoryEntry, SourceWardrobeItem } from '../../models/OutfitModels';
 import ApiService from '../../services/ApiService';
 import { isValidImageSize, formatFileSize } from '../../utils/imageUtils';
 import { WARDROBE_MAX_SIZE_MB } from '../../constants/imageLimits';
 import { UI_CONFIG } from '../../utils/constants';
 import ConfirmationModal from './ConfirmationModal';
+import AnalysisPreferences from './AnalysisPreferences';
 import { historyEntryToSuggestion } from '../../utils/historyUtils';
+import { MAIN_FLOW_UX_COPY } from '../../utils/mainFlowUxCopy';
 
 const COMPLETE_OUTFIT_SLOTS = ['shirt', 'trouser', 'blazer', 'shoes', 'belt'] as const;
 type CompleteOutfitSlot = typeof COMPLETE_OUTFIT_SLOTS[number];
@@ -29,6 +31,7 @@ const formatCompleteOutfitSlot = (slot: CompleteOutfitSlot): string =>
 
 interface WardrobeProps {
   initialCategory?: string | null;
+  isAuthenticated?: boolean;
   onSuggestionReady?: (suggestion: any) => void; // Callback when outfit suggestion is ready
   onNavigateToMain?: () => void; // Callback to navigate to main view
   onSourceImageLoaded?: () => void; // Callback after source wardrobe image is preloaded in main flow
@@ -44,16 +47,22 @@ interface WardrobeProps {
       sourceImage?: File | null,
       alternateFromPrevious?: boolean
     ) => Promise<void>;
+    filters?: Filters;
+    setFilters?: (filters: Filters) => void;
+    preferenceText?: string;
+    setPreferenceText?: (text: string) => void;
     loading: boolean;
     error: string | null;
     showDuplicateModal: boolean;
     handleUseCachedSuggestion: () => void;
-    useWardrobeOnly?: boolean; // Used in fallback getSuggestionFromWardrobeItem
+    useWardrobeOnly?: boolean;
+    setUseWardrobeOnly?: (value: boolean) => void;
   }; // Outfit controller to use same logic as main view
 }
 
 const Wardrobe: React.FC<WardrobeProps> = ({ 
   initialCategory = null,
+  isAuthenticated = false,
   onSuggestionReady,
   onNavigateToMain,
   onSourceImageLoaded,
@@ -872,41 +881,73 @@ const Wardrobe: React.FC<WardrobeProps> = ({
 
         {/* Complete Outfit Multi-Select */}
         {!loading && wardrobeItems && wardrobeItems.length > 0 && (
-          <div className="mb-4 rounded-2xl border border-brand-blue/25 bg-brand-gradient-soft p-4 shadow-xl backdrop-blur sm:mb-6 sm:p-5">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-base font-semibold text-white">Complete an outfit from selected wardrobe pieces</p>
-                <p className="mt-1 text-sm text-slate-200">
-                  Select 1 to 5 items across different slots: shirt, trousers, blazer, shoes, and belt.
-                </p>
-                <p className="mt-2 text-xs font-medium text-slate-300" aria-live="polite">
-                  {selectedCompleteOutfitItems.length === 0
-                    ? 'No items selected'
-                    : `${selectedCompleteOutfitItems.length} selected${selectedSlotSummary ? `: ${selectedSlotSummary}` : ''}`}
-                </p>
-              </div>
-              <div className="flex flex-col gap-2 sm:min-w-[220px]">
+          <div
+            className="mb-4 rounded-2xl border border-brand-blue/25 bg-brand-gradient-soft p-4 shadow-xl backdrop-blur sm:mb-6 sm:p-5"
+            data-testid="wardrobe-completion-panel"
+          >
+            <div>
+              <p className="text-base font-semibold text-white">Complete an outfit from selected wardrobe pieces</p>
+              <p className="mt-1 text-sm text-slate-200">
+                Select 1 to 5 items across different slots: shirt, trousers, blazer, shoes, and belt.
+              </p>
+              <p
+                className="mt-2 text-xs font-medium text-slate-300"
+                aria-live="polite"
+                data-testid="wardrobe-selection-status"
+              >
+                {selectedCompleteOutfitItems.length === 0
+                  ? 'No items selected'
+                  : `${selectedCompleteOutfitItems.length} selected${selectedSlotSummary ? `: ${selectedSlotSummary}` : ''}`}
+              </p>
+            </div>
+
+            {outfitController?.filters && outfitController.setFilters && outfitController.setPreferenceText && (
+              <details
+                className="group mt-4 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]"
+                open={selectedCompleteOutfitItems.length > 0}
+                data-testid="wardrobe-completion-preferences"
+              >
+                <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-slate-300 [&::-webkit-details-marker]:hidden">
+                  <span>{MAIN_FLOW_UX_COPY.preferencesSection}</span>
+                  <span className="text-slate-500 transition-transform group-open:rotate-180">▼</span>
+                </summary>
+                <div className="border-t border-white/10 px-4 py-4">
+                  <AnalysisPreferences
+                    filters={outfitController.filters}
+                    setFilters={outfitController.setFilters}
+                    preferenceText={outfitController.preferenceText ?? ''}
+                    setPreferenceText={outfitController.setPreferenceText}
+                    variant="sidebar"
+                    showSharedHint
+                    useWardrobeOnly={outfitController.useWardrobeOnly ?? false}
+                    setUseWardrobeOnly={outfitController.setUseWardrobeOnly}
+                    showWardrobeOnly={isAuthenticated && !!outfitController.setUseWardrobeOnly}
+                  />
+                </div>
+              </details>
+            )}
+
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+              <button
+                type="button"
+                onClick={handleCompleteOutfitWithAI}
+                disabled={completeOutfitActionDisabled}
+                className="min-h-[48px] rounded-xl px-5 py-3 text-sm font-semibold shadow-md btn-brand transition-all disabled:cursor-not-allowed disabled:opacity-50 sm:min-w-[220px]"
+              >
+                {completeOutfitActionCopy}
+              </button>
+              {selectedCompleteOutfitItems.length > 0 && (
                 <button
                   type="button"
-                  onClick={handleCompleteOutfitWithAI}
-                  disabled={completeOutfitActionDisabled}
-                  className="min-h-[48px] rounded-xl px-5 py-3 text-sm font-semibold shadow-md btn-brand transition-all disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => {
+                    setSelectedCompleteOutfitItems([]);
+                    setSuggestionError(null);
+                  }}
+                  className="min-h-[40px] rounded-xl border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/20 sm:min-w-[140px]"
                 >
-                  {completeOutfitActionCopy}
+                  Clear selection
                 </button>
-                {selectedCompleteOutfitItems.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedCompleteOutfitItems([]);
-                      setSuggestionError(null);
-                    }}
-                    className="min-h-[40px] rounded-xl border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/20"
-                  >
-                    Clear selection
-                  </button>
-                )}
-              </div>
+              )}
             </div>
           </div>
         )}

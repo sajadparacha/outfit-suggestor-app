@@ -59,12 +59,19 @@ final class AdminVisibilityTests: XCTestCase {
     }
 
     func testGuideAndAboutCopyMentionWardrobeCompletion() {
+        XCTAssertTrue(GuideCopy.wardrobeSingleItemStep.contains("Style this item with AI"))
         XCTAssertTrue(GuideCopy.wardrobeMultiSelectStep.contains("Select items"))
         XCTAssertTrue(GuideCopy.wardrobeMultiSelectStep.contains("1 to 5"))
+        XCTAssertTrue(GuideCopy.wardrobeMultiSelectStep.contains("Preferences"))
+        XCTAssertTrue(GuideCopy.wardrobeMultiSelectStep.contains("occasion, season, style, and notes"))
         XCTAssertTrue(GuideCopy.wardrobeMultiSelectStep.contains("Complete outfit with AI"))
-        XCTAssertTrue(AboutCopy.wardrobeCompletionFeature.contains("one or more"))
-        XCTAssertTrue(AboutCopy.wardrobeCompletionFeature.contains("complete outfits"))
-        XCTAssertTrue(AboutCopy.wardrobeCompletionFeature.contains("selected wardrobe pieces"))
+        XCTAssertTrue(GuideCopy.wardrobeMultiSelectStep.contains("one item per outfit slot"))
+        XCTAssertTrue(GuideCopy.wardrobeMultiSelectTip.contains("stay in sync with Suggest"))
+        XCTAssertTrue(GuideCopy.wardrobeMultiSelectTip.contains("Choose one item per outfit slot"))
+        XCTAssertTrue(GuideCopy.wardrobeOnlyModeStep.contains("Use my wardrobe only"))
+        XCTAssertTrue(AboutCopy.wardrobeCompletionFeature.contains("occasion, season, style, and notes"))
+        XCTAssertTrue(AboutCopy.wardrobeCompletionFeature.contains("Complete outfit with AI"))
+        XCTAssertTrue(AboutCopy.wardrobeCompletionFeature.contains("one item per slot"))
     }
 
     // MARK: - Settings admin section visibility pattern

@@ -18,6 +18,10 @@ struct FiltersView: View {
     var layout: Layout = .form
     var useWardrobeOnly: Binding<Bool>? = nil
     var showWardrobeOnly: Bool = false
+    var showSharedHint: Bool = false
+    var gridColumnCount: Int = 2
+    var filterAccessibilityPrefix: String = "home"
+    var wardrobeOnlyCheckboxAccessibilityId: String = GridContract.wardrobeOnlyCheckboxAccessibilityId
 
     @State private var activeSheet: FilterSheet?
 
@@ -34,10 +38,9 @@ struct FiltersView: View {
         }
     }
 
-    private let gridColumns = [
-        GridItem(.flexible(), spacing: 10),
-        GridItem(.flexible(), spacing: 10),
-    ]
+    private var gridColumns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: 10), count: max(1, gridColumnCount))
+    }
 
     var body: some View {
         Group {
@@ -91,6 +94,21 @@ struct FiltersView: View {
             Text("Preferences")
                 .font(.headline)
                 .foregroundColor(AppTheme.textPrimary)
+
+            if showSharedHint {
+                Text(InsightsCopy.sharedPreferencesNote)
+                    .font(.caption)
+                    .foregroundColor(AppTheme.textSecondary)
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(AppTheme.accentSoft)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(AppTheme.gradientStart.opacity(0.25), lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .accessibilityIdentifier("\(filterAccessibilityPrefix).sharedHint")
+            }
 
             LazyVGrid(columns: gridColumns, spacing: 10) {
                 gridCell(title: "Occasion", value: displayOccasion, icon: "calendar") {
@@ -157,7 +175,7 @@ struct FiltersView: View {
             .glassCard()
         }
         .buttonStyle(.plain)
-        .accessibilityIdentifier(GridContract.filterAccessibilityId(for: title))
+        .accessibilityIdentifier(GridContract.filterAccessibilityId(for: title, prefix: filterAccessibilityPrefix))
     }
 
     @ViewBuilder
@@ -183,7 +201,7 @@ struct FiltersView: View {
             }
         }
         .buttonStyle(.plain)
-        .accessibilityIdentifier(GridContract.wardrobeOnlyCheckboxAccessibilityId)
+        .accessibilityIdentifier(wardrobeOnlyCheckboxAccessibilityId)
         .accessibilityAddTraits(.isButton)
         .accessibilityValue(binding.wrappedValue ? "checked" : "unchecked")
     }
@@ -249,8 +267,7 @@ struct FiltersView: View {
     }
 
     private var notesSummary: String {
-        let trimmed = preferenceText.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? "Add notes" : trimmed
+        Self.notesDisplaySummary(for: preferenceText)
     }
 
     private func sheetTitle(for sheet: FilterSheet) -> String {
@@ -264,13 +281,17 @@ struct FiltersView: View {
 }
 
 extension FiltersView {
+    static func notesDisplaySummary(for preferenceText: String) -> String {
+        preferenceText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Add notes" : "Has notes"
+    }
+
     enum GridContract {
         static let fieldTitles = ["Occasion", "Season", "Style", "Notes"]
         static let wardrobeOnlyTitle = "Use my wardrobe only"
         static let wardrobeOnlyCheckboxAccessibilityId = "main.wardrobeOnlyCheckbox"
 
-        static func filterAccessibilityId(for title: String) -> String {
-            "home.filter.\(title.lowercased())"
+        static func filterAccessibilityId(for title: String, prefix: String = "home") -> String {
+            "\(prefix).filter.\(title.lowercased())"
         }
 
         static func shouldShowWardrobeOnlyCheckbox(showWardrobeOnly: Bool, bindingProvided: Bool) -> Bool {

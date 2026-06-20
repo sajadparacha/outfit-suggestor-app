@@ -69,3 +69,14 @@ enum WardrobeCardUx {
         "wardrobe.history.useThis.\(entryId)"
     }
 }
+
+enum WardrobeCompletionCopy {
+    static let noItemsSelected = "No items selected"
+    static let sharedPreferencesHint = InsightsCopy.sharedPreferencesNote
+    static let preferencesPanelAccessibilityId = "wardrobe.completion.preferences"
+    static let wardrobeOnlyCheckboxAccessibilityId = "wardrobe.completion.wardrobeOnlyCheckbox"
+
+    static func filterAccessibilityId(for title: String) -> String {
+        "wardrobe.completion.filter.\(title.lowercased())"
+    }
+}

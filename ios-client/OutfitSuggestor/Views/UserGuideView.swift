@@ -64,7 +64,7 @@ struct UserGuideView: View {
                         "Tap \"+\" to add a new item — upload a photo and the AI will analyze it.",
                         "Use category filters or search to find specific items.",
                         "Swipe left on an item to delete, or tap to edit.",
-                        "Tap \"Get suggestion\" on any item to build an outfit around it.",
+                        GuideCopy.wardrobeSingleItemStep,
                         GuideCopy.wardrobeMultiSelectStep
                     ],
                     tip: GuideCopy.wardrobeMultiSelectTip
@@ -75,9 +75,9 @@ struct UserGuideView: View {
                     title: "Wardrobe-Only Mode",
                     color: .orange,
                     steps: [
-                        "Enable \"Use wardrobe only\" toggle in the suggestion screen.",
-                        "The AI will only suggest items from your existing wardrobe.",
-                        "Great for deciding what to wear from what you already own."
+                        GuideCopy.wardrobeOnlyModeStep,
+                        "Great for deciding what to wear from what you already own.",
+                        "Completing an outfit from selected wardrobe pieces always uses your saved items."
                     ],
                     tip: nil
                 )

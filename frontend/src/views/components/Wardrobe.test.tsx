@@ -61,6 +61,27 @@ const mockWardrobeItem: WardrobeItem = {
   updated_at: '2024-01-01T00:00:00Z',
 };
 
+const defaultOutfitControllerPrefs = {
+  filters: { occasion: 'everyday', season: 'all-season', style: 'classic' },
+  setFilters: jest.fn(),
+  preferenceText: '',
+  setPreferenceText: jest.fn(),
+  useWardrobeOnly: false,
+  setUseWardrobeOnly: jest.fn(),
+};
+
+const outfitControllerWithPrefs = (overrides: Record<string, unknown> = {}) => ({
+  setImage: jest.fn(),
+  setSourceWardrobeItem: jest.fn(),
+  getSuggestion: jest.fn(),
+  loading: false,
+  error: null,
+  showDuplicateModal: false,
+  handleUseCachedSuggestion: jest.fn(),
+  ...defaultOutfitControllerPrefs,
+  ...overrides,
+});
+
 const openItemMenu = (itemId = 1) => {
   fireEvent.click(screen.getByTestId(`wardrobe-item-menu-${itemId}`));
 };
@@ -592,5 +613,52 @@ describe('Wardrobe page', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: /View image/i }));
 
     expect(screen.getByAltText('Full size view')).toBeInTheDocument();
+  });
+
+  it('renders Preferences section with Occasion, Season, Style, and Notes when outfit controller provides prefs', () => {
+    mockWardrobeItems.push(
+      { ...mockWardrobeItem, id: 1, category: 'shirt', description: 'Blue shirt' },
+      { ...mockWardrobeItem, id: 2, category: 'trouser', description: 'Navy trousers', color: 'Navy' }
+    );
+
+    render(<Wardrobe isAuthenticated outfitController={outfitControllerWithPrefs()} />);
+
+    expect(screen.getByTestId('wardrobe-completion-preferences')).toBeInTheDocument();
+    expect(screen.getByText('Shared with Suggest — occasion, season, style, and notes stay in sync across outfit suggestions and wardrobe insights.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Select occasion')).toBeInTheDocument();
+    expect(screen.getByLabelText('Select season')).toBeInTheDocument();
+    expect(screen.getByLabelText('Select style preference')).toBeInTheDocument();
+    expect(screen.getByText('Notes')).toBeInTheDocument();
+  });
+
+  it('shows selection summary with slot names when multiple items are selected', () => {
+    mockWardrobeItems.push(
+      { ...mockWardrobeItem, id: 1, category: 'shirt', description: 'Blue shirt' },
+      { ...mockWardrobeItem, id: 2, category: 'trouser', description: 'Navy trousers', color: 'Navy' }
+    );
+
+    render(<Wardrobe outfitController={outfitControllerWithPrefs()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Add shirt to outfit completion/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Add trouser to outfit completion/i }));
+
+    expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('2 selected: shirt, trousers');
+  });
+
+  it('shows Use my wardrobe only checkbox when authenticated and prefs are wired', () => {
+    mockWardrobeItems.push({ ...mockWardrobeItem, id: 1, category: 'shirt' });
+
+    render(<Wardrobe isAuthenticated outfitController={outfitControllerWithPrefs()} />);
+
+    expect(screen.getByLabelText('Use my wardrobe only')).toBeInTheDocument();
+    expect(screen.getByText('Only recommend items from your saved wardrobe.')).toBeInTheDocument();
+  });
+
+  it('hides Use my wardrobe only checkbox when not authenticated', () => {
+    mockWardrobeItems.push({ ...mockWardrobeItem, id: 1, category: 'shirt' });
+
+    render(<Wardrobe isAuthenticated={false} outfitController={outfitControllerWithPrefs()} />);
+
+    expect(screen.queryByLabelText('Use my wardrobe only')).not.toBeInTheDocument();
   });
 });

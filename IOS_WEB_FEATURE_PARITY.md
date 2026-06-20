@@ -19,7 +19,7 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 | **Filters / preference text** | ✅ | ✅ | Occasion, season, style use shared recommended option vocabulary; free text |
 | **Wardrobe-only mode** | ✅ | ✅ | Toggle when logged in (Main flow) |
 | **Model image generation** | ✅ | ✅ | Toggle + model picker (DALL-E 3, Stable Diffusion, Nano Banana); full-screen view |
-| **Wardrobe** | ✅ | ✅ | List, add, edit, delete, category filter, search, "Get suggestion" from item, select 1-5 items to complete outfit with AI |
+| **Wardrobe** | ✅ | ✅ | List, add, edit, delete, category filter, search, "Get suggestion" from item, select 1-5 items (one per slot) to complete outfit with AI; inline **Preferences** (occasion/season/style/notes + wardrobe-only) synced with Suggest |
 | **Outfit history** | ✅ | ✅ | List, search, sort (newest/oldest), delete, load into main view |
 | **Random from wardrobe** | ✅ | ✅ | Button on Main; GET /api/wardrobe/random-outfit |
 | **Random from history** | ✅ | ✅ | Button on Main; client picks from history; **Your inputs** syncs preview + **From history** caption + entry filters |

@@ -107,7 +107,7 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
                   <span className="text-2xl">✨</span>
                   <div>
                     <h4 className="font-semibold text-white">Get Suggestions from Wardrobe</h4>
-                    <p className="text-sm text-slate-300">Tap "Style this item" on one wardrobe piece to load it on Suggest, or select one or more saved pieces across different slots and tap "Complete outfit with AI" so AI keeps those pieces and fills the missing slots.</p>
+                    <p className="text-sm text-slate-300">Tap "Style this item" on one wardrobe piece to load it on Suggest, or select one or more saved pieces across different slots (one per slot), set occasion, season, style, and notes inline on Wardrobe, then tap "Complete outfit with AI" so AI keeps those pieces and fills the missing slots.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">

@@ -129,4 +129,17 @@ final class FiltersViewTests: XCTestCase {
             )
         )
     }
+
+    func testNotesDisplaySummaryUsesHasNotesLabelWhenNonEmpty() {
+        XCTAssertEqual(FiltersView.notesDisplaySummary(for: ""), "Add notes")
+        XCTAssertEqual(FiltersView.notesDisplaySummary(for: "   "), "Add notes")
+        XCTAssertEqual(FiltersView.notesDisplaySummary(for: "no sneakers"), "Has notes")
+    }
+
+    func testWardrobeCompletionFilterAccessibilityPrefix() {
+        XCTAssertEqual(
+            FiltersView.GridContract.filterAccessibilityId(for: "Season", prefix: "wardrobe.completion"),
+            "wardrobe.completion.filter.season"
+        )
+    }
 }

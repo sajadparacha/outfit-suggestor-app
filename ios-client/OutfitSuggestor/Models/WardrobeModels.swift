@@ -103,6 +103,14 @@ enum WardrobeCompletionSlot: String, CaseIterable {
         }
     }
 
+    /// Lowercase slot label for multi-select status copy (trouser → trousers).
+    var summaryLabel: String {
+        switch self {
+        case .trouser: return "trousers"
+        default: return rawValue
+        }
+    }
+
     static func normalized(from category: String) -> WardrobeCompletionSlot? {
         let value = category.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         switch value {
@@ -203,6 +211,16 @@ struct WardrobeMultiSelectState: Equatable {
         if let slot = slot(for: item), selectedSlots[slot] == item.id {
             selectedSlots[slot] = nil
         }
+    }
+
+    func selectionSummary(for items: [WardrobeItem]) -> String {
+        guard selectedCount > 0 else { return WardrobeCompletionCopy.noItemsSelected }
+        let slotLabels = selectedItemIds.compactMap { id -> String? in
+            guard let item = items.first(where: { $0.id == id }),
+                  let slot = slot(for: item) else { return nil }
+            return slot.summaryLabel
+        }
+        return "\(selectedCount) selected: \(slotLabels.joined(separator: ", "))"
     }
 }
 

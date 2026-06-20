@@ -176,4 +176,84 @@ describe('Wardrobe multi-select complete outfit integration', () => {
       expect(screen.getByText('Black loafers')).toBeInTheDocument();
     });
   });
+
+  it('renders Preferences on Wardrobe completion panel with filter labels', async () => {
+    renderApp({ routerProps: { initialEntries: [ROUTES.WARDROBE] } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wardrobe-completion-preferences')).toBeInTheDocument();
+    });
+
+    expect(screen.getByLabelText('Select occasion')).toBeInTheDocument();
+    expect(screen.getByLabelText('Select season')).toBeInTheDocument();
+    expect(screen.getByLabelText('Select style preference')).toBeInTheDocument();
+    expect(screen.getByText('Notes')).toBeInTheDocument();
+    expect(screen.getByLabelText('Use my wardrobe only')).toBeInTheDocument();
+  });
+
+  it('sends updated occasion when changed in Wardrobe preferences before completing outfit', async () => {
+    renderApp({ routerProps: { initialEntries: [ROUTES.WARDROBE] } });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Select occasion')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText('Select occasion'), { target: { value: 'party' } });
+    fireEvent.click(await screen.findByRole('button', { name: /Add shirt to outfit completion/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Complete outfit with AI/i }));
+
+    await waitFor(() => {
+      expect(capturedRequestBody).toEqual(
+        expect.objectContaining({
+          occasion: 'party',
+          selected_wardrobe_item_ids: [11],
+        })
+      );
+    });
+  });
+
+  it('shows selection summary and blocks duplicate slot selection', async () => {
+    server.use(
+      rest.get(`${API_BASE}/api/wardrobe`, (_req, res, ctx) =>
+        res(
+          ctx.json({
+            items: [
+              {
+                id: 11,
+                category: 'shirt',
+                color: 'Blue',
+                description: 'Blue oxford shirt',
+                image_data: 'shirtImage',
+                name: null,
+              },
+              {
+                id: 12,
+                category: 'shirt',
+                color: 'White',
+                description: 'White oxford shirt',
+                image_data: 'shirtImage2',
+                name: null,
+              },
+            ],
+            total: 2,
+            limit: 10,
+            offset: 0,
+          })
+        )
+      )
+    );
+
+    renderApp({ routerProps: { initialEntries: [ROUTES.WARDROBE] } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Blue oxford shirt')).toBeInTheDocument();
+    });
+
+    const selectButtons = await screen.findAllByRole('button', { name: /Add shirt to outfit completion/i });
+    fireEvent.click(selectButtons[0]);
+    fireEvent.click(selectButtons[1]);
+
+    expect(screen.getByText('Choose one item per outfit slot')).toBeInTheDocument();
+    expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('1 selected: shirt');
+  });
 });

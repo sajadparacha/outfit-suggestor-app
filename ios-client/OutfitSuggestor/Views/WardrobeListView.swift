@@ -29,6 +29,10 @@ struct WardrobeListView: View {
     var onGetSuggestionFromItem: ((WardrobeItem) -> Void)?
     var onCompleteOutfitFromSelection: (([WardrobeItem]) -> Void)?
     var onSelectHistorySuggestion: ((OutfitHistoryEntry) -> Void)?
+    @Binding var filters: OutfitFilters
+    @Binding var preferenceText: String
+    @Binding var useWardrobeOnly: Bool
+    var isAuthenticated: Bool = false
     @State private var historyLoadingForItem: Int?
     @State private var showHistorySuggestionsSheet = false
     @State private var historySuggestions: [OutfitHistoryEntry] = []
@@ -40,6 +44,7 @@ struct WardrobeListView: View {
     @State private var isCompletionSelectionMode = false
     @State private var completionSelection = WardrobeMultiSelectState()
     @State private var completionSelectionMessage: String?
+    @State private var completionPreferencesExpanded = true
     
     private var categoryVisibleItems: [WardrobeItem] {
         if categoryFilter == "All" {
@@ -79,8 +84,27 @@ struct WardrobeListView: View {
         horizontalSizeClass == .regular
     }
 
+    private var completionSelectionSummary: String {
+        completionSelection.selectionSummary(for: allWardrobeItems)
+    }
+
+    private var completionStatusText: String? {
+        if let completionSelectionMessage, !completionSelectionMessage.isEmpty {
+            return completionSelectionMessage
+        }
+        return nil
+    }
+
+    private var showsCompletionPreferences: Bool {
+        onCompleteOutfitFromSelection != nil && (isCompletionSelectionMode || hasCompletionEligibleItems)
+    }
+
     private var hasCompletionEligibleItems: Bool {
         allWardrobeItems.contains { completionSelection.isEligible($0) }
+    }
+
+    private var completionPreferencesGridColumns: Int {
+        isRegularWidth ? 4 : 2
     }
 
     var body: some View {
@@ -308,13 +332,19 @@ struct WardrobeListView: View {
 
                 if isCompletionSelectionMode {
                     VStack(alignment: .leading, spacing: 10) {
+                        if showsCompletionPreferences {
+                            completionPreferencesSection
+                        }
+
                         HStack {
-                            Text("\(completionSelection.selectedCount)/\(WardrobeMultiSelectState.maximumSelectedItems) selected")
+                            Text(completionStatusText ?? completionSelectionSummary)
                                 .font(.caption.weight(.semibold))
-                                .foregroundColor(AppTheme.textSecondary)
-                                .accessibilityIdentifier("wardrobe.multiSelect.count")
+                                .foregroundColor(completionSelectionMessage == nil
+                                    ? AppTheme.textSecondary
+                                    : AppTheme.accent)
+                                .accessibilityIdentifier("wardrobe.multiSelect.status")
                             Spacer()
-                            Button("Clear") {
+                            Button("Clear selection") {
                                 completionSelection.clear()
                                 completionSelectionMessage = nil
                             }
@@ -323,11 +353,6 @@ struct WardrobeListView: View {
                             .disabled(completionSelection.selectedCount == 0)
                             .accessibilityIdentifier("wardrobe.multiSelect.clear")
                         }
-
-                        Text(completionSelectionMessage ?? completionSelection.actionTitle)
-                            .font(.caption)
-                            .foregroundColor(completionSelection.canCompleteOutfit ? AppTheme.textSecondary : AppTheme.accent)
-                            .accessibilityIdentifier("wardrobe.multiSelect.status")
 
                         Button(action: completeSelectedOutfit) {
                             Label(completionSelection.actionTitle, systemImage: "sparkles")
@@ -340,6 +365,8 @@ struct WardrobeListView: View {
                         .accessibilityLabel(completionSelection.actionTitle)
                         .accessibilityIdentifier("wardrobe.multiSelect.complete")
                     }
+                } else if showsCompletionPreferences {
+                    completionPreferencesSection
                 } else if !hasCompletionEligibleItems {
                     Text("Add eligible wardrobe items to use AI outfit completion.")
                         .font(.caption)
@@ -401,6 +428,9 @@ struct WardrobeListView: View {
     private func toggleCompletionSelectionMode() {
         withAnimation {
             isCompletionSelectionMode.toggle()
+            if isCompletionSelectionMode {
+                completionPreferencesExpanded = true
+            }
             completionSelection.clear()
             completionSelectionMessage = nil
         }
@@ -411,10 +441,34 @@ struct WardrobeListView: View {
         let result = completionSelection.toggle(item)
         completionSelectionMessage = result.message
         if result == .selected || result == .deselected {
-            completionSelectionMessage = completionSelection.canCompleteOutfit
-                ? nil
-                : "Select at least 1 item"
+            completionPreferencesExpanded = true
+            if completionSelection.canCompleteOutfit {
+                completionSelectionMessage = nil
+            }
         }
+    }
+
+    @ViewBuilder
+    private var completionPreferencesSection: some View {
+        DisclosureGroup(isExpanded: $completionPreferencesExpanded) {
+            FiltersView(
+                filters: $filters,
+                preferenceText: $preferenceText,
+                layout: .grid,
+                useWardrobeOnly: $useWardrobeOnly,
+                showWardrobeOnly: isAuthenticated,
+                showSharedHint: true,
+                gridColumnCount: completionPreferencesGridColumns,
+                filterAccessibilityPrefix: "wardrobe.completion",
+                wardrobeOnlyCheckboxAccessibilityId: WardrobeCompletionCopy.wardrobeOnlyCheckboxAccessibilityId
+            )
+            .padding(.top, 4)
+        } label: {
+            Text(MainFlowUxCopy.preferencesSection)
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(AppTheme.textPrimary)
+        }
+        .accessibilityIdentifier(WardrobeCompletionCopy.preferencesPanelAccessibilityId)
     }
 
     private func completeSelectedOutfit() {
