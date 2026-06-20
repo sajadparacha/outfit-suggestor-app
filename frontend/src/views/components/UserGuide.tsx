@@ -264,6 +264,7 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               'After analysis, preferences collapse into an Analyzed for bar—tap Change preferences to edit and re-run.',
               'Review the summary card, Top items to add, Wardrobe coverage dashboard, and expand Detailed category analysis for specifics.',
               'Tap a best color on any item card to search Google Shopping for that category and color. Use Shop similar for a broader search.',
+              'Tap Shopping list to open a buy-list table with item, style and color tuples, per-row Google Shopping links, Export to WhatsApp, and Export as PDF.',
             ]}
           />
           {isAdmin && (

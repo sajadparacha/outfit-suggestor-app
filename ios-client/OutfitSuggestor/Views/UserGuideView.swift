@@ -121,7 +121,9 @@ struct UserGuideView: View {
                         "Check the coverage dashboard for category health at a glance.",
                         "Tap a category in Detailed category analysis for recommendations.",
                         "Tap a best color to search Google Shopping for that category and color.",
-                        "Tap Shop similar on any item to search Google Shopping."
+                        "Tap Shop similar on any item to search Google Shopping.",
+                        "After results load, tap Shopping list to see Item, Style & color tuples, and Google Shopping rows.",
+                        "Use Export to WhatsApp for a readable text list, or Export as PDF to share a native PDF."
                     ],
                     tip: isAdmin
                         ? GuideCopy.adminDiagnosticsTip

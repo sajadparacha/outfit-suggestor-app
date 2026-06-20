@@ -54,7 +54,7 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               action-focused analysis that shows your gap score, top priorities, items to add, and a coverage
               dashboard. Choose <strong className="text-white">Quick Wardrobe Check</strong> (fast rules-based snapshot) or{' '}
               <strong className="text-white">AI Stylist Review</strong> (deeper AI-powered styling advice), then
-              generate outfits or shop similar pieces from the results.
+              shop similar pieces or export a focused shopping list to WhatsApp or PDF from the results.
               The app features a <strong className="text-white">smart wardrobe management system</strong> that learns your collection and makes recommendations practical and personalized.
             </p>
             <p className="text-slate-200 leading-relaxed">
@@ -114,7 +114,7 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
                   <span className="text-2xl">🧠</span>
                   <div>
                     <h4 className="font-semibold text-white">Wardrobe Insights</h4>
-                    <p className="text-sm text-slate-300">Get an AI-powered wardrobe gap score, top 3 priorities, high-impact items to add, and a coverage dashboard across shirts, trousers, shoes, blazers, belts, colors, and styles. Collapse preferences after analysis, then tap best colors to shop on Google or use Shop similar for broader searches.</p>
+                    <p className="text-sm text-slate-300">Get an AI-powered wardrobe gap score, top 3 priorities, high-impact items to add, and a coverage dashboard across shirts, trousers, shoes, blazers, belts, colors, and styles. Collapse preferences after analysis, tap best colors or Shopping list rows to shop on Google, and export the shopping list to WhatsApp or PDF.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">

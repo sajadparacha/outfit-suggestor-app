@@ -180,10 +180,28 @@ final class WardrobeInsightsViewTests: XCTestCase {
     // 10. Empty/no-result state
     func testEmptyStateWhenNoResult() {
         XCTAssertFalse(WardrobeInsightsPresentation.shouldShowResults(hasResult: false))
+        XCTAssertFalse(WardrobeInsightsPresentation.shouldShowShoppingListAction(hasResult: false))
         XCTAssertEqual(InsightsCopy.emptyStateMessage, "Run a check to see what's missing in each part of your wardrobe.")
         XCTAssertTrue(
             WardrobeInsightsPresentation.shouldShowAnalyzeButton(hasResult: false, isPreferencesExpanded: false, isLoading: false)
         )
+    }
+
+    func testShoppingListActionAvailableAfterResults() {
+        XCTAssertTrue(WardrobeInsightsPresentation.shouldShowResults(hasResult: true))
+        XCTAssertTrue(WardrobeInsightsPresentation.shouldShowShoppingListAction(hasResult: true))
+        XCTAssertEqual(InsightsCopy.shoppingListButton, "Shopping list")
+    }
+
+    func testShoppingListExportLabelsAndColumnsMatchSpec() {
+        XCTAssertEqual(InsightsCopy.shoppingListItemColumn, "Item")
+        XCTAssertEqual(InsightsCopy.shoppingListTupleColumn, "Style & color tuples")
+        XCTAssertEqual(InsightsCopy.shoppingListGoogleColumn, "Google Shopping")
+        XCTAssertEqual(
+            WardrobeInsightsPresentation.shoppingListExportActionTitles,
+            ["Export to WhatsApp", "Export as PDF"]
+        )
+        XCTAssertEqual(InsightsCopy.shoppingListExportErrorMessage, "Could not export shopping list.")
     }
 
     func testHeaderCopyMatchesSpec() {

@@ -89,7 +89,9 @@
 		WIR01BF0000000000000001 /* WardrobeInsightResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = WIR01FR0000000000000001 /* WardrobeInsightResult.swift */; };
 		NWI01BF0000000000000001 /* NormalizeWardrobeInsight.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWI01FR0000000000000001 /* NormalizeWardrobeInsight.swift */; };
 		WIP01BF0000000000000001 /* WardrobeInsightsPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = WIP01FR0000000000000001 /* WardrobeInsightsPresentation.swift */; };
+		WSL01BF0000000000000001 /* WardrobeInsightShoppingList.swift in Sources */ = {isa = PBXBuildFile; fileRef = WSL01FR0000000000000001 /* WardrobeInsightShoppingList.swift */; };
 		ISV01BF0000000000000001 /* InsightsSharedViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = ISV01FR0000000000000001 /* InsightsSharedViews.swift */; };
+		SLV01BF0000000000000001 /* ShoppingListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SLV01FR0000000000000001 /* ShoppingListView.swift */; };
 		IHV01BF0000000000000001 /* InsightsHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = IHV01FR0000000000000001 /* InsightsHeaderView.swift */; };
 		ACB01BF0000000000000001 /* AnalysisContextBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACB01FR0000000000000001 /* AnalysisContextBarView.swift */; };
 		APV01BF0000000000000001 /* AnalysisPreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = APV01FR0000000000000001 /* AnalysisPreferencesView.swift */; };
@@ -104,6 +106,7 @@
 		WIV01BF0000000000000001 /* WardrobeInsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WIV01FR0000000000000001 /* WardrobeInsightsView.swift */; };
 		NWIT01BF000000000000001 /* NormalizeWardrobeInsightTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWIT01FR000000000000001 /* NormalizeWardrobeInsightTests.swift */; };
 		WIVT01BF000000000000001 /* WardrobeInsightsViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WIVT01FR000000000000001 /* WardrobeInsightsViewTests.swift */; };
+		WSLT01BF000000000000001 /* WardrobeInsightShoppingListTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WSLT01FR000000000000001 /* WardrobeInsightShoppingListTests.swift */; };
 /* End PBXBuildFile section */
 		C4AA4111F038841A8E622B9A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -208,7 +211,9 @@
 		WIR01FR0000000000000001 /* WardrobeInsightResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeInsightResult.swift; sourceTree = "<group>"; };
 		NWI01FR0000000000000001 /* NormalizeWardrobeInsight.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NormalizeWardrobeInsight.swift; sourceTree = "<group>"; };
 		WIP01FR0000000000000001 /* WardrobeInsightsPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeInsightsPresentation.swift; sourceTree = "<group>"; };
+		WSL01FR0000000000000001 /* WardrobeInsightShoppingList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeInsightShoppingList.swift; sourceTree = "<group>"; };
 		ISV01FR0000000000000001 /* InsightsSharedViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsSharedViews.swift; sourceTree = "<group>"; };
+		SLV01FR0000000000000001 /* ShoppingListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListView.swift; sourceTree = "<group>"; };
 		IHV01FR0000000000000001 /* InsightsHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsHeaderView.swift; sourceTree = "<group>"; };
 		ACB01FR0000000000000001 /* AnalysisContextBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisContextBarView.swift; sourceTree = "<group>"; };
 		APV01FR0000000000000001 /* AnalysisPreferencesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisPreferencesView.swift; sourceTree = "<group>"; };
@@ -223,6 +228,7 @@
 		WIV01FR0000000000000001 /* WardrobeInsightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeInsightsView.swift; sourceTree = "<group>"; };
 		NWIT01FR000000000000001 /* NormalizeWardrobeInsightTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NormalizeWardrobeInsightTests.swift; sourceTree = "<group>"; };
 		WIVT01FR000000000000001 /* WardrobeInsightsViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeInsightsViewTests.swift; sourceTree = "<group>"; };
+		WSLT01FR000000000000001 /* WardrobeInsightShoppingListTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeInsightShoppingListTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 		384222D780F1291F491220F0 /* OutfitSuggestorTests */ = {
 			isa = PBXGroup;
@@ -244,6 +250,7 @@
 				O1I2T3H4U5M6B7N8A9I0L03 /* OutfitItemThumbnailTests.swift */,
 				NWIT01FR000000000000001 /* NormalizeWardrobeInsightTests.swift */,
 				WIVT01FR000000000000001 /* WardrobeInsightsViewTests.swift */,
+				WSLT01FR000000000000001 /* WardrobeInsightShoppingListTests.swift */,
 			);
 			path = OutfitSuggestorTests;
 			sourceTree = "<group>";
@@ -269,6 +276,7 @@
 			isa = PBXGroup;
 			children = (
 				ISV01FR0000000000000001 /* InsightsSharedViews.swift */,
+				SLV01FR0000000000000001 /* ShoppingListView.swift */,
 				IHV01FR0000000000000001 /* InsightsHeaderView.swift */,
 				ACB01FR0000000000000001 /* AnalysisContextBarView.swift */,
 				APV01FR0000000000000001 /* AnalysisPreferencesView.swift */,
@@ -358,6 +366,7 @@
 				I1A2B3C4D5E6F708192A3B52 /* InsightsCopy.swift */,
 				NWI01FR0000000000000001 /* NormalizeWardrobeInsight.swift */,
 				WIP01FR0000000000000001 /* WardrobeInsightsPresentation.swift */,
+				WSL01FR0000000000000001 /* WardrobeInsightShoppingList.swift */,
 				M1A2B3C4D5E6F708192A3B53 /* MicroHelpCopy.swift */,
 				F1R2U3N4C5O6A7C8H900002 /* FirstRunCoachLogic.swift */,
 				G1U2E3S4T5L6I7M8I900002 /* MainFlowGuestLimitLogic.swift */,
@@ -615,7 +624,9 @@
 				WIR01BF0000000000000001 /* WardrobeInsightResult.swift in Sources */,
 				NWI01BF0000000000000001 /* NormalizeWardrobeInsight.swift in Sources */,
 				WIP01BF0000000000000001 /* WardrobeInsightsPresentation.swift in Sources */,
+				WSL01BF0000000000000001 /* WardrobeInsightShoppingList.swift in Sources */,
 				ISV01BF0000000000000001 /* InsightsSharedViews.swift in Sources */,
+				SLV01BF0000000000000001 /* ShoppingListView.swift in Sources */,
 				IHV01BF0000000000000001 /* InsightsHeaderView.swift in Sources */,
 				ACB01BF0000000000000001 /* AnalysisContextBarView.swift in Sources */,
 				APV01BF0000000000000001 /* AnalysisPreferencesView.swift in Sources */,
@@ -652,6 +663,7 @@
 				O1I2T3H4U5M6B7N8A9I0L04 /* OutfitItemThumbnailTests.swift in Sources */,
 				NWIT01BF000000000000001 /* NormalizeWardrobeInsightTests.swift in Sources */,
 				WIVT01BF000000000000001 /* WardrobeInsightsViewTests.swift in Sources */,
+				WSLT01BF000000000000001 /* WardrobeInsightShoppingListTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

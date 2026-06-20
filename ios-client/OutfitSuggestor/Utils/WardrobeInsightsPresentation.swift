@@ -31,6 +31,17 @@ enum WardrobeInsightsPresentation {
     static func shouldShowResults(hasResult: Bool) -> Bool {
         hasResult
     }
+
+    static func shouldShowShoppingListAction(hasResult: Bool) -> Bool {
+        hasResult
+    }
+
+    static var shoppingListExportActionTitles: [String] {
+        [
+            InsightsCopy.exportToWhatsAppButton,
+            InsightsCopy.exportAsPDFButton,
+        ]
+    }
 }
 
 enum WardrobeCategoryIcon {
