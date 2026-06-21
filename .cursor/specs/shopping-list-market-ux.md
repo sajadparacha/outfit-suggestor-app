@@ -2,7 +2,7 @@
 
 **Branch:** `cursor/update-preference-options-8b6a`  
 **Slug:** `shopping-list-market-ux`  
-**Status:** in-progress
+**Status:** done
 
 ---
 
@@ -197,8 +197,8 @@ For: Business · Winter · Smart casual
 - [x] Equivalent checklist + export UX
 - [x] `IOS_WEB_FEATURE_PARITY.md` updated
 - [x] New-behavior tests added (web + iOS)
-- [ ] Full web suite pass — orchestrator end gate
-- [ ] Full iOS suite pass — orchestrator end gate
+- [x] Full web suite pass — orchestrator end gate
+- [x] Full iOS suite pass — orchestrator end gate
 
 ---
 

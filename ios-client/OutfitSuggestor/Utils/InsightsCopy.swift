@@ -46,16 +46,11 @@ enum InsightsCopy {
     static let copyListButton = "Copy list"
     static let seeAllOptionsButton = "See all options"
     static let hideOptionsButton = "Hide options"
-    static let shoppingListNotesPlaceholder = "Notes (optional)"
     static let copiedToClipboardMessage = "Copied to clipboard"
     static let exportToWhatsAppButton = "Export to WhatsApp"
     static let exportAsPDFButton = "Export as PDF"
     static let shoppingListEmptyMessage = "No shopping list items for this analysis."
     static let shoppingListExportErrorMessage = "Could not export shopping list."
-
-    static func shoppingListProgressText(bought: Int, total: Int) -> String {
-        "Progress: \(bought) / \(total) bought"
-    }
 
     // MARK: - Coverage dashboard
 

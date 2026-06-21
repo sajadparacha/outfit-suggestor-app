@@ -91,22 +91,23 @@ final class WardrobeInsightShoppingListTests: XCTestCase {
 
         XCTAssertTrue(text.contains("🛍 ClosIQ Shopping List"))
         XCTAssertTrue(text.contains("For: Casual · Summer · Smart Casual"))
-        XCTAssertTrue(text.contains("1. ☐ Oxford Shirt (High)"))
+        XCTAssertTrue(text.contains("1. Oxford Shirt (High)"))
         XCTAssertTrue(text.contains("→ Olive or white oxford; linen olive OK"))
         XCTAssertTrue(text.contains("🔗 https://www.google.com/search"))
         XCTAssertFalse(text.contains("(Oxford, Olive)"))
+        XCTAssertFalse(text.contains("☐"))
+        XCTAssertFalse(text.contains("☑"))
     }
 
-    func testShareTextIncludesChecklistState() {
+    func testShareTextDoesNotIncludeChecklistOrNotes() {
         let result = makeResult()
         let rows = WardrobeInsightShoppingList.buildRows(from: result)
-        let checklist: [String: ShoppingListChecklistEntry] = [
-            rows[0].id: ShoppingListChecklistEntry(isBought: true, notes: "Got one in olive"),
-        ]
-        let text = WardrobeInsightShoppingList.shareText(rows: rows, context: result.context, checklist: checklist)
+        let text = WardrobeInsightShoppingList.shareText(rows: rows, context: result.context)
 
-        XCTAssertTrue(text.contains("☑ Oxford Shirt (High)"))
-        XCTAssertTrue(text.contains("📝 Got one in olive"))
+        XCTAssertFalse(text.contains("📝"))
+        XCTAssertFalse(text.contains("Notes:"))
+        XCTAssertFalse(text.contains("☐"))
+        XCTAssertFalse(text.contains("☑"))
     }
 
     func testShareTextUsesEmptyStateCopyForNoRows() {

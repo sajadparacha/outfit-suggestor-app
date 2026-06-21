@@ -17,19 +17,10 @@ struct ShoppingListView: View {
     @State private var showingShareSheet = false
     @State private var exportError: String?
     @State private var copyConfirmation: String?
-    @State private var checklist: [String: ShoppingListChecklistEntry] = [:]
     @State private var expandedRowIds: Set<String> = []
 
     private var rows: [WardrobeInsightShoppingListRow] {
         WardrobeInsightShoppingList.buildRows(from: result)
-    }
-
-    private var storageKey: String {
-        ShoppingListStorage.storageKey(context: result.context, itemIds: rows.map(\.id))
-    }
-
-    private var boughtCount: Int {
-        rows.filter { checklist[$0.id]?.isBought == true }.count
     }
 
     var body: some View {
@@ -76,7 +67,6 @@ struct ShoppingListView: View {
                             ForEach(rows) { row in
                                 shoppingListRow(row)
                             }
-                            progressFooter
                         }
                         .accessibilityIdentifier("insights.shoppingList.rows")
                     }
@@ -92,8 +82,8 @@ struct ShoppingListView: View {
                     Button("Close", action: onClose)
                 }
             }
-            .onAppear(perform: loadChecklist)
         }
+        .accessibilityIdentifier("insights.shoppingList")
         .sheet(isPresented: $showingShareSheet) {
             ActivityShareSheet(items: shareItems)
         }
@@ -146,28 +136,11 @@ struct ShoppingListView: View {
         .accessibilityIdentifier("insights.shoppingList.header")
     }
 
-    private var progressFooter: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ProgressView(value: Double(boughtCount), total: Double(max(rows.count, 1)))
-                .tint(AppTheme.accent)
-            Text(InsightsCopy.shoppingListProgressText(bought: boughtCount, total: rows.count))
-                .font(.subheadline.weight(.semibold))
-                .foregroundColor(AppTheme.textPrimary)
-        }
-        .padding(12)
-        .glassCard()
-        .accessibilityIdentifier("insights.shoppingList.progress")
-    }
-
     private func shoppingListRow(_ row: WardrobeInsightShoppingListRow) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
-                buyColumn(row)
-                lookForColumn(row)
-                searchOnlineColumn(row)
-            }
-
-            checklistRow(row)
+        HStack(alignment: .top, spacing: 12) {
+            buyColumn(row)
+            lookForColumn(row)
+            searchOnlineColumn(row)
         }
         .padding(12)
         .glassCard()
@@ -268,50 +241,6 @@ struct ShoppingListView: View {
         .frame(width: 112, alignment: .leading)
     }
 
-    private func checklistRow(_ row: WardrobeInsightShoppingListRow) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Toggle(isOn: binding(for: row.id, keyPath: \.isBought)) {
-                Text("Mark as bought")
-                    .font(.subheadline)
-                    .foregroundColor(AppTheme.textPrimary)
-            }
-            .toggleStyle(.checkbox)
-            .accessibilityIdentifier("insights.shoppingList.checklist.\(row.id)")
-
-            TextField(
-                InsightsCopy.shoppingListNotesPlaceholder,
-                text: binding(for: row.id, keyPath: \.notes)
-            )
-            .font(.subheadline)
-            .textFieldStyle(.roundedBorder)
-            .accessibilityIdentifier("insights.shoppingList.notes.\(row.id)")
-        }
-    }
-
-    private func binding(for rowId: String, keyPath: WritableKeyPath<ShoppingListChecklistEntry, Bool>) -> Binding<Bool> {
-        Binding(
-            get: { checklist[rowId, default: .empty][keyPath: keyPath] },
-            set: { newValue in
-                var entry = checklist[rowId, default: .empty]
-                entry[keyPath: keyPath] = newValue
-                checklist[rowId] = entry
-                persistChecklist()
-            }
-        )
-    }
-
-    private func binding(for rowId: String, keyPath: WritableKeyPath<ShoppingListChecklistEntry, String>) -> Binding<String> {
-        Binding(
-            get: { checklist[rowId, default: .empty][keyPath: keyPath] },
-            set: { newValue in
-                var entry = checklist[rowId, default: .empty]
-                entry[keyPath: keyPath] = newValue
-                checklist[rowId] = entry
-                persistChecklist()
-            }
-        )
-    }
-
     private func toggleExpanded(_ rowId: String) {
         if expandedRowIds.contains(rowId) {
             expandedRowIds.remove(rowId)
@@ -320,18 +249,10 @@ struct ShoppingListView: View {
         }
     }
 
-    private func loadChecklist() {
-        checklist = ShoppingListStorage.load(forKey: storageKey)
-    }
-
-    private func persistChecklist() {
-        ShoppingListStorage.save(checklist, forKey: storageKey)
-    }
-
     private func exportToWhatsApp() {
         exportError = nil
         copyConfirmation = nil
-        let text = WardrobeInsightShoppingList.shareText(rows: rows, context: result.context, checklist: checklist)
+        let text = WardrobeInsightShoppingList.shareText(rows: rows, context: result.context)
         if let whatsappURL = WardrobeInsightShoppingList.whatsappURL(for: text) {
             openURL(whatsappURL) { accepted in
                 if !accepted {
@@ -345,7 +266,7 @@ struct ShoppingListView: View {
 
     private func copyList() {
         exportError = nil
-        let text = WardrobeInsightShoppingList.shareText(rows: rows, context: result.context, checklist: checklist)
+        let text = WardrobeInsightShoppingList.shareText(rows: rows, context: result.context)
         UIPasteboard.general.string = text
         let generator = UIImpactFeedbackGenerator(style: .light)
         generator.impactOccurred()
@@ -355,7 +276,7 @@ struct ShoppingListView: View {
     private func exportPDF() {
         exportError = nil
         copyConfirmation = nil
-        let data = WardrobeInsightShoppingList.pdfData(rows: rows, context: result.context, checklist: checklist)
+        let data = WardrobeInsightShoppingList.pdfData(rows: rows, context: result.context)
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("wardrobe-insights-shopping-list")
             .appendingPathExtension("pdf")
@@ -386,30 +307,4 @@ struct ActivityShareSheet: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
-}
-
-private extension ToggleStyle where Self == CheckboxToggleStyle {
-    static var checkbox: CheckboxToggleStyle { CheckboxToggleStyle() }
-}
-
-private struct CheckboxToggleStyle: ToggleStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        Button {
-            configuration.isOn.toggle()
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: configuration.isOn ? "checkmark.square.fill" : "square")
-                    .foregroundColor(configuration.isOn ? AppTheme.accent : AppTheme.textSecondary)
-                configuration.label
-            }
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-private extension Dictionary {
-    subscript(key: Key, default defaultValue: @autoclosure () -> Value) -> Value {
-        get { self[key] ?? defaultValue() }
-        set { self[key] = newValue }
-    }
 }

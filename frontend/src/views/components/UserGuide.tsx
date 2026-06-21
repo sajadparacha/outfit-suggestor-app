@@ -264,7 +264,7 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               'After analysis, preferences collapse into an Analyzed for bar—tap Change preferences to edit and re-run.',
               'Review the summary card, Top items to add, Wardrobe coverage dashboard, and expand Detailed category analysis for specifics.',
               'Tap a best color on any item card to search Google Shopping for that category and color. Use Shop similar for a broader search.',
-              'Open Shopping list (expanded by default) for a market-ready buy checklist: clean Buy labels with priority badges, human Look for guidance, per style/color Search online chips, optional notes, and progress as you check items off.',
+              'Tap Shopping list to open a market-ready table with Buy labels, priority badges, human Look for guidance, and per style/color Search online chips.',
               'Use Copy list, Export to WhatsApp, or Export as PDF—the export uses numbered items with one focused Google Shopping link per row (no raw style/color tuples).',
             ]}
           />

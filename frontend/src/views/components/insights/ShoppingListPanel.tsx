@@ -8,15 +8,6 @@ import {
   formatStyleColorTuples,
   type ShoppingListRow,
 } from '../../../utils/insightsHelpers';
-import {
-  buildShoppingListStorageKey,
-  countBoughtItems,
-  getChecklistItem,
-  loadShoppingListChecklist,
-  saveShoppingListChecklist,
-  setChecklistItem,
-  type ShoppingListChecklistState,
-} from '../../../utils/shoppingListStorage';
 
 interface ShoppingListPanelProps {
   items: WardrobeMissingItem[];
@@ -40,46 +31,20 @@ const priorityBadgeClass = (priority: ShoppingListRow['priority']): string => {
 
 const ShoppingListRowView: React.FC<{
   row: ShoppingListRow;
-  checklist: ShoppingListChecklistState;
-  onChecklistChange: (itemId: string, update: { checked?: boolean; note?: string }) => void;
-}> = ({ row, checklist, onChecklistChange }) => {
+}> = ({ row }) => {
   const [showAllOptions, setShowAllOptions] = React.useState(false);
-  const itemState = getChecklistItem(checklist, row.id);
 
   return (
     <tr key={row.id} className="align-top">
       <th scope="row" className="px-4 py-3 font-medium text-white">
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="inline-flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={itemState.checked}
-                onChange={(event) =>
-                  onChecklistChange(row.id, { checked: event.target.checked })
-                }
-                className="h-4 w-4 rounded border-white/20 bg-slate-900 text-brand-blue focus:ring-brand-blue/40"
-                aria-label={`Mark ${row.cleanLabel} as bought`}
-                data-testid={`shopping-list-check-${row.id}`}
-              />
-              <span>{row.cleanLabel}</span>
-            </label>
-            <span
-              className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${priorityBadgeClass(row.priority)}`}
-              data-testid={`shopping-list-priority-${row.id}`}
-            >
-              {row.priority}
-            </span>
-          </div>
-          <input
-            type="text"
-            value={itemState.note}
-            onChange={(event) => onChecklistChange(row.id, { note: event.target.value })}
-            placeholder={INSIGHTS_COPY.SHOPPING_LIST_NOTES_PLACEHOLDER}
-            className="w-full rounded-lg border border-white/10 bg-slate-950/40 px-2 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus:border-brand-blue/40 focus:outline-none"
-            aria-label={`Notes for ${row.cleanLabel}`}
-            data-testid={`shopping-list-note-${row.id}`}
-          />
+        <div className="flex flex-wrap items-center gap-2">
+          <span>{row.cleanLabel}</span>
+          <span
+            className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${priorityBadgeClass(row.priority)}`}
+            data-testid={`shopping-list-priority-${row.id}`}
+          >
+            {row.priority}
+          </span>
         </div>
       </th>
       <td className="px-4 py-3 text-slate-300">
@@ -145,33 +110,9 @@ const ShoppingListRowView: React.FC<{
 };
 
 const ShoppingListPanel: React.FC<ShoppingListPanelProps> = ({ items, context }) => {
-  const [isOpen, setIsOpen] = React.useState(true);
+  const [isOpen, setIsOpen] = React.useState(false);
   const [copyFeedback, setCopyFeedback] = React.useState<string | null>(null);
   const rows = React.useMemo(() => buildShoppingListRows(items), [items]);
-  const storageKey = React.useMemo(
-    () => buildShoppingListStorageKey(context, items.map((item) => item.id)),
-    [context, items]
-  );
-  const [checklist, setChecklist] = React.useState<ShoppingListChecklistState>(() =>
-    loadShoppingListChecklist(storageKey)
-  );
-
-  React.useEffect(() => {
-    setChecklist(loadShoppingListChecklist(storageKey));
-  }, [storageKey]);
-
-  React.useEffect(() => {
-    saveShoppingListChecklist(storageKey, checklist);
-  }, [checklist, storageKey]);
-
-  const boughtCount = countBoughtItems(checklist);
-
-  const handleChecklistChange = (
-    itemId: string,
-    update: { checked?: boolean; note?: string }
-  ) => {
-    setChecklist((current) => setChecklistItem(current, itemId, update));
-  };
 
   const handleWhatsAppExport = () => {
     try {
@@ -223,7 +164,7 @@ const ShoppingListPanel: React.FC<ShoppingListPanelProps> = ({ items, context })
           </button>
         </div>
 
-        {copyFeedback && (
+        {isOpen && copyFeedback && (
           <p
             className="mt-3 rounded-lg border border-emerald-400/30 bg-emerald-500/15 px-3 py-2 text-sm text-emerald-100"
             role="status"
@@ -265,50 +206,37 @@ const ShoppingListPanel: React.FC<ShoppingListPanelProps> = ({ items, context })
                 {INSIGHTS_COPY.SHOPPING_LIST_EMPTY}
               </p>
             ) : (
-              <>
-                <div className="overflow-x-auto rounded-xl border border-white/10">
-                  <table className="w-full min-w-[48rem] table-fixed divide-y divide-white/10 text-left text-sm">
-                    <colgroup>
-                      <col className="w-[32%]" />
-                      <col className="w-[38%]" />
-                      <col className="w-[30%]" />
-                    </colgroup>
-                    <caption className="sr-only">
-                      Wardrobe Insights shopping list for {context.occasion}, {context.season},{' '}
-                      {context.style}
-                    </caption>
-                    <thead className="bg-white/[0.04] text-xs uppercase tracking-wide text-slate-400">
-                      <tr>
-                        <th scope="col" className="px-4 py-3 font-semibold">
-                          {INSIGHTS_COPY.SHOPPING_LIST_COLUMN_BUY}
-                        </th>
-                        <th scope="col" className="px-4 py-3 font-semibold">
-                          {INSIGHTS_COPY.SHOPPING_LIST_COLUMN_LOOK_FOR}
-                        </th>
-                        <th scope="col" className="px-4 py-3 font-semibold whitespace-nowrap">
-                          {INSIGHTS_COPY.SHOPPING_LIST_COLUMN_SEARCH_ONLINE}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/10 bg-slate-950/20">
-                      {rows.map((row) => (
-                        <ShoppingListRowView
-                          key={row.id}
-                          row={row}
-                          checklist={checklist}
-                          onChecklistChange={handleChecklistChange}
-                        />
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <p
-                  className="text-sm font-medium text-slate-300"
-                  data-testid="shopping-list-progress"
-                >
-                  {INSIGHTS_COPY.SHOPPING_LIST_PROGRESS(boughtCount, rows.length)}
-                </p>
-              </>
+              <div className="overflow-x-auto rounded-xl border border-white/10">
+                <table className="w-full min-w-[48rem] table-fixed divide-y divide-white/10 text-left text-sm">
+                  <colgroup>
+                    <col className="w-[32%]" />
+                    <col className="w-[38%]" />
+                    <col className="w-[30%]" />
+                  </colgroup>
+                  <caption className="sr-only">
+                    Wardrobe Insights shopping list for {context.occasion}, {context.season},{' '}
+                    {context.style}
+                  </caption>
+                  <thead className="bg-white/[0.04] text-xs uppercase tracking-wide text-slate-400">
+                    <tr>
+                      <th scope="col" className="px-4 py-3 font-semibold">
+                        {INSIGHTS_COPY.SHOPPING_LIST_COLUMN_BUY}
+                      </th>
+                      <th scope="col" className="px-4 py-3 font-semibold">
+                        {INSIGHTS_COPY.SHOPPING_LIST_COLUMN_LOOK_FOR}
+                      </th>
+                      <th scope="col" className="px-4 py-3 font-semibold whitespace-nowrap">
+                        {INSIGHTS_COPY.SHOPPING_LIST_COLUMN_SEARCH_ONLINE}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/10 bg-slate-950/20">
+                    {rows.map((row) => (
+                      <ShoppingListRowView key={row.id} row={row} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         )}
@@ -327,33 +255,15 @@ const ShoppingListPanel: React.FC<ShoppingListPanelProps> = ({ items, context })
           <p className="mt-6 text-sm">{INSIGHTS_COPY.SHOPPING_LIST_EMPTY}</p>
         ) : (
           <ol className="mt-6 space-y-4 text-sm">
-            {rows.map((row, index) => {
-              const itemState = getChecklistItem(checklist, row.id);
-              return (
-                <li key={row.id} className="break-inside-avoid">
-                  <div className="flex items-start gap-2">
-                    <span className="mt-0.5 inline-block h-4 w-4 border border-gray-600">
-                      {itemState.checked ? '✓' : ''}
-                    </span>
-                    <div>
-                      <p className="font-semibold">
-                        {index + 1}. {row.cleanLabel} ({row.priority})
-                      </p>
-                      <p className="mt-1 text-gray-700">→ {row.lookForText}</p>
-                      {itemState.note ? (
-                        <p className="mt-1 text-gray-600">Note: {itemState.note}</p>
-                      ) : null}
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
+            {rows.map((row, index) => (
+              <li key={row.id} className="break-inside-avoid">
+                <p className="font-semibold">
+                  {index + 1}. {row.cleanLabel} ({row.priority})
+                </p>
+                <p className="mt-1 text-gray-700">→ {row.lookForText}</p>
+              </li>
+            ))}
           </ol>
-        )}
-        {rows.length > 0 && (
-          <p className="mt-6 text-sm text-gray-700">
-            {INSIGHTS_COPY.SHOPPING_LIST_PROGRESS(boughtCount, rows.length)}
-          </p>
         )}
       </section>
     </>

@@ -190,6 +190,7 @@ final class WardrobeInsightsViewTests: XCTestCase {
     func testShoppingListActionAvailableAfterResults() {
         XCTAssertTrue(WardrobeInsightsPresentation.shouldShowResults(hasResult: true))
         XCTAssertTrue(WardrobeInsightsPresentation.shouldShowShoppingListAction(hasResult: true))
+        XCTAssertFalse(WardrobeInsightsPresentation.shouldShowShoppingListAction(hasResult: false))
         XCTAssertEqual(InsightsCopy.shoppingListButton, "Shopping list")
     }
 
@@ -201,7 +202,6 @@ final class WardrobeInsightsViewTests: XCTestCase {
         XCTAssertEqual(InsightsCopy.seeAllOptionsButton, "See all options")
         XCTAssertEqual(InsightsCopy.hideOptionsButton, "Hide options")
         XCTAssertEqual(InsightsCopy.copiedToClipboardMessage, "Copied to clipboard")
-        XCTAssertEqual(InsightsCopy.shoppingListProgressText(bought: 2, total: 5), "Progress: 2 / 5 bought")
         XCTAssertEqual(
             WardrobeInsightsPresentation.shoppingListExportActionTitles,
             ["Export to WhatsApp", "Copy list", "Export as PDF"]

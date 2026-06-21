@@ -37,8 +37,6 @@ export const INSIGHTS_COPY = {
   SHOPPING_LIST_COPY: 'Copy list',
   SHOPPING_LIST_COPIED: 'Copied to clipboard',
   SHOPPING_LIST_EXPORT_ERROR: 'Could not export shopping list.',
-  SHOPPING_LIST_PROGRESS: (bought: number, total: number) => `Progress: ${bought} / ${total} bought`,
-  SHOPPING_LIST_NOTES_PLACEHOLDER: 'Notes (optional)',
   SHOPPING_LIST_PRINT_TITLE: 'ClosIQ Shopping List',
 } as const;
 

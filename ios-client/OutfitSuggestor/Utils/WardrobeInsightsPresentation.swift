@@ -32,8 +32,13 @@ enum WardrobeInsightsPresentation {
         hasResult
     }
 
-    static func shouldShowShoppingListAction(hasResult: Bool) -> Bool {
+    static func shouldShowShoppingList(hasResult: Bool) -> Bool {
         hasResult
+    }
+
+    /// Deprecated alias — shopping list is inline when results are shown.
+    static func shouldShowShoppingListAction(hasResult: Bool) -> Bool {
+        shouldShowShoppingList(hasResult: hasResult)
     }
 
     static var shoppingListExportActionTitles: [String] {

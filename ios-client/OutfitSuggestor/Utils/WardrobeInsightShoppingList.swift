@@ -186,8 +186,7 @@ enum WardrobeInsightShoppingList {
 
     static func shareText(
         rows: [WardrobeInsightShoppingListRow],
-        context: WardrobeInsightContext,
-        checklist: [String: ShoppingListChecklistEntry] = [:]
+        context: WardrobeInsightContext
     ) -> String {
         var lines = [
             "🛍 ClosIQ Shopping List",
@@ -199,14 +198,8 @@ enum WardrobeInsightShoppingList {
             lines.append(InsightsCopy.shoppingListEmptyMessage)
         } else {
             for (index, row) in rows.enumerated() {
-                let bought = checklist[row.id]?.isBought == true
-                let checkbox = bought ? "☑" : "☐"
-                lines.append("\(index + 1). \(checkbox) \(row.item) (\(row.priority))")
+                lines.append("\(index + 1). \(row.item) (\(row.priority))")
                 lines.append("   → \(row.lookForText)")
-                if let notes = checklist[row.id]?.notes.trimmingCharacters(in: .whitespacesAndNewlines),
-                   !notes.isEmpty {
-                    lines.append("   📝 \(notes)")
-                }
                 if let url = row.exportURL?.absoluteString {
                     lines.append("   🔗 \(url)")
                 }
@@ -226,8 +219,7 @@ enum WardrobeInsightShoppingList {
 #if canImport(UIKit)
     static func pdfData(
         rows: [WardrobeInsightShoppingListRow],
-        context: WardrobeInsightContext,
-        checklist: [String: ShoppingListChecklistEntry] = [:]
+        context: WardrobeInsightContext
     ) -> Data {
         let pageBounds = CGRect(x: 0, y: 0, width: 612, height: 792)
         let renderer = UIGraphicsPDFRenderer(bounds: pageBounds)
@@ -269,10 +261,8 @@ enum WardrobeInsightShoppingList {
                         y = 44
                     }
 
-                    let bought = checklist[row.id]?.isBought == true
-                    let checkbox = bought ? "☑" : "☐"
                     y = draw(
-                        "\(index + 1). \(checkbox) \(row.item) (\(row.priority))",
+                        "\(index + 1). \(row.item) (\(row.priority))",
                         at: y,
                         margin: margin,
                         width: bodyWidth,
@@ -285,17 +275,6 @@ enum WardrobeInsightShoppingList {
                         width: bodyWidth,
                         attributes: bodyAttributes
                     )
-
-                    if let notes = checklist[row.id]?.notes.trimmingCharacters(in: .whitespacesAndNewlines),
-                       !notes.isEmpty {
-                        y = draw(
-                            "   Notes: \(notes)",
-                            at: y + 4,
-                            margin: margin,
-                            width: bodyWidth,
-                            attributes: bodyAttributes
-                        )
-                    }
 
                     if let url = row.exportURL?.absoluteString {
                         y = draw(

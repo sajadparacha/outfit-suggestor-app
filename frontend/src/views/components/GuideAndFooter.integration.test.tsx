@@ -21,7 +21,7 @@ describe('Guide and footer navigation (App)', () => {
     expect(screen.getByText(/Add to outfit completion/i)).toBeInTheDocument();
     expect(screen.getAllByText(/Complete outfit with AI/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Choose one item per outfit slot/i)).toBeInTheDocument();
-    expect(screen.getByText(/Open Shopping list \(expanded by default\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Tap Shopping list to open a market-ready table/i)).toBeInTheDocument();
   });
 
   it('opens About from footer', async () => {

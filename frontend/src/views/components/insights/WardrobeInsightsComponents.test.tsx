@@ -368,7 +368,7 @@ describe('WardrobeInsightsPage layout states', () => {
     expect(screen.queryByTestId('analysis-preferences-card')).not.toBeInTheDocument();
   });
 
-  it('shows the shopping-list table expanded by default with Buy, Look for, and Search online columns', () => {
+  it('keeps the shopping-list table collapsed until the Shopping list button is clicked', () => {
     render(
       <WardrobeInsightsPage
         filters={DEFAULT_FILTERS}
@@ -385,6 +385,31 @@ describe('WardrobeInsightsPage layout states', () => {
     );
 
     const panel = within(screen.getByTestId('insights-shopping-list'));
+    expect(panel.queryByRole('columnheader', { name: 'Buy' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Shopping list/i }));
+
+    expect(panel.getByRole('columnheader', { name: 'Buy' })).toBeInTheDocument();
+  });
+
+  it('shows Buy, Look for, and Search online columns when the shopping list is expanded', () => {
+    render(
+      <WardrobeInsightsPage
+        filters={DEFAULT_FILTERS}
+        setFilters={jest.fn()}
+        preferenceText=""
+        setPreferenceText={jest.fn()}
+        onAnalyze={jest.fn()}
+        onNavigateToGuide={jest.fn()}
+        onNavigateToWardrobe={jest.fn()}
+        result={sampleResponse}
+        loading={false}
+        error={null}
+      />
+    );
+
+    const panel = within(screen.getByTestId('insights-shopping-list'));
+    fireEvent.click(screen.getByRole('button', { name: /Shopping list/i }));
     const expectedRows = buildShoppingListRows(insight.missingItems);
     expect(panel.getByRole('columnheader', { name: 'Buy' })).toBeInTheDocument();
     expect(panel.getByRole('columnheader', { name: 'Look for' })).toBeInTheDocument();
@@ -396,9 +421,9 @@ describe('WardrobeInsightsPage layout states', () => {
     expect(panel.getByTestId(`shopping-list-priority-${expectedRows[0].id}`)).toHaveTextContent(
       expectedRows[0].priority
     );
-    expect(panel.getByTestId('shopping-list-progress')).toHaveTextContent(
-      `Progress: 0 / ${expectedRows.length} bought`
-    );
+    expect(panel.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(panel.queryByPlaceholderText(/Notes \(optional\)/i)).not.toBeInTheDocument();
+    expect(panel.queryByTestId('shopping-list-progress')).not.toBeInTheDocument();
   });
 
   it('shows full tuple detail behind See all options for long shopping-list rows', () => {
@@ -419,6 +444,8 @@ describe('WardrobeInsightsPage layout states', () => {
         context={{ occasion: 'business', season: 'winter', style: 'classic' }}
       />
     );
+
+    fireEvent.click(screen.getByRole('button', { name: /Shopping list/i }));
 
     expect(screen.getByTestId(`shopping-list-look-for-${longTupleItem.id}`)).toHaveTextContent(
       expectedRow.lookForText
@@ -448,6 +475,7 @@ describe('WardrobeInsightsPage layout states', () => {
 
     const rows = buildShoppingListRows(insight.missingItems);
     const firstRow = rows[0];
+    fireEvent.click(screen.getByRole('button', { name: /Shopping list/i }));
     fireEvent.click(screen.getByTestId(`shopping-list-search-all-${firstRow.id}`));
 
     expect(openSpy).toHaveBeenCalledWith(firstRow.searchAllUrl, '_blank', 'noopener,noreferrer');
@@ -473,6 +501,7 @@ describe('WardrobeInsightsPage layout states', () => {
       />
     );
 
+    fireEvent.click(screen.getByRole('button', { name: /Shopping list/i }));
     fireEvent.click(screen.getByRole('button', { name: /Export to WhatsApp/i }));
 
     expect(openSpy).toHaveBeenCalled();
@@ -496,23 +525,13 @@ describe('WardrobeInsightsPage layout states', () => {
       <ShoppingListPanel items={insight.missingItems} context={insight.context} />
     );
 
+    fireEvent.click(screen.getByRole('button', { name: /Shopping list/i }));
     fireEvent.click(screen.getByTestId('shopping-list-copy-button'));
 
     await screen.findByTestId('shopping-list-copy-feedback');
     expect(writeText).toHaveBeenCalled();
     expect(String(writeText.mock.calls[0][0])).toContain('ClosIQ Shopping List');
     expect(screen.getByText('Copied to clipboard')).toBeInTheDocument();
-  });
-
-  it('updates progress when checklist items are marked bought', () => {
-    render(
-      <ShoppingListPanel items={insight.missingItems.slice(0, 2)} context={insight.context} />
-    );
-
-    const rows = buildShoppingListRows(insight.missingItems.slice(0, 2));
-    fireEvent.click(screen.getByTestId(`shopping-list-check-${rows[0].id}`));
-
-    expect(screen.getByTestId('shopping-list-progress')).toHaveTextContent('Progress: 1 / 2 bought');
   });
 
   it('uses the browser print path for PDF export', () => {
@@ -532,6 +551,7 @@ describe('WardrobeInsightsPage layout states', () => {
       />
     );
 
+    fireEvent.click(screen.getByRole('button', { name: /Shopping list/i }));
     fireEvent.click(screen.getByRole('button', { name: /Export as PDF/i }));
 
     expect(printSpy).toHaveBeenCalled();

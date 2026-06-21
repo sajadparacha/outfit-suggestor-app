@@ -54,7 +54,7 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               action-focused analysis that shows your gap score, top priorities, items to add, and a coverage
               dashboard. Choose <strong className="text-white">Quick Wardrobe Check</strong> (fast rules-based snapshot) or{' '}
               <strong className="text-white">AI Stylist Review</strong> (deeper AI-powered styling advice), then
-              shop similar pieces, or use the market-ready shopping list—checklist with notes, per style/color Google Shopping chips,
+              shop similar pieces, or use the market-ready shopping list with Buy/Look for/Search online columns, per style/color Google Shopping chips,
               Copy list, and improved WhatsApp/PDF export—from the results.
               The app features a <strong className="text-white">smart wardrobe management system</strong> that learns your collection and makes recommendations practical and personalized.
             </p>
@@ -115,7 +115,7 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
                   <span className="text-2xl">🧠</span>
                   <div>
                     <h4 className="font-semibold text-white">Wardrobe Insights</h4>
-                    <p className="text-sm text-slate-300">Get an AI-powered wardrobe gap score, top 3 priorities, high-impact items to add, and a coverage dashboard across shirts, trousers, shoes, blazers, belts, colors, and styles. Collapse preferences after analysis, tap best colors to shop on Google, and use the market-ready shopping list with Buy/Look for/Search online columns, a bought checklist with notes, per style/color search chips, Copy list, and improved WhatsApp/PDF export.</p>
+                    <p className="text-sm text-slate-300">Get an AI-powered wardrobe gap score, top 3 priorities, high-impact items to add, and a coverage dashboard across shirts, trousers, shoes, blazers, belts, colors, and styles. Collapse preferences after analysis, tap best colors to shop on Google, and use the market-ready shopping list with Buy/Look for/Search online columns, per style/color search chips, Copy list, and improved WhatsApp/PDF export.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
