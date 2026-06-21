@@ -11,9 +11,10 @@ final class InsightsCopyTests: XCTestCase {
     func testShoppingListLabelsMatchSpec() {
         XCTAssertEqual(InsightsCopy.shoppingListButton, "Shopping list")
         XCTAssertEqual(InsightsCopy.shoppingListTitle, "Shopping list")
-        XCTAssertEqual(InsightsCopy.shoppingListItemColumn, "Item")
-        XCTAssertEqual(InsightsCopy.shoppingListTupleColumn, "Style & color tuples")
-        XCTAssertEqual(InsightsCopy.shoppingListGoogleColumn, "Google Shopping")
+        XCTAssertEqual(InsightsCopy.shoppingListBuyColumn, "Buy")
+        XCTAssertEqual(InsightsCopy.shoppingListLookForColumn, "Look for")
+        XCTAssertEqual(InsightsCopy.shoppingListSearchOnlineColumn, "Search online")
+        XCTAssertEqual(InsightsCopy.copyListButton, "Copy list")
         XCTAssertEqual(InsightsCopy.exportToWhatsAppButton, "Export to WhatsApp")
         XCTAssertEqual(InsightsCopy.exportAsPDFButton, "Export as PDF")
         XCTAssertEqual(InsightsCopy.shoppingListEmptyMessage, "No shopping list items for this analysis.")

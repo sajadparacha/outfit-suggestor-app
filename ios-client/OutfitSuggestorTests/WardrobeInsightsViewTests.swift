@@ -194,12 +194,17 @@ final class WardrobeInsightsViewTests: XCTestCase {
     }
 
     func testShoppingListExportLabelsAndColumnsMatchSpec() {
-        XCTAssertEqual(InsightsCopy.shoppingListItemColumn, "Item")
-        XCTAssertEqual(InsightsCopy.shoppingListTupleColumn, "Style & color tuples")
-        XCTAssertEqual(InsightsCopy.shoppingListGoogleColumn, "Google Shopping")
+        XCTAssertEqual(InsightsCopy.shoppingListBuyColumn, "Buy")
+        XCTAssertEqual(InsightsCopy.shoppingListLookForColumn, "Look for")
+        XCTAssertEqual(InsightsCopy.shoppingListSearchOnlineColumn, "Search online")
+        XCTAssertEqual(InsightsCopy.copyListButton, "Copy list")
+        XCTAssertEqual(InsightsCopy.seeAllOptionsButton, "See all options")
+        XCTAssertEqual(InsightsCopy.hideOptionsButton, "Hide options")
+        XCTAssertEqual(InsightsCopy.copiedToClipboardMessage, "Copied to clipboard")
+        XCTAssertEqual(InsightsCopy.shoppingListProgressText(bought: 2, total: 5), "Progress: 2 / 5 bought")
         XCTAssertEqual(
             WardrobeInsightsPresentation.shoppingListExportActionTitles,
-            ["Export to WhatsApp", "Export as PDF"]
+            ["Export to WhatsApp", "Copy list", "Export as PDF"]
         )
         XCTAssertEqual(InsightsCopy.shoppingListExportErrorMessage, "Could not export shopping list.")
     }

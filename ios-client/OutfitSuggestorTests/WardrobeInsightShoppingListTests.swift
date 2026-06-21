@@ -8,10 +8,14 @@ final class WardrobeInsightShoppingListTests: XCTestCase {
         XCTAssertEqual(rows.count, 2)
         XCTAssertEqual(rows[0].item, "Oxford Shirt")
         XCTAssertEqual(rows[0].category, "Shirt")
+        XCTAssertEqual(rows[0].priority, "High")
         XCTAssertEqual(rows[0].styles, ["Oxford", "Linen"])
         XCTAssertEqual(rows[0].colors, ["Olive", "White"])
         XCTAssertEqual(rows[0].styleColorTuples, "(Oxford, Olive), (Oxford, White), (Linen, Olive), (Linen, White)")
-        XCTAssertNotNil(rows[0].googleShoppingURL)
+        XCTAssertEqual(rows[0].lookForText, "Olive or white oxford; linen olive OK")
+        XCTAssertEqual(rows[0].comboLinks.count, 4)
+        XCTAssertNotNil(rows[0].searchAllURL)
+        XCTAssertNotNil(rows[0].exportURL)
     }
 
     func testBuildRowsFallsBackToTopPrioritiesWhenMissingItemsAreEmpty() {
@@ -38,7 +42,31 @@ final class WardrobeInsightShoppingListTests: XCTestCase {
         XCTAssertEqual(rows.count, 1)
         XCTAssertEqual(rows[0].item, "Loafers")
         XCTAssertEqual(rows[0].category, "Shoes")
+        XCTAssertEqual(rows[0].priority, "High")
         XCTAssertEqual(rows[0].styleColorTuples, "(Classic, Neutral)")
+        XCTAssertEqual(rows[0].lookForText, "Classic neutral")
+    }
+
+    func testCleanShoppingItemLabelDedupesRepeatedWordsAndPrefersCategory() {
+        XCTAssertEqual(
+            WardrobeInsightShoppingList.cleanShoppingItemLabel(name: "white trouser trouser", category: "trouser"),
+            "Trousers"
+        )
+        XCTAssertEqual(
+            WardrobeInsightShoppingList.cleanShoppingItemLabel(name: "belt", category: "belt"),
+            "Belt"
+        )
+    }
+
+    func testFormatLookForTextProducesHumanReadableSummary() {
+        XCTAssertEqual(
+            WardrobeInsightShoppingList.formatLookForText(styles: ["leather", "braided"], colors: ["black", "brown"]),
+            "Black or brown leather; braided black OK"
+        )
+        XCTAssertEqual(
+            WardrobeInsightShoppingList.formatLookForText(styles: ["unstructured"], colors: ["black", "white"]),
+            "Unstructured black or white"
+        )
     }
 
     func testTupleFormattingUsesFallbacksWhenStyleOrColorMissing() {
@@ -56,15 +84,29 @@ final class WardrobeInsightShoppingListTests: XCTestCase {
         )
     }
 
-    func testShareTextContainsContextRowsAndGoogleShoppingLinks() {
+    func testShareTextUsesNumberedWhatsAppFormatWithoutRawTuples() {
         let result = makeResult()
         let rows = WardrobeInsightShoppingList.buildRows(from: result)
         let text = WardrobeInsightShoppingList.shareText(rows: rows, context: result.context)
 
-        XCTAssertTrue(text.contains("Wardrobe Insights Shopping List"))
-        XCTAssertTrue(text.contains("Analyzed for Casual / Summer / Smart Casual"))
-        XCTAssertTrue(text.contains("Oxford Shirt: (Oxford, Olive), (Oxford, White), (Linen, Olive), (Linen, White)"))
-        XCTAssertTrue(text.contains("Google Shopping: https://www.google.com/search"))
+        XCTAssertTrue(text.contains("🛍 ClosIQ Shopping List"))
+        XCTAssertTrue(text.contains("For: Casual · Summer · Smart Casual"))
+        XCTAssertTrue(text.contains("1. ☐ Oxford Shirt (High)"))
+        XCTAssertTrue(text.contains("→ Olive or white oxford; linen olive OK"))
+        XCTAssertTrue(text.contains("🔗 https://www.google.com/search"))
+        XCTAssertFalse(text.contains("(Oxford, Olive)"))
+    }
+
+    func testShareTextIncludesChecklistState() {
+        let result = makeResult()
+        let rows = WardrobeInsightShoppingList.buildRows(from: result)
+        let checklist: [String: ShoppingListChecklistEntry] = [
+            rows[0].id: ShoppingListChecklistEntry(isBought: true, notes: "Got one in olive"),
+        ]
+        let text = WardrobeInsightShoppingList.shareText(rows: rows, context: result.context, checklist: checklist)
+
+        XCTAssertTrue(text.contains("☑ Oxford Shirt (High)"))
+        XCTAssertTrue(text.contains("📝 Got one in olive"))
     }
 
     func testShareTextUsesEmptyStateCopyForNoRows() {
@@ -73,30 +115,40 @@ final class WardrobeInsightShoppingListTests: XCTestCase {
         XCTAssertTrue(text.contains(InsightsCopy.shoppingListEmptyMessage))
     }
 
-    func testGoogleShoppingURLIncludesItemCategoryAndTuples() {
-        let url = WardrobeInsightShoppingList.googleShoppingURL(
-            item: "Oxford Shirt",
-            category: "shirt",
-            styles: ["Oxford", "Linen"],
-            colors: ["Olive", "White"]
-        )
+    func testComboSearchURLUsesFocusedStyleAndColor() {
+        let url = WardrobeInsightShoppingList.comboSearchURL(category: "shirt", style: "Oxford", color: "Olive")
 
         XCTAssertNotNil(url)
-        XCTAssertEqual(url?.host, "www.google.com")
-        XCTAssertTrue(url?.absoluteString.contains("tbm=shop") ?? false)
-
         let query = URLComponents(url: url!, resolvingAgainstBaseURL: false)?
             .queryItems?
             .first(where: { $0.name == "q" })?
             .value ?? ""
-        XCTAssertTrue(query.contains("Oxford Shirt"))
-        XCTAssertTrue(query.contains("Shirt"))
-        XCTAssertTrue(query.contains("(Oxford, Olive)"))
-        XCTAssertTrue(query.contains("(Linen, White)"))
+        XCTAssertTrue(query.contains("shirts"))
+        XCTAssertTrue(query.contains("Oxford"))
+        XCTAssertTrue(query.contains("Olive"))
+        XCTAssertFalse(query.contains("(Oxford, Olive)"))
+    }
+
+    func testSearchAllURLUsesMaxThreeCombos() {
+        let tuples = WardrobeInsightShoppingList.buildStyleColorTuples(
+            styles: ["a", "b", "c", "d"],
+            colors: ["1", "2"]
+        )
+        let url = WardrobeInsightShoppingList.searchAllURL(category: "belt", itemLabel: "Belt", tuples: tuples)
+
+        XCTAssertNotNil(url)
+        let query = URLComponents(url: url!, resolvingAgainstBaseURL: false)?
+            .queryItems?
+            .first(where: { $0.name == "q" })?
+            .value ?? ""
+        XCTAssertTrue(query.contains("A 1"))
+        XCTAssertTrue(query.contains("A 2"))
+        XCTAssertTrue(query.contains("B 1"))
+        XCTAssertFalse(query.contains("D 2"))
     }
 
     func testWhatsAppURLUsesEncodedText() {
-        let text = "Wardrobe Insights Shopping List\nOxford Shirt: (Oxford, Olive)"
+        let text = "🛍 ClosIQ Shopping List\n1. Belt (High)"
         let url = WardrobeInsightShoppingList.whatsappURL(for: text)
 
         XCTAssertEqual(url?.scheme, "whatsapp")

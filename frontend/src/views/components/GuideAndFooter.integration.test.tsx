@@ -21,7 +21,7 @@ describe('Guide and footer navigation (App)', () => {
     expect(screen.getByText(/Add to outfit completion/i)).toBeInTheDocument();
     expect(screen.getAllByText(/Complete outfit with AI/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Choose one item per outfit slot/i)).toBeInTheDocument();
-    expect(screen.getByText(/Tap Shopping list to open a buy-list table/i)).toBeInTheDocument();
+    expect(screen.getByText(/Open Shopping list \(expanded by default\)/i)).toBeInTheDocument();
   });
 
   it('opens About from footer', async () => {
@@ -44,7 +44,7 @@ describe('Guide and footer navigation (App)', () => {
     });
     expect(screen.getByText(/Developed by Sajjad Ahmed Paracha/i)).toBeInTheDocument();
     expect(screen.getByText(/select one or more saved pieces/i)).toBeInTheDocument();
-    expect(screen.getByText(/export the shopping list to WhatsApp or PDF/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/market-ready shopping list/i).length).toBeGreaterThan(0);
   });
 
   it('opens User guide from footer link', async () => {

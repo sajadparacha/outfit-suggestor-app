@@ -122,8 +122,10 @@ struct UserGuideView: View {
                         "Tap a category in Detailed category analysis for recommendations.",
                         "Tap a best color to search Google Shopping for that category and color.",
                         "Tap Shop similar on any item to search Google Shopping.",
-                        "After results load, tap Shopping list to see Item, Style & color tuples, and Google Shopping rows.",
-                        "Use Export to WhatsApp for a readable text list, or Export as PDF to share a native PDF."
+                        "After results load, tap Shopping list for Buy, Look for, and Search online columns.",
+                        "Check off items as you buy them and add optional notes — progress shows at the bottom.",
+                        "Tap style · color chips for focused Google Shopping searches, or Search all for the top options.",
+                        "Use Copy list, Export to WhatsApp, or Export as PDF to share a numbered list with one link per item."
                     ],
                     tip: isAdmin
                         ? GuideCopy.adminDiagnosticsTip

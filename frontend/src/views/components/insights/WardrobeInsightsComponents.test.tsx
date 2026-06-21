@@ -1,7 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { WardrobeGapAnalysisResponse } from '../../../models/WardrobeModels';
-import { buildShoppingListRows, formatStyleColorTuplePreview } from '../../../utils/insightsHelpers';
+import { buildShoppingListRows } from '../../../utils/insightsHelpers';
 import { normalizeWardrobeInsight } from '../../../utils/normalizeWardrobeInsight';
 import AdminDebugPanel from './AdminDebugPanel';
 import CategoryDetailAccordion from './CategoryDetailAccordion';
@@ -368,7 +368,7 @@ describe('WardrobeInsightsPage layout states', () => {
     expect(screen.queryByTestId('analysis-preferences-card')).not.toBeInTheDocument();
   });
 
-  it('shows the shopping-list table with item, tuple, and Google Shopping columns', () => {
+  it('shows the shopping-list table expanded by default with Buy, Look for, and Search online columns', () => {
     render(
       <WardrobeInsightsPage
         filters={DEFAULT_FILTERS}
@@ -384,28 +384,24 @@ describe('WardrobeInsightsPage layout states', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Shopping list/i }));
-
     const panel = within(screen.getByTestId('insights-shopping-list'));
     const expectedRows = buildShoppingListRows(insight.missingItems);
-    expect(panel.getByRole('columnheader', { name: 'Item' })).toBeInTheDocument();
-    expect(panel.getByRole('columnheader', { name: 'Style & color tuples' })).toBeInTheDocument();
-    expect(panel.getByRole('columnheader', { name: 'Google Shopping' })).toBeInTheDocument();
-    expect(panel.getByText(expectedRows[0].itemLabel)).toBeInTheDocument();
-    const tupleCell = panel.getByText(formatStyleColorTuplePreview(expectedRows[0].tuples));
-    expect(tupleCell).toBeInTheDocument();
-    expect(tupleCell.textContent).toHaveLength(formatStyleColorTuplePreview(expectedRows[0].tuples).length);
-    expect(tupleCell).toHaveClass('whitespace-normal');
-    expect(tupleCell).toHaveClass('break-words');
-    expect(tupleCell).toHaveClass('max-w-full');
-    expect(tupleCell).toHaveClass('overflow-hidden');
-    expect(tupleCell.className).toContain('[overflow-wrap:anywhere]');
-    expect(tupleCell).toHaveAttribute('title', expectedRows[0].tupleText);
-    expect(tupleCell).toHaveAttribute('aria-label', `Full style and color tuples: ${expectedRows[0].tupleText}`);
-    expect(panel.getAllByRole('button', { name: /Open Google Shopping for/i })[0]).toHaveClass('whitespace-nowrap');
+    expect(panel.getByRole('columnheader', { name: 'Buy' })).toBeInTheDocument();
+    expect(panel.getByRole('columnheader', { name: 'Look for' })).toBeInTheDocument();
+    expect(panel.getByRole('columnheader', { name: 'Search online' })).toBeInTheDocument();
+    expect(panel.getByText(expectedRows[0].cleanLabel)).toBeInTheDocument();
+    expect(panel.getByTestId(`shopping-list-look-for-${expectedRows[0].id}`)).toHaveTextContent(
+      expectedRows[0].lookForText
+    );
+    expect(panel.getByTestId(`shopping-list-priority-${expectedRows[0].id}`)).toHaveTextContent(
+      expectedRows[0].priority
+    );
+    expect(panel.getByTestId('shopping-list-progress')).toHaveTextContent(
+      `Progress: 0 / ${expectedRows.length} bought`
+    );
   });
 
-  it('shows a bounded tuple preview for very long shopping-list rows without dropping the full value', () => {
+  it('shows full tuple detail behind See all options for long shopping-list rows', () => {
     const longTupleItem = {
       id: 'long-tuple-shirt',
       name: 'shirt',
@@ -424,23 +420,16 @@ describe('WardrobeInsightsPage layout states', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Shopping list/i }));
-
-    const tupleDisplay = screen.getByTestId('shopping-list-tuple-long-tuple-shirt');
-    const preview = formatStyleColorTuplePreview(expectedRow.tuples);
-    expect(tupleDisplay).toHaveClass('max-w-full');
-    expect(tupleDisplay).toHaveClass('overflow-hidden');
-    expect(tupleDisplay).toHaveAttribute('title', expectedRow.tupleText);
-    expect(tupleDisplay).toHaveAttribute('aria-label', `Full style and color tuples: ${expectedRow.tupleText}`);
-    expect(tupleDisplay).toHaveTextContent(preview);
-    expect(tupleDisplay).toHaveTextContent('+246 more');
-    expect(tupleDisplay.textContent).not.toBe(expectedRow.tupleText);
-    expect(tupleDisplay.textContent!.length).toBeLessThan(expectedRow.tupleText.length);
-    expect(tupleDisplay).not.toHaveTextContent('(Style 18, Color 14)');
-    expect(screen.getByRole('button', { name: /Open Google Shopping for Shirt/i })).toHaveClass('whitespace-nowrap');
+    expect(screen.getByTestId(`shopping-list-look-for-${longTupleItem.id}`)).toHaveTextContent(
+      expectedRow.lookForText
+    );
+    fireEvent.click(screen.getByTestId(`shopping-list-toggle-options-${longTupleItem.id}`));
+    const tupleDisplay = screen.getByTestId(`shopping-list-tuple-${longTupleItem.id}`);
+    expect(tupleDisplay).toHaveTextContent('(Style 1, Color 1)');
+    expect(tupleDisplay.textContent).toContain('(Style 18, Color 14)');
   });
 
-  it('opens Google Shopping for a shopping-list row', () => {
+  it('opens Google Shopping for a combo chip and search-all action', () => {
     const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
     render(
       <WardrobeInsightsPage
@@ -457,21 +446,17 @@ describe('WardrobeInsightsPage layout states', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Shopping list/i }));
-    const panel = within(screen.getByTestId('insights-shopping-list'));
-    fireEvent.click(panel.getAllByRole('button', { name: /Open Google Shopping for/i })[0]);
+    const rows = buildShoppingListRows(insight.missingItems);
+    const firstRow = rows[0];
+    fireEvent.click(screen.getByTestId(`shopping-list-search-all-${firstRow.id}`));
 
-    expect(openSpy).toHaveBeenCalledWith(
-      buildShoppingListRows(insight.missingItems)[0].googleShoppingUrl,
-      '_blank',
-      'noopener,noreferrer'
-    );
+    expect(openSpy).toHaveBeenCalledWith(firstRow.searchAllUrl, '_blank', 'noopener,noreferrer');
     expect(decodeURIComponent(String(openSpy.mock.calls[0][0]))).toContain('tbm=shop');
 
     openSpy.mockRestore();
   });
 
-  it('exports the shopping list to WhatsApp with encoded text', () => {
+  it('exports the shopping list to WhatsApp with numbered text and no raw tuples', () => {
     const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
     render(
       <WardrobeInsightsPage
@@ -488,16 +473,46 @@ describe('WardrobeInsightsPage layout states', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Shopping list/i }));
     fireEvent.click(screen.getByRole('button', { name: /Export to WhatsApp/i }));
 
     expect(openSpy).toHaveBeenCalled();
     const url = String(openSpy.mock.calls[0][0]);
     expect(url).toMatch(/^https:\/\/wa\.me\/\?text=/);
-    expect(decodeURIComponent(url)).toContain('Wardrobe Insights shopping list');
-    expect(decodeURIComponent(url)).toContain(buildShoppingListRows(insight.missingItems)[0].tupleText);
+    const decoded = decodeURIComponent(url);
+    expect(decoded).toContain('ClosIQ Shopping List');
+    expect(decoded).toContain('1.');
+    expect(decoded).not.toContain('(Oxford, Olive)');
 
     openSpy.mockRestore();
+  });
+
+  it('copies the shopping list to the clipboard', async () => {
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: { writeText },
+    });
+
+    render(
+      <ShoppingListPanel items={insight.missingItems} context={insight.context} />
+    );
+
+    fireEvent.click(screen.getByTestId('shopping-list-copy-button'));
+
+    await screen.findByTestId('shopping-list-copy-feedback');
+    expect(writeText).toHaveBeenCalled();
+    expect(String(writeText.mock.calls[0][0])).toContain('ClosIQ Shopping List');
+    expect(screen.getByText('Copied to clipboard')).toBeInTheDocument();
+  });
+
+  it('updates progress when checklist items are marked bought', () => {
+    render(
+      <ShoppingListPanel items={insight.missingItems.slice(0, 2)} context={insight.context} />
+    );
+
+    const rows = buildShoppingListRows(insight.missingItems.slice(0, 2));
+    fireEvent.click(screen.getByTestId(`shopping-list-check-${rows[0].id}`));
+
+    expect(screen.getByTestId('shopping-list-progress')).toHaveTextContent('Progress: 1 / 2 bought');
   });
 
   it('uses the browser print path for PDF export', () => {
@@ -517,10 +532,10 @@ describe('WardrobeInsightsPage layout states', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Shopping list/i }));
     fireEvent.click(screen.getByRole('button', { name: /Export as PDF/i }));
 
     expect(printSpy).toHaveBeenCalled();
+    expect(screen.getByTestId('shopping-list-print')).toBeInTheDocument();
 
     printSpy.mockRestore();
   });

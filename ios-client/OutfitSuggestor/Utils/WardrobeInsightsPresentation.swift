@@ -39,6 +39,7 @@ enum WardrobeInsightsPresentation {
     static var shoppingListExportActionTitles: [String] {
         [
             InsightsCopy.exportToWhatsAppButton,
+            InsightsCopy.copyListButton,
             InsightsCopy.exportAsPDFButton,
         ]
     }

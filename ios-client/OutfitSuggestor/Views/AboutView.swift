@@ -20,7 +20,7 @@ struct AboutView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Features")
                         .font(.headline)
-                    Text("• Wardrobe Insights — AI-powered gap analysis with a summary score, top priorities, coverage dashboard, Google Shopping actions, and shopping list exports to WhatsApp or PDF.")
+                    Text("• Wardrobe Insights — AI-powered gap analysis with a summary score, top priorities, coverage dashboard, and a market-ready shopping list with checklist, per style/color Google Shopping searches, Copy list, and WhatsApp or PDF export.")
                     Text("• Outfit suggestions with occasion, season, and style filters")
                     Text("• Digital wardrobe and outfit history when logged in")
                     Text(AboutCopy.wardrobeCompletionFeature)

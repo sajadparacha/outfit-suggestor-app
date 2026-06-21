@@ -1,4 +1,5 @@
 import type {
+  ItemPriority,
   ScoreLabel,
   WardrobeInsightContext,
   WardrobeMissingItem,
@@ -81,16 +82,163 @@ export interface ShoppingListTuple {
   color: string;
 }
 
+export interface ShoppingListComboLink {
+  style: string;
+  color: string;
+  label: string;
+  url: string;
+}
+
 export interface ShoppingListRow {
   id: string;
   itemLabel: string;
+  cleanLabel: string;
   category: string;
+  priority: ItemPriority;
   styles: string[];
   colors: string[];
   tuples: ShoppingListTuple[];
   tupleText: string;
+  lookForText: string;
+  comboLinks: ShoppingListComboLink[];
+  searchAllUrl: string;
+  /** @deprecated Use searchAllUrl — kept for existing callers */
   googleShoppingUrl: string;
+  exportUrl: string;
 }
+
+export const SHOPPING_LIST_SEARCH_ALL_LIMIT = 3;
+
+const CATEGORY_DISPLAY_LABELS: Record<string, string> = {
+  shirt: 'Shirt',
+  shirts: 'Shirt',
+  trouser: 'Trousers',
+  trousers: 'Trousers',
+  shoe: 'Shoes',
+  shoes: 'Shoes',
+  blazer: 'Blazer',
+  blazers: 'Blazer',
+  belt: 'Belt',
+  belts: 'Belt',
+};
+
+const dedupeWords = (label: string): string => {
+  const words = label.split(/\s+/).filter(Boolean);
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const word of words) {
+    const key = word.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push(word);
+    }
+  }
+
+  return result.join(' ');
+};
+
+const categoryStem = (category: string): string =>
+  category.trim().toLowerCase().replace(/s$/, '');
+
+export const cleanShoppingItemLabel = (name: string, category: string): string => {
+  const catKey = category.trim().toLowerCase();
+  const categoryLabel = CATEGORY_DISPLAY_LABELS[catKey] ?? prettyLabel(category);
+  const rawName = prettyLabel(name || category);
+  const rawWords = rawName.toLowerCase().split(/\s+/).filter(Boolean);
+  const stem = categoryStem(category);
+
+  const isCategoryWord = (word: string): boolean =>
+    word === catKey || word === stem || word === categoryLabel.toLowerCase();
+
+  const categoryRepeatCount = rawWords.filter(isCategoryWord).length;
+  if (categoryRepeatCount >= 2) {
+    return categoryLabel;
+  }
+
+  const nameLabel = dedupeWords(rawName);
+  const nameWords = nameLabel.toLowerCase().split(/\s+/).filter(Boolean);
+  const nonCategoryWords = nameWords.filter((word) => !isCategoryWord(word));
+
+  if (nonCategoryWords.length === 0) {
+    return categoryLabel;
+  }
+
+  if (nonCategoryWords.length === 1 && nameWords.length <= 3) {
+    return categoryLabel;
+  }
+
+  return nameLabel;
+};
+
+const formatColorOrList = (colors: string[]): string => {
+  const lowered = colors.map((color) => color.toLowerCase());
+  if (lowered.length === 0) return 'neutral';
+  if (lowered.length === 1) return lowered[0];
+  if (lowered.length === 2) return `${lowered[0]} or ${lowered[1]}`;
+  return `${lowered.slice(0, -1).join(', ')}, or ${lowered[lowered.length - 1]}`;
+};
+
+const capitalizeFirst = (value: string): string =>
+  value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
+
+export const formatLookForText = (tuples: ShoppingListTuple[]): string => {
+  if (tuples.length === 0) return 'Classic neutral';
+
+  if (tuples.length === 1) {
+    const { style, color } = tuples[0];
+    if (style.toLowerCase() === 'classic' && color.toLowerCase() === 'neutral') {
+      return 'Classic neutral';
+    }
+  }
+
+  const styleGroups: { style: string; colors: string[] }[] = [];
+  const seenStyles = new Set<string>();
+
+  for (const tuple of tuples) {
+    const styleKey = tuple.style.toLowerCase();
+    let group = styleGroups.find((entry) => entry.style.toLowerCase() === styleKey);
+    if (!group) {
+      group = { style: tuple.style, colors: [] };
+      styleGroups.push(group);
+      seenStyles.add(styleKey);
+    }
+    if (!group.colors.some((color) => color.toLowerCase() === tuple.color.toLowerCase())) {
+      group.colors.push(tuple.color);
+    }
+  }
+
+  const phrases = styleGroups.map(
+    (group) => `${formatColorOrList(group.colors)} ${group.style.toLowerCase()}`
+  );
+
+  if (phrases.length === 1) {
+    return capitalizeFirst(phrases[0]);
+  }
+
+  const first = capitalizeFirst(phrases[0]);
+  const rest = phrases.slice(1);
+  const last = `${rest.pop()} OK`;
+  const middle = rest.join('; ');
+  return [first, middle, last].filter(Boolean).join('; ');
+};
+
+export const buildComboSearchUrl = (
+  category: string,
+  style: string,
+  color: string
+): string => buildShoppingSearchUrl(category, [style], [color]);
+
+export const buildSearchAllUrl = (category: string, tuples: ShoppingListTuple[]): string => {
+  const limited = tuples.slice(0, SHOPPING_LIST_SEARCH_ALL_LIMIT);
+  if (limited.length === 0) {
+    return buildShoppingSearchUrl(category, ['classic'], ['neutral']);
+  }
+
+  const comboPhrase = limited.map((tuple) => `${tuple.style} ${tuple.color}`).join(' ');
+  const query = `Show me men ${categoryForSearch(category)} ${comboPhrase}`.trim();
+  return `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(query)}`;
+};
 
 const uniquePrettyValues = (values: string[], fallback: string): string[] => {
   const seen = new Set<string>();
@@ -135,60 +283,100 @@ export const formatStyleColorTuplePreview = (
   return `${formatStyleColorTuples(visibleTuples)} +${tuples.length - limit} more`;
 };
 
-const buildShoppingListGoogleUrl = (
-  itemLabel: string,
-  category: string,
-  tuples: ShoppingListTuple[]
-): string => {
-  const tupleQuery = tuples
-    .map((tuple) => `${tuple.style} ${tuple.color}`)
-    .join(' ');
-  const query = `Show me men ${categoryForSearch(category)} ${itemLabel} ${tupleQuery}`.trim();
-  return `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(query)}`;
-};
-
 export const buildShoppingListRows = (items: WardrobeMissingItem[]): ShoppingListRow[] =>
   items.map((item) => {
     const tuples = buildStyleColorTuples(item.worksWith, item.bestColors);
-    const itemLabel = prettyLabel(item.name || item.category);
     const category = item.category || item.name;
+    const cleanLabel = cleanShoppingItemLabel(item.name, category);
+    const itemLabel = cleanLabel;
+    const searchAllUrl = buildSearchAllUrl(category, tuples);
+    const comboLinks = tuples.map((tuple) => ({
+      style: tuple.style,
+      color: tuple.color,
+      label: `${tuple.style} · ${tuple.color}`,
+      url: buildComboSearchUrl(category, tuple.style, tuple.color),
+    }));
+    const exportUrl = searchAllUrl || comboLinks[0]?.url || '';
 
     return {
       id: item.id,
       itemLabel,
+      cleanLabel,
       category,
+      priority: item.priority,
       styles: uniquePrettyValues(item.worksWith, 'classic'),
       colors: uniquePrettyValues(item.bestColors, 'neutral'),
       tuples,
       tupleText: formatStyleColorTuples(tuples),
-      googleShoppingUrl: buildShoppingListGoogleUrl(itemLabel, category, tuples),
+      lookForText: formatLookForText(tuples),
+      comboLinks,
+      searchAllUrl,
+      googleShoppingUrl: searchAllUrl,
+      exportUrl,
     };
   });
 
-export const buildWhatsAppShoppingListText = (
+const formatContextLine = (context: WardrobeInsightContext): string =>
+  `${prettyLabel(context.occasion)} · ${prettyLabel(context.season)} · ${prettyLabel(context.style)}`;
+
+export const buildCopyListText = (
   rows: ShoppingListRow[],
   context?: WardrobeInsightContext
 ): string => {
-  const lines = ['Wardrobe Insights shopping list'];
+  const lines = ['ClosIQ Shopping List'];
 
   if (context) {
-    lines.push(
-      `Analyzed for: ${prettyLabel(context.occasion)} / ${prettyLabel(context.season)} / ${prettyLabel(context.style)}`
-    );
+    lines.push(`For: ${formatContextLine(context)}`);
   }
 
   lines.push('');
 
   if (rows.length === 0) {
     lines.push('No shopping list items for this analysis.');
-  } else {
-    rows.forEach((row) => {
-      lines.push(`- ${row.itemLabel}: ${row.tupleText}`);
-    });
+    return lines.join('\n');
   }
 
-  return lines.join('\n');
+  rows.forEach((row, index) => {
+    lines.push(`${index + 1}. ${row.cleanLabel} (${row.priority})`);
+    lines.push(`   → ${row.lookForText}`);
+    lines.push(`   ${row.exportUrl}`);
+    lines.push('');
+  });
+
+  return lines.join('\n').trimEnd();
 };
+
+export const buildWhatsAppShoppingListText = (
+  rows: ShoppingListRow[],
+  context?: WardrobeInsightContext
+): string => {
+  const lines = ['🛍 ClosIQ Shopping List'];
+
+  if (context) {
+    lines.push(`For: ${formatContextLine(context)}`);
+  }
+
+  lines.push('');
+
+  if (rows.length === 0) {
+    lines.push('No shopping list items for this analysis.');
+    return lines.join('\n');
+  }
+
+  rows.forEach((row, index) => {
+    lines.push(`${index + 1}. ${row.cleanLabel} (${row.priority})`);
+    lines.push(`   → ${row.lookForText}`);
+    lines.push(`   🔗 ${row.exportUrl}`);
+    lines.push('');
+  });
+
+  return lines.join('\n').trimEnd();
+};
+
+export const buildPrintShoppingListText = (
+  rows: ShoppingListRow[],
+  context?: WardrobeInsightContext
+): string => buildCopyListText(rows, context);
 
 export const buildWhatsAppShoppingListUrl = (
   rows: ShoppingListRow[],

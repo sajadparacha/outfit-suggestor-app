@@ -16,24 +16,27 @@ struct ShoppingListView: View {
     @State private var shareItems: [Any] = []
     @State private var showingShareSheet = false
     @State private var exportError: String?
+    @State private var copyConfirmation: String?
+    @State private var checklist: [String: ShoppingListChecklistEntry] = [:]
+    @State private var expandedRowIds: Set<String> = []
 
     private var rows: [WardrobeInsightShoppingListRow] {
         WardrobeInsightShoppingList.buildRows(from: result)
+    }
+
+    private var storageKey: String {
+        ShoppingListStorage.storageKey(context: result.context, itemIds: rows.map(\.id))
+    }
+
+    private var boughtCount: Int {
+        rows.filter { checklist[$0.id]?.isBought == true }.count
     }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(InsightsCopy.shoppingListTitle)
-                            .font(.title2.bold())
-                            .foregroundColor(AppTheme.textPrimary)
-                        Text("Analyzed for \(result.context.occasion.capitalized) / \(result.context.season.capitalized) / \(result.context.style.capitalized)")
-                            .font(.subheadline)
-                            .foregroundColor(AppTheme.textSecondary)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    headerSection
 
                     if let exportError {
                         Text(exportError)
@@ -44,6 +47,17 @@ struct ShoppingListView: View {
                             .background(Color.red.opacity(0.10))
                             .cornerRadius(10)
                             .accessibilityIdentifier("insights.shoppingList.error")
+                    }
+
+                    if let copyConfirmation {
+                        Text(copyConfirmation)
+                            .font(.subheadline)
+                            .foregroundColor(AppTheme.textSecondary)
+                            .padding(12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(AppTheme.accent.opacity(0.12))
+                            .cornerRadius(10)
+                            .accessibilityIdentifier("insights.shoppingList.copyConfirmation")
                     }
 
                     exportActions
@@ -62,6 +76,7 @@ struct ShoppingListView: View {
                             ForEach(rows) { row in
                                 shoppingListRow(row)
                             }
+                            progressFooter
                         }
                         .accessibilityIdentifier("insights.shoppingList.rows")
                     }
@@ -77,10 +92,23 @@ struct ShoppingListView: View {
                     Button("Close", action: onClose)
                 }
             }
+            .onAppear(perform: loadChecklist)
         }
         .sheet(isPresented: $showingShareSheet) {
             ActivityShareSheet(items: shareItems)
         }
+    }
+
+    private var headerSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(InsightsCopy.shoppingListTitle)
+                .font(.title2.bold())
+                .foregroundColor(AppTheme.textPrimary)
+            Text("Analyzed for \(WardrobeInsightShoppingList.prettyLabel(result.context.occasion)) · \(WardrobeInsightShoppingList.prettyLabel(result.context.season)) · \(WardrobeInsightShoppingList.prettyLabel(result.context.style))")
+                .font(.subheadline)
+                .foregroundColor(AppTheme.textSecondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var exportActions: some View {
@@ -89,6 +117,11 @@ struct ShoppingListView: View {
                 exportToWhatsApp()
             }
             .accessibilityIdentifier("insights.shoppingList.exportWhatsApp")
+
+            InsightsSecondaryButton(title: InsightsCopy.copyListButton) {
+                copyList()
+            }
+            .accessibilityIdentifier("insights.shoppingList.copyList")
 
             InsightsSecondaryButton(title: InsightsCopy.exportAsPDFButton) {
                 exportPDF()
@@ -99,11 +132,11 @@ struct ShoppingListView: View {
 
     private var shoppingListHeader: some View {
         HStack(alignment: .top, spacing: 12) {
-            Text(InsightsCopy.shoppingListItemColumn)
+            Text(InsightsCopy.shoppingListBuyColumn)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Text(InsightsCopy.shoppingListTupleColumn)
+            Text(InsightsCopy.shoppingListLookForColumn)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Text(InsightsCopy.shoppingListGoogleColumn)
+            Text(InsightsCopy.shoppingListSearchOnlineColumn)
                 .frame(width: 112, alignment: .leading)
         }
         .font(.caption.weight(.semibold))
@@ -113,49 +146,192 @@ struct ShoppingListView: View {
         .accessibilityIdentifier("insights.shoppingList.header")
     }
 
-    private func shoppingListRow(_ row: WardrobeInsightShoppingListRow) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(InsightsCopy.shoppingListItemColumn)
-                        .font(.caption.weight(.semibold))
-                        .foregroundColor(AppTheme.textSecondary)
-                    Text(row.item)
-                        .font(.headline)
-                        .foregroundColor(AppTheme.textPrimary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(InsightsCopy.shoppingListTupleColumn)
-                        .font(.caption.weight(.semibold))
-                        .foregroundColor(AppTheme.textSecondary)
-                    Text(row.styleColorTuples)
-                        .font(.subheadline)
-                        .foregroundColor(AppTheme.textPrimary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            Button {
-                if let url = row.googleShoppingURL {
-                    openURL(url)
-                }
-            } label: {
-                Label(InsightsCopy.shoppingListGoogleColumn, systemImage: "cart.fill")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(AppTheme.accent)
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("insights.shoppingList.google.\(row.id)")
+    private var progressFooter: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ProgressView(value: Double(boughtCount), total: Double(max(rows.count, 1)))
+                .tint(AppTheme.accent)
+            Text(InsightsCopy.shoppingListProgressText(bought: boughtCount, total: rows.count))
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(AppTheme.textPrimary)
         }
         .padding(12)
         .glassCard()
+        .accessibilityIdentifier("insights.shoppingList.progress")
+    }
+
+    private func shoppingListRow(_ row: WardrobeInsightShoppingListRow) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                buyColumn(row)
+                lookForColumn(row)
+                searchOnlineColumn(row)
+            }
+
+            checklistRow(row)
+        }
+        .padding(12)
+        .glassCard()
+        .accessibilityIdentifier("insights.shoppingList.row.\(row.id)")
+    }
+
+    private func buyColumn(_ row: WardrobeInsightShoppingListRow) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(InsightsCopy.shoppingListBuyColumn)
+                .font(.caption.weight(.semibold))
+                .foregroundColor(AppTheme.textSecondary)
+            Text(row.item)
+                .font(.headline)
+                .foregroundColor(AppTheme.textPrimary)
+            InsightsPriorityBadge(priority: row.priority)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func lookForColumn(_ row: WardrobeInsightShoppingListRow) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(InsightsCopy.shoppingListLookForColumn)
+                .font(.caption.weight(.semibold))
+                .foregroundColor(AppTheme.textSecondary)
+            Text(row.lookForText)
+                .font(.subheadline)
+                .foregroundColor(AppTheme.textPrimary)
+                .accessibilityIdentifier("insights.shoppingList.lookFor.\(row.id)")
+
+            if row.tuples.count > 1 {
+                Button {
+                    toggleExpanded(row.id)
+                } label: {
+                    Text(
+                        expandedRowIds.contains(row.id)
+                            ? InsightsCopy.hideOptionsButton
+                            : InsightsCopy.seeAllOptionsButton
+                    )
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(AppTheme.accent)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("insights.shoppingList.toggleOptions.\(row.id)")
+
+                if expandedRowIds.contains(row.id) {
+                    Text(row.styleColorTuples)
+                        .font(.caption)
+                        .foregroundColor(AppTheme.textSecondary)
+                        .accessibilityIdentifier("insights.shoppingList.tuples.\(row.id)")
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func searchOnlineColumn(_ row: WardrobeInsightShoppingListRow) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(InsightsCopy.shoppingListSearchOnlineColumn)
+                .font(.caption.weight(.semibold))
+                .foregroundColor(AppTheme.textSecondary)
+
+            ForEach(Array(row.comboLinks.enumerated()), id: \.offset) { index, combo in
+                Button {
+                    if let url = combo.url {
+                        openURL(url)
+                    }
+                } label: {
+                    Text(combo.label)
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(AppTheme.accent)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(AppTheme.accent.opacity(0.12))
+                        .cornerRadius(8)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("insights.shoppingList.combo.\(row.id).\(index)")
+            }
+
+            if row.searchAllURL != nil {
+                Button {
+                    if let url = row.searchAllURL {
+                        openURL(url)
+                    }
+                } label: {
+                    Text(InsightsCopy.shoppingListSearchAllButton)
+                        .font(.caption.weight(.bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(AppTheme.accent)
+                        .cornerRadius(8)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("insights.shoppingList.searchAll.\(row.id)")
+            }
+        }
+        .frame(width: 112, alignment: .leading)
+    }
+
+    private func checklistRow(_ row: WardrobeInsightShoppingListRow) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle(isOn: binding(for: row.id, keyPath: \.isBought)) {
+                Text("Mark as bought")
+                    .font(.subheadline)
+                    .foregroundColor(AppTheme.textPrimary)
+            }
+            .toggleStyle(.checkbox)
+            .accessibilityIdentifier("insights.shoppingList.checklist.\(row.id)")
+
+            TextField(
+                InsightsCopy.shoppingListNotesPlaceholder,
+                text: binding(for: row.id, keyPath: \.notes)
+            )
+            .font(.subheadline)
+            .textFieldStyle(.roundedBorder)
+            .accessibilityIdentifier("insights.shoppingList.notes.\(row.id)")
+        }
+    }
+
+    private func binding(for rowId: String, keyPath: WritableKeyPath<ShoppingListChecklistEntry, Bool>) -> Binding<Bool> {
+        Binding(
+            get: { checklist[rowId, default: .empty][keyPath: keyPath] },
+            set: { newValue in
+                var entry = checklist[rowId, default: .empty]
+                entry[keyPath: keyPath] = newValue
+                checklist[rowId] = entry
+                persistChecklist()
+            }
+        )
+    }
+
+    private func binding(for rowId: String, keyPath: WritableKeyPath<ShoppingListChecklistEntry, String>) -> Binding<String> {
+        Binding(
+            get: { checklist[rowId, default: .empty][keyPath: keyPath] },
+            set: { newValue in
+                var entry = checklist[rowId, default: .empty]
+                entry[keyPath: keyPath] = newValue
+                checklist[rowId] = entry
+                persistChecklist()
+            }
+        )
+    }
+
+    private func toggleExpanded(_ rowId: String) {
+        if expandedRowIds.contains(rowId) {
+            expandedRowIds.remove(rowId)
+        } else {
+            expandedRowIds.insert(rowId)
+        }
+    }
+
+    private func loadChecklist() {
+        checklist = ShoppingListStorage.load(forKey: storageKey)
+    }
+
+    private func persistChecklist() {
+        ShoppingListStorage.save(checklist, forKey: storageKey)
     }
 
     private func exportToWhatsApp() {
         exportError = nil
-        let text = WardrobeInsightShoppingList.shareText(rows: rows, context: result.context)
+        copyConfirmation = nil
+        let text = WardrobeInsightShoppingList.shareText(rows: rows, context: result.context, checklist: checklist)
         if let whatsappURL = WardrobeInsightShoppingList.whatsappURL(for: text) {
             openURL(whatsappURL) { accepted in
                 if !accepted {
@@ -167,9 +343,19 @@ struct ShoppingListView: View {
         }
     }
 
+    private func copyList() {
+        exportError = nil
+        let text = WardrobeInsightShoppingList.shareText(rows: rows, context: result.context, checklist: checklist)
+        UIPasteboard.general.string = text
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
+        copyConfirmation = InsightsCopy.copiedToClipboardMessage
+    }
+
     private func exportPDF() {
         exportError = nil
-        let data = WardrobeInsightShoppingList.pdfData(rows: rows, context: result.context)
+        copyConfirmation = nil
+        let data = WardrobeInsightShoppingList.pdfData(rows: rows, context: result.context, checklist: checklist)
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("wardrobe-insights-shopping-list")
             .appendingPathExtension("pdf")
@@ -200,4 +386,30 @@ struct ActivityShareSheet: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+private extension ToggleStyle where Self == CheckboxToggleStyle {
+    static var checkbox: CheckboxToggleStyle { CheckboxToggleStyle() }
+}
+
+private struct CheckboxToggleStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Button {
+            configuration.isOn.toggle()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: configuration.isOn ? "checkmark.square.fill" : "square")
+                    .foregroundColor(configuration.isOn ? AppTheme.accent : AppTheme.textSecondary)
+                configuration.label
+            }
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private extension Dictionary {
+    subscript(key: Key, default defaultValue: @autoclosure () -> Value) -> Value {
+        get { self[key] ?? defaultValue() }
+        set { self[key] = newValue }
+    }
 }
