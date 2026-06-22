@@ -1,4 +1,4 @@
-import { screen, waitFor, fireEvent } from '@testing-library/react';
+import { screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { rest } from 'msw';
 import { renderApp } from '../../test/renderWithRouter';
 import { server } from '../../test/msw/server';
@@ -422,5 +422,31 @@ describe('Wardrobe multi-select complete outfit integration', () => {
 
     expect(screen.getByText('Choose one item per outfit slot')).toBeInTheDocument();
     expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('1 selected: shirt');
+  });
+
+  it('shows selection thumbnails and opens full-size viewer on thumbnail click', async () => {
+    renderApp({ routerProps: { initialEntries: [ROUTES.WARDROBE] } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Blue oxford shirt')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId('wardrobe-selection-thumbnails')).not.toBeInTheDocument();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Add shirt to outfit completion/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Add trouser to outfit completion/i }));
+
+    const row = screen.getByTestId('wardrobe-selection-thumbnails');
+    expect(within(row).getByTestId('wardrobe-selection-thumb-11')).toBeInTheDocument();
+    expect(within(row).getByTestId('wardrobe-selection-thumb-22')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('wardrobe-selection-thumb-11'));
+
+    await waitFor(() => {
+      expect(screen.getByAltText('Full size view')).toHaveAttribute(
+        'src',
+        'data:image/jpeg;base64,shirtImage'
+      );
+    });
   });
 });

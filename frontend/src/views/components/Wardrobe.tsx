@@ -957,6 +957,35 @@ const Wardrobe: React.FC<WardrobeProps> = ({
             )}
 
             <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+              {selectedCompleteOutfitItems.some((item) => item.image_data) && (
+                <div
+                  className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-1 sm:order-first sm:mr-auto"
+                  data-testid="wardrobe-selection-thumbnails"
+                >
+                  {selectedCompleteOutfitItems
+                    .filter((item) => item.image_data)
+                    .map((item) => {
+                      const slot = normalizeCompleteOutfitSlot(item.category);
+                      const slotLabel = slot ? formatCompleteOutfitSlot(slot) : item.category;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => handleViewImage(item.image_data!)}
+                          className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg border border-white/10 bg-slate-800/80 transition hover:border-brand-blue/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/50"
+                          aria-label={`View ${slotLabel}`}
+                          data-testid={`wardrobe-selection-thumb-${item.id}`}
+                        >
+                          <img
+                            src={`data:image/jpeg;base64,${item.image_data}`}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        </button>
+                      );
+                    })}
+                </div>
+              )}
               <button
                 type="button"
                 onClick={handleCompleteOutfitWithAI}

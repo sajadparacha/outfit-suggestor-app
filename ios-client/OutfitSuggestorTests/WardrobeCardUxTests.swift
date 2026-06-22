@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 @testable import OutfitSuggestor
 
 final class WardrobeCardUxTests: XCTestCase {
@@ -167,13 +168,72 @@ final class WardrobeCardUxTests: XCTestCase {
         )
     }
 
-    private func wardrobeItem(id: Int, category: String) -> WardrobeItem {
+    func testCompletionThumbnailSelectedItemsPreserveSelectionOrder() {
+        let items = [
+            wardrobeItem(id: 1, category: "shirt"),
+            wardrobeItem(id: 2, category: "trouser"),
+            wardrobeItem(id: 3, category: "blazer")
+        ]
+        let ordered = WardrobeCompletionThumbnails.selectedItemsInOrder(
+            selectedItemIds: [3, 1],
+            allItems: items
+        )
+        XCTAssertEqual(ordered.map(\.id), [3, 1])
+    }
+
+    func testCompletionThumbnailItemsFilterMissingOrInvalidImageData() {
+        let validImage = makeBase64TestImage()
+        let items = [
+            wardrobeItem(id: 1, category: "shirt", imageData: validImage),
+            wardrobeItem(id: 2, category: "trouser", imageData: nil),
+            wardrobeItem(id: 3, category: "blazer", imageData: "not-valid-base64"),
+            wardrobeItem(id: 4, category: "shoes", imageData: validImage)
+        ]
+        let thumbnails = WardrobeCompletionThumbnails.thumbnailItemsInOrder(
+            selectedItemIds: [2, 1, 3, 4],
+            allItems: items
+        )
+        XCTAssertEqual(thumbnails.map(\.id), [1, 4])
+    }
+
+    func testCompletionThumbnailAccessibilityIdentifiers() {
+        XCTAssertEqual(WardrobeCompletionThumbnails.rowAccessibilityId, "wardrobe.multiSelect.thumbnails")
+        XCTAssertEqual(WardrobeCompletionThumbnails.thumbnailAccessibilityId(itemId: 42), "wardrobe.multiSelect.thumb.42")
+        XCTAssertEqual(
+            WardrobeCompletionThumbnails.viewImageAccessibilityLabel(for: wardrobeItem(id: 1, category: "shirt")),
+            "View shirt"
+        )
+        XCTAssertEqual(
+            WardrobeCompletionThumbnails.viewImageAccessibilityLabel(for: wardrobeItem(id: 3, category: "trouser")),
+            "View trousers"
+        )
+    }
+
+    func testHasDecodableImageDataAcceptsValidBase64Payload() {
+        let payload = makeBase64TestImage()
+        XCTAssertTrue(WardrobeCompletionThumbnails.hasDecodableImageData(payload))
+        XCTAssertFalse(WardrobeCompletionThumbnails.hasDecodableImageData(nil))
+        XCTAssertFalse(WardrobeCompletionThumbnails.hasDecodableImageData(""))
+        XCTAssertFalse(WardrobeCompletionThumbnails.hasDecodableImageData("not-valid-base64"))
+    }
+
+    private func wardrobeItem(id: Int, category: String, imageData: String? = nil) -> WardrobeItem {
         WardrobeItem(
             id: id,
             category: category,
             name: "\(category) \(id)",
             description: nil,
-            color: nil
+            color: nil,
+            image_data: imageData
         )
+    }
+
+    private func makeBase64TestImage() -> String {
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 8, height: 8))
+        let image = renderer.image { context in
+            UIColor.systemBlue.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 8, height: 8))
+        }
+        return image.pngData()!.base64EncodedString()
     }
 }

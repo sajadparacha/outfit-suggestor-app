@@ -700,6 +700,68 @@ describe('Wardrobe page', () => {
     expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('2 selected: shirt, trousers');
   });
 
+  describe('completion selection thumbnails', () => {
+    it('renders thumbnails in selection order when items with images are selected', () => {
+      mockWardrobeItems.push(
+        { ...mockWardrobeItem, id: 1, category: 'shirt', description: 'Blue shirt', image_data: 'shirt-thumb' },
+        { ...mockWardrobeItem, id: 2, category: 'trouser', description: 'Navy trousers', color: 'Navy', image_data: 'trouser-thumb' }
+      );
+
+      render(<Wardrobe />);
+
+      expect(screen.queryByTestId('wardrobe-selection-thumbnails')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /Add shirt to outfit completion/i }));
+      expect(screen.getByTestId('wardrobe-selection-thumbnails')).toBeInTheDocument();
+      expect(screen.getByTestId('wardrobe-selection-thumb-1')).toBeInTheDocument();
+      expect(screen.queryByTestId('wardrobe-selection-thumb-2')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /Add trouser to outfit completion/i }));
+
+      const row = screen.getByTestId('wardrobe-selection-thumbnails');
+      const thumbs = within(row).getAllByRole('button');
+      expect(thumbs).toHaveLength(2);
+      expect(thumbs[0]).toHaveAttribute('data-testid', 'wardrobe-selection-thumb-1');
+      expect(thumbs[1]).toHaveAttribute('data-testid', 'wardrobe-selection-thumb-2');
+      expect(screen.getByRole('button', { name: /View shirt/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /View trousers/i })).toBeInTheDocument();
+    });
+
+    it('opens the full-size image viewer when a selection thumbnail is clicked', () => {
+      mockWardrobeItems.push(
+        { ...mockWardrobeItem, id: 1, category: 'shirt', description: 'Blue shirt', image_data: 'shirt-thumb' }
+      );
+
+      render(<Wardrobe />);
+
+      fireEvent.click(screen.getByRole('button', { name: /Add shirt to outfit completion/i }));
+      fireEvent.click(screen.getByTestId('wardrobe-selection-thumb-1'));
+
+      expect(screen.getByAltText('Full size view')).toHaveAttribute(
+        'src',
+        'data:image/jpeg;base64,shirt-thumb'
+      );
+    });
+
+    it('omits items without image_data from the thumbnail row', () => {
+      mockWardrobeItems.push(
+        { ...mockWardrobeItem, id: 1, category: 'shirt', description: 'Blue shirt', image_data: 'shirt-thumb' },
+        { ...mockWardrobeItem, id: 2, category: 'trouser', description: 'Navy trousers', color: 'Navy', image_data: null }
+      );
+
+      render(<Wardrobe />);
+
+      fireEvent.click(screen.getByRole('button', { name: /Add shirt to outfit completion/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Add trouser to outfit completion/i }));
+
+      expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('2 selected: shirt, trousers');
+      expect(screen.getByTestId('wardrobe-selection-thumbnails')).toBeInTheDocument();
+      expect(screen.getByTestId('wardrobe-selection-thumb-1')).toBeInTheDocument();
+      expect(screen.queryByTestId('wardrobe-selection-thumb-2')).not.toBeInTheDocument();
+      expect(within(screen.getByTestId('wardrobe-selection-thumbnails')).getAllByRole('button')).toHaveLength(1);
+    });
+  });
+
   it('shows Use my wardrobe only checkbox when authenticated and prefs are wired', () => {
     mockWardrobeItems.push({ ...mockWardrobeItem, id: 1, category: 'shirt' });
 

@@ -71,9 +71,21 @@ struct WardrobeListView: View {
     }
 
     private var selectedCompletionItems: [WardrobeItem] {
-        completionSelection.selectedItemIds.compactMap { id in
-            allWardrobeItems.first { $0.id == id }
-        }
+        WardrobeCompletionThumbnails.selectedItemsInOrder(
+            selectedItemIds: completionSelection.selectedItemIds,
+            allItems: allWardrobeItems
+        )
+    }
+
+    private var selectedCompletionThumbnailItems: [WardrobeItem] {
+        WardrobeCompletionThumbnails.thumbnailItemsInOrder(
+            selectedItemIds: completionSelection.selectedItemIds,
+            allItems: allWardrobeItems
+        )
+    }
+
+    private var completionThumbnailSize: CGFloat {
+        isRegularWidth ? 52 : 48
     }
 
     private var visibleWardrobeItemIDsLabel: String {
@@ -175,7 +187,7 @@ struct WardrobeListView: View {
                                 let isSelected = completionSelection.isSelected(item)
                                 WardrobeCardView(
                                     item: item,
-                                    image: decodeBase64Image(item.image_data),
+                                    image: WardrobeImageData.decodeUIImage(from: item.image_data),
                                     onGetSuggestion: onGetSuggestionFromItem == nil ? nil : { onGetSuggestionFromItem?(item) },
                                     onPastSuggestions: { Task { await openHistorySuggestions(for: item) } },
                                     isPastSuggestionsLoading: historyLoadingForItem == item.id,
@@ -358,6 +370,10 @@ struct WardrobeListView: View {
                             .accessibilityIdentifier("wardrobe.multiSelect.clear")
                         }
 
+                        if completionSelection.selectedCount > 0 {
+                            completionSelectionThumbnailsRow
+                        }
+
                         Button(action: completeSelectedOutfit) {
                             Label(completionSelection.actionTitle, systemImage: "sparkles")
                                 .font(.headline.weight(.semibold))
@@ -426,6 +442,41 @@ struct WardrobeListView: View {
                     .accessibilityIdentifier("wardrobe.chip.\(category.lowercased())")
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var completionSelectionThumbnailsRow: some View {
+        let items = selectedCompletionThumbnailItems
+        if !items.isEmpty {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: isRegularWidth ? 10 : 8) {
+                    ForEach(items) { item in
+                        if let image = WardrobeImageData.decodeUIImage(from: item.image_data) {
+                            Button {
+                                fullScreenImage = image
+                            } label: {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: completionThumbnailSize, height: completionThumbnailSize)
+                                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                            .stroke(AppTheme.border, lineWidth: 1)
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(WardrobeCompletionThumbnails.viewImageAccessibilityLabel(for: item))
+                            .accessibilityIdentifier(
+                                WardrobeCompletionThumbnails.thumbnailAccessibilityId(itemId: item.id)
+                            )
+                        }
+                    }
+                }
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier(WardrobeCompletionThumbnails.rowAccessibilityId)
         }
     }
 
@@ -637,7 +688,7 @@ struct WardrobeListView: View {
             VStack(spacing: 14) {
                 if let sourceItem = historySourceItem {
                     HStack(spacing: 12) {
-                        if let image = decodeBase64Image(sourceItem.image_data) {
+                        if let image = WardrobeImageData.decodeUIImage(from: sourceItem.image_data) {
                             Image(uiImage: image)
                                 .resizable()
                                 .scaledToFill()
@@ -716,13 +767,6 @@ struct WardrobeListView: View {
         }
     }
 
-    private func decodeBase64Image(_ value: String?) -> UIImage? {
-        guard let raw = value, !raw.isEmpty else { return nil }
-        let payload = raw.contains("base64,") ? String(raw.split(separator: ",").last ?? "") : raw
-        let cleaned = payload.replacingOccurrences(of: "\\s", with: "", options: .regularExpression)
-        guard let data = Data(base64Encoded: cleaned) else { return nil }
-        return UIImage(data: data)
-    }
 }
 
 struct WardrobeCardView: View {
