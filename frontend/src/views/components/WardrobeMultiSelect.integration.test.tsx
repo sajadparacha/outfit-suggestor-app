@@ -263,6 +263,102 @@ describe('Wardrobe multi-select complete outfit integration', () => {
     expect(screen.getByLabelText('Use my wardrobe only')).toBeInTheDocument();
   });
 
+  it('renders core filter chips and extended chips when summary includes counts', async () => {
+    server.resetHandlers(
+      rest.get(`${API_BASE}/api/auth/me`, (_req, res, ctx) => res(ctx.json(mockUser))),
+      rest.get(`${API_BASE}/api/wardrobe/summary`, (_req, res, ctx) =>
+        res(
+          ctx.json({
+            total_items: 5,
+            by_category: { shirt: 1, polo: 1, t_shirt: 1, jeans: 1, watch: 1 },
+            by_color: {},
+            categories: ['shirt', 'polo', 't_shirt', 'jeans', 'watch'],
+          })
+        )
+      ),
+      rest.get(`${API_BASE}/api/wardrobe`, (_req, res, ctx) =>
+        res(
+          ctx.json({
+            items: [
+              {
+                id: 11,
+                category: 'shirt',
+                color: 'Blue',
+                description: 'Blue oxford shirt',
+                image_data: 'shirtImage',
+                name: null,
+              },
+              {
+                id: 12,
+                category: 'polo',
+                color: 'Navy',
+                description: 'Navy polo',
+                image_data: 'poloImage',
+                name: null,
+              },
+              {
+                id: 13,
+                category: 't_shirt',
+                color: 'White',
+                description: 'White tee',
+                image_data: 'teeImage',
+                name: null,
+              },
+              {
+                id: 14,
+                category: 'jeans',
+                color: 'Blue',
+                description: 'Blue jeans',
+                image_data: 'jeansImage',
+                name: null,
+              },
+              {
+                id: 15,
+                category: 'watch',
+                color: 'Black',
+                description: 'Sport watch',
+                image_data: null,
+                name: null,
+              },
+            ],
+            total: 5,
+            limit: 10,
+            offset: 0,
+          })
+        )
+      ),
+      rest.get(`${API_BASE}/api/outfit-history`, (_req, res, ctx) => res(ctx.json([]))),
+      rest.post(`${API_BASE}/api/suggest-outfit-from-wardrobe`, async (req, res, ctx) => {
+        capturedRequestBody = await req.json();
+        return res(
+          ctx.json({
+            shirt: 'Blue oxford shirt',
+            trouser: 'Navy trousers',
+            blazer: 'Charcoal blazer',
+            shoes: 'Black loafers',
+            belt: 'Black leather belt',
+            reasoning: 'Completed around selected wardrobe pieces.',
+          })
+        );
+      })
+    );
+
+    renderApp({ routerProps: { initialEntries: [ROUTES.WARDROBE] } });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /All \(5\)/i })).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole('button', { name: /^Shirt\b/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Trousers\b/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Polo\b/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /T-shirt/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Jeans\b/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Other\b/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Shorts\b/i })).not.toBeInTheDocument();
+    expect(screen.getByText('Sport watch')).toBeInTheDocument();
+  });
+
   it('sends updated occasion when changed in Wardrobe preferences before completing outfit', async () => {
     renderApp({ routerProps: { initialEntries: [ROUTES.WARDROBE] } });
 

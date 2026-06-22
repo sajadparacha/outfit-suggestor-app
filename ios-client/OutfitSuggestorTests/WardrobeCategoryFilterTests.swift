@@ -1,0 +1,128 @@
+import XCTest
+@testable import OutfitSuggestor
+
+final class WardrobeCategoryFilterTests: XCTestCase {
+    private var sampleItems: [WardrobeItem] {
+        [
+            wardrobeItem(category: "shirt"),
+            wardrobeItem(category: "shirt"),
+            wardrobeItem(category: "polo"),
+            wardrobeItem(category: "t_shirt"),
+            wardrobeItem(category: "jeans"),
+            wardrobeItem(category: "jeans"),
+            wardrobeItem(category: "shorts"),
+            wardrobeItem(category: "blazer"),
+            wardrobeItem(category: "jacket"),
+            wardrobeItem(category: "shoes"),
+            wardrobeItem(category: "belt"),
+            wardrobeItem(category: "sweater"),
+            wardrobeItem(category: "tie"),
+            wardrobeItem(category: "watch"),
+        ]
+    }
+
+    func testWardrobeCategoryLabelReturnsHumanReadableLabels() {
+        XCTAssertEqual(WardrobeCategoryDisplay.wardrobeCategoryLabel("t_shirt"), "T-shirt")
+        XCTAssertEqual(WardrobeCategoryDisplay.wardrobeCategoryLabel("t-shirt"), "T-shirt")
+        XCTAssertEqual(WardrobeCategoryDisplay.wardrobeCategoryLabel("polo"), "Polo")
+        XCTAssertEqual(WardrobeCategoryDisplay.wardrobeCategoryLabel("jeans"), "Jeans")
+        XCTAssertEqual(WardrobeCategoryDisplay.wardrobeCategoryLabel("trouser"), "Trousers")
+        XCTAssertEqual(WardrobeCategoryDisplay.wardrobeCategoryLabel("jacket"), "Jacket")
+    }
+
+    func testWardrobeCategoryLabelReturnsOtherForUnrecognizedCategories() {
+        XCTAssertEqual(WardrobeCategoryDisplay.wardrobeCategoryLabel("watch"), "Other")
+    }
+
+    func testMatchesCategoryFilterGroupedCoreShirtCategories() {
+        XCTAssertTrue(WardrobeCategoryDisplay.matchesCategoryFilter("shirt", filter: "shirt"))
+        XCTAssertTrue(WardrobeCategoryDisplay.matchesCategoryFilter("polo", filter: "shirt"))
+        XCTAssertTrue(WardrobeCategoryDisplay.matchesCategoryFilter("t_shirt", filter: "shirt"))
+        XCTAssertFalse(WardrobeCategoryDisplay.matchesCategoryFilter("jeans", filter: "shirt"))
+    }
+
+    func testMatchesCategoryFilterGroupedCoreTrouserCategories() {
+        XCTAssertTrue(WardrobeCategoryDisplay.matchesCategoryFilter("jeans", filter: "trouser"))
+        XCTAssertTrue(WardrobeCategoryDisplay.matchesCategoryFilter("shorts", filter: "trouser"))
+        XCTAssertTrue(WardrobeCategoryDisplay.matchesCategoryFilter("pants", filter: "trouser"))
+    }
+
+    func testMatchesCategoryFilterExactExtendedCategoriesOnly() {
+        XCTAssertTrue(WardrobeCategoryDisplay.matchesCategoryFilter("polo", filter: "polo"))
+        XCTAssertFalse(WardrobeCategoryDisplay.matchesCategoryFilter("shirt", filter: "polo"))
+        XCTAssertTrue(WardrobeCategoryDisplay.matchesCategoryFilter("t-shirt", filter: "t_shirt"))
+        XCTAssertFalse(WardrobeCategoryDisplay.matchesCategoryFilter("shirt", filter: "t_shirt"))
+    }
+
+    func testMatchesCategoryFilterOtherBucketForUnrecognizedCategories() {
+        XCTAssertTrue(WardrobeCategoryDisplay.matchesCategoryFilter("watch", filter: "other"))
+        XCTAssertFalse(WardrobeCategoryDisplay.matchesCategoryFilter("polo", filter: "other"))
+    }
+
+    func testRebuildCategoryCountsGroupsCoreAndCountsExtendedExactly() {
+        let counts = WardrobeCategoryDisplay.rebuildCategoryCounts(from: sampleItems)
+
+        XCTAssertEqual(counts["shirt"], 4)
+        XCTAssertEqual(counts["trouser"], 3)
+        XCTAssertEqual(counts["blazer"], 2)
+        XCTAssertEqual(counts["polo"], 1)
+        XCTAssertEqual(counts["t_shirt"], 1)
+        XCTAssertEqual(counts["jeans"], 2)
+        XCTAssertEqual(counts["shorts"], 1)
+        XCTAssertEqual(counts["sweater"], 1)
+        XCTAssertEqual(counts["jacket"], 1)
+        XCTAssertEqual(counts["tie"], 1)
+        XCTAssertEqual(counts["other"], 1)
+    }
+
+    func testVisibleFilterChipsAlwaysIncludesCoreAndHidesZeroCountExtended() {
+        let counts = WardrobeCategoryDisplay.rebuildCategoryCounts(from: sampleItems)
+        let keys = WardrobeCategoryDisplay.visibleFilterChipKeys(from: counts)
+        let labels = keys.map { WardrobeCategoryDisplay.filterChipLabel(for: $0) }
+
+        XCTAssertEqual(keys.first, "All")
+        XCTAssertTrue(labels.contains("Shirt"))
+        XCTAssertTrue(labels.contains("Trousers"))
+        XCTAssertTrue(labels.contains("Blazer"))
+        XCTAssertTrue(labels.contains("Shoes"))
+        XCTAssertTrue(labels.contains("Belt"))
+        XCTAssertTrue(labels.contains("Polo"))
+        XCTAssertTrue(labels.contains("T-shirt"))
+        XCTAssertTrue(labels.contains("Jeans"))
+        XCTAssertTrue(labels.contains("Shorts"))
+        XCTAssertTrue(labels.contains("Sweater"))
+        XCTAssertTrue(labels.contains("Jacket"))
+        XCTAssertTrue(labels.contains("Tie"))
+        XCTAssertTrue(labels.contains("Other"))
+    }
+
+    func testVisibleFilterChipsHidesExtendedWhenCountIsZero() {
+        let counts = WardrobeCategoryDisplay.rebuildCategoryCounts(from: [
+            wardrobeItem(category: "shirt"),
+            wardrobeItem(category: "trouser"),
+        ])
+        let labels = WardrobeCategoryDisplay.visibleFilterChipKeys(from: counts)
+            .map { WardrobeCategoryDisplay.filterChipLabel(for: $0) }
+
+        XCTAssertEqual(labels, ["All", "Shirt", "Trousers", "Blazer", "Shoes", "Belt"])
+    }
+
+    func testCompletionSlotNormalizationUnchangedForAliases() {
+        XCTAssertEqual(WardrobeCompletionSlot.normalized(from: "polo"), .shirt)
+        XCTAssertEqual(WardrobeCompletionSlot.normalized(from: "t_shirt"), .shirt)
+        XCTAssertEqual(WardrobeCompletionSlot.normalized(from: "t-shirt"), .shirt)
+        XCTAssertEqual(WardrobeCompletionSlot.normalized(from: "jeans"), .trouser)
+        XCTAssertEqual(WardrobeCompletionSlot.normalized(from: "shorts"), .trouser)
+        XCTAssertEqual(WardrobeCompletionSlot.normalized(from: "jacket"), .blazer)
+    }
+
+    private func wardrobeItem(category: String) -> WardrobeItem {
+        WardrobeItem(
+            id: Int.random(in: 1...9999),
+            category: category,
+            name: category,
+            description: nil,
+            color: nil
+        )
+    }
+}

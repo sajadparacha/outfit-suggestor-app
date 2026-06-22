@@ -22,7 +22,8 @@ struct AboutView: View {
                         .font(.headline)
                     Text("• Wardrobe Insights — AI-powered gap analysis with a summary score, top priorities, coverage dashboard, and a market-ready shopping list with Buy, Look for, and Search online columns, per style/color Google Shopping searches, Copy list, and WhatsApp or PDF export.")
                     Text("• Outfit suggestions with occasion, season, and style filters")
-                    Text("• Digital wardrobe and outfit history when logged in")
+                    Text(AboutCopy.wardrobeFilterFeature)
+                    Text("• Outfit history when logged in")
                     Text(AboutCopy.wardrobeCompletionFeature)
                 }
                 .font(.subheadline)

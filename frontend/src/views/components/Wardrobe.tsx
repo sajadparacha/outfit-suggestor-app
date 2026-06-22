@@ -10,6 +10,14 @@ import ConfirmationModal from './ConfirmationModal';
 import AnalysisPreferences from './AnalysisPreferences';
 import { historyEntryToSuggestion } from '../../utils/historyUtils';
 import { MAIN_FLOW_UX_COPY } from '../../utils/mainFlowUxCopy';
+import {
+  WARDROBE_FORM_CATEGORIES,
+  apiCategoryParamForFilter,
+  getFilterChipCount,
+  getVisibleFilterChips,
+  matchesWardrobeCategoryFilter,
+  wardrobeCategoryLabel,
+} from '../../utils/wardrobeCategory';
 
 const COMPLETE_OUTFIT_SLOTS = ['shirt', 'trouser', 'blazer', 'shoes', 'belt'] as const;
 type CompleteOutfitSlot = typeof COMPLETE_OUTFIT_SLOTS[number];
@@ -161,10 +169,15 @@ const Wardrobe: React.FC<WardrobeProps> = ({
     timeoutId: ReturnType<typeof setTimeout>;
   } | null>(null);
 
-  const visibleWardrobeItems = useMemo(
-    () => wardrobeItems.filter((item) => !hiddenItemIds.has(item.id)),
-    [wardrobeItems, hiddenItemIds]
-  );
+  const visibleWardrobeItems = useMemo(() => {
+    let items = wardrobeItems.filter((item) => !hiddenItemIds.has(item.id));
+    if (selectedCategory) {
+      items = items.filter((item) => matchesWardrobeCategoryFilter(item.category, selectedCategory));
+    }
+    return items;
+  }, [wardrobeItems, hiddenItemIds, selectedCategory]);
+
+  const visibleFilterChips = useMemo(() => getVisibleFilterChips(summary), [summary]);
   const selectedCompleteOutfitIds = useMemo(
     () => new Set(selectedCompleteOutfitItems.map((item) => item.id)),
     [selectedCompleteOutfitItems]
@@ -317,15 +330,19 @@ const Wardrobe: React.FC<WardrobeProps> = ({
     return !!item.image_data && !!entry.image_data && entry.image_data === item.image_data;
   }, []);
 
-  // Essential categories only - matches outfit suggestion structure
-  const categories = ['shirt', 'trouser', 'blazer', 'shoes', 'belt', 'other'];
+  const categories = WARDROBE_FORM_CATEGORIES;
+
+  const wardrobeApiCategory = useCallback(
+    () => apiCategoryParamForFilter(selectedCategory),
+    [selectedCategory]
+  );
 
   // Load wardrobe and summary on mount or when initialCategory changes
   React.useEffect(() => {
     // Summary is loaded by the wardrobe controller hook on mount.
     if (initialCategory) {
       setSelectedCategory(initialCategory);
-      loadWardrobe(initialCategory, undefined, 1);
+      loadWardrobe(apiCategoryParamForFilter(initialCategory), undefined, 1);
     } else {
       loadWardrobe(undefined, undefined, 1);
     }
@@ -339,7 +356,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
       loadWardrobe(undefined, searchQuery || undefined, 1);
     } else {
       setSelectedCategory(category);
-      loadWardrobe(category || undefined, searchQuery || undefined, 1);
+      loadWardrobe(apiCategoryParamForFilter(category), searchQuery || undefined, 1);
     }
   };
 
@@ -347,12 +364,12 @@ const Wardrobe: React.FC<WardrobeProps> = ({
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setSearchQuery(localSearchQuery);
-    loadWardrobe(selectedCategory || undefined, localSearchQuery || undefined, 1);
+    loadWardrobe(wardrobeApiCategory(), localSearchQuery || undefined, 1);
   };
 
   // Handle pagination
   const handlePageChange = (page: number) => {
-    loadWardrobe(selectedCategory || undefined, searchQuery || undefined, page);
+    loadWardrobe(wardrobeApiCategory(), searchQuery || undefined, page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -378,25 +395,6 @@ const Wardrobe: React.FC<WardrobeProps> = ({
         )}
       </>
     );
-  };
-
-  // Get category count from summary (case-insensitive)
-  const getCategoryCount = (category: string): number => {
-    if (!summary || !summary.by_category) {
-      return 0;
-    }
-    // Try exact match first
-    if (summary.by_category[category]) {
-      return summary.by_category[category];
-    }
-    // Try case-insensitive match
-    const categoryLower = category.toLowerCase();
-    for (const [key, value] of Object.entries(summary.by_category)) {
-      if (key.toLowerCase() === categoryLower) {
-        return value as number;
-      }
-    }
-    return 0;
   };
 
   const handleImageUpload = async (file: File) => {
@@ -841,15 +839,15 @@ const Wardrobe: React.FC<WardrobeProps> = ({
               >
                 All <span className="ml-1 font-semibold">({summary ? summary.total_items || 0 : 0})</span>
               </button>
-              {categories.map((category) => (
+              {visibleFilterChips.map((chip) => (
                 <button
-                  key={category}
-                  onClick={() => handleCategoryFilter(category)}
-                  className={`${filterChipClass(selectedCategory === category)} capitalize`}
+                  key={chip.key}
+                  onClick={() => handleCategoryFilter(chip.key)}
+                  className={filterChipClass(selectedCategory === chip.key)}
                 >
-                  {category === 'trouser' ? 'Trousers' : category.charAt(0).toUpperCase() + category.slice(1)}
+                  {chip.label}
                   <span className="ml-1 font-semibold">
-                    {summary ? `(${getCategoryCount(category)})` : '(0)'}
+                    ({getFilterChipCount(summary, chip.key)})
                   </span>
                 </button>
               ))}
@@ -880,7 +878,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                   onClick={() => {
                     setLocalSearchQuery('');
                     setSearchQuery('');
-                    loadWardrobe(selectedCategory || undefined, undefined, 1);
+                    loadWardrobe(wardrobeApiCategory(), undefined, 1);
                   }}
                   className="min-h-[44px] flex-1 touch-manipulation rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-medium text-slate-200 transition-colors hover:bg-white/20 sm:flex-none"
                 >
@@ -1052,7 +1050,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                   )}
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                      <h3 className="text-base font-bold capitalize text-white sm:text-lg">{item.category}</h3>
+                      <h3 className="text-base font-bold text-white sm:text-lg">{wardrobeCategoryLabel(item.category)}</h3>
                       {isSelectedForCompleteOutfit && (
                         <span className="inline-flex w-fit items-center rounded-full border border-brand-blue/30 bg-brand-blue/20 px-2.5 py-1 text-xs font-semibold text-brand-blue">
                           ✓ Selected
@@ -1816,7 +1814,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                       className="w-full max-h-32 object-contain mb-3 rounded"
                     />
                   )}
-                  <p className="font-semibold text-white capitalize">{duplicateItem.category}</p>
+                  <p className="font-semibold text-white">{wardrobeCategoryLabel(duplicateItem.category)}</p>
                   {duplicateItem.color && (
                     <p className="text-sm text-slate-300">Color: {duplicateItem.color}</p>
                   )}
@@ -1872,7 +1870,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
 
                 {historySourceItem && (
                   <p className="text-slate-300 mb-4">
-                    Showing history outfits for selected item: <span className="text-white font-medium capitalize">{historySourceItem.category}</span>
+                    Showing history outfits for selected item: <span className="text-white font-medium">{wardrobeCategoryLabel(historySourceItem.category)}</span>
                   </p>
                 )}
 

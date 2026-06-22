@@ -285,7 +285,7 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
         >
           <StepList
             items={[
-              'Open the Wardrobe tab to browse shirts, trousers, blazers, shoes, and belts.',
+              'Open the Wardrobe tab to browse shirts, trousers, blazers, shoes, and belts. When you own specific types—polo, T-shirt, jeans, shorts, sweater, jacket, tie, and more—extra filter chips appear so you can narrow the list quickly.',
               'Add items with the guided flow: we suggest category, color, and a description—edit anything before saving.',
               'Tap an item anytime to update details or swap the photo.',
               'For one saved piece, tap Style this item with AI to open Suggest with that item loaded—set preferences and tap Generate Outfit.',

@@ -6,8 +6,6 @@
 import SwiftUI
 import UIKit
 
-private let wardrobeCategoryOptions = ["All", "shirt", "trouser", "blazer", "shoes", "belt", "other"]
-
 struct WardrobeListView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var response: WardrobeListResponse?
@@ -50,7 +48,9 @@ struct WardrobeListView: View {
         if categoryFilter == "All" {
             return allWardrobeItems
         }
-        return allWardrobeItems.filter { matchesCategoryFilter($0.category, filter: categoryFilter) }
+        return allWardrobeItems.filter {
+            WardrobeCategoryDisplay.matchesCategoryFilter($0.category, filter: categoryFilter)
+        }
     }
     
     private var filteredItems: [WardrobeItem] {
@@ -82,6 +82,10 @@ struct WardrobeListView: View {
 
     private var isRegularWidth: Bool {
         horizontalSizeClass == .regular
+    }
+
+    private var visibleCategoryFilterChips: [String] {
+        WardrobeCategoryDisplay.visibleFilterChipKeys(from: categoryCounts)
     }
 
     private var completionSelectionSummary: String {
@@ -391,7 +395,7 @@ struct WardrobeListView: View {
                 .foregroundColor(AppTheme.textSecondary)
             
             LazyVGrid(columns: [GridItem(.adaptive(minimum: isRegularWidth ? 130 : 106), spacing: 10)], alignment: .leading, spacing: 10) {
-                ForEach(wardrobeCategoryOptions, id: \.self) { category in
+                ForEach(visibleCategoryFilterChips, id: \.self) { category in
                     let isActive = categoryFilter == category
                     Button {
                         guard categoryFilter != category else { return }
@@ -400,12 +404,12 @@ struct WardrobeListView: View {
                         categoryInfoMessage = nil
                         if category != "All" && countForCategory(category) == 0 {
                             categoryFilter = "All"
-                            showCategoryInfoToast("No items found in \(displayName(for: category)). Showing all wardrobe items.")
+                            showCategoryInfoToast("No items found in \(WardrobeCategoryDisplay.filterChipLabel(for: category)). Showing all wardrobe items.")
                         } else {
                             categoryFilter = category
                         }
                     } label: {
-                        Text("\(displayName(for: category)) (\(countForCategory(category)))")
+                        Text("\(WardrobeCategoryDisplay.filterChipLabel(for: category)) (\(countForCategory(category)))")
                             .font(.body.weight(.semibold))
                             .foregroundColor(isActive ? .white : AppTheme.textPrimary)
                             .lineLimit(1)
@@ -484,18 +488,6 @@ struct WardrobeListView: View {
         }
     }
 
-    private func displayName(for category: String) -> String {
-        switch category.lowercased() {
-        case "all": return "All"
-        case "shirt": return "Shirt"
-        case "trouser": return "Trousers"
-        case "blazer": return "Blazer"
-        case "shoes": return "Shoes"
-        case "belt": return "Belt"
-        default: return "Other"
-        }
-    }
-    
     private func countForCategory(_ category: String) -> Int {
         if category == "All" {
             return response?.total ?? 0
@@ -511,63 +503,16 @@ struct WardrobeListView: View {
         let normalized = seed.lowercased()
         if normalized == "all" {
             categoryFilter = "All"
-        } else if wardrobeCategoryOptions.contains(where: { $0.lowercased() == normalized }) {
-            categoryFilter = wardrobeCategoryOptions.first(where: { $0.lowercased() == normalized }) ?? seed
+        } else if WardrobeCategoryDisplay.allFilterChipKeys.contains(where: { $0.lowercased() == normalized }) {
+            categoryFilter = WardrobeCategoryDisplay.allFilterChipKeys.first(where: { $0.lowercased() == normalized }) ?? seed
         } else {
             categoryFilter = seed
         }
         onConsumeCategoryFilter?()
     }
 
-    private func matchesCategoryFilter(_ itemCategory: String, filter: String) -> Bool {
-        let normalized = itemCategory.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        switch filter.lowercased() {
-        case "shirt":
-            return ["shirt", "t_shirt", "t-shirt", "polo"].contains(normalized)
-        case "trouser":
-            return ["trouser", "trousers", "pants", "jeans", "shorts"].contains(normalized)
-        case "blazer":
-            return ["blazer", "jacket", "suit"].contains(normalized)
-        case "shoes":
-            return ["shoe", "shoes"].contains(normalized)
-        case "belt":
-            return ["belt", "belts"].contains(normalized)
-        case "other":
-            return !matchesCategoryFilter(itemCategory, filter: "shirt")
-                && !matchesCategoryFilter(itemCategory, filter: "trouser")
-                && !matchesCategoryFilter(itemCategory, filter: "blazer")
-                && !matchesCategoryFilter(itemCategory, filter: "shoes")
-                && !matchesCategoryFilter(itemCategory, filter: "belt")
-        default:
-            return false
-        }
-    }
-    
     private func rebuildCategoryCounts(from items: [WardrobeItem]) {
-        var counts: [String: Int] = [
-            "shirt": 0,
-            "trouser": 0,
-            "blazer": 0,
-            "shoes": 0,
-            "belt": 0,
-            "other": 0
-        ]
-        for item in items {
-            if matchesCategoryFilter(item.category, filter: "shirt") {
-                counts["shirt", default: 0] += 1
-            } else if matchesCategoryFilter(item.category, filter: "trouser") {
-                counts["trouser", default: 0] += 1
-            } else if matchesCategoryFilter(item.category, filter: "blazer") {
-                counts["blazer", default: 0] += 1
-            } else if matchesCategoryFilter(item.category, filter: "shoes") {
-                counts["shoes", default: 0] += 1
-            } else if matchesCategoryFilter(item.category, filter: "belt") {
-                counts["belt", default: 0] += 1
-            } else {
-                counts["other", default: 0] += 1
-            }
-        }
-        categoryCounts = counts
+        categoryCounts = WardrobeCategoryDisplay.rebuildCategoryCounts(from: items)
     }
 
     private func scheduleDelete(item: WardrobeItem) {
@@ -801,7 +746,7 @@ struct WardrobeCardView: View {
                 imageBlock
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(item.category.capitalized)
+                    Text(WardrobeCategoryDisplay.wardrobeCategoryLabel(item.category))
                         .font(.title3.weight(.semibold))
                         .foregroundColor(AppTheme.textPrimary)
                         .accessibilityIdentifier("wardrobe.row.category.\(item.id)")

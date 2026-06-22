@@ -87,7 +87,7 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
                   <span className="text-2xl">👔</span>
                   <div>
                     <h4 className="font-semibold text-white">Smart Wardrobe Management</h4>
-                    <p className="text-sm text-slate-300">Build and manage your digital wardrobe with AI-powered item recognition. Automatically categorize items, filter by category (shirts, trousers, blazers, shoes, belts), and get outfit suggestions that prioritize your existing clothing.</p>
+                    <p className="text-sm text-slate-300">Build and manage your digital wardrobe with AI-powered item recognition. Automatically categorize items, filter by core slots (shirts, trousers, blazers, shoes, belts) plus specific types when you own them (polo, T-shirt, jeans, shorts, sweater, jacket, tie, and more), and get outfit suggestions that prioritize your existing clothing. Outfit completion still uses the same five core slots.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">

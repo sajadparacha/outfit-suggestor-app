@@ -7,28 +7,33 @@ import ApiService from '../../services/ApiService';
 // Mock state: shared array so we can test both empty and with-items in one file
 const mockWardrobeItems: WardrobeItem[] = [];
 
+const mockSummary = {
+  total_items: 0,
+  by_category: {} as Record<string, number>,
+  by_color: {},
+  categories: [] as string[],
+};
+
 const mockLoadWardrobe = jest.fn();
 const mockLoadSummary = jest.fn();
 const mockAnalyzeImage = jest.fn();
 const mockAddItem = jest.fn();
 const mockUpdateItem = jest.fn();
 const mockDeleteItem = jest.fn();
-const mockSetSelectedCategory = jest.fn();
+const mockSetSelectedCategory = jest.fn((category: string | null) => {
+  mockSelectedCategory = category;
+});
+let mockSelectedCategory: string | null = null;
 const mockSetSearchQuery = jest.fn();
 const mockClearError = jest.fn();
 
 jest.mock('../../controllers/useWardrobeController', () => ({
   useWardrobeController: () => ({
     wardrobeItems: mockWardrobeItems,
-    summary: {
-      total_items: mockWardrobeItems.length,
-      by_category: { shirt: mockWardrobeItems.filter((i) => i.category === 'shirt').length },
-      by_color: {},
-      categories: ['shirt'],
-    },
+    summary: mockSummary,
     loading: false,
     error: null,
-    selectedCategory: null,
+    selectedCategory: mockSelectedCategory,
     totalCount: mockWardrobeItems.length,
     currentPage: 1,
     itemsPerPage: 10,
@@ -95,6 +100,10 @@ describe('Wardrobe page', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockWardrobeItems.length = 0;
+    mockSummary.total_items = 0;
+    mockSummary.by_category = {};
+    mockSummary.categories = [];
+    mockSelectedCategory = null;
     localStorage.removeItem('wardrobe_flow_tip_dismissed');
   });
 
@@ -112,6 +121,8 @@ describe('Wardrobe page', () => {
 
   it('shows wardrobe item list when items exist', () => {
     mockWardrobeItems.push(mockWardrobeItem);
+    mockSummary.total_items = 1;
+    mockSummary.by_category = { shirt: 1 };
     render(<Wardrobe />);
     expect(screen.getByRole('heading', { name: /My Wardrobe/i })).toBeInTheDocument();
     expect(screen.getByText('Test shirt')).toBeInTheDocument();
@@ -704,5 +715,74 @@ describe('Wardrobe page', () => {
     render(<Wardrobe isAuthenticated={false} outfitController={outfitControllerWithPrefs()} />);
 
     expect(screen.queryByLabelText('Use my wardrobe only')).not.toBeInTheDocument();
+  });
+
+  it('always renders core filter chips', () => {
+    mockSummary.total_items = 2;
+    mockSummary.by_category = { shirt: 1, trouser: 1 };
+    mockWardrobeItems.push(
+      { ...mockWardrobeItem, id: 1, category: 'shirt' },
+      { ...mockWardrobeItem, id: 2, category: 'trouser', description: 'Navy trousers', color: 'Navy' }
+    );
+
+    render(<Wardrobe />);
+
+    expect(screen.getByRole('button', { name: /All/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Shirt\b/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Trousers/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Blazer\b/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Shoes\b/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Belt\b/i })).toBeInTheDocument();
+  });
+
+  it('renders extended filter chips when summary has matching counts', () => {
+    mockSummary.total_items = 4;
+    mockSummary.by_category = { polo: 1, t_shirt: 1, jeans: 1, watch: 1 };
+    mockWardrobeItems.push(
+      { ...mockWardrobeItem, id: 1, category: 'polo', description: 'Navy polo' },
+      { ...mockWardrobeItem, id: 2, category: 't_shirt', description: 'White tee', color: 'White' },
+      { ...mockWardrobeItem, id: 3, category: 'jeans', description: 'Blue jeans', color: 'Blue' },
+      { ...mockWardrobeItem, id: 4, category: 'watch', description: 'Sport watch', color: 'Black' }
+    );
+
+    render(<Wardrobe />);
+
+    expect(screen.getByRole('button', { name: /^Polo\b/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /T-shirt/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Jeans\b/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Other\b/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Shorts\b/i })).not.toBeInTheDocument();
+  });
+
+  it('shows human-readable category badge on item cards', () => {
+    mockSummary.total_items = 1;
+    mockSummary.by_category = { t_shirt: 1 };
+    mockWardrobeItems.push({
+      ...mockWardrobeItem,
+      category: 't_shirt',
+      description: 'Training tee',
+    });
+
+    render(<Wardrobe />);
+
+    const card = screen.getByTestId('wardrobe-item-card-1');
+    expect(within(card).getByText('T-shirt')).toBeInTheDocument();
+    expect(within(card).queryByText('t_shirt')).not.toBeInTheDocument();
+  });
+
+  it('loads wardrobe without API category for grouped shirt filter', () => {
+    mockSummary.total_items = 2;
+    mockSummary.by_category = { shirt: 1, polo: 1 };
+    mockWardrobeItems.push(
+      { ...mockWardrobeItem, id: 1, category: 'shirt' },
+      { ...mockWardrobeItem, id: 2, category: 'polo', description: 'Navy polo', color: 'Navy' }
+    );
+
+    render(<Wardrobe />);
+
+    fireEvent.click(screen.getByRole('button', { name: /^Shirt\b/i }));
+
+    expect(mockSetSelectedCategory).toHaveBeenCalledWith('shirt');
+    expect(mockLoadWardrobe).toHaveBeenCalledWith(undefined, undefined, 1);
   });
 });

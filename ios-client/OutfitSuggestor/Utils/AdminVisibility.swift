@@ -35,6 +35,8 @@ enum AdminVisibility {
 }
 
 enum GuideCopy {
+    static let wardrobeCategoryFiltersStep =
+        "Open the Wardrobe tab to browse shirts, trousers, blazers, shoes, and belts. When you own specific types—polo, T-shirt, jeans, shorts, sweater, jacket, tie, and more—extra filter chips appear so you can narrow the list quickly."
     static let wardrobeSingleItemStep =
         "Tap Style this item with AI on any card to open Suggest with that piece loaded—set preferences and tap Generate Outfit."
     static let wardrobeMultiSelectStep =
@@ -53,6 +55,8 @@ enum GuideCopy {
 enum AboutCopy {
     static let generalTechStack =
         "Built with React (web), SwiftUI (iOS), FastAPI, OpenAI GPT-4 Vision, and more."
+    static let wardrobeFilterFeature =
+        "• Digital wardrobe with AI item recognition—filter by core slots (shirts, trousers, blazers, shoes, belts) plus specific types when you own them (polo, T-shirt, jeans, shorts, sweater, jacket, tie, and more). Outfit completion still uses the same five core slots."
     static let wardrobeCompletionFeature =
         "• Complete outfits from selected wardrobe pieces—set occasion, season, style, and notes inline on Wardrobe before tapping Complete outfit with AI (one item per slot)."
     static let adminDiagnosticsSuffix = " Includes transparent admin diagnostics for administrators."

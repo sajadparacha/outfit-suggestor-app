@@ -60,9 +60,9 @@ struct UserGuideView: View {
                     title: "Managing Your Wardrobe",
                     color: .blue,
                     steps: [
-                        "Go to the Wardrobe tab to view your saved clothing items.",
+                        GuideCopy.wardrobeCategoryFiltersStep,
                         "Tap \"+\" to add a new item — upload a photo and the AI will analyze it.",
-                        "Use category filters or search to find specific items.",
+                        "Use search to find specific items by name, color, or description.",
                         "Swipe left on an item to delete, or tap to edit.",
                         GuideCopy.wardrobeSingleItemStep,
                         GuideCopy.wardrobeMultiSelectStep
