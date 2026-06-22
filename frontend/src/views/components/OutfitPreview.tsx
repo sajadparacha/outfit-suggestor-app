@@ -7,7 +7,12 @@ import { MAIN_FLOW_UX_COPY } from '../../utils/mainFlowUxCopy';
 import { formatOutfitContextLine } from '../../utils/outfitContextLine';
 import { parseOutfitItemCardText } from '../../utils/outfitItemCardText';
 import { reasoningToBullets } from '../../utils/reasoningBullets';
-import { resolveOutfitItemThumbnail, type OutfitCategoryKey } from '../../utils/outfitItemThumbnail';
+import {
+  resolveOutfitItemThumbnail,
+  type CoreOutfitCategoryKey,
+  type OptionalOutfitCategoryKey,
+  type OutfitCategoryKey,
+} from '../../utils/outfitItemThumbnail';
 
 interface OutfitPreviewFilters {
   occasion?: string;
@@ -61,12 +66,17 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
   React.useEffect(() => {
     if (!suggestion) return;
 
-    const selectedIdsByCategory: Partial<Record<'shirt' | 'trouser' | 'blazer' | 'shoes' | 'belt', number | null | undefined>> = {
+    const selectedIdsByCategory: Partial<
+      Record<CoreOutfitCategoryKey | OptionalOutfitCategoryKey, number | null | undefined>
+    > = {
       shirt: suggestion.shirt_id,
       trouser: suggestion.trouser_id,
       blazer: suggestion.blazer_id,
       shoes: suggestion.shoes_id,
       belt: suggestion.belt_id,
+      sweater: suggestion.sweater_id,
+      outerwear: suggestion.outerwear_id,
+      tie: suggestion.tie_id,
     };
 
     (Object.keys(selectedIdsByCategory) as Array<keyof typeof selectedIdsByCategory>).forEach((category) => {
@@ -174,6 +184,51 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
   const saveLookClass =
     'min-h-[48px] flex-1 touch-manipulation rounded-xl border border-white/20 bg-white/5 px-5 py-3 text-sm font-medium text-slate-100 transition hover:border-rose-400/50 hover:bg-rose-500/10 hover:text-rose-200';
 
+  const isOptionalItemPresent = (value: string | null | undefined) =>
+    value != null && value.trim() !== '';
+
+  const optionalItems = (
+    [
+      { key: 'sweater', label: MAIN_FLOW_UX_COPY.layerLabel, value: suggestion.sweater },
+      { key: 'outerwear', label: MAIN_FLOW_UX_COPY.outerwearLabel, value: suggestion.outerwear },
+      { key: 'tie', label: MAIN_FLOW_UX_COPY.tieLabel, value: suggestion.tie },
+    ] as const
+  ).filter(({ value }) => isOptionalItemPresent(value));
+
+  const hasOptionalLayers = optionalItems.length > 0;
+
+  const renderItemCard = (
+    key: OutfitCategoryKey,
+    label: string,
+    value: string
+  ) => {
+    const thumb = resolveOutfitItemThumbnail(suggestion, key, suggestion.imageUrl);
+    const tagLabel =
+      thumb.tag === 'upload'
+        ? MAIN_FLOW_UX_COPY.tagFromUpload
+        : thumb.tag === 'wardrobe'
+          ? MAIN_FLOW_UX_COPY.tagFromWardrobe
+          : MAIN_FLOW_UX_COPY.tagAiSuggested;
+    const tagTone = thumb.tag === 'ai' ? 'ai' : 'wardrobe';
+    const legacyHint = thumb.tag === 'ai' ? '(suggested by AI)' : undefined;
+    const { shortName, oneLineReason } = parseOutfitItemCardText(value);
+
+    return (
+      <OutfitItemCard
+        key={key}
+        title={label}
+        shortName={shortName}
+        oneLineReason={oneLineReason}
+        imageSrc={thumb.imageSrc}
+        imageAlt={label}
+        tag={tagLabel}
+        tagTone={tagTone}
+        legacyHint={legacyHint}
+        onImageClick={thumb.imageSrc ? () => setFullWardrobeImage({ src: thumb.imageSrc!, label }) : undefined}
+      />
+    );
+  };
+
   return (
     <div
       className="rounded-3xl border border-white/10 bg-slate-950/70 p-4 shadow-[0_18px_50px_rgba(2,8,23,0.55)] backdrop-blur sm:p-6 lg:p-8"
@@ -197,34 +252,26 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
             { key: 'shoes', label: 'Shoes', value: suggestion.shoes },
             { key: 'belt', label: 'Belt', value: suggestion.belt },
           ] as const
-        ).map(({ key, label, value }) => {
-          const thumb = resolveOutfitItemThumbnail(suggestion, key as OutfitCategoryKey, suggestion.imageUrl);
-          const tagLabel =
-            thumb.tag === 'upload'
-              ? MAIN_FLOW_UX_COPY.tagFromUpload
-              : thumb.tag === 'wardrobe'
-                ? MAIN_FLOW_UX_COPY.tagFromWardrobe
-                : MAIN_FLOW_UX_COPY.tagAiSuggested;
-          const tagTone = thumb.tag === 'ai' ? 'ai' : 'wardrobe';
-          const legacyHint = thumb.tag === 'ai' ? '(suggested by AI)' : undefined;
-          const { shortName, oneLineReason } = parseOutfitItemCardText(value);
-
-          return (
-            <OutfitItemCard
-              key={key}
-              title={label}
-              shortName={shortName}
-              oneLineReason={oneLineReason}
-              imageSrc={thumb.imageSrc}
-              imageAlt={label}
-              tag={tagLabel}
-              tagTone={tagTone}
-              legacyHint={legacyHint}
-              onImageClick={thumb.imageSrc ? () => setFullWardrobeImage({ src: thumb.imageSrc!, label }) : undefined}
-            />
-          );
-        })}
+        ).map(({ key, label, value }) => renderItemCard(key, label, value))}
       </div>
+
+      {hasOptionalLayers && (
+        <details
+          className="group mt-5 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]"
+          open
+          data-testid="also-wear-section"
+        >
+          <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 text-sm font-semibold uppercase tracking-wide text-slate-300 [&::-webkit-details-marker]:hidden">
+            <span>{MAIN_FLOW_UX_COPY.alsoWearSection}</span>
+            <span className="text-slate-500 transition-transform group-open:rotate-180" aria-hidden>
+              ▼
+            </span>
+          </summary>
+          <div className="grid grid-cols-1 gap-4 border-t border-white/10 p-5 sm:grid-cols-2">
+            {optionalItems.map(({ key, label, value }) => renderItemCard(key, label, value!))}
+          </div>
+        </details>
+      )}
 
       <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.02] p-5">
         <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-300">

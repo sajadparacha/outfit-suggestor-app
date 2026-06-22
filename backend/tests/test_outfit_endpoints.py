@@ -506,3 +506,32 @@ class TestOutfitEndpoints:
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "shirt, trouser, blazer, shoes, or belt" in response.json()["detail"]
+
+
+class TestOutfitSuggestionOptionalLayers:
+    """Schema tests for optional sweater/outerwear/tie fields."""
+
+    def test_outfit_suggestion_model_serializes_optional_layers(self):
+        from models.outfit import OutfitSuggestion
+
+        suggestion = OutfitSuggestion(
+            shirt="White shirt",
+            trouser="Navy chinos",
+            blazer="Grey blazer",
+            shoes="Brown shoes",
+            belt="Brown belt",
+            reasoning="Layered look.",
+            sweater="Navy merino",
+            outerwear="Olive jacket",
+            tie=None,
+            sweater_id=10,
+            outerwear_id=11,
+            tie_id=None,
+        )
+        data = suggestion.model_dump()
+        assert data["sweater"] == "Navy merino"
+        assert data["outerwear"] == "Olive jacket"
+        assert data["tie"] is None
+        assert data["sweater_id"] == 10
+        assert data["outerwear_id"] == 11
+        assert data["tie_id"] is None

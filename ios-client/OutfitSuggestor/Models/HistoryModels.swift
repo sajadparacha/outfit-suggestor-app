@@ -28,6 +28,12 @@ struct OutfitHistoryEntry: Codable, Identifiable {
     let blazer_id: Int?
     let shoes_id: Int?
     let belt_id: Int?
+    let sweater: String?
+    let outerwear: String?
+    let tie: String?
+    let sweater_id: Int?
+    let outerwear_id: Int?
+    let tie_id: Int?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -50,6 +56,12 @@ struct OutfitHistoryEntry: Codable, Identifiable {
         case blazer_id
         case shoes_id
         case belt_id
+        case sweater
+        case outerwear
+        case tie
+        case sweater_id
+        case outerwear_id
+        case tie_id
     }
 
     init(from decoder: Decoder) throws {
@@ -74,6 +86,12 @@ struct OutfitHistoryEntry: Codable, Identifiable {
         blazer_id = try c.decodeIfPresent(Int.self, forKey: .blazer_id)
         shoes_id = try c.decodeIfPresent(Int.self, forKey: .shoes_id)
         belt_id = try c.decodeIfPresent(Int.self, forKey: .belt_id)
+        sweater = try c.decodeIfPresent(String.self, forKey: .sweater)
+        outerwear = try c.decodeIfPresent(String.self, forKey: .outerwear)
+        tie = try c.decodeIfPresent(String.self, forKey: .tie)
+        sweater_id = try c.decodeIfPresent(Int.self, forKey: .sweater_id)
+        outerwear_id = try c.decodeIfPresent(Int.self, forKey: .outerwear_id)
+        tie_id = try c.decodeIfPresent(Int.self, forKey: .tie_id)
     }
 
     init(
@@ -96,7 +114,13 @@ struct OutfitHistoryEntry: Codable, Identifiable {
         trouser_id: Int? = nil,
         blazer_id: Int? = nil,
         shoes_id: Int? = nil,
-        belt_id: Int? = nil
+        belt_id: Int? = nil,
+        sweater: String? = nil,
+        outerwear: String? = nil,
+        tie: String? = nil,
+        sweater_id: Int? = nil,
+        outerwear_id: Int? = nil,
+        tie_id: Int? = nil
     ) {
         self.id = id
         self.created_at = created_at
@@ -118,6 +142,12 @@ struct OutfitHistoryEntry: Codable, Identifiable {
         self.blazer_id = blazer_id
         self.shoes_id = shoes_id
         self.belt_id = belt_id
+        self.sweater = sweater
+        self.outerwear = outerwear
+        self.tie = tie
+        self.sweater_id = sweater_id
+        self.outerwear_id = outerwear_id
+        self.tie_id = tie_id
     }
 }
 
@@ -133,7 +163,19 @@ extension OutfitHistoryEntry {
             belt: belt,
             reasoning: reasoning,
             imageData: image_data.flatMap { Data(base64Encoded: $0) },
-            model_image: model_image
+            model_image: model_image,
+            sweater: sweater,
+            outerwear: outerwear,
+            tie: tie,
+            shirt_id: shirt_id,
+            trouser_id: trouser_id,
+            blazer_id: blazer_id,
+            shoes_id: shoes_id,
+            belt_id: belt_id,
+            sweater_id: sweater_id,
+            outerwear_id: outerwear_id,
+            tie_id: tie_id,
+            source_wardrobe_item_id: source_wardrobe_item_id
         )
     }
 }

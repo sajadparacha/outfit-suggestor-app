@@ -37,6 +37,30 @@ class OutfitSuggestion(BaseModel):
         None,
         description="Primary key of the selected belt from user's wardrobe when available."
     )
+    sweater: str | None = Field(
+        None,
+        description="Optional layering piece (e.g. merino sweater, cardigan) when relevant to season/occasion."
+    )
+    outerwear: str | None = Field(
+        None,
+        description="Optional coat or jacket layer distinct from the core blazer slot."
+    )
+    tie: str | None = Field(
+        None,
+        description="Optional tie for formal or business occasions."
+    )
+    sweater_id: int | None = Field(
+        None,
+        description="Primary key of the selected sweater from user's wardrobe when available."
+    )
+    outerwear_id: int | None = Field(
+        None,
+        description="Primary key of the selected outerwear (jacket/coat) from user's wardrobe when available."
+    )
+    tie_id: int | None = Field(
+        None,
+        description="Primary key of the selected tie from user's wardrobe when available."
+    )
     source_wardrobe_item_id: int | None = Field(
         None,
         description="Primary key of the wardrobe item selected by the user before generating this AI suggestion."

@@ -617,10 +617,14 @@ You are a professional fashion stylist. Analyze the uploaded image of a shirt or
 Please provide a complete outfit recommendation including:
 1. Shirt (if not already provided in the image, suggest a complementary one)
 2. Trouser/Pants
-3. Blazer/Jacket (if not already provided in the image, suggest a complementary one)
+3. Blazer (structured jacket layer — distinct from optional outerwear coat)
 4. Shoes
 5. Belt
-6. Brief reasoning for the outfit choice
+6. Optional layering when relevant to season/occasion:
+   - sweater: merino/cardigan/crew neck for cooler weather or smart-casual layering (null if not needed)
+   - outerwear: coat or casual jacket layer worn over the outfit, NOT the blazer (null if not needed)
+   - tie: for business, formal, office, or wedding-guest occasions (null if not needed)
+7. Brief reasoning for the outfit choice
 
 Consider:
 - Color coordination
@@ -634,14 +638,20 @@ Respond in JSON format with the following structure:
 {{
     "shirt": "detailed description of the shirt (mention if from user's wardrobe)",
     "trouser": "detailed description of the trousers/pants (mention if from user's wardrobe)",
-    "blazer": "detailed description of the blazer/jacket (mention if from user's wardrobe)",
+    "blazer": "detailed description of the blazer (mention if from user's wardrobe)",
     "shoes": "detailed description of the shoes (mention if from user's wardrobe)",
     "belt": "detailed description of the belt (mention if from user's wardrobe)",
+    "sweater": "optional sweater/layer description or null",
+    "outerwear": "optional coat/jacket description (distinct from blazer) or null",
+    "tie": "optional tie description or null",
     "shirt_id": integer or null,
     "trouser_id": integer or null,
     "blazer_id": integer or null,
     "shoes_id": integer or null,
     "belt_id": integer or null,
+    "sweater_id": integer or null,
+    "outerwear_id": integer or null,
+    "tie_id": integer or null,
     "source_slot": "one of: shirt, trouser, blazer, shoes, belt, or null (which slot in this outfit corresponds to the uploaded item)",
     "reasoning": "brief explanation of why this outfit works well together"
 }}
@@ -705,17 +715,33 @@ Respond in JSON format with the following structure:
                 }
                 return aliases.get(normalized)
 
+            def _parse_optional_text(value):
+                if value is None:
+                    return None
+                if isinstance(value, str):
+                    stripped = value.strip()
+                    if not stripped or stripped.lower() in {"null", "none", "n/a"}:
+                        return None
+                    return stripped
+                return None
+
             return OutfitSuggestion(
                 shirt=outfit_data.get("shirt", "Classic white dress shirt"),
                 trouser=outfit_data.get("trouser", "Dark navy dress trousers"),
                 blazer=outfit_data.get("blazer", "Charcoal gray blazer"),
                 shoes=outfit_data.get("shoes", "Black leather dress shoes"),
                 belt=outfit_data.get("belt", "Black leather belt"),
+                sweater=_parse_optional_text(outfit_data.get("sweater")),
+                outerwear=_parse_optional_text(outfit_data.get("outerwear")),
+                tie=_parse_optional_text(outfit_data.get("tie")),
                 shirt_id=_parse_optional_int(outfit_data.get("shirt_id")),
                 trouser_id=_parse_optional_int(outfit_data.get("trouser_id")),
                 blazer_id=_parse_optional_int(outfit_data.get("blazer_id")),
                 shoes_id=_parse_optional_int(outfit_data.get("shoes_id")),
                 belt_id=_parse_optional_int(outfit_data.get("belt_id")),
+                sweater_id=_parse_optional_int(outfit_data.get("sweater_id")),
+                outerwear_id=_parse_optional_int(outfit_data.get("outerwear_id")),
+                tie_id=_parse_optional_int(outfit_data.get("tie_id")),
                 source_slot=_parse_source_slot(outfit_data.get("source_slot")),
                 reasoning=outfit_data.get(
                     "reasoning", 

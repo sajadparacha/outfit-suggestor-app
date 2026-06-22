@@ -61,6 +61,8 @@ enum AboutCopy {
         "• Complete outfits from selected wardrobe pieces—set occasion, season, style, and notes inline on Wardrobe before tapping Complete outfit with AI (one item per slot)."
     static let wardrobeInsightsFeature =
         "• Wardrobe Insights — AI-powered gap analysis with a summary score, top priorities, coverage dashboard (including sweaters, jackets, and ties for formal occasions), and a market-ready shopping list with Buy, Look for, and Search online columns, per style/color Google Shopping searches, Copy list, and WhatsApp or PDF export. Outfit suggestions still use the same five core slots."
+    static let outfitSuggestionsFeature =
+        "• Outfit suggestions with occasion, season, and style filters. Results show five core pieces; the AI may also suggest optional layering (sweater, coat/jacket, or tie) when relevant."
     static let adminDiagnosticsSuffix = " Includes transparent admin diagnostics for administrators."
 
     static func techStackDescription(isAdmin: Bool) -> String {

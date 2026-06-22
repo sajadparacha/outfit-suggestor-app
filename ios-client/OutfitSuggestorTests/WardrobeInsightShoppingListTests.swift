@@ -40,7 +40,7 @@ final class WardrobeInsightShoppingListTests: XCTestCase {
         let rows = WardrobeInsightShoppingList.buildRows(from: result)
 
         XCTAssertEqual(rows.count, 1)
-        XCTAssertEqual(rows[0].item, "Loafers")
+        XCTAssertEqual(rows[0].item, "Shoes")
         XCTAssertEqual(rows[0].category, "Shoes")
         XCTAssertEqual(rows[0].priority, "High")
         XCTAssertEqual(rows[0].styleColorTuples, "(Classic, Neutral)")
@@ -53,8 +53,35 @@ final class WardrobeInsightShoppingListTests: XCTestCase {
             "Trousers"
         )
         XCTAssertEqual(
+            WardrobeInsightShoppingList.cleanShoppingItemLabel(name: "Merino Sweater Sweater", category: "sweater"),
+            "Sweater"
+        )
+        XCTAssertEqual(
             WardrobeInsightShoppingList.cleanShoppingItemLabel(name: "belt", category: "belt"),
             "Belt"
+        )
+        XCTAssertEqual(
+            WardrobeInsightShoppingList.cleanShoppingItemLabel(name: "shirt", category: "shirt"),
+            "Shirt"
+        )
+    }
+
+    func testCleanShoppingItemLabelPrefersCategoryForNonTaxonomyNames() {
+        XCTAssertEqual(
+            WardrobeInsightShoppingList.cleanShoppingItemLabel(name: "Summer Dress", category: "shirt"),
+            "Shirt"
+        )
+        XCTAssertEqual(
+            WardrobeInsightShoppingList.cleanShoppingItemLabel(name: "merino sweater", category: "sweater"),
+            "Sweater"
+        )
+        XCTAssertEqual(
+            WardrobeInsightShoppingList.cleanShoppingItemLabel(name: "field jacket", category: "jacket"),
+            "Field Jacket"
+        )
+        XCTAssertEqual(
+            WardrobeInsightShoppingList.cleanShoppingItemLabel(name: "oxford shirt", category: "shirt"),
+            "Oxford Shirt"
         )
     }
 
@@ -130,22 +157,24 @@ final class WardrobeInsightShoppingListTests: XCTestCase {
         XCTAssertFalse(query.contains("(Oxford, Olive)"))
     }
 
-    func testSearchAllURLUsesMaxThreeCombos() {
+    func testSearchAllURLUsesMaxThreeCombosWithoutRedundantItemLabel() {
         let tuples = WardrobeInsightShoppingList.buildStyleColorTuples(
             styles: ["a", "b", "c", "d"],
             colors: ["1", "2"]
         )
-        let url = WardrobeInsightShoppingList.searchAllURL(category: "belt", itemLabel: "Belt", tuples: tuples)
+        let url = WardrobeInsightShoppingList.searchAllURL(category: "belt", tuples: tuples)
 
         XCTAssertNotNil(url)
         let query = URLComponents(url: url!, resolvingAgainstBaseURL: false)?
             .queryItems?
             .first(where: { $0.name == "q" })?
             .value ?? ""
+        XCTAssertTrue(query.contains("men's belts"))
         XCTAssertTrue(query.contains("A 1"))
         XCTAssertTrue(query.contains("A 2"))
         XCTAssertTrue(query.contains("B 1"))
         XCTAssertFalse(query.contains("D 2"))
+        XCTAssertFalse(query.localizedCaseInsensitiveContains("Belt A"))
     }
 
     func testWhatsAppURLUsesEncodedText() {
@@ -161,15 +190,17 @@ final class WardrobeInsightShoppingListTests: XCTestCase {
         XCTAssertEqual(encodedText, text)
     }
 
-    func testComboSearchURLUsesSingularPhrasesForExtendedCategories() {
+    func testComboSearchURLUsesPossessiveMensCategoryPhrases() {
         let sweaterURL = WardrobeInsightShoppingList.comboSearchURL(category: "sweater", style: "Merino", color: "Navy")
         let jacketURL = WardrobeInsightShoppingList.comboSearchURL(category: "jacket", style: "Bomber", color: "Olive")
         let tieURL = WardrobeInsightShoppingList.comboSearchURL(category: "tie", style: "Silk", color: "Burgundy")
+        let shirtURL = WardrobeInsightShoppingList.comboSearchURL(category: "shirt", style: "Oxford", color: "Olive")
 
         for (url, phrase) in [
-            (sweaterURL, "men sweater"),
-            (jacketURL, "men jacket"),
-            (tieURL, "men tie"),
+            (sweaterURL, "men's sweater"),
+            (jacketURL, "men's jacket"),
+            (tieURL, "men's tie"),
+            (shirtURL, "men's shirts"),
         ] {
             XCTAssertNotNil(url)
             let query = URLComponents(url: url!, resolvingAgainstBaseURL: false)?

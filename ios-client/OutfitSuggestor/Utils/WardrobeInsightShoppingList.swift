@@ -37,6 +37,38 @@ struct WardrobeInsightShoppingListRow: Identifiable, Equatable {
 
 enum WardrobeInsightShoppingList {
     static let shoppingListSearchAllLimit = 3
+    /// Hardcoded this iteration; future: `AppConfig.shoppingGenderPrefix`.
+    private static let shoppingGenderPrefix = "men's"
+
+    private static let categoryDisplayLabels: [String: String] = [
+        "shirt": "Shirt", "shirts": "Shirt",
+        "trouser": "Trousers", "trousers": "Trousers",
+        "shoe": "Shoes", "shoes": "Shoes",
+        "blazer": "Blazer", "blazers": "Blazer",
+        "sweater": "Sweater", "sweaters": "Sweater",
+        "jacket": "Jacket", "jackets": "Jacket",
+        "tie": "Tie", "ties": "Tie",
+        "belt": "Belt", "belts": "Belt",
+    ]
+
+    private static let nonTaxonomyTerms: Set<String> = [
+        "dress", "dresses", "gown", "gowns", "skirt", "skirts",
+    ]
+
+    private static let categoryVocabulary: Set<String> = [
+        "shirt", "shirts", "trouser", "trousers", "pants", "jeans", "shorts",
+        "blazer", "blazers", "suit", "suits", "sweater", "sweaters",
+        "jacket", "jackets", "shoe", "shoes", "belt", "belts", "tie", "ties",
+        "polo", "oxford", "linen", "cotton", "wool", "merino", "leather",
+        "silk", "bomber", "field", "braided", "unstructured", "crew", "neck",
+    ]
+
+    private static let colorOrMaterialWords: Set<String> = [
+        "black", "white", "brown", "tan", "beige", "blue", "navy", "gray", "grey",
+        "green", "olive", "burgundy", "red", "purple", "pink", "yellow", "mint",
+        "neutral", "merino", "linen", "leather", "silk", "cotton", "wool", "cashmere",
+        "denim", "chino", "suede", "canvas", "nylon", "fleece", "corduroy",
+    ]
 
     static func buildRows(from result: WardrobeInsightResult) -> [WardrobeInsightShoppingListRow] {
         let missingRows = result.missingItems.map { missingItem in
@@ -85,41 +117,43 @@ enum WardrobeInsightShoppingList {
     }
 
     static func cleanShoppingItemLabel(name: String, category: String) -> String {
-        let categoryLabel = displayCategoryLabel(category)
-        let words = prettyLabel(name).split(separator: " ").map(String.init)
+        let catKey = category.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let categoryLabel = categoryDisplayLabels[catKey] ?? displayCategoryLabel(category)
+        let rawName = prettyLabel(name.isEmpty ? category : name)
+        let rawWords = rawName.lowercased().split(separator: " ").map(String.init)
+        let stem = categoryStem(catKey)
 
-        var deduped: [String] = []
-        var seen = Set<String>()
-        for word in words {
-            let lower = word.lowercased()
-            guard !seen.contains(lower) else { continue }
-            seen.insert(lower)
-            deduped.append(word)
+        func isCategoryWord(_ word: String) -> Bool {
+            word == catKey || word == stem || word == categoryLabel.lowercased()
         }
 
-        let dedupedName = deduped.joined(separator: " ")
-        if dedupedName.isEmpty { return categoryLabel }
-
-        let nameLower = dedupedName.lowercased()
-        let categoryLower = categoryLabel.lowercased()
-        let categorySingular = categoryLower.hasSuffix("s") ? String(categoryLower.dropLast()) : categoryLower
-
-        if nameLower == categoryLower || nameLower == categorySingular {
+        let categoryRepeatCount = rawWords.filter(isCategoryWord).count
+        if categoryRepeatCount >= 2 {
             return categoryLabel
         }
 
-        let hadDuplicate = words.count != deduped.count
-        if hadDuplicate {
-            let nonCategoryWords = deduped.filter {
-                let word = $0.lowercased()
-                return word != categorySingular && word != categoryLower
-            }
-            if nonCategoryWords.count <= 1 {
-                return categoryLabel
-            }
+        let nameLabel = dedupeWords(rawName)
+        let nameWords = nameLabel.lowercased().split(separator: " ").map(String.init)
+        let nonCategoryWords = nameWords.filter { !isCategoryWord($0) }
+
+        if nonCategoryWords.isEmpty {
+            return categoryLabel
         }
 
-        return dedupedName
+        if rawWords.contains(where: { nonTaxonomyTerms.contains($0) }) {
+            return categoryLabel
+        }
+
+        if !rawWords.contains(where: { categoryVocabulary.contains($0) }) {
+            return categoryLabel
+        }
+
+        if nonCategoryWords.count == 1, nameWords.count <= 3,
+           colorOrMaterialWords.contains(nonCategoryWords[0]) {
+            return categoryLabel
+        }
+
+        return nameLabel
     }
 
     static func formatLookForText(styles: [String], colors: [String]) -> String {
@@ -154,7 +188,7 @@ enum WardrobeInsightShoppingList {
         let stylePhrase = formatSearchList(styles.isEmpty ? ["classic"] : styles)
         let colorPhrase = formatSearchList(colors.isEmpty ? ["neutral"] : colors)
         let categoryPhrase = categoryForSearch(category)
-        let query = "Show me men \(categoryPhrase) in \(stylePhrase) style and \(colorPhrase) color"
+        let query = "Show me \(shoppingGenderPrefix) \(categoryPhrase) in \(stylePhrase) style and \(colorPhrase) color"
 
         var components = URLComponents(string: "https://www.google.com/search")
         components?.queryItems = [
@@ -168,12 +202,12 @@ enum WardrobeInsightShoppingList {
         buildShoppingSearchURL(category: category, styles: [style], colors: [color])
     }
 
-    static func searchAllURL(category: String, itemLabel: String, tuples: [ShoppingStyleColorTuple]) -> URL? {
+    static func searchAllURL(category: String, tuples: [ShoppingStyleColorTuple]) -> URL? {
         let limited = Array(tuples.prefix(shoppingListSearchAllLimit))
         guard !limited.isEmpty else { return nil }
 
         let tupleQuery = limited.map { "\($0.style) \($0.color)" }.joined(separator: " ")
-        let query = "Show me men \(categoryForSearch(category)) \(itemLabel) \(tupleQuery)"
+        let query = "Show me \(shoppingGenderPrefix) \(categoryForSearch(category)) \(tupleQuery)"
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
         var components = URLComponents(string: "https://www.google.com/search")
@@ -331,7 +365,7 @@ enum WardrobeInsightShoppingList {
                 url: comboSearchURL(category: category, style: tuple.style, color: tuple.color)
             )
         }
-        let searchAll = searchAllURL(category: category, itemLabel: itemLabel, tuples: tuples)
+        let searchAll = searchAllURL(category: category, tuples: tuples)
         let exportURL = searchAll ?? comboLinks.first?.url
 
         return WardrobeInsightShoppingListRow(
@@ -413,18 +447,28 @@ enum WardrobeInsightShoppingList {
         }
     }
 
-    private static func displayCategoryLabel(_ category: String) -> String {
-        switch category.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
-        case "shirt", "shirts": return "Shirt"
-        case "trouser", "trousers": return "Trousers"
-        case "shoe", "shoes": return "Shoes"
-        case "blazer", "blazers": return "Blazer"
-        case "sweater", "sweaters": return "Sweater"
-        case "jacket", "jackets": return "Jacket"
-        case "tie", "ties": return "Tie"
-        case "belt", "belts": return "Belt"
-        default: return prettyLabel(category)
+    private static func categoryStem(_ category: String) -> String {
+        category.hasSuffix("s") ? String(category.dropLast()) : category
+    }
+
+    private static func dedupeWords(_ label: String) -> String {
+        let words = label.split(separator: " ").map(String.init)
+        var seen = Set<String>()
+        var result: [String] = []
+
+        for word in words where !word.isEmpty {
+            let key = word.lowercased()
+            guard !seen.contains(key) else { continue }
+            seen.insert(key)
+            result.append(word)
         }
+
+        return result.joined(separator: " ")
+    }
+
+    private static func displayCategoryLabel(_ category: String) -> String {
+        let normalized = category.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return categoryDisplayLabels[normalized] ?? prettyLabel(category)
     }
 
     static func prettyLabel(_ value: String) -> String {

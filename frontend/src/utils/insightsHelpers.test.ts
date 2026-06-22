@@ -38,7 +38,7 @@ const missingItems: WardrobeMissingItem[] = [
 ];
 
 describe('insights shopping list helpers', () => {
-  it('maps extended clothing categories for Google Shopping queries', () => {
+  it('maps extended clothing categories for Google Shopping queries with possessive men\'s prefix', () => {
     expect(categoryForSearch('sweater')).toBe('sweater');
     expect(categoryForSearch('Sweaters')).toBe('sweater');
     expect(categoryForSearch('jacket')).toBe('jacket');
@@ -47,19 +47,50 @@ describe('insights shopping list helpers', () => {
     expect(categoryForSearch('ties')).toBe('tie');
 
     const sweaterUrl = decodeURIComponent(buildShoppingSearchUrl('sweater', ['crew neck'], ['navy']));
-    expect(sweaterUrl).toMatch(/men sweater/i);
+    expect(sweaterUrl).toMatch(/men's sweater/i);
 
     const jacketUrl = decodeURIComponent(buildShoppingSearchUrl('jacket', ['bomber'], ['olive']));
-    expect(jacketUrl).toMatch(/men jacket/i);
+    expect(jacketUrl).toMatch(/men's jacket/i);
 
     const tieUrl = decodeURIComponent(buildShoppingSearchUrl('tie', ['silk'], ['navy']));
-    expect(tieUrl).toMatch(/men tie/i);
+    expect(tieUrl).toMatch(/men's tie/i);
+
+    const shirtUrl = decodeURIComponent(buildShoppingSearchUrl('shirt', ['oxford'], ['white']));
+    expect(shirtUrl).toMatch(/men's shirts/i);
+
+    const searchAllUrl = decodeURIComponent(
+      buildSearchAllUrl('sweater', [{ style: 'Crew Neck', color: 'Navy' }])
+    );
+    expect(searchAllUrl).toMatch(/men's sweater/i);
   });
 
   it('dedupes repeated words and prefers category labels', () => {
     expect(cleanShoppingItemLabel('White Trouser Trouser', 'trouser')).toBe('Trousers');
+    expect(cleanShoppingItemLabel('Merino Sweater Sweater', 'sweater')).toBe('Sweater');
     expect(cleanShoppingItemLabel('belt', 'belt')).toBe('Belt');
     expect(cleanShoppingItemLabel('shirt', 'shirt')).toBe('Shirt');
+  });
+
+  it('prefers category label over AI junk names and keeps valid descriptive names', () => {
+    expect(cleanShoppingItemLabel('Summer Dress', 'shirt')).toBe('Shirt');
+    expect(cleanShoppingItemLabel('Oxford Shirt', 'shirt')).toBe('Oxford Shirt');
+    expect(cleanShoppingItemLabel('field jacket', 'jacket')).toBe('Field Jacket');
+    expect(cleanShoppingItemLabel('Merino', 'sweater')).toBe('Sweater');
+  });
+
+  it('uses cleanLabel from category when AI name is junk in shopping list rows', () => {
+    const junkItem: WardrobeMissingItem = {
+      id: 'junk-shirt',
+      name: 'Summer Dress',
+      category: 'shirt',
+      priority: 'High',
+      reason: 'Needs a proper shirt.',
+      bestColors: ['white'],
+      worksWith: ['oxford'],
+    };
+    const row = buildShoppingListRows([junkItem])[0];
+    expect(row.cleanLabel).toBe('Shirt');
+    expect(row.itemLabel).toBe('Shirt');
   });
 
   it('formats human-readable look-for text with sentence-case or lists', () => {

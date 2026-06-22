@@ -24,6 +24,7 @@ struct OutfitSuggestionView: View {
     var showAiPromptResponse: Bool = true
     var showsActionSection: Bool = true
     @State private var showModelImageFullScreen = false
+    @State private var alsoWearExpanded = true
 
     private var modelImageData: Data? {
         guard let b64 = suggestion.model_image else { return nil }
@@ -58,6 +59,10 @@ struct OutfitSuggestionView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             itemCardsGrid
+
+            if OutfitOptionalLayers.hasOptionalLayers(suggestion) {
+                alsoWearSection
+            }
 
             whyThisWorksSection
 
@@ -141,6 +146,31 @@ struct OutfitSuggestionView: View {
             itemCard(category: "shoes", label: "Shoes", description: suggestion.shoes)
             itemCard(category: "belt", label: "Belt", description: suggestion.belt)
         }
+    }
+
+    private var alsoWearSection: some View {
+        DisclosureGroup(isExpanded: $alsoWearExpanded) {
+            optionalItemsGrid
+        } label: {
+            Text(MainFlowUxCopy.alsoWearSection)
+                .font(.headline)
+                .foregroundColor(AppTheme.textPrimary)
+        }
+        .accessibilityIdentifier("main.alsoWearSection")
+    }
+
+    private var optionalItemsGrid: some View {
+        let columns = [
+            GridItem(.flexible(), spacing: 12),
+            GridItem(.flexible(), spacing: 12),
+        ]
+
+        return LazyVGrid(columns: columns, spacing: 12) {
+            ForEach(OutfitOptionalLayers.items(for: suggestion), id: \.category) { item in
+                itemCard(category: item.category, label: item.label, description: item.description)
+            }
+        }
+        .padding(.top, 8)
     }
 
     @ViewBuilder

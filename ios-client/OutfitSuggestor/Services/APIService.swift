@@ -1057,7 +1057,10 @@ final class UITestDataStore {
                 .map(Self.matchingItem),
             belt: selectedItems
                 .filter { WardrobeCompletionSlot.normalized(from: $0.category) == .belt }
-                .map(Self.matchingItem)
+                .map(Self.matchingItem),
+            sweater: nil,
+            outerwear: nil,
+            tie: nil
         )
         let suggestion = OutfitSuggestion(
             shirt: "Selected wardrobe shirt with crisp tailoring",

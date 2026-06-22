@@ -41,7 +41,7 @@ enum WardrobeCategoryDisplay {
     private static let coreGroupMatchers: [String: [String]] = [
         "shirt": ["shirt", "t_shirt", "t-shirt", "polo", "tshirt", "tee"],
         "trouser": ["trouser", "trousers", "pants", "jeans", "shorts"],
-        "blazer": ["blazer", "jacket", "jackets", "suit"],
+        "blazer": ["blazer", "blazers", "suit"],
         "shoes": ["shoe", "shoes"],
         "belt": ["belt", "belts"],
     ]

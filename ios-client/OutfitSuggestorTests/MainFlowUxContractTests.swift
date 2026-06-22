@@ -49,6 +49,10 @@ final class MainFlowUxContractTests: XCTestCase {
         XCTAssertEqual(MainFlowUxCopy.saveLookAuthPrompt, "Sign in to save looks")
         XCTAssertEqual(MainFlowUxCopy.uploadNewItem, "Upload new item")
         XCTAssertEqual(MainFlowUxCopy.compactUploadHint, "Upload a new photo to start a fresh outfit")
+        XCTAssertEqual(MainFlowUxCopy.alsoWearSection, "Also wear")
+        XCTAssertEqual(MainFlowUxCopy.layerLabel, "Layer")
+        XCTAssertEqual(MainFlowUxCopy.outerwearLabel, "Outerwear")
+        XCTAssertEqual(MainFlowUxCopy.tieLabel, "Tie")
     }
 
     // MARK: - ReasoningBullets

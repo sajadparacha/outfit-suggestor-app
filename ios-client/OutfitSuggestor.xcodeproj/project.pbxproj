@@ -88,6 +88,8 @@
 		F1L2T3E4R5V6I7E8W900001 /* FiltersViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L2T3E4R5V6I7E8W900002 /* FiltersViewTests.swift */; };
 		O1I2T3H4U5M6B7N8A9I0L02 /* OutfitItemThumbnail.swift in Sources */ = {isa = PBXBuildFile; fileRef = O1I2T3H4U5M6B7N8A9I0L01 /* OutfitItemThumbnail.swift */; };
 		O1I2T3H4U5M6B7N8A9I0L04 /* OutfitItemThumbnailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = O1I2T3H4U5M6B7N8A9I0L03 /* OutfitItemThumbnailTests.swift */; };
+		O1O2L3A4Y5E6R7S8V9T02 /* OutfitOptionalLayers.swift in Sources */ = {isa = PBXBuildFile; fileRef = O1O2L3A4Y5E6R7S8V9T01 /* OutfitOptionalLayers.swift */; };
+		O1S2V3T4E5S6T7V8I9E0W02 /* OutfitSuggestionViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = O1S2V3T4E5S6T7V8I9E0W01 /* OutfitSuggestionViewTests.swift */; };
 		WIR01BF0000000000000001 /* WardrobeInsightResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = WIR01FR0000000000000001 /* WardrobeInsightResult.swift */; };
 		NWI01BF0000000000000001 /* NormalizeWardrobeInsight.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWI01FR0000000000000001 /* NormalizeWardrobeInsight.swift */; };
 		WIP01BF0000000000000001 /* WardrobeInsightsPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = WIP01FR0000000000000001 /* WardrobeInsightsPresentation.swift */; };
@@ -212,6 +214,8 @@
 		F1L2T3E4R5V6I7E8W900002 /* FiltersViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FiltersViewTests.swift; sourceTree = "<group>"; };
 		O1I2T3H4U5M6B7N8A9I0L01 /* OutfitItemThumbnail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitItemThumbnail.swift; sourceTree = "<group>"; };
 		O1I2T3H4U5M6B7N8A9I0L03 /* OutfitItemThumbnailTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitItemThumbnailTests.swift; sourceTree = "<group>"; };
+		O1O2L3A4Y5E6R7S8V9T01 /* OutfitOptionalLayers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitOptionalLayers.swift; sourceTree = "<group>"; };
+		O1S2V3T4E5S6T7V8I9E0W01 /* OutfitSuggestionViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitSuggestionViewTests.swift; sourceTree = "<group>"; };
 		WIR01FR0000000000000001 /* WardrobeInsightResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeInsightResult.swift; sourceTree = "<group>"; };
 		NWI01FR0000000000000001 /* NormalizeWardrobeInsight.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NormalizeWardrobeInsight.swift; sourceTree = "<group>"; };
 		WIP01FR0000000000000001 /* WardrobeInsightsPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeInsightsPresentation.swift; sourceTree = "<group>"; };
@@ -253,6 +257,7 @@
 				R1E2G3E4N5L6O7G8I9C004 /* MainFlowResultRegenerateLogicTests.swift */,
 				F1L2T3E4R5V6I7E8W900002 /* FiltersViewTests.swift */,
 				O1I2T3H4U5M6B7N8A9I0L03 /* OutfitItemThumbnailTests.swift */,
+				O1S2V3T4E5S6T7V8I9E0W01 /* OutfitSuggestionViewTests.swift */,
 				NWIT01FR000000000000001 /* NormalizeWardrobeInsightTests.swift */,
 				WIVT01FR000000000000001 /* WardrobeInsightsViewTests.swift */,
 				WSLT01FR000000000000001 /* WardrobeInsightShoppingListTests.swift */,
@@ -382,6 +387,7 @@
 				M1F2L3O4W5U6X7C8O9P0Y06 /* OutfitContextLine.swift */,
 				M1F2L3O4W5U6X7C8O9P0Y08 /* OutfitItemCardText.swift */,
 				O1I2T3H4U5M6B7N8A9I0L01 /* OutfitItemThumbnail.swift */,
+				O1O2L3A4Y5E6R7S8V9T01 /* OutfitOptionalLayers.swift */,
 				W1A2B3C4D5E6F708192A3B50 /* WardrobeCardUx.swift */,
 				WCF01FR0000000000000001 /* WardrobeCategoryDisplay.swift */,
 				585D224C3BAB35D9CD03EA3B /* AppConfig.swift */,
@@ -628,6 +634,7 @@
 				M1F2L3O4W5U6X7C8O9P0Y0B /* RefineMenuView.swift in Sources */,
 				M1F2L3O4W5U6X7C8O9P0Y0D /* MainFlowCompactSummaryView.swift in Sources */,
 				O1I2T3H4U5M6B7N8A9I0L02 /* OutfitItemThumbnail.swift in Sources */,
+				O1O2L3A4Y5E6R7S8V9T02 /* OutfitOptionalLayers.swift in Sources */,
 				WIR01BF0000000000000001 /* WardrobeInsightResult.swift in Sources */,
 				NWI01BF0000000000000001 /* NormalizeWardrobeInsight.swift in Sources */,
 				WIP01BF0000000000000001 /* WardrobeInsightsPresentation.swift in Sources */,
@@ -669,6 +676,7 @@
 				R1E2G3E4N5L6O7G8I9C003 /* MainFlowResultRegenerateLogicTests.swift in Sources */,
 				F1L2T3E4R5V6I7E8W900001 /* FiltersViewTests.swift in Sources */,
 				O1I2T3H4U5M6B7N8A9I0L04 /* OutfitItemThumbnailTests.swift in Sources */,
+				O1S2V3T4E5S6T7V8I9E0W02 /* OutfitSuggestionViewTests.swift in Sources */,
 				NWIT01BF000000000000001 /* NormalizeWardrobeInsightTests.swift in Sources */,
 				WIVT01BF000000000000001 /* WardrobeInsightsViewTests.swift in Sources */,
 				WSLT01BF000000000000001 /* WardrobeInsightShoppingListTests.swift in Sources */,

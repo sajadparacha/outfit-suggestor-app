@@ -204,6 +204,59 @@ describe('OutfitPreview', () => {
       expect(screen.getByText('Cream linen button-down')).toBeInTheDocument();
       expect(screen.getByText('breathable summer fabric')).toBeInTheDocument();
     });
+
+    it('shows Also wear section when optional layers are present', () => {
+      const suggestionWithLayers: OutfitSuggestion = {
+        ...baseSuggestion,
+        sweater: 'Navy merino crewneck — extra warmth for cool evenings',
+        outerwear: 'Charcoal wool overcoat',
+        tie: null,
+        sweater_id: 21,
+        matching_wardrobe_items: {
+          shirt: [],
+          trouser: [],
+          blazer: [],
+          shoes: [],
+          belt: [],
+          sweater: [
+            {
+              id: 21,
+              category: 'sweater',
+              color: 'navy',
+              description: 'Merino crewneck',
+              image_data: 'base64_sweater',
+            },
+          ],
+          outerwear: [],
+        },
+      };
+      render(
+        <OutfitPreview suggestion={suggestionWithLayers} loading={false} error={null} {...actionProps} hasImage={true} />
+      );
+      expect(screen.getByTestId('also-wear-section')).toBeInTheDocument();
+      expect(screen.getByText(MAIN_FLOW_UX_COPY.alsoWearSection)).toBeInTheDocument();
+      expect(screen.getByText(MAIN_FLOW_UX_COPY.layerLabel)).toBeInTheDocument();
+      expect(screen.getByText(MAIN_FLOW_UX_COPY.outerwearLabel)).toBeInTheDocument();
+      expect(screen.queryByText(MAIN_FLOW_UX_COPY.tieLabel)).not.toBeInTheDocument();
+      expect(screen.getByText('Navy merino crewneck')).toBeInTheDocument();
+      expect(screen.getByText('Charcoal wool overcoat')).toBeInTheDocument();
+      const sweaterImg = screen.getAllByRole('img').find((img) => img.getAttribute('alt') === 'Layer');
+      expect(sweaterImg?.getAttribute('src')).toBe('data:image/jpeg;base64,base64_sweater');
+    });
+
+    it('hides Also wear section when all optional fields are null or empty', () => {
+      render(
+        <OutfitPreview
+          suggestion={{ ...baseSuggestion, sweater: null, outerwear: undefined, tie: '' }}
+          loading={false}
+          error={null}
+          {...actionProps}
+          hasImage={true}
+        />
+      );
+      expect(screen.queryByTestId('also-wear-section')).not.toBeInTheDocument();
+      expect(screen.queryByText(MAIN_FLOW_UX_COPY.alsoWearSection)).not.toBeInTheDocument();
+    });
   });
 
   describe('primary actions', () => {

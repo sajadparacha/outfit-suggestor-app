@@ -38,7 +38,8 @@ struct UserGuideView: View {
                         "Optionally set your occasion, season, and style preferences using the pickers.",
                         "Add any free-text notes about your preferences.",
                         "Tap \"Get Outfit Suggestion\" to receive AI-powered recommendations.",
-                        "View the complete outfit (shirt, trousers, blazer, shoes, belt) and the AI's reasoning."
+                        "View the five core pieces (shirt, trousers, blazer, shoes, belt). When relevant for the occasion, the AI may also suggest optional layering—a sweater, coat/jacket, or tie—in an Also wear section.",
+                        "Read the AI's reasoning in Why this works."
                     ],
                     tip: "Upload any clothing item — shirts, blazers, shoes, or even partial outfits. The AI adapts to what you provide."
                 )

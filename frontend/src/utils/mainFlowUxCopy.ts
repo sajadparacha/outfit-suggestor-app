@@ -30,6 +30,10 @@ export const MAIN_FLOW_UX_COPY = {
   moreActions: 'More',
   uploadNewItem: 'Upload new item',
   compactUploadHint: 'Upload a new photo to start a fresh outfit',
+  alsoWearSection: 'Also wear',
+  layerLabel: 'Layer',
+  outerwearLabel: 'Outerwear',
+  tieLabel: 'Tie',
 } as const;
 
 export type MainFlowUxCopyKey = keyof typeof MAIN_FLOW_UX_COPY;

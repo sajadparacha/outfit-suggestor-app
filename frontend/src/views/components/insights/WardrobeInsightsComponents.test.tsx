@@ -265,7 +265,7 @@ describe('CategoryDetailAccordion', () => {
     });
   });
 
-  it('opens Google Shopping with men sweater when sweater row Shop similar is clicked', () => {
+  it("opens Google Shopping with men's sweater when sweater row Shop similar is clicked", () => {
     const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
 
     render(
@@ -277,7 +277,7 @@ describe('CategoryDetailAccordion', () => {
 
     expect(openSpy).toHaveBeenCalled();
     const url = decodeURIComponent(String(openSpy.mock.calls[0][0]));
-    expect(url).toMatch(/men sweater/i);
+    expect(url).toMatch(/men's sweater/i);
 
     openSpy.mockRestore();
   });

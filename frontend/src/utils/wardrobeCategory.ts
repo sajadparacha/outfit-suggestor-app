@@ -35,7 +35,7 @@ export const WARDROBE_EXTENDED_FILTER_CHIPS: WardrobeFilterChip[] = [
 const CORE_GROUP_MATCHERS: Record<string, readonly string[]> = {
   shirt: ['shirt', 't_shirt', 't-shirt', 'polo', 'tshirt', 'tee'],
   trouser: ['trouser', 'trousers', 'pants', 'jeans', 'shorts'],
-  blazer: ['blazer', 'jacket', 'jackets', 'suit'],
+  blazer: ['blazer', 'blazers', 'suit'],
   shoes: ['shoe', 'shoes'],
   belt: ['belt', 'belts'],
 };

@@ -154,6 +154,13 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
+                  <span className="text-2xl">🧥</span>
+                  <div>
+                    <h4 className="font-semibold text-white">Optional Layering Suggestions</h4>
+                    <p className="text-sm text-slate-300">Main results always show five core pieces (shirt, trousers, blazer, shoes, belt). When relevant for the occasion and season, the AI may also suggest a sweater, outerwear, or tie in a collapsible <strong className="text-white">Also wear</strong> section.</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
                   <span className="text-2xl">🎨</span>
                   <div>
                     <h4 className="font-semibold text-white">Wardrobe Mode Toggle</h4>

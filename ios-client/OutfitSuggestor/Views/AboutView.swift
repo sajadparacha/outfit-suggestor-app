@@ -21,7 +21,7 @@ struct AboutView: View {
                     Text("Features")
                         .font(.headline)
                     Text(AboutCopy.wardrobeInsightsFeature)
-                    Text("• Outfit suggestions with occasion, season, and style filters")
+                    Text(AboutCopy.outfitSuggestionsFeature)
                     Text(AboutCopy.wardrobeFilterFeature)
                     Text("• Outfit history when logged in")
                     Text(AboutCopy.wardrobeCompletionFeature)

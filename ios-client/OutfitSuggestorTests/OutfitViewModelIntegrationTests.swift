@@ -137,7 +137,10 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
                     trouser: nil,
                     blazer: nil,
                     shoes: nil,
-                    belt: nil
+                    belt: nil,
+                    sweater: nil,
+                    outerwear: nil,
+                    tie: nil
                 )
             )
         )

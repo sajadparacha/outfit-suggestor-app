@@ -72,10 +72,13 @@ describe('wardrobeCategory helpers', () => {
   });
 
   describe('count helpers', () => {
-    it('groups core shirt counts', () => {
+    it('groups core shirt counts and separates blazer from jacket', () => {
       expect(getCoreFilterCount(sampleSummary, 'shirt')).toBe(4);
       expect(getCoreFilterCount(sampleSummary, 'trouser')).toBe(3);
-      expect(getCoreFilterCount(sampleSummary, 'blazer')).toBe(2);
+      expect(getCoreFilterCount(sampleSummary, 'blazer')).toBe(1);
+      expect(getExtendedFilterCount(sampleSummary, 'jacket')).toBe(1);
+      expect(matchesWardrobeCategoryFilter('jacket', 'blazer')).toBe(false);
+      expect(matchesWardrobeCategoryFilter('jacket', 'jacket')).toBe(true);
     });
 
     it('counts exact extended categories', () => {

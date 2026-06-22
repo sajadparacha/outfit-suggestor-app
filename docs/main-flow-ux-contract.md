@@ -53,6 +53,13 @@ Both clients implement this contract natively. Labels and behavior must match ex
 
 Categories (item cards): Shirt, Trousers, Blazer, Shoes, Belt.
 
+**Optional layers (not part of core five):** When the API returns non-null `sweater`, `outerwear`, or `tie`, show a collapsible **Also wear** section below the core cards with labels **Layer** (sweater), **Outerwear** (jacket/coat), **Tie**. Same card pattern and source tags as core items. Hidden when all three are null/empty.
+
+| Copy key | Label |
+|----------|-------|
+| `alsoWearSection` | Also wear |
+| Optional card labels | Layer, Outerwear, Tie |
+
 ---
 
 ## Before generation (`creation`)
@@ -103,6 +110,14 @@ Each card:
 | Source tag | From your upload / From your wardrobe / AI Suggested |
 
 No paragraphs inside cards. Max ~80 chars visible for reason.
+
+### Also wear (optional)
+
+When `sweater`, `outerwear`, or `tie` is present:
+
+- Section heading: `Also wear` (collapsible; expanded by default if any field present)
+- Cards: Layer / Outerwear / Tie — same thumbnail + source tag rules as core cards
+- Omit entire section when all optional fields are null
 
 ### Why this works
 
@@ -179,6 +194,24 @@ Item detail expansions: optional `DisclosureGroup` per card on iOS for full text
 
 ---
 
+## Category taxonomy (wardrobe, insights, shopping)
+
+Iteration-2 clothing categories for gap analysis and shopping: **shirt, trouser, blazer, sweater, jacket, shoes, belt** (+ **tie** for business/formal/office occasions). No new categories beyond this set.
+
+| Concern | Rule (both platforms) |
+|---------|----------------------|
+| Wardrobe blazer filter chip | Counts `blazer` / `blazers` / `suit` only — **not** jacket |
+| Wardrobe jacket filter chip | Extended chip; counts `jacket` / `jackets` only |
+| Outfit completion (5 slots) | Jacket items still map to blazer slot for AI completion |
+| Insights coverage | Jacket and blazer are separate rows; API `item_count` per category |
+| Shopping list labels | `cleanShoppingItemLabel` — dedupe words; prefer category label when AI name is junk or non-taxonomy |
+| Google Shopping queries | `Show me men's {categoryPhrase} …` — possessive `men's` hardcoded; future env flag documented in `.cursor/specs/category-taxonomy-polish.md` |
+
+**Sync pair:** `frontend/src/utils/insightsHelpers.ts` ↔ `ios-client/OutfitSuggestor/Utils/WardrobeInsightShoppingList.swift`  
+**Wardrobe filter sync:** `frontend/src/utils/wardrobeCategory.ts` ↔ `ios-client/OutfitSuggestor/Utils/WardrobeCategoryDisplay.swift`
+
+---
+
 ## Contract files (sync pairs)
 
 | Web | iOS |
@@ -187,3 +220,5 @@ Item detail expansions: optional `DisclosureGroup` per card on iOS for full text
 | `frontend/src/utils/reasoningBullets.ts` | `ios-client/OutfitSuggestor/Utils/ReasoningBullets.swift` |
 | `frontend/src/utils/outfitContextLine.ts` | `ios-client/OutfitSuggestor/Utils/OutfitContextLine.swift` |
 | `frontend/src/utils/outfitItemCardText.ts` | `ios-client/OutfitSuggestor/Utils/OutfitItemCardText.swift` |
+| `frontend/src/utils/insightsHelpers.ts` | `ios-client/OutfitSuggestor/Utils/WardrobeInsightShoppingList.swift` |
+| `frontend/src/utils/wardrobeCategory.ts` | `ios-client/OutfitSuggestor/Utils/WardrobeCategoryDisplay.swift` |

@@ -37,6 +37,9 @@ export const getColorSwatchValue = (colorName: string): string => {
   return map[normalized] || '#334155';
 };
 
+/** Hardcoded this iteration; future: REACT_APP_SHOPPING_GENDER */
+export const SHOPPING_GENDER_PREFIX = "men's";
+
 export const categoryForSearch = (rawCategory: string): string => {
   const normalized = rawCategory.trim().toLowerCase();
   if (normalized === 'shirt' || normalized === 'shirts') return 'shirts';
@@ -61,7 +64,7 @@ const formatSearchList = (items: string[]): string => {
 export const buildShoppingSearchUrl = (category: string, styles: string[], colors: string[]): string => {
   const stylePhrase = formatSearchList(styles.length > 0 ? styles : ['classic']);
   const colorPhrase = formatSearchList(colors.length > 0 ? colors : ['neutral']);
-  const query = `Show me men ${categoryForSearch(category)} in ${stylePhrase} style and ${colorPhrase} color`;
+  const query = `Show me ${SHOPPING_GENDER_PREFIX} ${categoryForSearch(category)} in ${stylePhrase} style and ${colorPhrase} color`;
   return `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(query)}`;
 };
 
@@ -150,6 +153,87 @@ const dedupeWords = (label: string): string => {
 const categoryStem = (category: string): string =>
   category.trim().toLowerCase().replace(/s$/, '');
 
+const NON_TAXONOMY_JUNK_TERMS = new Set([
+  'dress',
+  'dresses',
+  'gown',
+  'gowns',
+  'skirt',
+  'skirts',
+  'blouse',
+  'blouses',
+  'romper',
+  'rompers',
+  'jumpsuit',
+  'jumpsuits',
+]);
+
+const ITERATION_2_CATEGORY_VOCABULARY = new Set([
+  'shirt',
+  'shirts',
+  'trouser',
+  'trousers',
+  'pants',
+  'blazer',
+  'blazers',
+  'suit',
+  'suits',
+  'sweater',
+  'sweaters',
+  'jacket',
+  'jackets',
+  'shoe',
+  'shoes',
+  'belt',
+  'belts',
+  'tie',
+  'ties',
+]);
+
+const COLOR_AND_MATERIAL_WORDS = new Set([
+  'black',
+  'white',
+  'gray',
+  'grey',
+  'beige',
+  'tan',
+  'navy',
+  'brown',
+  'burgundy',
+  'red',
+  'blue',
+  'green',
+  'olive',
+  'purple',
+  'pink',
+  'yellow',
+  'mint',
+  'pastel',
+  'neutral',
+  'merino',
+  'linen',
+  'cotton',
+  'wool',
+  'silk',
+  'leather',
+  'denim',
+  'cashmere',
+  'knit',
+  'fleece',
+  'corduroy',
+  'suede',
+  'canvas',
+  'nylon',
+  'polyester',
+  'velvet',
+]);
+
+const isColorOrMaterialWord = (word: string): boolean =>
+  COLOR_AND_MATERIAL_WORDS.has(word.toLowerCase());
+
+const hasIteration2VocabularyOverlap = (words: string[]): boolean =>
+  words.some((word) => ITERATION_2_CATEGORY_VOCABULARY.has(word.toLowerCase()));
+
 export const cleanShoppingItemLabel = (name: string, category: string): string => {
   const catKey = category.trim().toLowerCase();
   const categoryLabel = CATEGORY_DISPLAY_LABELS[catKey] ?? prettyLabel(category);
@@ -173,7 +257,19 @@ export const cleanShoppingItemLabel = (name: string, category: string): string =
     return categoryLabel;
   }
 
-  if (nonCategoryWords.length === 1 && nameWords.length <= 3) {
+  if (nonCategoryWords.some((word) => NON_TAXONOMY_JUNK_TERMS.has(word))) {
+    return categoryLabel;
+  }
+
+  if (!hasIteration2VocabularyOverlap(nameWords)) {
+    return categoryLabel;
+  }
+
+  if (
+    nonCategoryWords.length === 1 &&
+    nameWords.length <= 3 &&
+    isColorOrMaterialWord(nonCategoryWords[0])
+  ) {
     return categoryLabel;
   }
 
@@ -245,7 +341,7 @@ export const buildSearchAllUrl = (category: string, tuples: ShoppingListTuple[])
   }
 
   const comboPhrase = limited.map((tuple) => `${tuple.style} ${tuple.color}`).join(' ');
-  const query = `Show me men ${categoryForSearch(category)} ${comboPhrase}`.trim();
+  const query = `Show me ${SHOPPING_GENDER_PREFIX} ${categoryForSearch(category)} ${comboPhrase}`.trim();
   return `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(query)}`;
 };
 

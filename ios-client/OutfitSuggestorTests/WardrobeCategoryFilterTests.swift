@@ -64,7 +64,7 @@ final class WardrobeCategoryFilterTests: XCTestCase {
 
         XCTAssertEqual(counts["shirt"], 4)
         XCTAssertEqual(counts["trouser"], 3)
-        XCTAssertEqual(counts["blazer"], 2)
+        XCTAssertEqual(counts["blazer"], 1)
         XCTAssertEqual(counts["polo"], 1)
         XCTAssertEqual(counts["t_shirt"], 1)
         XCTAssertEqual(counts["jeans"], 2)
@@ -105,6 +105,30 @@ final class WardrobeCategoryFilterTests: XCTestCase {
             .map { WardrobeCategoryDisplay.filterChipLabel(for: $0) }
 
         XCTAssertEqual(labels, ["All", "Shirt", "Trousers", "Blazer", "Shoes", "Belt"])
+    }
+
+    func testMatchesCategoryFilterBlazerExcludesJacket() {
+        XCTAssertTrue(WardrobeCategoryDisplay.matchesCategoryFilter("blazer", filter: "blazer"))
+        XCTAssertTrue(WardrobeCategoryDisplay.matchesCategoryFilter("suit", filter: "blazer"))
+        XCTAssertFalse(WardrobeCategoryDisplay.matchesCategoryFilter("jacket", filter: "blazer"))
+        XCTAssertFalse(WardrobeCategoryDisplay.matchesCategoryFilter("jackets", filter: "blazer"))
+    }
+
+    func testMatchesCategoryFilterJacketExtendedChipIncludesJacketOnly() {
+        XCTAssertTrue(WardrobeCategoryDisplay.matchesCategoryFilter("jacket", filter: "jacket"))
+        XCTAssertTrue(WardrobeCategoryDisplay.matchesCategoryFilter("jackets", filter: "jacket"))
+        XCTAssertFalse(WardrobeCategoryDisplay.matchesCategoryFilter("blazer", filter: "jacket"))
+    }
+
+    func testRebuildCategoryCountsSeparatesBlazerAndJacket() {
+        let counts = WardrobeCategoryDisplay.rebuildCategoryCounts(from: [
+            wardrobeItem(category: "blazer"),
+            wardrobeItem(category: "jacket"),
+            wardrobeItem(category: "suit"),
+        ])
+
+        XCTAssertEqual(counts["blazer"], 2)
+        XCTAssertEqual(counts["jacket"], 1)
     }
 
     func testCompletionSlotNormalizationUnchangedForAliases() {

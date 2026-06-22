@@ -218,7 +218,9 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               <span className="text-brand-blue font-bold shrink-0">•</span>
               <span>
                 You will see <strong className="text-white">shirt, trousers, blazer, shoes, and belt</strong> with short
-                descriptions. Small images may show your upload, items from your wardrobe, or an AI-only suggestion.
+                descriptions. Small images may show your upload, items from your wardrobe, or an AI-only suggestion. When
+                the occasion calls for it, the AI may also suggest a <strong className="text-white">sweater, coat or jacket, or tie</strong>{' '}
+                in an <strong className="text-white">Also wear</strong> section below the core five pieces.
               </span>
             </li>
             <li className="flex gap-3">
