@@ -16,7 +16,7 @@ const WardrobeCoverageDashboard: React.FC<WardrobeCoverageDashboardProps> = ({ c
     </div>
 
     <div
-      className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7"
+      className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
       data-testid="coverage-grid"
     >
       {categories.map((item) => (

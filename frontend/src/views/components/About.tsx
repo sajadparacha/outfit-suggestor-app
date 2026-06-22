@@ -115,7 +115,7 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
                   <span className="text-2xl">🧠</span>
                   <div>
                     <h4 className="font-semibold text-white">Wardrobe Insights</h4>
-                    <p className="text-sm text-slate-300">Get an AI-powered wardrobe gap score, top 3 priorities, high-impact items to add, and a coverage dashboard across shirts, trousers, shoes, blazers, belts, colors, and styles. Collapse preferences after analysis, tap best colors to shop on Google, and use the market-ready shopping list with Buy/Look for/Search online columns, per style/color search chips, Copy list, and improved WhatsApp/PDF export.</p>
+                    <p className="text-sm text-slate-300">Get an AI-powered wardrobe gap score, top 3 priorities, high-impact items to add, and a coverage dashboard across shirts, trousers, blazers, sweaters, jackets, shoes, belts, colors, and styles—plus ties for business, formal, or office occasions. This is separate from the main five-slot outfit result. Collapse preferences after analysis, tap best colors to shop on Google, and use the market-ready shopping list with Buy/Look for/Search online columns, per style/color search chips, Copy list, and improved WhatsApp/PDF export.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">

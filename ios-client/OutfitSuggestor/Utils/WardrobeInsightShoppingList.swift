@@ -406,6 +406,9 @@ enum WardrobeInsightShoppingList {
         case "shoe", "shoes": return "shoes"
         case "blazer", "blazers": return "blazers"
         case "belt", "belts": return "belts"
+        case "sweater", "sweaters": return "sweater"
+        case "jacket", "jackets": return "jacket"
+        case "tie", "ties": return "tie"
         default: return lower
         }
     }
@@ -416,6 +419,9 @@ enum WardrobeInsightShoppingList {
         case "trouser", "trousers": return "Trousers"
         case "shoe", "shoes": return "Shoes"
         case "blazer", "blazers": return "Blazer"
+        case "sweater", "sweaters": return "Sweater"
+        case "jacket", "jackets": return "Jacket"
+        case "tie", "ties": return "Tie"
         case "belt", "belts": return "Belt"
         default: return prettyLabel(category)
         }

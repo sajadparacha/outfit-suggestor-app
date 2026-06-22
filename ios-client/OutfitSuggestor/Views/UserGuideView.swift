@@ -118,7 +118,7 @@ struct UserGuideView: View {
                         "Open Insights from Profile to get an AI-powered wardrobe analysis.",
                         "Set occasion, season, and style, then tap Analyze My Wardrobe.",
                         "Review your gap score, top priorities, and items to add next.",
-                        "Check the coverage dashboard for category health at a glance.",
+                        "Check the coverage dashboard for category health at a glance—including sweaters and jackets, plus ties for business, formal, or office.",
                         "Tap a category in Detailed category analysis for recommendations.",
                         "Tap a best color to search Google Shopping for that category and color.",
                         "Tap Shop similar on any item to search Google Shopping.",

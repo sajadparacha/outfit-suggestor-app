@@ -262,7 +262,7 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               'You can also start from Wardrobe by clicking Analyze My Wardrobe in the header.',
               'Choose Quick Wardrobe Check (rules-based) or AI Stylist Review (deeper AI styling advice).',
               'After analysis, preferences collapse into an Analyzed for bar—tap Change preferences to edit and re-run.',
-              'Review the summary card, Top items to add, Wardrobe coverage dashboard, and expand Detailed category analysis for specifics.',
+              'Review the summary card, Top items to add, Wardrobe coverage dashboard (shirts through belts plus sweaters and jackets; ties appear for business, formal, or office), and expand Detailed category analysis for specifics.',
               'Tap a best color on any item card to search Google Shopping for that category and color. Use Shop similar for a broader search.',
               'Tap Shopping list to open a market-ready table with Buy labels, priority badges, human Look for guidance, and per style/color Search online chips.',
               'Use Copy list, Export to WhatsApp, or Export as PDF—the export uses numbered items with one focused Google Shopping link per row (no raw style/color tuples).',

@@ -59,6 +59,8 @@ enum AboutCopy {
         "• Digital wardrobe with AI item recognition—filter by core slots (shirts, trousers, blazers, shoes, belts) plus specific types when you own them (polo, T-shirt, jeans, shorts, sweater, jacket, tie, and more). Outfit completion still uses the same five core slots."
     static let wardrobeCompletionFeature =
         "• Complete outfits from selected wardrobe pieces—set occasion, season, style, and notes inline on Wardrobe before tapping Complete outfit with AI (one item per slot)."
+    static let wardrobeInsightsFeature =
+        "• Wardrobe Insights — AI-powered gap analysis with a summary score, top priorities, coverage dashboard (including sweaters, jackets, and ties for formal occasions), and a market-ready shopping list with Buy, Look for, and Search online columns, per style/color Google Shopping searches, Copy list, and WhatsApp or PDF export. Outfit suggestions still use the same five core slots."
     static let adminDiagnosticsSuffix = " Includes transparent admin diagnostics for administrators."
 
     static func techStackDescription(isAdmin: Bool) -> String {

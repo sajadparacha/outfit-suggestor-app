@@ -1,10 +1,10 @@
 """
 Unit tests for WardrobeService - find_most_similar_wardrobe_item,
-reorder_matches_by_upload_similarity
+reorder_matches_by_upload_similarity, gap analysis categories
 """
 import base64
 import io
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 import pytest
 from PIL import Image
 
@@ -45,6 +45,73 @@ class TestWardrobeServiceCategoryStyles:
             ["oxford", "linen", "clean sneakers", "loafers"],
         )
         assert filtered == ["oxford", "linen"]
+
+
+class TestWardrobeGapAnalysisCategories:
+    """Gap analysis includes sweater, jacket; tie only for formal occasions; jacket distinct from blazer."""
+
+    def test_gap_categories_casual_includes_sweater_and_jacket_not_tie(self):
+        ws = WardrobeService()
+        categories = ws._gap_analysis_categories("casual")
+        assert "sweater" in categories
+        assert "jacket" in categories
+        assert "tie" not in categories
+
+    def test_gap_categories_business_includes_tie(self):
+        ws = WardrobeService()
+        for occasion in ("business", "formal", "office"):
+            categories = ws._gap_analysis_categories(occasion)
+            assert "tie" in categories, occasion
+            assert "sweater" in categories
+            assert "jacket" in categories
+
+    def test_jacket_not_merged_into_blazer(self):
+        ws = WardrobeService()
+        assert ws._normalize_category("jacket") == "jacket"
+        assert ws._normalize_category("jackets") == "jacket"
+        assert ws._normalize_category("blazer") == "blazer"
+
+    def test_sweater_and_jacket_have_style_library_entries(self):
+        ws = WardrobeService()
+        assert ws.STYLE_LIBRARY["sweater"]
+        assert ws.STYLE_LIBRARY["jacket"]
+        assert ws.STYLE_LIBRARY["tie"]
+
+    def test_analyze_wardrobe_gaps_casual_has_no_tie(self):
+        ws = WardrobeService()
+        db = MagicMock()
+        jacket_item = WardrobeItem(
+            id=1,
+            user_id=1,
+            category="jacket",
+            color="Navy",
+            description="Lightweight field jacket",
+        )
+        blazer_item = WardrobeItem(
+            id=2,
+            user_id=1,
+            category="blazer",
+            color="Gray",
+            description="Unstructured casual blazer",
+        )
+        with patch.object(ws, "get_user_wardrobe", return_value=([jacket_item, blazer_item], 2)):
+            result = ws.analyze_wardrobe_gaps(db, user_id=1, occasion="casual", season="fall", style="modern")
+
+        categories = result["analysis_by_category"]
+        assert "tie" not in categories
+        assert "sweater" in categories
+        assert "jacket" in categories
+        assert categories["jacket"]["item_count"] == 1
+        assert categories["blazer"]["item_count"] == 1
+
+    def test_analyze_wardrobe_gaps_business_includes_tie(self):
+        ws = WardrobeService()
+        db = MagicMock()
+        with patch.object(ws, "get_user_wardrobe", return_value=([], 0)):
+            result = ws.analyze_wardrobe_gaps(db, user_id=1, occasion="business", season="winter", style="classic")
+
+        assert "tie" in result["analysis_by_category"]
+        assert result["analysis_by_category"]["tie"]["item_count"] == 0
 
 
 class TestWardrobeServiceSimilarity:

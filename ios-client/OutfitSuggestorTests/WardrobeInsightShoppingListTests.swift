@@ -161,6 +161,69 @@ final class WardrobeInsightShoppingListTests: XCTestCase {
         XCTAssertEqual(encodedText, text)
     }
 
+    func testComboSearchURLUsesSingularPhrasesForExtendedCategories() {
+        let sweaterURL = WardrobeInsightShoppingList.comboSearchURL(category: "sweater", style: "Merino", color: "Navy")
+        let jacketURL = WardrobeInsightShoppingList.comboSearchURL(category: "jacket", style: "Bomber", color: "Olive")
+        let tieURL = WardrobeInsightShoppingList.comboSearchURL(category: "tie", style: "Silk", color: "Burgundy")
+
+        for (url, phrase) in [
+            (sweaterURL, "men sweater"),
+            (jacketURL, "men jacket"),
+            (tieURL, "men tie"),
+        ] {
+            XCTAssertNotNil(url)
+            let query = URLComponents(url: url!, resolvingAgainstBaseURL: false)?
+                .queryItems?
+                .first(where: { $0.name == "q" })?
+                .value ?? ""
+            XCTAssertTrue(query.contains(phrase), "Expected query to contain \(phrase), got \(query)")
+        }
+    }
+
+    func testBuildRowsUseExtendedCategoryDisplayLabels() {
+        let result = WardrobeInsightResult(
+            context: makeResult().context,
+            score: WardrobeInsightScore(value: 70, label: .good, summary: "Add layers."),
+            topPriorities: [],
+            missingItems: [
+                WardrobeInsightMissingItem(
+                    id: "missing-1-sweater",
+                    name: "merino sweater",
+                    category: "sweater",
+                    priority: "High",
+                    reason: "Warm layering.",
+                    bestColors: ["navy"],
+                    worksWith: ["merino"]
+                ),
+                WardrobeInsightMissingItem(
+                    id: "missing-2-jacket",
+                    name: "field jacket",
+                    category: "jacket",
+                    priority: "Medium",
+                    reason: "Outer layer.",
+                    bestColors: ["olive"],
+                    worksWith: ["field jacket"]
+                ),
+                WardrobeInsightMissingItem(
+                    id: "missing-3-tie",
+                    name: "silk tie",
+                    category: "tie",
+                    priority: "Low",
+                    reason: "Formal polish.",
+                    bestColors: ["burgundy"],
+                    worksWith: ["silk"]
+                ),
+            ],
+            categoryHealth: [],
+            diagnostics: nil,
+            admin: nil
+        )
+
+        let rows = WardrobeInsightShoppingList.buildRows(from: result)
+
+        XCTAssertEqual(rows.map(\.category), ["Sweater", "Jacket", "Tie"])
+    }
+
     private func makeResult() -> WardrobeInsightResult {
         WardrobeInsightResult(
             context: WardrobeInsightContext(

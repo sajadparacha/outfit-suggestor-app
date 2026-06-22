@@ -16,8 +16,11 @@ import {
   getFilterChipCount,
   getVisibleFilterChips,
   matchesWardrobeCategoryFilter,
+  usesClientSideCategoryFilter,
   wardrobeCategoryLabel,
 } from '../../utils/wardrobeCategory';
+
+const CLIENT_SIDE_FILTER_LOAD_LIMIT = 100;
 
 const COMPLETE_OUTFIT_SLOTS = ['shirt', 'trouser', 'blazer', 'shoes', 'belt'] as const;
 type CompleteOutfitSlot = typeof COMPLETE_OUTFIT_SLOTS[number];
@@ -332,21 +335,28 @@ const Wardrobe: React.FC<WardrobeProps> = ({
 
   const categories = WARDROBE_FORM_CATEGORIES;
 
-  const wardrobeApiCategory = useCallback(
-    () => apiCategoryParamForFilter(selectedCategory),
-    [selectedCategory]
-  );
+  const loadWardrobeWithCategoryFilter = useCallback((
+    category: string | null,
+    search?: string,
+    page: number = 1
+  ) => {
+    const apiCategory = apiCategoryParamForFilter(category);
+    const bulkLimit = usesClientSideCategoryFilter(category) ? CLIENT_SIDE_FILTER_LOAD_LIMIT : undefined;
+    loadWardrobe(apiCategory, search, page, bulkLimit);
+  }, [loadWardrobe]);
+
+  const isClientSideCategoryFilter = usesClientSideCategoryFilter(selectedCategory);
 
   // Load wardrobe and summary on mount or when initialCategory changes
   React.useEffect(() => {
     // Summary is loaded by the wardrobe controller hook on mount.
     if (initialCategory) {
       setSelectedCategory(initialCategory);
-      loadWardrobe(apiCategoryParamForFilter(initialCategory), undefined, 1);
+      loadWardrobeWithCategoryFilter(initialCategory, undefined, 1);
     } else {
       loadWardrobe(undefined, undefined, 1);
     }
-  }, [loadWardrobe, loadSummary, initialCategory, setSelectedCategory]);
+  }, [loadWardrobe, loadSummary, initialCategory, setSelectedCategory, loadWardrobeWithCategoryFilter]);
 
   // Handle category filter
   const handleCategoryFilter = (category: string | null) => {
@@ -356,7 +366,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
       loadWardrobe(undefined, searchQuery || undefined, 1);
     } else {
       setSelectedCategory(category);
-      loadWardrobe(apiCategoryParamForFilter(category), searchQuery || undefined, 1);
+      loadWardrobeWithCategoryFilter(category, searchQuery || undefined, 1);
     }
   };
 
@@ -364,16 +374,20 @@ const Wardrobe: React.FC<WardrobeProps> = ({
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setSearchQuery(localSearchQuery);
-    loadWardrobe(wardrobeApiCategory(), localSearchQuery || undefined, 1);
+    loadWardrobeWithCategoryFilter(selectedCategory, localSearchQuery || undefined, 1);
   };
 
   // Handle pagination
   const handlePageChange = (page: number) => {
-    loadWardrobe(wardrobeApiCategory(), searchQuery || undefined, page);
+    loadWardrobeWithCategoryFilter(selectedCategory, searchQuery || undefined, page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const totalPages = totalCount > 0 ? Math.ceil(totalCount / itemsPerPage) : 0;
+  const totalPages = isClientSideCategoryFilter
+    ? 0
+    : totalCount > 0
+      ? Math.ceil(totalCount / itemsPerPage)
+      : 0;
 
   // Function to highlight search term in text
   const highlightSearchTerm = (text: string | null, searchTerm: string): React.ReactNode => {
@@ -878,7 +892,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                   onClick={() => {
                     setLocalSearchQuery('');
                     setSearchQuery('');
-                    loadWardrobe(wardrobeApiCategory(), undefined, 1);
+                    loadWardrobeWithCategoryFilter(selectedCategory, undefined, 1);
                   }}
                   className="min-h-[44px] flex-1 touch-manipulation rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-medium text-slate-200 transition-colors hover:bg-white/20 sm:flex-none"
                 >

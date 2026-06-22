@@ -770,19 +770,26 @@ describe('Wardrobe page', () => {
     expect(within(card).queryByText('t_shirt')).not.toBeInTheDocument();
   });
 
-  it('loads wardrobe without API category for grouped shirt filter', () => {
+  it('keeps shirt filter selected and shows filtered items after chip click', () => {
     mockSummary.total_items = 2;
-    mockSummary.by_category = { shirt: 1, polo: 1 };
+    mockSummary.by_category = { shirt: 1, trouser: 1 };
     mockWardrobeItems.push(
-      { ...mockWardrobeItem, id: 1, category: 'shirt' },
-      { ...mockWardrobeItem, id: 2, category: 'polo', description: 'Navy polo', color: 'Navy' }
+      { ...mockWardrobeItem, id: 1, category: 'shirt', description: 'Blue shirt' },
+      { ...mockWardrobeItem, id: 2, category: 'trouser', description: 'Navy trousers', color: 'Navy' }
     );
 
-    render(<Wardrobe />);
+    const { rerender } = render(<Wardrobe />);
 
     fireEvent.click(screen.getByRole('button', { name: /^Shirt\b/i }));
 
     expect(mockSetSelectedCategory).toHaveBeenCalledWith('shirt');
-    expect(mockLoadWardrobe).toHaveBeenCalledWith(undefined, undefined, 1);
+    expect(mockLoadWardrobe).toHaveBeenCalledWith(undefined, undefined, 1, 100);
+
+    mockSelectedCategory = 'shirt';
+    rerender(<Wardrobe />);
+
+    expect(screen.getByText('Blue shirt')).toBeInTheDocument();
+    expect(screen.queryByText('Navy trousers')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Shirt\b/i })).toHaveClass('btn-brand');
   });
 });

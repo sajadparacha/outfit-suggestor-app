@@ -45,6 +45,33 @@ const sampleResponse: WardrobeGapAnalysisResponse = {
       recommended_purchases: ['Navy blazer'],
       item_count: 0,
     },
+    sweater: {
+      category: 'sweater',
+      owned_colors: ['gray'],
+      owned_styles: ['crew neck'],
+      missing_colors: ['navy'],
+      missing_styles: ['cardigan'],
+      recommended_purchases: ['Navy cardigan'],
+      item_count: 1,
+    },
+    jacket: {
+      category: 'jacket',
+      owned_colors: [],
+      owned_styles: [],
+      missing_colors: ['olive'],
+      missing_styles: ['bomber'],
+      recommended_purchases: ['Olive bomber jacket'],
+      item_count: 0,
+    },
+    tie: {
+      category: 'tie',
+      owned_colors: [],
+      owned_styles: [],
+      missing_colors: ['navy'],
+      missing_styles: ['silk'],
+      recommended_purchases: ['Navy silk tie'],
+      item_count: 0,
+    },
     shoes: {
       category: 'shoes',
       owned_colors: ['brown'],
@@ -146,6 +173,17 @@ describe('WardrobeCoverageDashboard', () => {
       expect(screen.getAllByText(item.status).length).toBeGreaterThan(0);
     });
   });
+
+  it('shows extended clothing categories including sweater, jacket, and tie', () => {
+    render(<WardrobeCoverageDashboard categories={insight.categoryHealth} />);
+
+    expect(screen.getByTestId('coverage-card-sweaters')).toBeInTheDocument();
+    expect(screen.getByTestId('coverage-card-jackets')).toBeInTheDocument();
+    expect(screen.getByTestId('coverage-card-ties')).toBeInTheDocument();
+    expect(screen.getByText('Sweaters')).toBeInTheDocument();
+    expect(screen.getByText('Jackets')).toBeInTheDocument();
+    expect(screen.getByText('Ties')).toBeInTheDocument();
+  });
 });
 
 describe('CategoryDetailAccordion', () => {
@@ -225,6 +263,23 @@ describe('CategoryDetailAccordion', () => {
     missingColorChips.forEach((chip) => {
       expect(chip.tagName).toBe('BUTTON');
     });
+  });
+
+  it('opens Google Shopping with men sweater when sweater row Shop similar is clicked', () => {
+    const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
+
+    render(
+      <CategoryDetailAccordion categories={insight.categoryHealth} styleContext="classic" />
+    );
+
+    fireEvent.click(screen.getByTestId('category-row-sweater').querySelector('button') as HTMLButtonElement);
+    fireEvent.click(screen.getByRole('button', { name: /Shop similar/i }));
+
+    expect(openSpy).toHaveBeenCalled();
+    const url = decodeURIComponent(String(openSpy.mock.calls[0][0]));
+    expect(url).toMatch(/men sweater/i);
+
+    openSpy.mockRestore();
   });
 
   it('opens Google Shopping with category, color, and missing styles when a missing color chip is clicked', () => {

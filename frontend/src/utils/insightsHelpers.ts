@@ -44,6 +44,9 @@ export const categoryForSearch = (rawCategory: string): string => {
   if (normalized === 'shoe' || normalized === 'shoes') return 'shoes';
   if (normalized === 'blazer' || normalized === 'blazers') return 'blazers';
   if (normalized === 'belt' || normalized === 'belts') return 'belts';
+  if (normalized === 'sweater' || normalized === 'sweaters') return 'sweater';
+  if (normalized === 'jacket' || normalized === 'jackets') return 'jacket';
+  if (normalized === 'tie' || normalized === 'ties') return 'tie';
   return normalized;
 };
 
@@ -118,6 +121,12 @@ const CATEGORY_DISPLAY_LABELS: Record<string, string> = {
   shoes: 'Shoes',
   blazer: 'Blazer',
   blazers: 'Blazer',
+  sweater: 'Sweater',
+  sweaters: 'Sweater',
+  jacket: 'Jacket',
+  jackets: 'Jacket',
+  tie: 'Tie',
+  ties: 'Tie',
   belt: 'Belt',
   belts: 'Belt',
 };
@@ -392,7 +401,7 @@ export const scoreLabelFromValue = (value: number): ScoreLabel => {
   return 'Strong';
 };
 
-export const CATEGORY_ORDER = ['shirt', 'trouser', 'blazer', 'shoes', 'belt'] as const;
+export const CATEGORY_ORDER = ['shirt', 'trouser', 'blazer', 'sweater', 'jacket', 'shoes', 'belt'] as const;
 
 export const NEUTRAL_COLORS = new Set([
   'black',
@@ -413,6 +422,9 @@ export const CATEGORY_STYLE_LIBRARY: Record<string, readonly string[]> = {
   shirt: ['oxford', 'linen', 'textured', 'smart casual', 'overshirt'],
   trouser: ['chino', 'slim-fit', 'relaxed-fit', 'tailored', 'straight-leg'],
   blazer: ['unstructured', 'lightweight', 'casual blazer', 'linen blazer', 'soft shoulder'],
+  sweater: ['crew neck', 'v-neck', 'cardigan', 'merino', 'cable knit'],
+  jacket: ['bomber', 'denim jacket', 'field jacket', 'lightweight shell', 'harrington'],
+  tie: ['silk', 'knit tie', 'classic width', 'textured', 'solid'],
   shoes: ['loafers', 'clean sneakers', 'derby shoes', 'driving shoes', 'minimal leather sneakers'],
   belt: ['leather', 'braided', 'reversible', 'formal leather', 'casual leather'],
 };

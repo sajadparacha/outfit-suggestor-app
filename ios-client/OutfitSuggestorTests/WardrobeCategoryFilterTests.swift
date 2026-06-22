@@ -116,6 +116,99 @@ final class WardrobeCategoryFilterTests: XCTestCase {
         XCTAssertEqual(WardrobeCompletionSlot.normalized(from: "jacket"), .blazer)
     }
 
+    func testCategoryFilterChipTapPreservesSelectionWhenCountPositive() {
+        let counts = WardrobeCategoryDisplay.rebuildCategoryCounts(from: sampleItems)
+        let total = sampleItems.count
+
+        for chip in ["shirt", "trouser", "polo"] {
+            let count = countForCategory(chip, counts: counts, total: total)
+            XCTAssertGreaterThan(count, 0, "\(chip) should have a positive count in sample wardrobe")
+
+            let selected = categoryFilterAfterChipTap(tapped: chip, counts: counts, total: total)
+            XCTAssertEqual(selected, chip, "Tapping \(chip) with items should keep that filter active")
+        }
+    }
+
+    func testCategoryFilterChipTapResetsToAllOnlyWhenCountIsZero() {
+        let counts = WardrobeCategoryDisplay.rebuildCategoryCounts(from: [
+            wardrobeItem(category: "shirt"),
+        ])
+        let total = 1
+
+        XCTAssertEqual(
+            categoryFilterAfterChipTap(tapped: "blazer", counts: counts, total: total),
+            "All"
+        )
+        XCTAssertEqual(
+            categoryFilterAfterChipTap(tapped: "shirt", counts: counts, total: total),
+            "shirt"
+        )
+    }
+
+    func testCategoryFilterSurvivesReloadWhenCountPositive() {
+        let counts = WardrobeCategoryDisplay.rebuildCategoryCounts(from: sampleItems)
+        let total = sampleItems.count
+
+        for chip in ["shirt", "trouser", "polo"] {
+            let preserved = categoryFilterAfterReload(current: chip, counts: counts, total: total)
+            XCTAssertEqual(preserved, chip, "Reload should preserve \(chip) when count > 0")
+        }
+    }
+
+    func testCoreFilterChipKeysMatchFilterBehavior() {
+        let counts = WardrobeCategoryDisplay.rebuildCategoryCounts(from: sampleItems)
+
+        for chip in WardrobeCategoryDisplay.coreFilterChips {
+            let matchingItems = sampleItems.filter {
+                WardrobeCategoryDisplay.matchesCategoryFilter($0.category, filter: chip.key)
+            }
+            let count = counts[chip.key] ?? 0
+
+            XCTAssertEqual(
+                count,
+                matchingItems.count,
+                "Count for core chip \(chip.key) should match filtered items"
+            )
+            XCTAssertGreaterThan(
+                count,
+                0,
+                "Sample wardrobe should include items for core chip \(chip.key)"
+            )
+        }
+    }
+
+    /// Mirrors `WardrobeListView.countForCategory` — categoryCounts keys are lowercase chip keys.
+    private func countForCategory(_ category: String, counts: [String: Int], total: Int) -> Int {
+        if category == "All" {
+            return total
+        }
+        return counts[category.lowercased()] ?? 0
+    }
+
+    /// Mirrors chip tap handler in `WardrobeListView.categoryFilterChips`.
+    private func categoryFilterAfterChipTap(
+        tapped: String,
+        counts: [String: Int],
+        total: Int
+    ) -> String {
+        if tapped != "All" && countForCategory(tapped, counts: counts, total: total) == 0 {
+            return "All"
+        }
+        return tapped
+    }
+
+    /// Mirrors post-load reset guard in `WardrobeListView.load`.
+    private func categoryFilterAfterReload(
+        current: String,
+        counts: [String: Int],
+        total: Int
+    ) -> String {
+        if current != "All" && countForCategory(current, counts: counts, total: total) == 0 {
+            return "All"
+        }
+        return current
+    }
+
     private func wardrobeItem(category: String) -> WardrobeItem {
         WardrobeItem(
             id: Int.random(in: 1...9999),

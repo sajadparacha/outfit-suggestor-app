@@ -17,14 +17,17 @@ const statusStyles: Record<CoverageStatus, { border: string; text: string; bg: s
   'Too casual': { border: 'border-sky-400/30', text: 'text-sky-200', bg: 'bg-sky-500/10' },
 };
 
-const categoryIcons: Record<string, string> = {
+export const categoryIcons: Record<string, string> = {
   Shirts: '👔',
   Trousers: '👖',
   Shoes: '👟',
   Blazers: '🧥',
+  Sweaters: '🧶',
+  Jackets: '🧥',
+  Ties: '🎀',
   Belts: '🪢',
   Colors: '🎨',
-  Styles: '👔',
+  Styles: '✨',
 };
 
 const CoverageStatusCard: React.FC<CoverageStatusCardProps> = ({ category, status, summary, icon }) => {

@@ -5,9 +5,11 @@ import {
   buildCopyListText,
   buildSearchAllUrl,
   buildShoppingListRows,
+  buildShoppingSearchUrl,
   buildStyleColorTuples,
   buildWhatsAppShoppingListText,
   buildWhatsAppShoppingListUrl,
+  categoryForSearch,
   cleanShoppingItemLabel,
   formatLookForText,
   formatStyleColorTuplePreview,
@@ -36,6 +38,24 @@ const missingItems: WardrobeMissingItem[] = [
 ];
 
 describe('insights shopping list helpers', () => {
+  it('maps extended clothing categories for Google Shopping queries', () => {
+    expect(categoryForSearch('sweater')).toBe('sweater');
+    expect(categoryForSearch('Sweaters')).toBe('sweater');
+    expect(categoryForSearch('jacket')).toBe('jacket');
+    expect(categoryForSearch('Jackets')).toBe('jacket');
+    expect(categoryForSearch('tie')).toBe('tie');
+    expect(categoryForSearch('ties')).toBe('tie');
+
+    const sweaterUrl = decodeURIComponent(buildShoppingSearchUrl('sweater', ['crew neck'], ['navy']));
+    expect(sweaterUrl).toMatch(/men sweater/i);
+
+    const jacketUrl = decodeURIComponent(buildShoppingSearchUrl('jacket', ['bomber'], ['olive']));
+    expect(jacketUrl).toMatch(/men jacket/i);
+
+    const tieUrl = decodeURIComponent(buildShoppingSearchUrl('tie', ['silk'], ['navy']));
+    expect(tieUrl).toMatch(/men tie/i);
+  });
+
   it('dedupes repeated words and prefers category labels', () => {
     expect(cleanShoppingItemLabel('White Trouser Trouser', 'trouser')).toBe('Trousers');
     expect(cleanShoppingItemLabel('belt', 'belt')).toBe('Belt');

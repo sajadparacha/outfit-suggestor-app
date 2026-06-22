@@ -34,6 +34,24 @@ const baseResponse: WardrobeGapAnalysisResponse = {
       recommended_purchases: ['Navy blazer'],
       item_count: 0,
     },
+    sweater: {
+      category: 'sweater',
+      owned_colors: ['gray'],
+      owned_styles: ['crew neck'],
+      missing_colors: ['navy'],
+      missing_styles: ['cardigan'],
+      recommended_purchases: ['Navy cardigan'],
+      item_count: 1,
+    },
+    jacket: {
+      category: 'jacket',
+      owned_colors: [],
+      owned_styles: [],
+      missing_colors: ['olive'],
+      missing_styles: ['bomber'],
+      recommended_purchases: ['Olive bomber jacket'],
+      item_count: 0,
+    },
     shoes: {
       category: 'shoes',
       owned_colors: ['brown'],
@@ -147,9 +165,43 @@ describe('normalizeWardrobeInsight', () => {
     expect(names).toContain('Trousers');
     expect(names).toContain('Shoes');
     expect(names).toContain('Blazers');
+    expect(names).toContain('Sweaters');
+    expect(names).toContain('Jackets');
     expect(names).toContain('Belts');
     expect(names).toContain('Colors');
     expect(names).toContain('Styles');
+    expect(names).not.toContain('Ties');
+
+    const clothingRows = result.categoryHealth.filter((c) => c.id !== 'colors' && c.id !== 'styles');
+    expect(clothingRows).toHaveLength(7);
+    expect(result.categoryHealth).toHaveLength(9);
+  });
+
+  it('includes tie only when returned in analysis_by_category', () => {
+    const casual = normalizeWardrobeInsight(baseResponse);
+    expect(casual.categoryHealth.find((c) => c.id === 'tie')).toBeUndefined();
+
+    const formal = normalizeWardrobeInsight({
+      ...baseResponse,
+      occasion: 'business',
+      analysis_by_category: {
+        ...baseResponse.analysis_by_category,
+        tie: {
+          category: 'tie',
+          owned_colors: [],
+          owned_styles: [],
+          missing_colors: ['navy'],
+          missing_styles: ['silk'],
+          recommended_purchases: ['Navy silk tie'],
+          item_count: 0,
+        },
+      },
+    });
+
+    const tie = formal.categoryHealth.find((c) => c.id === 'tie');
+    expect(tie?.category).toBe('Ties');
+    expect(formal.categoryHealth.filter((c) => c.id !== 'colors' && c.id !== 'styles')).toHaveLength(8);
+    expect(formal.categoryHealth).toHaveLength(10);
   });
 
   it('marks empty categories as Missing', () => {

@@ -234,8 +234,10 @@ Wardrobe items (JSON list):
 {json.dumps(wardrobe_items, ensure_ascii=True)}
 
 Rules:
-1) Analyze categories: shirt, trouser, blazer, shoes, belt.
-2) For each category return:
+1) Analyze categories: shirt, trouser, blazer, sweater, jacket, shoes, belt.
+   Include tie only when occasion is business, formal, or office.
+2) Keep jacket distinct from blazer — do not merge them.
+3) For each category return:
    - category
    - owned_colors (normalized)
    - owned_styles (derived from descriptions)
@@ -243,10 +245,10 @@ Rules:
    - missing_styles
    - recommended_purchases (3 concise bullet-like strings)
    - item_count
-3) Be practical and fashion-aware for the provided context.
-4) Return STRICT JSON only, no markdown, no extra prose.
-5) Avoid repeating generic style words like "trendy" across every category.
-6) priorityShoppingList must include every category with meaningful gaps, ranked by impact (do not limit to only three items).
+4) Be practical and fashion-aware for the provided context.
+5) Return STRICT JSON only, no markdown, no extra prose.
+6) Avoid repeating generic style words like "trendy" across every category.
+7) priorityShoppingList must include every category with meaningful gaps, ranked by impact (do not limit to only three items).
 
 Required JSON shape:
 {{
@@ -291,8 +293,11 @@ Required JSON shape:
     }},
     "trouser": {{ "...": "..." }},
     "blazer": {{ "...": "..." }},
+    "sweater": {{ "...": "..." }},
+    "jacket": {{ "...": "..." }},
     "shoes": {{ "...": "..." }},
-    "belt": {{ "...": "..." }}
+    "belt": {{ "...": "..." }},
+    "tie": {{ "...": "..." }}
   }},
   "overall_summary": "string"
 }}
@@ -322,13 +327,15 @@ Required JSON shape:
             parsed = self._safe_parse_json_object(content)
 
             # Minimal shape enforcement fallback
-            required_categories = ["shirt", "trouser", "blazer", "shoes", "belt"]
-            categories = parsed.get("analysis_by_category", {})
-            if not isinstance(categories, dict):
-                categories = {}
             from services.wardrobe_service import WardrobeService
 
             style_filter = WardrobeService()
+            required_categories = style_filter._gap_analysis_categories(
+                str(parsed.get("occasion", occasion))
+            )
+            categories = parsed.get("analysis_by_category", {})
+            if not isinstance(categories, dict):
+                categories = {}
             for category in required_categories:
                 entry = categories.get(category, {})
                 owned_styles = entry.get("owned_styles", []) if isinstance(entry, dict) else []

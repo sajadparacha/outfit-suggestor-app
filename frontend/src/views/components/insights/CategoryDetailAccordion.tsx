@@ -3,6 +3,7 @@ import { WardrobeCategoryHealth } from '../../../models/WardrobeInsightResult';
 import { openShoppingSearch, prettyLabel } from '../../../utils/insightsHelpers';
 import InsightColorChip from './InsightColorChip';
 import InsightStyleChip from './InsightStyleChip';
+import { categoryIcons } from './CoverageStatusCard';
 
 interface CategoryDetailAccordionProps {
   categories: WardrobeCategoryHealth[];
@@ -182,7 +183,7 @@ const CategoryDetailAccordion: React.FC<CategoryDetailAccordionProps> = ({ categ
                 aria-expanded={isExpanded}
               >
                 <span className="text-lg" aria-hidden>
-                  {item.category === 'Shirts' ? '👔' : item.category === 'Trousers' ? '👖' : item.category === 'Shoes' ? '👟' : item.category === 'Blazers' ? '🧥' : item.category === 'Belts' ? '🪢' : item.category === 'Colors' ? '🎨' : '👔'}
+                  {categoryIcons[item.category] ?? '📦'}
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">

@@ -129,14 +129,66 @@ final class NormalizeWardrobeInsightTests: XCTestCase {
     func testCategoryHealthIncludesAllCoverageCategories() {
         let result = NormalizeWardrobeInsight.normalize(makeResponse())
 
-        XCTAssertEqual(result.categoryHealth.count, 7)
+        XCTAssertEqual(result.categoryHealth.count, 9)
         XCTAssertEqual(
             result.categoryHealth.map(\.category),
-            ["Shirts", "Trousers", "Shoes", "Blazers", "Belts", "Colors", "Styles"]
+            ["Shirts", "Trousers", "Blazers", "Sweaters", "Jackets", "Shoes", "Belts", "Colors", "Styles"]
         )
         XCTAssertTrue(result.categoryHealth.contains { $0.status == .missing })
         XCTAssertTrue(result.categoryHealth.contains { $0.category == "Colors" })
         XCTAssertTrue(result.categoryHealth.contains { $0.category == "Styles" })
+    }
+
+    func testCategoryHealthIncludesTieWhenReturnedInResponse() {
+        let response = makeResponse(
+            analysisByCategory: [
+                "shirt": makeCategoryGap(category: "shirt", itemCount: 1),
+                "trouser": makeCategoryGap(category: "trouser", itemCount: 1),
+                "blazer": makeCategoryGap(category: "blazer", itemCount: 1),
+                "sweater": makeCategoryGap(category: "sweater", itemCount: 0),
+                "jacket": makeCategoryGap(category: "jacket", itemCount: 1),
+                "shoes": makeCategoryGap(category: "shoes", itemCount: 1),
+                "belt": makeCategoryGap(category: "belt", itemCount: 1),
+                "tie": makeCategoryGap(category: "tie", itemCount: 0),
+            ]
+        )
+
+        let health = NormalizeWardrobeInsight.normalize(response).categoryHealth
+
+        XCTAssertEqual(health.count, 10)
+        XCTAssertEqual(health.map(\.id), ["shirt", "trouser", "blazer", "sweater", "jacket", "shoes", "belt", "tie", "colors", "styles"])
+        XCTAssertEqual(health.first { $0.id == "tie" }?.category, "Ties")
+    }
+
+    func testCategoryHealthOmitsTieWhenNotInResponse() {
+        let result = NormalizeWardrobeInsight.normalize(makeResponse())
+
+        XCTAssertNil(result.categoryHealth.first { $0.id == "tie" })
+    }
+
+    func testSweaterCategoryHealthUsesStyleLibraryFilter() {
+        let response = makeResponse(
+            analysisByCategory: [
+                "shirt": makeCategoryGap(category: "shirt", itemCount: 1),
+                "trouser": makeCategoryGap(category: "trouser", itemCount: 1),
+                "blazer": makeCategoryGap(category: "blazer", itemCount: 1),
+                "sweater": makeCategoryGap(
+                    category: "sweater",
+                    itemCount: 1,
+                    missingStyles: ["crew neck", "clean sneakers"],
+                    ownedStyles: ["merino"]
+                ),
+                "jacket": makeCategoryGap(category: "jacket", itemCount: 1),
+                "shoes": makeCategoryGap(category: "shoes", itemCount: 1),
+                "belt": makeCategoryGap(category: "belt", itemCount: 1),
+            ]
+        )
+
+        let sweater = NormalizeWardrobeInsight.normalize(response).categoryHealth.first { $0.id == "sweater" }
+
+        XCTAssertEqual(sweater?.ownedStyles, ["merino"])
+        XCTAssertEqual(sweater?.missingStyles, ["crew neck"])
+        XCTAssertFalse(sweater?.missingStyles.contains("clean sneakers") ?? true)
     }
 
     func testAdminPayloadPreservedInNormalizedResult() {
@@ -259,8 +311,10 @@ final class NormalizeWardrobeInsightTests: XCTestCase {
         let defaultCategories: [String: WardrobeCategoryGap] = [
             "shirt": makeCategoryGap(category: "shirt", itemCount: 2, missingColors: ["white"], ownedStyles: ["linen"]),
             "trouser": makeCategoryGap(category: "trouser", itemCount: 0),
-            "shoes": makeCategoryGap(category: "shoes", itemCount: 1, missingStyles: ["clean sneakers"]),
             "blazer": makeCategoryGap(category: "blazer", itemCount: 0),
+            "sweater": makeCategoryGap(category: "sweater", itemCount: 0),
+            "jacket": makeCategoryGap(category: "jacket", itemCount: 1),
+            "shoes": makeCategoryGap(category: "shoes", itemCount: 1, missingStyles: ["clean sneakers"]),
             "belt": makeCategoryGap(category: "belt", itemCount: 1),
         ]
 
