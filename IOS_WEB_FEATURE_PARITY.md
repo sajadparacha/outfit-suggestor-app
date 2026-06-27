@@ -69,7 +69,7 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 1. **Creation** — upload, preferences (occasion/season/style/notes), **Generate Outfit** CTA; wardrobe / random picks / advanced options collapsed on input side
 2. **Result** — styled look hero (model image or placeholder, not upload repeat), context line (`Style · Season`), simplified item cards with source tags, optional **Also wear** collapsible section (sweater / outerwear / tie when API returns them — not part of core five), **Why this works** bullets
 3. **Actions** — **Generate Another Look**, **Save Look**, **Refine** (formal / casual / wardrobe-only / change occasion inside menu)
-4. **Layout** — web two-column on desktop; iOS two-column on iPad regular width; mobile scroll-to-result
+4. **Layout** — side-by-side on wide viewports: creation = input column \| empty preview; result = compact input \| styled look; sticky bottom actions on result (no inline primary actions in result panel on wide). Web uses `md:` (768px) two-column grid aligned with iPad regular width; max content width 980px; shared `mainFlowLayoutLogic.ts` / `MainFlowLayoutLogic.swift`. iPhone / mobile web stay single-column stacked with scroll-to-result.
 
 **Web**: Upload image (drag/drop or pick), optional preference text, occasion/season/style filters, **Generate Outfit**, loading state, display result. Optional: generate model image (advanced, input side).
 
