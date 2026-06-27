@@ -145,11 +145,50 @@ final class WardrobeInsightsViewTests: XCTestCase {
     }
 
     // 5. Coverage dashboard renders all category statuses
-    func testCoverageDashboardHasSevenCategories() {
-        let health = NormalizeWardrobeInsight.normalize(makeMinimalResponse()).categoryHealth
-        XCTAssertEqual(health.count, 7)
+    func testCoverageDashboardHasExtendedClothingCategories() {
+        let health = NormalizeWardrobeInsight.normalize(makeExtendedResponse()).categoryHealth
+        XCTAssertEqual(health.count, 9)
+        XCTAssertEqual(
+            health.map(\.category),
+            ["Shirts", "Trousers", "Blazers", "Sweaters", "Jackets", "Shoes", "Belts", "Colors", "Styles"]
+        )
         XCTAssertTrue(health.allSatisfy { !$0.status.rawValue.isEmpty })
         XCTAssertTrue(health.allSatisfy { !$0.summary.isEmpty })
+    }
+
+    func testCoverageDashboardIncludesTieForFormalOccasions() {
+        let health = NormalizeWardrobeInsight.normalize(makeFormalResponse()).categoryHealth
+
+        XCTAssertEqual(health.count, 10)
+        XCTAssertEqual(health.first { $0.id == "tie" }?.category, "Ties")
+    }
+
+    func testExtendedCategoryIconsAreDistinct() {
+        XCTAssertEqual(WardrobeCategoryIcon.symbolName(for: "sweater"), "cloud.snow.fill")
+        XCTAssertEqual(WardrobeCategoryIcon.symbolName(for: "jacket"), "umbrella.fill")
+        XCTAssertEqual(WardrobeCategoryIcon.symbolName(for: "tie"), "link")
+        XCTAssertEqual(WardrobeCategoryIcon.symbolName(for: "blazer"), "jacket.fill")
+    }
+
+    func testExtendedCategoryShoppingURLsUseSingularSearchPhrases() {
+        for (category, phrase) in [
+            ("sweater", "men sweater"),
+            ("jacket", "men jacket"),
+            ("tie", "men tie"),
+        ] {
+            let url = InsightsShoppingSearch.buildSearchURL(
+                category: category,
+                colors: ["navy"],
+                styles: ["classic"],
+                defaultStyle: "smart casual"
+            )
+            XCTAssertNotNil(url)
+            let query = URLComponents(url: url!, resolvingAgainstBaseURL: false)?
+                .queryItems?
+                .first(where: { $0.name == "q" })?
+                .value ?? ""
+            XCTAssertTrue(query.contains(phrase), "Expected \(phrase) in query for \(category)")
+        }
     }
 
     // 6. Category details collapsed by default
@@ -180,10 +219,33 @@ final class WardrobeInsightsViewTests: XCTestCase {
     // 10. Empty/no-result state
     func testEmptyStateWhenNoResult() {
         XCTAssertFalse(WardrobeInsightsPresentation.shouldShowResults(hasResult: false))
+        XCTAssertFalse(WardrobeInsightsPresentation.shouldShowShoppingListAction(hasResult: false))
         XCTAssertEqual(InsightsCopy.emptyStateMessage, "Run a check to see what's missing in each part of your wardrobe.")
         XCTAssertTrue(
             WardrobeInsightsPresentation.shouldShowAnalyzeButton(hasResult: false, isPreferencesExpanded: false, isLoading: false)
         )
+    }
+
+    func testShoppingListActionAvailableAfterResults() {
+        XCTAssertTrue(WardrobeInsightsPresentation.shouldShowResults(hasResult: true))
+        XCTAssertTrue(WardrobeInsightsPresentation.shouldShowShoppingListAction(hasResult: true))
+        XCTAssertFalse(WardrobeInsightsPresentation.shouldShowShoppingListAction(hasResult: false))
+        XCTAssertEqual(InsightsCopy.shoppingListButton, "Shopping list")
+    }
+
+    func testShoppingListExportLabelsAndColumnsMatchSpec() {
+        XCTAssertEqual(InsightsCopy.shoppingListBuyColumn, "Buy")
+        XCTAssertEqual(InsightsCopy.shoppingListLookForColumn, "Look for")
+        XCTAssertEqual(InsightsCopy.shoppingListSearchOnlineColumn, "Search online")
+        XCTAssertEqual(InsightsCopy.copyListButton, "Copy list")
+        XCTAssertEqual(InsightsCopy.seeAllOptionsButton, "See all options")
+        XCTAssertEqual(InsightsCopy.hideOptionsButton, "Hide options")
+        XCTAssertEqual(InsightsCopy.copiedToClipboardMessage, "Copied to clipboard")
+        XCTAssertEqual(
+            WardrobeInsightsPresentation.shoppingListExportActionTitles,
+            ["Export to WhatsApp", "Copy list", "Export as PDF"]
+        )
+        XCTAssertEqual(InsightsCopy.shoppingListExportErrorMessage, "Could not export shopping list.")
     }
 
     func testHeaderCopyMatchesSpec() {
@@ -227,6 +289,10 @@ final class WardrobeInsightsViewTests: XCTestCase {
     }
 
     private func makeMinimalResponse() -> WardrobeGapAnalysisResponse {
+        makeExtendedResponse()
+    }
+
+    private func makeExtendedResponse() -> WardrobeGapAnalysisResponse {
         WardrobeGapAnalysisResponse(
             occasion: "casual",
             season: "summer",
@@ -251,15 +317,6 @@ final class WardrobeInsightsViewTests: XCTestCase {
                     recommended_purchases: ["Khaki chinos"],
                     item_count: 0
                 ),
-                "shoes": WardrobeCategoryGap(
-                    category: "shoes",
-                    owned_colors: ["brown"],
-                    owned_styles: ["loafers"],
-                    missing_colors: [],
-                    missing_styles: [],
-                    recommended_purchases: [],
-                    item_count: 1
-                ),
                 "blazer": WardrobeCategoryGap(
                     category: "blazer",
                     owned_colors: [],
@@ -268,6 +325,33 @@ final class WardrobeInsightsViewTests: XCTestCase {
                     missing_styles: ["unstructured"],
                     recommended_purchases: ["Navy blazer"],
                     item_count: 0
+                ),
+                "sweater": WardrobeCategoryGap(
+                    category: "sweater",
+                    owned_colors: [],
+                    owned_styles: [],
+                    missing_colors: ["gray"],
+                    missing_styles: ["merino"],
+                    recommended_purchases: ["Gray merino sweater"],
+                    item_count: 0
+                ),
+                "jacket": WardrobeCategoryGap(
+                    category: "jacket",
+                    owned_colors: ["olive"],
+                    owned_styles: ["bomber"],
+                    missing_colors: [],
+                    missing_styles: [],
+                    recommended_purchases: [],
+                    item_count: 1
+                ),
+                "shoes": WardrobeCategoryGap(
+                    category: "shoes",
+                    owned_colors: ["brown"],
+                    owned_styles: ["loafers"],
+                    missing_colors: [],
+                    missing_styles: [],
+                    recommended_purchases: [],
+                    item_count: 1
                 ),
                 "belt": WardrobeCategoryGap(
                     category: "belt",
@@ -282,6 +366,35 @@ final class WardrobeInsightsViewTests: XCTestCase {
             overall_summary: "Add trousers and a blazer to round out casual summer looks.",
             summaryText: nil,
             analysisDepth: "Basic",
+            priorityShoppingList: nil,
+            categoryInsights: nil,
+            ai_prompt: nil,
+            ai_raw_response: nil,
+            cost: nil
+        )
+    }
+
+    private func makeFormalResponse() -> WardrobeGapAnalysisResponse {
+        var categories = makeExtendedResponse().analysis_by_category
+        categories["tie"] = WardrobeCategoryGap(
+            category: "tie",
+            owned_colors: [],
+            owned_styles: [],
+            missing_colors: ["burgundy"],
+            missing_styles: ["silk"],
+            recommended_purchases: ["Burgundy silk tie"],
+            item_count: 0
+        )
+
+        return WardrobeGapAnalysisResponse(
+            occasion: "business",
+            season: "fall",
+            style: "formal",
+            analysis_mode: "premium",
+            analysis_by_category: categories,
+            overall_summary: "Add a tie for formal business looks.",
+            summaryText: nil,
+            analysisDepth: "Premium",
             priorityShoppingList: nil,
             categoryInsights: nil,
             ai_prompt: nil,

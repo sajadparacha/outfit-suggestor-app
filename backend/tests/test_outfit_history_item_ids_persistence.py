@@ -13,11 +13,17 @@ def test_save_outfit_history_persists_selected_item_ids(db, test_user):
         shoes="Brown loafers",
         belt="Brown belt",
         reasoning="Balanced smart casual outfit.",
+        sweater="Navy merino sweater",
+        outerwear="Olive field jacket",
+        tie="Burgundy silk tie",
         shirt_id=11,
         trouser_id=22,
         blazer_id=33,
         shoes_id=44,
         belt_id=55,
+        sweater_id=66,
+        outerwear_id=77,
+        tie_id=88,
         source_wardrobe_item_id=11,
     )
 
@@ -33,7 +39,9 @@ def test_save_outfit_history_persists_selected_item_ids(db, test_user):
     row = db.execute(
         text(
             """
-            SELECT shirt_id, trouser_id, blazer_id, shoes_id, belt_id, source_wardrobe_item_id
+            SELECT shirt_id, trouser_id, blazer_id, shoes_id, belt_id,
+                   sweater, outerwear, tie, sweater_id, outerwear_id, tie_id,
+                   source_wardrobe_item_id
             FROM outfit_history
             ORDER BY id DESC
             LIMIT 1
@@ -46,4 +54,10 @@ def test_save_outfit_history_persists_selected_item_ids(db, test_user):
     assert row.blazer_id == 33
     assert row.shoes_id == 44
     assert row.belt_id == 55
+    assert row.sweater == "Navy merino sweater"
+    assert row.outerwear == "Olive field jacket"
+    assert row.tie == "Burgundy silk tie"
+    assert row.sweater_id == 66
+    assert row.outerwear_id == 77
+    assert row.tie_id == 88
     assert row.source_wardrobe_item_id == 11

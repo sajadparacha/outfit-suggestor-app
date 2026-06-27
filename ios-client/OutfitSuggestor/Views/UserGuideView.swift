@@ -38,7 +38,8 @@ struct UserGuideView: View {
                         "Optionally set your occasion, season, and style preferences using the pickers.",
                         "Add any free-text notes about your preferences.",
                         "Tap \"Get Outfit Suggestion\" to receive AI-powered recommendations.",
-                        "View the complete outfit (shirt, trousers, blazer, shoes, belt) and the AI's reasoning."
+                        "View the five core pieces (shirt, trousers, blazer, shoes, belt). When relevant for the occasion, the AI may also suggest optional layering—a sweater, coat/jacket, or tie—in an Also wear section.",
+                        "Read the AI's reasoning in Why this works."
                     ],
                     tip: "Upload any clothing item — shirts, blazers, shoes, or even partial outfits. The AI adapts to what you provide."
                 )
@@ -60,13 +61,14 @@ struct UserGuideView: View {
                     title: "Managing Your Wardrobe",
                     color: .blue,
                     steps: [
-                        "Go to the Wardrobe tab to view your saved clothing items.",
+                        GuideCopy.wardrobeCategoryFiltersStep,
                         "Tap \"+\" to add a new item — upload a photo and the AI will analyze it.",
-                        "Use category filters or search to find specific items.",
+                        "Use search to find specific items by name, color, or description.",
                         "Swipe left on an item to delete, or tap to edit.",
-                        "Tap \"Get suggestion\" on any item to build an outfit around it."
+                        GuideCopy.wardrobeSingleItemStep,
+                        GuideCopy.wardrobeMultiSelectStep
                     ],
-                    tip: "The app automatically detects duplicate items before adding them to prevent clutter."
+                    tip: GuideCopy.wardrobeMultiSelectTip
                 )
                 
                 GuideSection(
@@ -74,9 +76,9 @@ struct UserGuideView: View {
                     title: "Wardrobe-Only Mode",
                     color: .orange,
                     steps: [
-                        "Enable \"Use wardrobe only\" toggle in the suggestion screen.",
-                        "The AI will only suggest items from your existing wardrobe.",
-                        "Great for deciding what to wear from what you already own."
+                        GuideCopy.wardrobeOnlyModeStep,
+                        "Great for deciding what to wear from what you already own.",
+                        "Completing an outfit from selected wardrobe pieces always uses your saved items."
                     ],
                     tip: nil
                 )
@@ -117,10 +119,13 @@ struct UserGuideView: View {
                         "Open Insights from Profile to get an AI-powered wardrobe analysis.",
                         "Set occasion, season, and style, then tap Analyze My Wardrobe.",
                         "Review your gap score, top priorities, and items to add next.",
-                        "Check the coverage dashboard for category health at a glance.",
+                        "Check the coverage dashboard for category health at a glance—including sweaters and jackets, plus ties for business, formal, or office.",
                         "Tap a category in Detailed category analysis for recommendations.",
                         "Tap a best color to search Google Shopping for that category and color.",
-                        "Tap Shop similar on any item to search Google Shopping."
+                        "Tap Shop similar on any item to search Google Shopping.",
+                        "After results load, tap Shopping list for Buy, Look for, and Search online columns.",
+                        "Tap style · color chips for focused Google Shopping searches, or Search all for the top options.",
+                        "Use Copy list, Export to WhatsApp, or Export as PDF to share a numbered list with one link per item."
                     ],
                     tip: isAdmin
                         ? GuideCopy.adminDiagnosticsTip

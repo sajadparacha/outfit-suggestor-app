@@ -6,6 +6,8 @@ interface RecentLooksSectionProps {
   loading?: boolean;
   isAuthenticated?: boolean;
   onViewAll?: () => void;
+  /** Tighter spacing when rendered inside the main-flow sidebar column (md+). */
+  embedded?: boolean;
 }
 
 function formatRelativeTime(dateString: string): string {
@@ -45,13 +47,17 @@ const RecentLooksSection: React.FC<RecentLooksSectionProps> = ({
   loading = false,
   isAuthenticated = false,
   onViewAll,
+  embedded = false,
 }) => {
   if (!isAuthenticated) return null;
 
   const recent = history.slice(0, 4);
 
   return (
-    <section className="mt-12 sm:mt-16" aria-labelledby="recent-looks-heading">
+    <section
+      className={embedded ? 'mt-0' : 'mt-12 sm:mt-16'}
+      aria-labelledby="recent-looks-heading"
+    >
       <div className="mb-6 flex items-end justify-between gap-4">
         <h2 id="recent-looks-heading" className="text-xl font-bold text-white sm:text-2xl">
           Recent looks

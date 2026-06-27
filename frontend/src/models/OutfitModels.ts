@@ -24,6 +24,9 @@ export interface MatchingWardrobeItems {
   blazer: MatchingWardrobeItem[];
   shoes: MatchingWardrobeItem[];
   belt: MatchingWardrobeItem[];
+  sweater?: MatchingWardrobeItem[];
+  outerwear?: MatchingWardrobeItem[];
+  tie?: MatchingWardrobeItem[];
 }
 
 export interface OutfitCost {
@@ -54,6 +57,12 @@ export interface OutfitSuggestion {
   blazer_id?: number | null;
   shoes_id?: number | null;
   belt_id?: number | null;
+  sweater?: string | null;
+  outerwear?: string | null;
+  tie?: string | null;
+  sweater_id?: number | null;
+  outerwear_id?: number | null;
+  tie_id?: number | null;
   source_wardrobe_item_id?: number | null;
   ai_prompt?: string | null;
   ai_raw_response?: string | null;
@@ -91,6 +100,12 @@ export interface OutfitResponse {
   blazer_id?: number | null;
   shoes_id?: number | null;
   belt_id?: number | null;
+  sweater?: string | null;
+  outerwear?: string | null;
+  tie?: string | null;
+  sweater_id?: number | null;
+  outerwear_id?: number | null;
+  tie_id?: number | null;
   source_wardrobe_item_id?: number | null;
   ai_prompt?: string | null;
   ai_raw_response?: string | null;
@@ -122,6 +137,12 @@ export interface OutfitHistoryEntry {
   blazer_id?: number | null;
   shoes_id?: number | null;
   belt_id?: number | null;
+  sweater?: string | null;
+  outerwear?: string | null;
+  tie?: string | null;
+  sweater_id?: number | null;
+  outerwear_id?: number | null;
+  tie_id?: number | null;
   source_wardrobe_item_id?: number | null;
   matching_wardrobe_items?: MatchingWardrobeItems;
 }

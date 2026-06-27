@@ -1,133 +1,398 @@
-# AI Outfit Suggestor – User Guide
+# API Documentation - AI Outfit Suggester
 
-This guide explains how to use the AI Outfit Suggestor app as an end user: getting suggestions, managing your wardrobe, viewing history, using random picks, and tips for mobile.
+## Base URL
 
----
+- **Development**: `http://localhost:8001`
+- **Production**: `https://your-domain.com`
 
-## Getting Started
+## Authentication
 
-1. **Open the app**  
-   - Web: [https://sajadparacha.github.io/outfit-suggestor-app](https://sajadparacha.github.io/outfit-suggestor-app)  
-   - Or run locally: `http://localhost:3000` (after starting the app).
-
-2. **Optional: create an account**  
-   - Click **Sign Up** (top right), enter email and password, then activate via the link in your email (if enabled).  
-   - With an account you can: save outfit history, manage a wardrobe, use Random from Wardrobe and Random from History, and change password in Settings.
-
-3. **You can use the app without logging in**  
-   - You can still upload a photo and get one-off outfit suggestions; they just won’t be saved to history or use your wardrobe.
+Currently, the API does not require authentication. Future versions will include API key authentication.
 
 ---
 
-## Getting an Outfit Suggestion
+## Endpoints
 
-1. Go to **Get Suggestion** (main tab).
-2. **Upload a photo** of a clothing item (or a partial outfit):
-   - Drag and drop onto the upload area, or click to choose a file.
-   - Supported: JPG, PNG, WebP, up to 10 MB.
-   - You can upload a single item (e.g. a shirt) or a combination (e.g. shirt + trousers); the AI will suggest the rest.
-3. **Optional**: Add text (e.g. “business casual”, “weekend brunch”) in the preference field.
-4. **Optional**: If you’re logged in, turn on **Use wardrobe only** in the sidebar to get suggestions only from items in your wardrobe.
-5. Click **Get AI Suggestion**.
-6. Wait for the result. You’ll see:
-   - Recommended pieces (shirt, trousers, blazer, shoes, belt) and short reasoning.
-   - Optional AI-generated model image (if you enabled “Generate model image” and the feature is available).
-7. Use **Next** to get another suggestion, or **Like** / **Dislike** for feedback. If you’re logged in, you can **Add to Wardrobe** the uploaded item from this screen.
+### 1. Health Check
 
----
+Check if the API is running.
 
-## Wardrobe
+**Endpoint**: `GET /`
 
-Available when you’re **logged in**.
+**Response**:
 
-- Open the **Wardrobe** tab to see all your saved items.
-- **Add items**: On the main screen, upload a photo and click **Add to Wardrobe** (or use the sidebar “Add to Wardrobe” after uploading). The AI can suggest category, color, and description; you can edit before saving. Duplicate detection helps avoid adding the same item twice.
-- **Edit or delete**: Open an item to update category, color, description, or image, or to delete it.
-- **Get a suggestion from one item**: Open a wardrobe item and use **Get AI Suggestion** to get an outfit built around that piece.
-- **Filter**: Use category filters (e.g. Shirts, Trousers) to narrow the list.
+```json
+{
+  "message": "AI Outfit Suggestor API is running!",
+  "version": "2.0.0",
+  "status": "healthy"
+}
+```
+
+**Status Codes**:
+
+- `200 OK`: API is running
 
 ---
 
-## Outfit History
+### 2. Detailed Health Check
 
-Available when you’re **logged in**.
+Get detailed health status.
 
-- Open the **History** tab to see past outfit suggestions.
-- Each entry shows the recommendation and, if available, the uploaded photo and/or AI model image.
-- **Search**: Use the search box to find entries by clothing, colors, or context.
-- **View**: Click an entry (or image) to see full details and full-screen images.
-- **Delete**: Remove individual entries you no longer need.
-- **Load into main view**: Open a history entry and use the option to load it back into the main suggestion view.
+**Endpoint**: `GET /health`
 
----
+**Response**:
 
-## Random Picks (logged in only)
+```json
+{
+  "status": "healthy",
+  "service": "AI Outfit Suggestor",
+  "version": "2.0.0"
+}
+```
 
-In the **sidebar** (under “Random picks”, when logged in):
+**Status Codes**:
 
-- **Random from Wardrobe**  
-  Builds one outfit by randomly choosing items from your wardrobe (one per category). No photo upload; use it for quick ideas from what you own.
-
-- **Random from History**  
-  Picks a random past suggestion and shows it on the main screen. Handy for rediscovering old ideas.
-
-If you use Random from History and have no history yet, the app will tell you to get some suggestions first.
+- `200 OK`: Service is healthy
 
 ---
 
-## Settings
+### 3. Get Outfit Suggestion
 
-Available when you’re **logged in** (Settings tab).
+Analyze an uploaded image and get AI-powered outfit suggestions.
 
-- **Change password**: Enter current password and new password.
-- **Account info**: View the email for your account (managed via Settings / profile as implemented in the app).
+**Endpoint**: `POST /api/suggest-outfit`
+
+**Content-Type**: `multipart/form-data`
+
+**Request Parameters**:
+
+
+| Parameter    | Type   | Required | Description                                                                   |
+| ------------ | ------ | -------- | ----------------------------------------------------------------------------- |
+| `image`      | File   | Yes      | Image file of shirt/blazer (JPEG, PNG, GIF, BMP, WebP)                        |
+| `text_input` | String | No       | Additional context or preferences (e.g., "Business meeting", "Casual Friday") |
+
+
+**Example Request (cURL)**:
+
+```bash
+curl -X POST "http://localhost:8001/api/suggest-outfit" \
+  -F "image=@/path/to/shirt.jpg" \
+  -F "text_input=Business casual, modern style"
+```
+
+**Example Request (JavaScript)**:
+
+```javascript
+const formData = new FormData();
+formData.append('image', imageFile);
+formData.append('text_input', 'Business casual, modern style');
+
+const response = await fetch('http://localhost:8001/api/suggest-outfit', {
+  method: 'POST',
+  body: formData
+});
+
+const outfit = await response.json();
+```
+
+**Example Request (Python)**:
+
+```python
+import requests
+
+url = "http://localhost:8001/api/suggest-outfit"
+files = {'image': open('shirt.jpg', 'rb')}
+data = {'text_input': 'Business casual, modern style'}
+
+response = requests.post(url, files=files, data=data)
+outfit = response.json()
+```
+
+**Success Response** (200 OK):
+
+```json
+{
+  "shirt": "A crisp white button-down dress shirt with subtle texture",
+  "trouser": "Navy blue tailored dress trousers with a slim fit",
+  "blazer": "Charcoal gray single-breasted blazer with notch lapels",
+  "shoes": "Dark brown leather oxford shoes with cap toe detail",
+  "belt": "Cognac brown leather belt with silver buckle",
+  "reasoning": "This outfit combines classic business attire with modern proportions. The white shirt provides a clean base, while the navy trousers and charcoal blazer create a sophisticated palette. The brown shoes and belt add warmth and break up the cool tones, creating a balanced, professional look suitable for most business occasions."
+}
+```
+
+**Error Responses**:
+
+**400 Bad Request** - Invalid image:
+
+```json
+{
+  "detail": "File must be an image"
+}
+```
+
+**400 Bad Request** - Image too large:
+
+```json
+{
+  "detail": "Image too large. Please upload an image smaller than 10MB"
+}
+```
+
+**500 Internal Server Error** - Processing error:
+
+```json
+{
+  "detail": "Error calling OpenAI API: [error details]"
+}
+```
+
+**Status Codes**:
+
+- `200 OK`: Suggestion generated successfully
+- `400 Bad Request`: Invalid request (wrong file type, too large, etc.)
+- `500 Internal Server Error`: Server-side error
 
 ---
 
-## About
+## Data Models
 
-The **About** tab shows:
+### OutfitSuggestion
 
-- Short description of the app and developer.
-- Key features (wardrobe, suggestions, AI models, history, random picks, mobile-friendly, etc.).
-- Links (e.g. LinkedIn, GitHub, Instagram) and tech stack.
-
----
-
-## Using the App on Mobile
-
-The app is **mobile-friendly**:
-
-- **Navigation**: On small screens, the top tabs (Get Suggestion, History, Wardrobe, etc.) scroll horizontally. Swipe or scroll to reach all sections.
-- **Touch**: Buttons and tabs are sized for touch (at least 48px). Use taps instead of hover.
-- **Layout**: Content stacks in one column on phones; sidebar and main area use responsive padding.
-- **Upload**: You can upload from your camera roll or take a photo if your device supports it (camera option appears when available).
-
-For the best experience, use a modern browser (e.g. Chrome, Safari, Firefox) and allow camera/photo access if you want to take photos from the app.
+```typescript
+interface OutfitSuggestion {
+  shirt: string;      // Description of recommended shirt
+  trouser: string;    // Description of recommended trousers/pants
+  blazer: string;     // Description of recommended blazer/jacket
+  shoes: string;      // Description of recommended shoes
+  belt: string;       // Description of recommended belt
+  reasoning: string;  // Explanation of why this outfit works
+}
+```
 
 ---
 
-## Quick Reference
+## Rate Limiting
 
-| Goal                     | Where / How                                           |
-|--------------------------|--------------------------------------------------------|
-| Get outfit from a photo  | Get Suggestion → upload photo → Get AI Suggestion     |
-| Use only my wardrobe     | Get Suggestion → turn on “Use wardrobe only”          |
-| Add item to wardrobe     | Upload photo → Add to Wardrobe (or from main result)   |
-| Random outfit from wardrobe | Sidebar → Random picks → Random from Wardrobe      |
-| Random past suggestion   | Sidebar → Random picks → Random from History           |
-| Search past suggestions  | History tab → search box                               |
-| Change password          | Settings tab → Change password                         |
+Currently, there are no rate limits. Future versions will implement:
+
+- 100 requests per hour for free tier
+- Higher limits for authenticated users
 
 ---
 
-## Need Help?
+## Error Handling
 
-- **Errors on upload**: Use images under 10 MB in JPG, PNG, or WebP.
-- **No suggestion**: Check your internet connection and try again; the AI service may be temporarily busy.
-- **Account / login**: Ensure you’ve activated your account via the email link (if activation is enabled). If you don’t receive it, check spam or contact support.
-- **More technical details**: See [README.md](./README.md), [SETUP_GUIDE.md](./SETUP_GUIDE.md), and [TECHNICAL_PAPER.md](./TECHNICAL_PAPER.md).
+All errors follow this structure:
+
+```json
+{
+  "detail": "Human-readable error message"
+}
+```
+
+Common error scenarios:
+
+1. **Invalid file type**: Upload a valid image format
+2. **File too large**: Reduce image size to under 10MB
+3. **Missing image**: Include image in the request
+4. **API key issues**: Check OpenAI API key configuration
+5. **Network errors**: Check internet connection
 
 ---
 
-**Enjoy styling with AI.**
+## Best Practices
+
+### 1. Image Requirements
+
+- **Formats**: JPEG, PNG, GIF, BMP, WebP
+- **Size**: Maximum 10MB
+- **Content**: Clear image of shirt, blazer, or upper body garment
+- **Quality**: Higher quality images produce better suggestions
+
+### 2. Text Input Tips
+
+- Be specific about occasion (e.g., "Wedding guest", "Job interview")
+- Mention preferred style (e.g., "Modern", "Classic", "Trendy")
+- Include season if relevant (e.g., "Summer outdoor event")
+- Mention color preferences or restrictions
+
+### 3. Performance Optimization
+
+- Resize images before upload (recommended max: 2048x2048)
+- Compress images to reduce upload time
+- Cache responses when possible
+
+### 4. Error Handling
+
+```javascript
+try {
+  const response = await fetch(url, options);
+  
+  if (!response.ok) {
+    const error = await response.json();
+    console.error('API Error:', error.detail);
+    // Handle error
+  }
+  
+  const data = await response.json();
+  // Use data
+} catch (error) {
+  console.error('Network Error:', error);
+  // Handle network error
+}
+```
+
+---
+
+## Platform-Specific Examples
+
+### Android (Kotlin)
+
+```kotlin
+val client = OkHttpClient()
+
+val requestBody = MultipartBody.Builder()
+    .setType(MultipartBody.FORM)
+    .addFormDataPart(
+        "image", 
+        "photo.jpg",
+        RequestBody.create(MediaType.parse("image/jpeg"), imageFile)
+    )
+    .addFormDataPart("text_input", "Business casual")
+    .build()
+
+val request = Request.Builder()
+    .url("http://your-api.com/api/suggest-outfit")
+    .post(requestBody)
+    .build()
+
+client.newCall(request).enqueue(object : Callback {
+    override fun onResponse(call: Call, response: Response) {
+        val json = response.body?.string()
+        val outfit = Gson().fromJson(json, OutfitSuggestion::class.java)
+        // Use outfit
+    }
+    
+    override fun onFailure(call: Call, e: IOException) {
+        // Handle error
+    }
+})
+```
+
+### iOS (Swift)
+
+```swift
+let url = URL(string: "http://your-api.com/api/suggest-outfit")!
+var request = URLRequest(url: url)
+request.httpMethod = "POST"
+
+let boundary = UUID().uuidString
+request.setValue("multipart/form-data; boundary=\(boundary)", 
+                 forHTTPHeaderField: "Content-Type")
+
+// Create multipart body
+var body = Data()
+// ... add image and text_input parts ...
+
+request.httpBody = body
+
+URLSession.shared.dataTask(with: request) { data, response, error in
+    guard let data = data else { return }
+    
+    let outfit = try? JSONDecoder().decode(OutfitSuggestion.self, from: data)
+    // Use outfit
+}.resume()
+```
+
+### React Native
+
+```javascript
+import { launchImageLibrary } from 'react-native-image-picker';
+
+const pickImage = async () => {
+  const result = await launchImageLibrary({ mediaType: 'photo' });
+  
+  if (result.assets && result.assets[0]) {
+    const formData = new FormData();
+    formData.append('image', {
+      uri: result.assets[0].uri,
+      type: 'image/jpeg',
+      name: 'photo.jpg'
+    });
+    formData.append('text_input', 'Casual weekend');
+    
+    const response = await fetch('http://your-api.com/api/suggest-outfit', {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      }
+    });
+    
+    const outfit = await response.json();
+    // Use outfit
+  }
+};
+```
+
+---
+
+## Interactive Documentation
+
+When the backend is running, visit these URLs for interactive API documentation:
+
+- **Swagger UI**: [http://localhost:8001/docs](http://localhost:8001/docs)
+- **ReDoc**: [http://localhost:8001/redoc](http://localhost:8001/redoc)
+
+These interfaces allow you to:
+
+- See all endpoints
+- View request/response schemas
+- Test API calls directly in the browser
+- Download OpenAPI specification
+
+---
+
+## Changelog
+
+### Version 2.0.0 (Current)
+
+- Refactored to service-oriented architecture
+- Improved error handling
+- Added health check endpoints
+- Better documentation
+- Platform-agnostic design
+
+### Version 1.0.0
+
+- Initial release
+- Basic outfit suggestion endpoint
+- OpenAI integration
+
+---
+
+## Support
+
+For API issues or questions:
+
+1. Check this documentation
+2. Visit interactive docs at `/docs`
+3. Review error messages in responses
+4. Check application logs
+
+---
+
+## Future Roadmap
+
+- [ ] Authentication with API keys
+- [ ] Rate limiting
+- [ ] Webhook support
+- [ ] Batch processing
+- [ ] Image URL support (in addition to file upload)
+- [ ] Multiple image analysis
+- [ ] User preference profiles
+- [ ] Outfit history
+- [ ] Shopping link integration

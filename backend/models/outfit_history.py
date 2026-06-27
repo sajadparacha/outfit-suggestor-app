@@ -52,6 +52,12 @@ class OutfitHistory(Base):
     blazer_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     shoes_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     belt_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    sweater: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    outerwear: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    tie: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    sweater_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    outerwear_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    tie_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     source_wardrobe_item_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
 
 

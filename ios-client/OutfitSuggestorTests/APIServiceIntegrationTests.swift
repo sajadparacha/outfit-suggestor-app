@@ -2,6 +2,27 @@ import XCTest
 import UIKit
 @testable import OutfitSuggestor
 
+private func httpBodyData(from request: URLRequest) throws -> Data? {
+    if let body = request.httpBody {
+        return body
+    }
+    guard let stream = request.httpBodyStream else { return nil }
+    stream.open()
+    defer { stream.close() }
+    var data = Data()
+    let bufferSize = 4096
+    var buffer = [UInt8](repeating: 0, count: bufferSize)
+    while stream.hasBytesAvailable {
+        let read = stream.read(&buffer, maxLength: bufferSize)
+        if read < 0 {
+            throw stream.streamError ?? URLError(.cannotDecodeContentData)
+        }
+        if read == 0 { break }
+        data.append(buffer, count: read)
+    }
+    return data.isEmpty ? nil : data
+}
+
 final class APIServiceIntegrationTests: XCTestCase {
     override func tearDown() {
         MockURLProtocol.requestHandler = nil
@@ -32,7 +53,7 @@ final class APIServiceIntegrationTests: XCTestCase {
             )
         }
 
-        let suggestion = try await service.getRandomOutfit(occasion: "casual", season: "all", style: "modern")
+        let suggestion = try await service.getRandomOutfit(occasion: "everyday", season: "all-season", style: "classic")
         XCTAssertEqual(suggestion.shirt, "white oxford shirt")
         XCTAssertEqual(suggestion.belt, "brown belt")
     }
@@ -60,7 +81,7 @@ final class APIServiceIntegrationTests: XCTestCase {
             )
         }
 
-        let suggestion = try await service.getRandomOutfit(occasion: "formal", season: "winter", style: "classic")
+        let suggestion = try await service.getRandomOutfit(occasion: "formal-event", season: "winter", style: "classic")
         XCTAssertEqual(suggestion.shirt, "black shirt")
         XCTAssertEqual(suggestion.reasoning, "formal monochrome look")
     }
@@ -79,7 +100,7 @@ final class APIServiceIntegrationTests: XCTestCase {
         }
 
         do {
-            _ = try await service.getRandomOutfit(occasion: "casual", season: "all", style: "modern")
+            _ = try await service.getRandomOutfit(occasion: "everyday", season: "all-season", style: "classic")
             XCTFail("Expected APIServiceError.serverError for 401")
         } catch let APIServiceError.serverError(message) {
             XCTAssertTrue(message.localizedCaseInsensitiveContains("log in again"))
@@ -125,6 +146,90 @@ final class APIServiceIntegrationTests: XCTestCase {
             location: nil,
             previousOutfitText: "shirt: white shirt\ntrouser: black trouser"
         )
+    }
+
+    func testGetSuggestionFromWardrobeItemsEncodesSingleSelectedId() async throws {
+        let service = makeService { request in
+            XCTAssertEqual(request.url?.path, "/api/suggest-outfit-from-wardrobe")
+            XCTAssertEqual(request.httpMethod, "POST")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
+            let body = try XCTUnwrap(httpBodyData(from: request))
+            let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+            XCTAssertEqual(json["selected_wardrobe_item_ids"] as? [Int], [12])
+            return (
+                HTTPURLResponse(
+                    url: request.url!,
+                    statusCode: 200,
+                    httpVersion: nil,
+                    headerFields: nil
+                )!,
+                """
+                {
+                  "shirt":"selected shirt",
+                  "trouser":"navy trouser",
+                  "blazer":"navy blazer",
+                  "shoes":"black loafers",
+                  "belt":"black belt",
+                  "reasoning":"completed around one selected piece"
+                }
+                """.data(using: .utf8)!
+            )
+        }
+
+        let suggestion = try await service.getSuggestionFromWardrobeItems(
+            selectedWardrobeItemIds: [12],
+            textInput: "no sneakers",
+            occasion: "work",
+            season: "all-season",
+            style: "smart-casual"
+        )
+
+        XCTAssertEqual(suggestion.reasoning, "completed around one selected piece")
+    }
+
+    func testGetSuggestionFromWardrobeItemsEncodesMultipleSelectedIds() async throws {
+        let service = makeService { request in
+            XCTAssertEqual(request.url?.path, "/api/suggest-outfit-from-wardrobe")
+            XCTAssertEqual(request.httpMethod, "POST")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
+            let body = try XCTUnwrap(httpBodyData(from: request))
+            let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+            XCTAssertEqual(json["occasion"] as? String, "work")
+            XCTAssertEqual(json["season"] as? String, "all-season")
+            XCTAssertEqual(json["style"] as? String, "smart-casual")
+            XCTAssertEqual(json["text_input"] as? String, "no sneakers")
+            XCTAssertEqual(json["selected_wardrobe_item_ids"] as? [Int], [12, 34])
+            return (
+                HTTPURLResponse(
+                    url: request.url!,
+                    statusCode: 200,
+                    httpVersion: nil,
+                    headerFields: nil
+                )!,
+                """
+                {
+                  "shirt":"selected shirt",
+                  "trouser":"selected trouser",
+                  "blazer":"navy blazer",
+                  "shoes":"black loafers",
+                  "belt":"black belt",
+                  "reasoning":"completed around selected pieces"
+                }
+                """.data(using: .utf8)!
+            )
+        }
+
+        let suggestion = try await service.getSuggestionFromWardrobeItems(
+            selectedWardrobeItemIds: [12, 34],
+            textInput: "no sneakers",
+            occasion: "work",
+            season: "all-season",
+            style: "smart-casual"
+        )
+
+        XCTAssertEqual(suggestion.reasoning, "completed around selected pieces")
     }
 
     private func makeService(

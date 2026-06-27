@@ -21,6 +21,23 @@ export const INSIGHTS_COPY = {
   LOADING_QUICK: 'Running your Quick Wardrobe Check...',
   LOADING_AI: 'Preparing your AI Stylist Review...',
   TOAST_AI_READY: 'Your AI Stylist Review is ready. ✅',
+
+  SHOPPING_LIST_TITLE: 'Shopping list',
+  SHOPPING_LIST_SUBTITLE:
+    'Turn your highest-impact wardrobe gaps into focused shopping searches.',
+  SHOPPING_LIST_EMPTY: 'No shopping list items for this analysis.',
+  SHOPPING_LIST_COLUMN_BUY: 'Buy',
+  SHOPPING_LIST_COLUMN_LOOK_FOR: 'Look for',
+  SHOPPING_LIST_COLUMN_SEARCH_ONLINE: 'Search online',
+  SHOPPING_LIST_SEE_ALL_OPTIONS: 'See all options',
+  SHOPPING_LIST_HIDE_OPTIONS: 'Hide options',
+  SHOPPING_LIST_SEARCH_ALL: 'Search all',
+  SHOPPING_LIST_EXPORT_WHATSAPP: 'Export to WhatsApp',
+  SHOPPING_LIST_EXPORT_PDF: 'Export as PDF',
+  SHOPPING_LIST_COPY: 'Copy list',
+  SHOPPING_LIST_COPIED: 'Copied to clipboard',
+  SHOPPING_LIST_EXPORT_ERROR: 'Could not export shopping list.',
+  SHOPPING_LIST_PRINT_TITLE: 'ClosIQ Shopping List',
 } as const;
 
 export function getReviewTypeLabel(

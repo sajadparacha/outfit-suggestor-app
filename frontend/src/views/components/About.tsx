@@ -54,7 +54,8 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               action-focused analysis that shows your gap score, top priorities, items to add, and a coverage
               dashboard. Choose <strong className="text-white">Quick Wardrobe Check</strong> (fast rules-based snapshot) or{' '}
               <strong className="text-white">AI Stylist Review</strong> (deeper AI-powered styling advice), then
-              generate outfits or shop similar pieces from the results.
+              shop similar pieces, or use the market-ready shopping list with Buy/Look for/Search online columns, per style/color Google Shopping chips,
+              Copy list, and improved WhatsApp/PDF export—from the results.
               The app features a <strong className="text-white">smart wardrobe management system</strong> that learns your collection and makes recommendations practical and personalized.
             </p>
             <p className="text-slate-200 leading-relaxed">
@@ -86,7 +87,7 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
                   <span className="text-2xl">👔</span>
                   <div>
                     <h4 className="font-semibold text-white">Smart Wardrobe Management</h4>
-                    <p className="text-sm text-slate-300">Build and manage your digital wardrobe with AI-powered item recognition. Automatically categorize items, filter by category (shirts, trousers, blazers, shoes, belts), and get outfit suggestions that prioritize your existing clothing.</p>
+                    <p className="text-sm text-slate-300">Build and manage your digital wardrobe with AI-powered item recognition. Automatically categorize items, filter by core slots (shirts, trousers, blazers, shoes, belts) plus specific types when you own them (polo, T-shirt, jeans, shorts, sweater, jacket, tie, and more), and get outfit suggestions that prioritize your existing clothing. Outfit completion still uses the same five core slots.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
@@ -107,14 +108,14 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
                   <span className="text-2xl">✨</span>
                   <div>
                     <h4 className="font-semibold text-white">Get Suggestions from Wardrobe</h4>
-                    <p className="text-sm text-slate-300">Tap "Build outfit from this item" on any wardrobe piece to load it on Suggest, tune your preferences, then generate — same duplicate detection and filtering as the main flow.</p>
+                    <p className="text-sm text-slate-300">Tap "Style this item" on one wardrobe piece to load it on Suggest, or select one or more saved pieces across different slots (one per slot), set occasion, season, style, and notes inline on Wardrobe, then tap "Complete outfit with AI" so AI keeps those pieces and fills the missing slots.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
                   <span className="text-2xl">🧠</span>
                   <div>
                     <h4 className="font-semibold text-white">Wardrobe Insights</h4>
-                    <p className="text-sm text-slate-300">Get an AI-powered wardrobe gap score, top 3 priorities, high-impact items to add, and a coverage dashboard across shirts, trousers, shoes, blazers, belts, colors, and styles. Collapse preferences after analysis, then tap best colors to shop on Google or use Shop similar for broader searches.</p>
+                    <p className="text-sm text-slate-300">Get an AI-powered wardrobe gap score, top 3 priorities, high-impact items to add, and a coverage dashboard across shirts, trousers, blazers, sweaters, jackets, shoes, belts, colors, and styles—plus ties for business, formal, or office occasions. This is separate from the main five-slot outfit result. Collapse preferences after analysis, tap best colors to shop on Google, and use the market-ready shopping list with Buy/Look for/Search online columns, per style/color search chips, Copy list, and improved WhatsApp/PDF export.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
@@ -150,6 +151,13 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
                   <div>
                     <h4 className="font-semibold text-white">Smart Combination Analysis</h4>
                     <p className="text-sm text-slate-300">Upload a combination and the AI identifies existing pieces, then suggests only the missing elements to complete your look.</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <span className="text-2xl">🧥</span>
+                  <div>
+                    <h4 className="font-semibold text-white">Optional Layering Suggestions</h4>
+                    <p className="text-sm text-slate-300">Main results always show five core pieces (shirt, trousers, blazer, shoes, belt). When relevant for the occasion and season, the AI may also suggest a sweater, outerwear, or tie in a collapsible <strong className="text-white">Also wear</strong> section.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">

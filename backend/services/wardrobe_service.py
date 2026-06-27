@@ -21,9 +21,18 @@ class WardrobeService:
         "shirt": ["oxford", "linen", "textured", "smart casual", "overshirt"],
         "trouser": ["chino", "slim-fit", "relaxed-fit", "tailored", "straight-leg"],
         "blazer": ["unstructured", "lightweight", "casual blazer", "linen blazer", "soft shoulder"],
+        "sweater": ["crew neck", "v-neck", "cardigan", "merino", "cable knit"],
+        "jacket": ["bomber", "denim jacket", "field jacket", "lightweight shell", "harrington"],
+        "tie": ["silk", "knit tie", "classic width", "textured", "solid"],
         "shoes": ["loafers", "clean sneakers", "derby shoes", "driving shoes", "minimal leather sneakers"],
         "belt": ["leather", "braided", "reversible", "formal leather", "casual leather"],
     }
+
+    FORMAL_GAP_OCCASIONS: Set[str] = {"business", "formal", "office"}
+
+    BASE_GAP_CATEGORIES: List[str] = [
+        "shirt", "trouser", "blazer", "sweater", "jacket", "shoes", "belt",
+    ]
 
     STYLE_ALIASES: Dict[str, List[str]] = {
         "oxford": ["oxford"],
@@ -51,6 +60,20 @@ class WardrobeService:
         "reversible": ["reversible"],
         "formal leather": ["formal leather", "dress leather"],
         "casual leather": ["casual leather"],
+        "crew neck": ["crew neck", "crewneck", "crew-neck"],
+        "v-neck": ["v-neck", "v neck", "vneck"],
+        "cardigan": ["cardigan", "cardigans"],
+        "merino": ["merino", "merino wool"],
+        "cable knit": ["cable knit", "cable-knit", "cableknit"],
+        "bomber": ["bomber", "bomber jacket"],
+        "denim jacket": ["denim jacket", "jean jacket"],
+        "field jacket": ["field jacket", "utility jacket"],
+        "lightweight shell": ["lightweight shell", "windbreaker", "rain shell"],
+        "harrington": ["harrington", "harrington jacket"],
+        "silk": ["silk", "silk tie"],
+        "knit tie": ["knit tie", "knitted tie"],
+        "classic width": ["classic width", "standard width"],
+        "solid": ["solid", "plain tie"],
         "trendy": ["trendy", "fashion-forward", "statement"],
     }
 
@@ -644,19 +667,28 @@ class WardrobeService:
                 items.insert(0, items.pop(best_idx))
 
     def _normalize_category(self, category: str) -> str:
+        """Normalize wardrobe item category for gap analysis (jacket stays distinct from blazer)."""
         normalized = (category or "").strip().lower()
         aliases = {
             "pants": "trouser",
             "pant": "trouser",
             "trousers": "trouser",
             "jeans": "trouser",
-            "jacket": "blazer",
-            "jackets": "blazer",
             "blazers": "blazer",
+            "jackets": "jacket",
             "shoe": "shoes",
             "belts": "belt",
+            "sweaters": "sweater",
+            "ties": "tie",
+            "outerwear": "jacket",
         }
         return aliases.get(normalized, normalized)
+
+    def _gap_analysis_categories(self, occasion: str) -> List[str]:
+        categories = list(self.BASE_GAP_CATEGORIES)
+        if (occasion or "").strip().lower() in self.FORMAL_GAP_OCCASIONS:
+            categories.append("tie")
+        return categories
 
     def _normalize_color(self, color: Optional[str]) -> Optional[str]:
         if not color:
@@ -712,16 +744,21 @@ class WardrobeService:
             "shirt": ["white", "blue", "black"],
             "trouser": ["black", "navy", "gray", "beige"],
             "blazer": ["navy", "gray", "black"],
+            "sweater": ["navy", "gray", "beige", "burgundy"],
+            "jacket": ["navy", "black", "olive", "tan"],
+            "tie": ["navy", "burgundy", "gray", "black"],
             "shoes": ["black", "brown", "white"],
             "belt": ["black", "brown"],
         }.get(category, [])
 
         if occasion == "business":
-            base.extend(["charcoal", "blue"] if category in {"shirt", "trouser", "blazer"} else ["black"])
+            base.extend(["charcoal", "blue"] if category in {"shirt", "trouser", "blazer", "sweater"} else ["black"])
         elif occasion == "formal":
-            base.extend(["white", "black"] if category in {"shirt", "shoes", "belt"} else ["black", "navy"])
+            base.extend(["white", "black"] if category in {"shirt", "shoes", "belt", "tie"} else ["black", "navy"])
+        elif occasion == "office":
+            base.extend(["charcoal", "navy"] if category in {"shirt", "trouser", "blazer", "tie"} else ["gray"])
         elif occasion == "party":
-            base.extend(["burgundy", "olive"] if category in {"shirt", "blazer"} else ["tan"])
+            base.extend(["burgundy", "olive"] if category in {"shirt", "blazer", "sweater"} else ["tan"])
 
         if season == "summer":
             base.extend(["white", "beige", "light blue"])
@@ -765,27 +802,52 @@ class WardrobeService:
                 defaults.extend(["tailored", "formal leather"])
             elif category == "shirt":
                 defaults.extend(["smart casual"])
+            elif category == "sweater":
+                defaults.extend(["merino", "v-neck"])
+            elif category == "tie":
+                defaults.extend(["silk", "classic width"])
         elif occasion == "formal":
             if category in {"trouser", "blazer"}:
                 defaults.extend(["tailored"])
             elif category == "belt":
                 defaults.extend(["formal leather"])
+            elif category == "tie":
+                defaults.extend(["silk", "solid"])
+            elif category == "sweater":
+                defaults.extend(["v-neck", "merino"])
+        elif occasion == "office":
+            if category in {"trouser", "blazer"}:
+                defaults.extend(["tailored"])
+            elif category == "tie":
+                defaults.extend(["silk", "classic width"])
+            elif category == "sweater":
+                defaults.extend(["crew neck", "merino"])
         elif occasion == "party":
             if category == "shirt":
                 defaults.extend(["textured"])
             elif category == "blazer":
                 defaults.extend(["textured", "unstructured"])
+            elif category == "jacket":
+                defaults.extend(["bomber", "harrington"])
         elif occasion == "casual":
             if category in {"shirt", "trouser", "blazer"}:
                 defaults.extend(["relaxed-fit"])
             elif category == "shoes":
                 defaults.extend(["clean sneakers"])
+            elif category == "sweater":
+                defaults.extend(["crew neck", "cardigan"])
+            elif category == "jacket":
+                defaults.extend(["denim jacket", "field jacket"])
 
         if style in {"classic", "minimalist"}:
             if category == "shirt":
                 defaults.extend(["oxford"])
             elif category in {"trouser", "blazer"}:
                 defaults.extend(["tailored"])
+            elif category == "sweater":
+                defaults.extend(["merino"])
+            elif category == "tie":
+                defaults.extend(["solid"])
         elif style in {"bold", "trendy"}:
             if category == "shirt":
                 defaults.extend(["textured"])
@@ -793,6 +855,10 @@ class WardrobeService:
                 defaults.extend(["driving shoes"])
             elif category == "blazer":
                 defaults.extend(["textured"])
+            elif category == "jacket":
+                defaults.extend(["bomber"])
+            elif category == "sweater":
+                defaults.extend(["cable knit"])
 
         seen: Set[str] = set()
         ordered: List[str] = []
@@ -895,8 +961,8 @@ class WardrobeService:
         style: str,
         text_input: str = "",
     ) -> Dict[str, Any]:
-        categories = ["shirt", "trouser", "blazer", "shoes", "belt"]
         occasion = (occasion or "casual").strip().lower()
+        categories = self._gap_analysis_categories(occasion)
         season = (season or "all").strip().lower()
         style = (style or "modern").strip().lower()
         all_items, _ = self.get_user_wardrobe(

@@ -36,4 +36,8 @@ enum MainFlowUxCopy {
     static let moreActions = "More"
     static let uploadNewItem = "Upload new item"
     static let compactUploadHint = "Upload a new photo to start a fresh outfit"
+    static let alsoWearSection = "Also wear"
+    static let layerLabel = "Layer"
+    static let outerwearLabel = "Outerwear"
+    static let tieLabel = "Tie"
 }

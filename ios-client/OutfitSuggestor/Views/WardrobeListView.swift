@@ -6,8 +6,6 @@
 import SwiftUI
 import UIKit
 
-private let wardrobeCategoryOptions = ["All", "shirt", "trouser", "blazer", "shoes", "belt", "other"]
-
 struct WardrobeListView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var response: WardrobeListResponse?
@@ -27,7 +25,12 @@ struct WardrobeListView: View {
     var initialCategoryFilter: String?
     var onConsumeCategoryFilter: (() -> Void)?
     var onGetSuggestionFromItem: ((WardrobeItem) -> Void)?
+    var onCompleteOutfitFromSelection: (([WardrobeItem]) -> Void)?
     var onSelectHistorySuggestion: ((OutfitHistoryEntry) -> Void)?
+    @Binding var filters: OutfitFilters
+    @Binding var preferenceText: String
+    @Binding var useWardrobeOnly: Bool
+    var isAuthenticated: Bool = false
     @State private var historyLoadingForItem: Int?
     @State private var showHistorySuggestionsSheet = false
     @State private var historySuggestions: [OutfitHistoryEntry] = []
@@ -36,12 +39,18 @@ struct WardrobeListView: View {
     @State private var editingItem: WardrobeItem?
     @State private var fullScreenImage: UIImage?
     @AppStorage("wardrobe_flow_tip_dismissed") private var flowTipDismissed = false
+    @State private var isCompletionSelectionMode = false
+    @State private var completionSelection = WardrobeMultiSelectState()
+    @State private var completionSelectionMessage: String?
+    @State private var completionPreferencesExpanded = true
     
     private var categoryVisibleItems: [WardrobeItem] {
         if categoryFilter == "All" {
             return allWardrobeItems
         }
-        return allWardrobeItems.filter { matchesCategoryFilter($0.category, filter: categoryFilter) }
+        return allWardrobeItems.filter {
+            WardrobeCategoryDisplay.matchesCategoryFilter($0.category, filter: categoryFilter)
+        }
     }
     
     private var filteredItems: [WardrobeItem] {
@@ -61,12 +70,57 @@ struct WardrobeListView: View {
         return filteredItems.filter { $0.id != pendingDeleteItem.id }
     }
 
+    private var selectedCompletionItems: [WardrobeItem] {
+        WardrobeCompletionThumbnails.selectedItemsInOrder(
+            selectedItemIds: completionSelection.selectedItemIds,
+            allItems: allWardrobeItems
+        )
+    }
+
+    private var selectedCompletionThumbnailItems: [WardrobeItem] {
+        WardrobeCompletionThumbnails.thumbnailItemsInOrder(
+            selectedItemIds: completionSelection.selectedItemIds,
+            allItems: allWardrobeItems
+        )
+    }
+
+    private var completionThumbnailSize: CGFloat {
+        isRegularWidth ? 52 : 48
+    }
+
     private var visibleWardrobeItemIDsLabel: String {
         displayedItems.map { String($0.id) }.joined(separator: ",")
     }
 
     private var isRegularWidth: Bool {
         horizontalSizeClass == .regular
+    }
+
+    private var visibleCategoryFilterChips: [String] {
+        WardrobeCategoryDisplay.visibleFilterChipKeys(from: categoryCounts)
+    }
+
+    private var completionSelectionSummary: String {
+        completionSelection.selectionSummary(for: allWardrobeItems)
+    }
+
+    private var completionStatusText: String? {
+        if let completionSelectionMessage, !completionSelectionMessage.isEmpty {
+            return completionSelectionMessage
+        }
+        return nil
+    }
+
+    private var showsCompletionPreferences: Bool {
+        onCompleteOutfitFromSelection != nil && (isCompletionSelectionMode || hasCompletionEligibleItems)
+    }
+
+    private var hasCompletionEligibleItems: Bool {
+        allWardrobeItems.contains { completionSelection.isEligible($0) }
+    }
+
+    private var completionPreferencesGridColumns: Int {
+        isRegularWidth ? 4 : 2
     }
 
     var body: some View {
@@ -121,20 +175,30 @@ struct WardrobeListView: View {
                         .padding(.horizontal)
                         .padding(.vertical, 8)
                         .accessibilityIdentifier("wardrobe.searchField")
+
+                    completionSelectionPanel
+                        .padding(.horizontal)
+                        .padding(.bottom, 8)
                     
                     ScrollView {
                         // Native Menu popover stacks above LazyVStack siblings (no web z-index fix needed).
                         LazyVStack(spacing: 12) {
                             ForEach(displayedItems) { item in
+                                let isSelected = completionSelection.isSelected(item)
                                 WardrobeCardView(
                                     item: item,
-                                    image: decodeBase64Image(item.image_data),
+                                    image: WardrobeImageData.decodeUIImage(from: item.image_data),
                                     onGetSuggestion: onGetSuggestionFromItem == nil ? nil : { onGetSuggestionFromItem?(item) },
                                     onPastSuggestions: { Task { await openHistorySuggestions(for: item) } },
                                     isPastSuggestionsLoading: historyLoadingForItem == item.id,
                                     onEdit: { editingItem = item },
                                     onDelete: { scheduleDelete(item: item) },
-                                    onShowImage: { image in fullScreenImage = image }
+                                    onShowImage: { image in fullScreenImage = image },
+                                    isCompletionSelectionMode: isCompletionSelectionMode,
+                                    isSelectedForCompletion: isSelected,
+                                    isCompletionEligible: completionSelection.isEligible(item),
+                                    completionSlotLabel: completionSelection.slot(for: item)?.displayName,
+                                    onToggleCompletionSelection: { toggleCompletionSelection(for: item) }
                                 )
                                 .accessibilityIdentifier("wardrobe.row.\(item.id)")
                             }
@@ -255,6 +319,91 @@ struct WardrobeListView: View {
         }
     }
 
+    @ViewBuilder
+    private var completionSelectionPanel: some View {
+        if onCompleteOutfitFromSelection != nil {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "checklist")
+                        .font(.title3)
+                        .foregroundColor(AppTheme.accent)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Complete an outfit from your wardrobe")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(AppTheme.textPrimary)
+                        Text("Select 1 to 5 shirts, trousers, blazers, shoes, or belts. Choose one item per outfit slot.")
+                            .font(.caption)
+                            .foregroundColor(AppTheme.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer()
+                    Button(isCompletionSelectionMode ? "Cancel" : "Select items") {
+                        toggleCompletionSelectionMode()
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(AppTheme.accent)
+                    .disabled(!hasCompletionEligibleItems && !isCompletionSelectionMode)
+                    .accessibilityIdentifier("wardrobe.multiSelect.toggle")
+                }
+
+                if isCompletionSelectionMode {
+                    VStack(alignment: .leading, spacing: 10) {
+                        if showsCompletionPreferences {
+                            completionPreferencesSection
+                        }
+
+                        HStack {
+                            Text(completionStatusText ?? completionSelectionSummary)
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(completionSelectionMessage == nil
+                                    ? AppTheme.textSecondary
+                                    : AppTheme.accent)
+                                .accessibilityIdentifier("wardrobe.multiSelect.status")
+                            Spacer()
+                            Button("Clear selection") {
+                                completionSelection.clear()
+                                completionSelectionMessage = nil
+                            }
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(AppTheme.textSecondary)
+                            .disabled(completionSelection.selectedCount == 0)
+                            .accessibilityIdentifier("wardrobe.multiSelect.clear")
+                        }
+
+                        if completionSelection.selectedCount > 0 {
+                            completionSelectionThumbnailsRow
+                        }
+
+                        Button(action: completeSelectedOutfit) {
+                            Label(completionSelection.actionTitle, systemImage: "sparkles")
+                                .font(.headline.weight(.semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 13)
+                        }
+                        .buttonStyle(GradientButtonStyle(isEnabled: completionSelection.canCompleteOutfit))
+                        .disabled(!completionSelection.canCompleteOutfit)
+                        .accessibilityLabel(completionSelection.actionTitle)
+                        .accessibilityIdentifier("wardrobe.multiSelect.complete")
+                    }
+                } else if showsCompletionPreferences {
+                    completionPreferencesSection
+                } else if !hasCompletionEligibleItems {
+                    Text("Add eligible wardrobe items to use AI outfit completion.")
+                        .font(.caption)
+                        .foregroundColor(AppTheme.textSecondary)
+                }
+            }
+            .padding(14)
+            .background(AppTheme.surface)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(AppTheme.border, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .accessibilityIdentifier("wardrobe.multiSelect.panel")
+        }
+    }
+
     private var categoryFilterChips: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Filter by:")
@@ -262,7 +411,7 @@ struct WardrobeListView: View {
                 .foregroundColor(AppTheme.textSecondary)
             
             LazyVGrid(columns: [GridItem(.adaptive(minimum: isRegularWidth ? 130 : 106), spacing: 10)], alignment: .leading, spacing: 10) {
-                ForEach(wardrobeCategoryOptions, id: \.self) { category in
+                ForEach(visibleCategoryFilterChips, id: \.self) { category in
                     let isActive = categoryFilter == category
                     Button {
                         guard categoryFilter != category else { return }
@@ -271,12 +420,12 @@ struct WardrobeListView: View {
                         categoryInfoMessage = nil
                         if category != "All" && countForCategory(category) == 0 {
                             categoryFilter = "All"
-                            showCategoryInfoToast("No items found in \(displayName(for: category)). Showing all wardrobe items.")
+                            showCategoryInfoToast("No items found in \(WardrobeCategoryDisplay.filterChipLabel(for: category)). Showing all wardrobe items.")
                         } else {
                             categoryFilter = category
                         }
                     } label: {
-                        Text("\(displayName(for: category)) (\(countForCategory(category)))")
+                        Text("\(WardrobeCategoryDisplay.filterChipLabel(for: category)) (\(countForCategory(category)))")
                             .font(.body.weight(.semibold))
                             .foregroundColor(isActive ? .white : AppTheme.textPrimary)
                             .lineLimit(1)
@@ -296,18 +445,100 @@ struct WardrobeListView: View {
         }
     }
 
-    private func displayName(for category: String) -> String {
-        switch category.lowercased() {
-        case "all": return "All"
-        case "shirt": return "Shirt"
-        case "trouser": return "Trousers"
-        case "blazer": return "Blazer"
-        case "shoes": return "Shoes"
-        case "belt": return "Belt"
-        default: return "Other"
+    @ViewBuilder
+    private var completionSelectionThumbnailsRow: some View {
+        let items = selectedCompletionThumbnailItems
+        if !items.isEmpty {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: isRegularWidth ? 10 : 8) {
+                    ForEach(items) { item in
+                        if let image = WardrobeImageData.decodeUIImage(from: item.image_data) {
+                            Button {
+                                fullScreenImage = image
+                            } label: {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: completionThumbnailSize, height: completionThumbnailSize)
+                                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                            .stroke(AppTheme.border, lineWidth: 1)
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(WardrobeCompletionThumbnails.viewImageAccessibilityLabel(for: item))
+                            .accessibilityIdentifier(
+                                WardrobeCompletionThumbnails.thumbnailAccessibilityId(itemId: item.id)
+                            )
+                        }
+                    }
+                }
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier(WardrobeCompletionThumbnails.rowAccessibilityId)
         }
     }
-    
+
+    private func toggleCompletionSelectionMode() {
+        withAnimation {
+            isCompletionSelectionMode.toggle()
+            if isCompletionSelectionMode {
+                completionPreferencesExpanded = true
+            }
+            completionSelection.clear()
+            completionSelectionMessage = nil
+        }
+    }
+
+    private func toggleCompletionSelection(for item: WardrobeItem) {
+        guard isCompletionSelectionMode else { return }
+        let result = completionSelection.toggle(item)
+        completionSelectionMessage = result.message
+        if result == .selected || result == .deselected {
+            completionPreferencesExpanded = true
+            if completionSelection.canCompleteOutfit {
+                completionSelectionMessage = nil
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var completionPreferencesSection: some View {
+        DisclosureGroup(isExpanded: $completionPreferencesExpanded) {
+            FiltersView(
+                filters: $filters,
+                preferenceText: $preferenceText,
+                layout: .grid,
+                useWardrobeOnly: $useWardrobeOnly,
+                showWardrobeOnly: isAuthenticated,
+                showSharedHint: true,
+                gridColumnCount: completionPreferencesGridColumns,
+                filterAccessibilityPrefix: "wardrobe.completion",
+                wardrobeOnlyCheckboxAccessibilityId: WardrobeCompletionCopy.wardrobeOnlyCheckboxAccessibilityId
+            )
+            .padding(.top, 4)
+        } label: {
+            Text(MainFlowUxCopy.preferencesSection)
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(AppTheme.textPrimary)
+        }
+        .accessibilityIdentifier(WardrobeCompletionCopy.preferencesPanelAccessibilityId)
+    }
+
+    private func completeSelectedOutfit() {
+        guard completionSelection.canCompleteOutfit else {
+            completionSelectionMessage = "Select at least 1 item"
+            return
+        }
+        onCompleteOutfitFromSelection?(selectedCompletionItems)
+        withAnimation {
+            isCompletionSelectionMode = false
+            completionSelection.clear()
+            completionSelectionMessage = nil
+        }
+    }
+
     private func countForCategory(_ category: String) -> Int {
         if category == "All" {
             return response?.total ?? 0
@@ -323,68 +554,22 @@ struct WardrobeListView: View {
         let normalized = seed.lowercased()
         if normalized == "all" {
             categoryFilter = "All"
-        } else if wardrobeCategoryOptions.contains(where: { $0.lowercased() == normalized }) {
-            categoryFilter = wardrobeCategoryOptions.first(where: { $0.lowercased() == normalized }) ?? seed
+        } else if WardrobeCategoryDisplay.allFilterChipKeys.contains(where: { $0.lowercased() == normalized }) {
+            categoryFilter = WardrobeCategoryDisplay.allFilterChipKeys.first(where: { $0.lowercased() == normalized }) ?? seed
         } else {
             categoryFilter = seed
         }
         onConsumeCategoryFilter?()
     }
 
-    private func matchesCategoryFilter(_ itemCategory: String, filter: String) -> Bool {
-        let normalized = itemCategory.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        switch filter.lowercased() {
-        case "shirt":
-            return ["shirt", "t_shirt", "t-shirt", "polo"].contains(normalized)
-        case "trouser":
-            return ["trouser", "trousers", "pants", "jeans", "shorts"].contains(normalized)
-        case "blazer":
-            return ["blazer", "jacket", "suit"].contains(normalized)
-        case "shoes":
-            return ["shoe", "shoes"].contains(normalized)
-        case "belt":
-            return ["belt", "belts"].contains(normalized)
-        case "other":
-            return !matchesCategoryFilter(itemCategory, filter: "shirt")
-                && !matchesCategoryFilter(itemCategory, filter: "trouser")
-                && !matchesCategoryFilter(itemCategory, filter: "blazer")
-                && !matchesCategoryFilter(itemCategory, filter: "shoes")
-                && !matchesCategoryFilter(itemCategory, filter: "belt")
-        default:
-            return false
-        }
-    }
-    
     private func rebuildCategoryCounts(from items: [WardrobeItem]) {
-        var counts: [String: Int] = [
-            "shirt": 0,
-            "trouser": 0,
-            "blazer": 0,
-            "shoes": 0,
-            "belt": 0,
-            "other": 0
-        ]
-        for item in items {
-            if matchesCategoryFilter(item.category, filter: "shirt") {
-                counts["shirt", default: 0] += 1
-            } else if matchesCategoryFilter(item.category, filter: "trouser") {
-                counts["trouser", default: 0] += 1
-            } else if matchesCategoryFilter(item.category, filter: "blazer") {
-                counts["blazer", default: 0] += 1
-            } else if matchesCategoryFilter(item.category, filter: "shoes") {
-                counts["shoes", default: 0] += 1
-            } else if matchesCategoryFilter(item.category, filter: "belt") {
-                counts["belt", default: 0] += 1
-            } else {
-                counts["other", default: 0] += 1
-            }
-        }
-        categoryCounts = counts
+        categoryCounts = WardrobeCategoryDisplay.rebuildCategoryCounts(from: items)
     }
 
     private func scheduleDelete(item: WardrobeItem) {
         Task { @MainActor in
             await commitPendingDelete()
+            completionSelection.remove(item)
             pendingDeleteItem = item
             pendingDeleteTask?.cancel()
             pendingDeleteTask = Task {
@@ -503,7 +688,7 @@ struct WardrobeListView: View {
             VStack(spacing: 14) {
                 if let sourceItem = historySourceItem {
                     HStack(spacing: 12) {
-                        if let image = decodeBase64Image(sourceItem.image_data) {
+                        if let image = WardrobeImageData.decodeUIImage(from: sourceItem.image_data) {
                             Image(uiImage: image)
                                 .resizable()
                                 .scaledToFill()
@@ -582,13 +767,6 @@ struct WardrobeListView: View {
         }
     }
 
-    private func decodeBase64Image(_ value: String?) -> UIImage? {
-        guard let raw = value, !raw.isEmpty else { return nil }
-        let payload = raw.contains("base64,") ? String(raw.split(separator: ",").last ?? "") : raw
-        let cleaned = payload.replacingOccurrences(of: "\\s", with: "", options: .regularExpression)
-        guard let data = Data(base64Encoded: cleaned) else { return nil }
-        return UIImage(data: data)
-    }
 }
 
 struct WardrobeCardView: View {
@@ -600,6 +778,11 @@ struct WardrobeCardView: View {
     let onEdit: () -> Void
     let onDelete: () -> Void
     let onShowImage: (UIImage) -> Void
+    var isCompletionSelectionMode: Bool = false
+    var isSelectedForCompletion: Bool = false
+    var isCompletionEligible: Bool = true
+    var completionSlotLabel: String? = nil
+    var onToggleCompletionSelection: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -607,7 +790,7 @@ struct WardrobeCardView: View {
                 imageBlock
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(item.category.capitalized)
+                    Text(WardrobeCategoryDisplay.wardrobeCategoryLabel(item.category))
                         .font(.title3.weight(.semibold))
                         .foregroundColor(AppTheme.textPrimary)
                         .accessibilityIdentifier("wardrobe.row.category.\(item.id)")
@@ -624,31 +807,80 @@ struct WardrobeCardView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            HStack(spacing: 10) {
-                if let onGetSuggestion {
-                    WardrobeTopActionButton(
-                        title: WardrobeCardUx.styleThisItemTitle,
-                        systemImage: "sparkles",
-                        isPrimary: true,
-                        accessibilityLabel: WardrobeCardUx.styleThisItemAccessibilityLabel,
-                        accessibilityIdentifier: WardrobeCardUx.heroButtonIdentifier(itemId: item.id),
-                        action: onGetSuggestion
-                    )
-                    .frame(maxWidth: .infinity, minHeight: 48)
-                }
+            if isCompletionSelectionMode {
+                completionSelectionRow
+            } else {
+                HStack(spacing: 10) {
+                    if let onGetSuggestion {
+                        WardrobeTopActionButton(
+                            title: WardrobeCardUx.styleThisItemTitle,
+                            systemImage: "sparkles",
+                            isPrimary: true,
+                            accessibilityLabel: WardrobeCardUx.styleThisItemAccessibilityLabel,
+                            accessibilityIdentifier: WardrobeCardUx.heroButtonIdentifier(itemId: item.id),
+                            action: onGetSuggestion
+                        )
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                    }
 
-                wardrobeOverflowMenu
+                    wardrobeOverflowMenu
+                }
             }
         }
         .padding(14)
-        .background(AppTheme.surface)
+        .background(isSelectedForCompletion ? AppTheme.accentSoft : AppTheme.surface)
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(AppTheme.border, lineWidth: 1)
+                .stroke(isSelectedForCompletion ? AppTheme.accent : AppTheme.border, lineWidth: isSelectedForCompletion ? 2 : 1)
         )
         // Rounds card chrome only. SwiftUI Menu below uses native popover presentation
         // outside this view's bounds, so overflow items are not clipped (unlike web).
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private var completionSelectionRow: some View {
+        HStack(spacing: 10) {
+            if isCompletionEligible {
+                Button {
+                    onToggleCompletionSelection?()
+                } label: {
+                    Label(
+                        isSelectedForCompletion ? "Selected" : "Select",
+                        systemImage: isSelectedForCompletion ? "checkmark.circle.fill" : "circle"
+                    )
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(isSelectedForCompletion ? .white : AppTheme.textPrimary)
+                    .frame(maxWidth: .infinity, minHeight: 48)
+                    .background(isSelectedForCompletion ? AppTheme.accent : AppTheme.accentSoft)
+                    .overlay(
+                        Capsule()
+                            .stroke(isSelectedForCompletion ? AppTheme.accent.opacity(0.35) : AppTheme.border, lineWidth: 1)
+                    )
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(isSelectedForCompletion ? "Selected for outfit completion" : "Select for outfit completion")
+                .accessibilityIdentifier("wardrobe.multiSelect.item.\(item.id)")
+            } else {
+                Label("Not eligible for completion", systemImage: "minus.circle")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(AppTheme.textSecondary)
+                    .frame(maxWidth: .infinity, minHeight: 48)
+                    .background(AppTheme.bgSecondary.opacity(0.7))
+                    .clipShape(Capsule())
+                    .accessibilityIdentifier("wardrobe.multiSelect.unsupported.\(item.id)")
+            }
+
+            if let completionSlotLabel {
+                Text(completionSlotLabel)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(AppTheme.textSecondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(AppTheme.bgSecondary.opacity(0.7))
+                    .clipShape(Capsule())
+            }
+        }
     }
 
     /// Native SwiftUI `Menu` — popover is presented by UIKit and is not clipped by card `clipShape`.
@@ -739,6 +971,16 @@ struct WardrobeCardView: View {
                             .font(.title3)
                             .foregroundColor(AppTheme.textSecondary)
                     )
+                    .accessibilityHidden(true)
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            if isSelectedForCompletion {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.title2)
+                    .foregroundColor(.white)
+                    .background(AppTheme.accent.clipShape(Circle()))
+                    .padding(6)
                     .accessibilityHidden(true)
             }
         }

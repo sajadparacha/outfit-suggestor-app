@@ -102,9 +102,16 @@ def test_category_normalization_injection_jeans_to_trouser():
     assert matching_items["trouser"][0]["id"] == 777
 
 
-def test_category_normalization_handles_shoe_and_jackets_aliases():
+def test_category_normalization_handles_completion_aliases():
     controller = _make_controller()
 
+    assert controller._normalize_item_category_for_outfit("polo") == "shirt"  # type: ignore[attr-defined]
+    assert controller._normalize_item_category_for_outfit("t_shirt") == "shirt"  # type: ignore[attr-defined]
+    assert controller._normalize_item_category_for_outfit("t-shirt") == "shirt"  # type: ignore[attr-defined]
+    assert controller._normalize_item_category_for_outfit("tshirt") == "shirt"  # type: ignore[attr-defined]
+    assert controller._normalize_item_category_for_outfit("pants") == "trouser"  # type: ignore[attr-defined]
+    assert controller._normalize_item_category_for_outfit("jeans") == "trouser"  # type: ignore[attr-defined]
+    assert controller._normalize_item_category_for_outfit("shorts") == "trouser"  # type: ignore[attr-defined]
     assert controller._normalize_item_category_for_outfit("shoe") == "shoes"  # type: ignore[attr-defined]
     assert controller._normalize_item_category_for_outfit("jackets") == "blazer"  # type: ignore[attr-defined]
 

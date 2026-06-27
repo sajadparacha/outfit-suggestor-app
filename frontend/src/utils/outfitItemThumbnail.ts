@@ -1,6 +1,8 @@
 import type { MatchingWardrobeItem, OutfitSuggestion } from '../models/OutfitModels';
 
-export type OutfitCategoryKey = 'shirt' | 'trouser' | 'blazer' | 'shoes' | 'belt';
+export type CoreOutfitCategoryKey = 'shirt' | 'trouser' | 'blazer' | 'shoes' | 'belt';
+export type OptionalOutfitCategoryKey = 'sweater' | 'outerwear' | 'tie';
+export type OutfitCategoryKey = CoreOutfitCategoryKey | OptionalOutfitCategoryKey;
 
 const CATEGORY_IDS: Record<OutfitCategoryKey, keyof OutfitSuggestion> = {
   shirt: 'shirt_id',
@@ -8,6 +10,9 @@ const CATEGORY_IDS: Record<OutfitCategoryKey, keyof OutfitSuggestion> = {
   blazer: 'blazer_id',
   shoes: 'shoes_id',
   belt: 'belt_id',
+  sweater: 'sweater_id',
+  outerwear: 'outerwear_id',
+  tie: 'tie_id',
 };
 
 /**
@@ -85,7 +90,7 @@ export function resolveOutfitItemThumbnail(
   return { imageSrc: null, tag: 'ai' };
 }
 
-const PREVIEW_CATEGORY_ORDER: OutfitCategoryKey[] = ['shirt', 'trouser', 'blazer', 'shoes', 'belt'];
+const PREVIEW_CATEGORY_ORDER: CoreOutfitCategoryKey[] = ['shirt', 'trouser', 'blazer', 'shoes', 'belt'];
 
 /** First available wardrobe thumbnail — used for random-from-wardrobe sidebar preview. */
 export function firstWardrobePreviewUrl(suggestion: OutfitSuggestion): string | null {

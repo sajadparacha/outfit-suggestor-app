@@ -116,7 +116,7 @@ struct MainFlowView: View {
                         Spacer(minLength: showsCompactResultLayout ? 100 : 50)
                     }
                     .padding(.vertical, 8)
-                    .adaptiveContent(maxWidth: 980)
+                    .adaptiveContent(maxWidth: MainFlowLayoutLogic.maxContentWidth)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .onChange(of: hasSuggestion) { hasResult in
@@ -326,7 +326,7 @@ struct MainFlowView: View {
     // MARK: - Layout
 
     private var regularWidthFlow: some View {
-        HStack(alignment: .top, spacing: 20) {
+        HStack(alignment: .top, spacing: MainFlowLayoutLogic.sideBySideColumnSpacing) {
             VStack(spacing: 22) {
                 if showsCompactResultLayout {
                     MainFlowCompactSummaryView(

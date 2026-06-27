@@ -71,12 +71,16 @@ enum InsightsShoppingSearch {
     }
 
     private static func categoryForSearch(_ rawCategory: String) -> String {
-        let lower = rawCategory.lowercased()
+        let lower = rawCategory.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         switch lower {
         case "shirt", "shirts": return "shirts"
         case "trouser", "trousers": return "trousers"
         case "shoe", "shoes": return "shoes"
-        case "blazer", "blazers", "belt", "belts": return "\(lower.hasSuffix("s") ? lower : "\(lower)s")"
+        case "blazer", "blazers": return "blazers"
+        case "belt", "belts": return "belts"
+        case "sweater", "sweaters": return "sweater"
+        case "jacket", "jackets": return "jacket"
+        case "tie", "ties": return "tie"
         default: return lower
         }
     }

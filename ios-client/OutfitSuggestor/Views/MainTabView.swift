@@ -105,10 +105,18 @@ struct MainTabView: View {
                                 routeCoordinator.selectedTab = .suggest
                             }
                         },
+                        onCompleteOutfitFromSelection: { items in
+                            routeCoordinator.selectedTab = .suggest
+                            viewModel.startCompleteOutfitFromWardrobeItems(items)
+                        },
                         onSelectHistorySuggestion: { entry in
                             viewModel.loadFromHistory(entry)
                             routeCoordinator.selectedTab = .suggest
-                        }
+                        },
+                        filters: $viewModel.filters,
+                        preferenceText: $viewModel.preferenceText,
+                        useWardrobeOnly: $viewModel.useWardrobeOnly,
+                        isAuthenticated: auth.isAuthenticated
                     )
                 } else {
                     GuestTabPlaceholderView(

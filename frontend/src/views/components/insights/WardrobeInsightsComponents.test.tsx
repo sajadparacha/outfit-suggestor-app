@@ -1,11 +1,13 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { WardrobeGapAnalysisResponse } from '../../../models/WardrobeModels';
+import { buildShoppingListRows } from '../../../utils/insightsHelpers';
 import { normalizeWardrobeInsight } from '../../../utils/normalizeWardrobeInsight';
 import AdminDebugPanel from './AdminDebugPanel';
 import CategoryDetailAccordion from './CategoryDetailAccordion';
 import InsightSummaryCard from './InsightSummaryCard';
 import MissingItemCard from './MissingItemCard';
+import ShoppingListPanel from './ShoppingListPanel';
 import WardrobeCoverageDashboard from './WardrobeCoverageDashboard';
 import WardrobeInsightsPage from './WardrobeInsightsPage';
 import { DEFAULT_FILTERS } from '../../../utils/outfitPreferences';
@@ -41,6 +43,33 @@ const sampleResponse: WardrobeGapAnalysisResponse = {
       missing_colors: ['navy'],
       missing_styles: ['unstructured'],
       recommended_purchases: ['Navy blazer'],
+      item_count: 0,
+    },
+    sweater: {
+      category: 'sweater',
+      owned_colors: ['gray'],
+      owned_styles: ['crew neck'],
+      missing_colors: ['navy'],
+      missing_styles: ['cardigan'],
+      recommended_purchases: ['Navy cardigan'],
+      item_count: 1,
+    },
+    jacket: {
+      category: 'jacket',
+      owned_colors: [],
+      owned_styles: [],
+      missing_colors: ['olive'],
+      missing_styles: ['bomber'],
+      recommended_purchases: ['Olive bomber jacket'],
+      item_count: 0,
+    },
+    tie: {
+      category: 'tie',
+      owned_colors: [],
+      owned_styles: [],
+      missing_colors: ['navy'],
+      missing_styles: ['silk'],
+      recommended_purchases: ['Navy silk tie'],
       item_count: 0,
     },
     shoes: {
@@ -144,6 +173,17 @@ describe('WardrobeCoverageDashboard', () => {
       expect(screen.getAllByText(item.status).length).toBeGreaterThan(0);
     });
   });
+
+  it('shows extended clothing categories including sweater, jacket, and tie', () => {
+    render(<WardrobeCoverageDashboard categories={insight.categoryHealth} />);
+
+    expect(screen.getByTestId('coverage-card-sweaters')).toBeInTheDocument();
+    expect(screen.getByTestId('coverage-card-jackets')).toBeInTheDocument();
+    expect(screen.getByTestId('coverage-card-ties')).toBeInTheDocument();
+    expect(screen.getByText('Sweaters')).toBeInTheDocument();
+    expect(screen.getByText('Jackets')).toBeInTheDocument();
+    expect(screen.getByText('Ties')).toBeInTheDocument();
+  });
 });
 
 describe('CategoryDetailAccordion', () => {
@@ -223,6 +263,23 @@ describe('CategoryDetailAccordion', () => {
     missingColorChips.forEach((chip) => {
       expect(chip.tagName).toBe('BUTTON');
     });
+  });
+
+  it("opens Google Shopping with men's sweater when sweater row Shop similar is clicked", () => {
+    const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
+
+    render(
+      <CategoryDetailAccordion categories={insight.categoryHealth} styleContext="classic" />
+    );
+
+    fireEvent.click(screen.getByTestId('category-row-sweater').querySelector('button') as HTMLButtonElement);
+    fireEvent.click(screen.getByRole('button', { name: /Shop similar/i }));
+
+    expect(openSpy).toHaveBeenCalled();
+    const url = decodeURIComponent(String(openSpy.mock.calls[0][0]));
+    expect(url).toMatch(/men's sweater/i);
+
+    openSpy.mockRestore();
   });
 
   it('opens Google Shopping with category, color, and missing styles when a missing color chip is clicked', () => {
@@ -341,6 +398,7 @@ describe('WardrobeInsightsPage layout states', () => {
 
     expect(screen.getByTestId('analysis-preferences-card')).toBeInTheDocument();
     expect(screen.queryByTestId('analysis-context-bar')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Shopping list/i })).not.toBeInTheDocument();
   });
 
   it('collapses preferences into context bar after analysis', () => {
@@ -361,6 +419,199 @@ describe('WardrobeInsightsPage layout states', () => {
 
     expect(screen.getByTestId('analysis-context-bar')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Change preferences/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Shopping list/i })).toBeInTheDocument();
     expect(screen.queryByTestId('analysis-preferences-card')).not.toBeInTheDocument();
+  });
+
+  it('keeps the shopping-list table collapsed until the Shopping list button is clicked', () => {
+    render(
+      <WardrobeInsightsPage
+        filters={DEFAULT_FILTERS}
+        setFilters={jest.fn()}
+        preferenceText=""
+        setPreferenceText={jest.fn()}
+        onAnalyze={jest.fn()}
+        onNavigateToGuide={jest.fn()}
+        onNavigateToWardrobe={jest.fn()}
+        result={sampleResponse}
+        loading={false}
+        error={null}
+      />
+    );
+
+    const panel = within(screen.getByTestId('insights-shopping-list'));
+    expect(panel.queryByRole('columnheader', { name: 'Buy' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Shopping list/i }));
+
+    expect(panel.getByRole('columnheader', { name: 'Buy' })).toBeInTheDocument();
+  });
+
+  it('shows Buy, Look for, and Search online columns when the shopping list is expanded', () => {
+    render(
+      <WardrobeInsightsPage
+        filters={DEFAULT_FILTERS}
+        setFilters={jest.fn()}
+        preferenceText=""
+        setPreferenceText={jest.fn()}
+        onAnalyze={jest.fn()}
+        onNavigateToGuide={jest.fn()}
+        onNavigateToWardrobe={jest.fn()}
+        result={sampleResponse}
+        loading={false}
+        error={null}
+      />
+    );
+
+    const panel = within(screen.getByTestId('insights-shopping-list'));
+    fireEvent.click(screen.getByRole('button', { name: /Shopping list/i }));
+    const expectedRows = buildShoppingListRows(insight.missingItems);
+    expect(panel.getByRole('columnheader', { name: 'Buy' })).toBeInTheDocument();
+    expect(panel.getByRole('columnheader', { name: 'Look for' })).toBeInTheDocument();
+    expect(panel.getByRole('columnheader', { name: 'Search online' })).toBeInTheDocument();
+    expect(panel.getByText(expectedRows[0].cleanLabel)).toBeInTheDocument();
+    expect(panel.getByTestId(`shopping-list-look-for-${expectedRows[0].id}`)).toHaveTextContent(
+      expectedRows[0].lookForText
+    );
+    expect(panel.getByTestId(`shopping-list-priority-${expectedRows[0].id}`)).toHaveTextContent(
+      expectedRows[0].priority
+    );
+    expect(panel.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(panel.queryByPlaceholderText(/Notes \(optional\)/i)).not.toBeInTheDocument();
+    expect(panel.queryByTestId('shopping-list-progress')).not.toBeInTheDocument();
+  });
+
+  it('shows full tuple detail behind See all options for long shopping-list rows', () => {
+    const longTupleItem = {
+      id: 'long-tuple-shirt',
+      name: 'shirt',
+      category: 'shirt',
+      priority: 'High' as const,
+      reason: 'Needs many style and color options.',
+      bestColors: Array.from({ length: 14 }, (_, index) => `color ${index + 1}`),
+      worksWith: Array.from({ length: 18 }, (_, index) => `style ${index + 1}`),
+    };
+    const expectedRow = buildShoppingListRows([longTupleItem])[0];
+
+    render(
+      <ShoppingListPanel
+        items={[longTupleItem]}
+        context={{ occasion: 'business', season: 'winter', style: 'classic' }}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Shopping list/i }));
+
+    expect(screen.getByTestId(`shopping-list-look-for-${longTupleItem.id}`)).toHaveTextContent(
+      expectedRow.lookForText
+    );
+    fireEvent.click(screen.getByTestId(`shopping-list-toggle-options-${longTupleItem.id}`));
+    const tupleDisplay = screen.getByTestId(`shopping-list-tuple-${longTupleItem.id}`);
+    expect(tupleDisplay).toHaveTextContent('(Style 1, Color 1)');
+    expect(tupleDisplay.textContent).toContain('(Style 18, Color 14)');
+  });
+
+  it('opens Google Shopping for a combo chip and search-all action', () => {
+    const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
+    render(
+      <WardrobeInsightsPage
+        filters={DEFAULT_FILTERS}
+        setFilters={jest.fn()}
+        preferenceText=""
+        setPreferenceText={jest.fn()}
+        onAnalyze={jest.fn()}
+        onNavigateToGuide={jest.fn()}
+        onNavigateToWardrobe={jest.fn()}
+        result={sampleResponse}
+        loading={false}
+        error={null}
+      />
+    );
+
+    const rows = buildShoppingListRows(insight.missingItems);
+    const firstRow = rows[0];
+    fireEvent.click(screen.getByRole('button', { name: /Shopping list/i }));
+    fireEvent.click(screen.getByTestId(`shopping-list-search-all-${firstRow.id}`));
+
+    expect(openSpy).toHaveBeenCalledWith(firstRow.searchAllUrl, '_blank', 'noopener,noreferrer');
+    expect(decodeURIComponent(String(openSpy.mock.calls[0][0]))).toContain('tbm=shop');
+
+    openSpy.mockRestore();
+  });
+
+  it('exports the shopping list to WhatsApp with numbered text and no raw tuples', () => {
+    const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
+    render(
+      <WardrobeInsightsPage
+        filters={DEFAULT_FILTERS}
+        setFilters={jest.fn()}
+        preferenceText=""
+        setPreferenceText={jest.fn()}
+        onAnalyze={jest.fn()}
+        onNavigateToGuide={jest.fn()}
+        onNavigateToWardrobe={jest.fn()}
+        result={sampleResponse}
+        loading={false}
+        error={null}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Shopping list/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Export to WhatsApp/i }));
+
+    expect(openSpy).toHaveBeenCalled();
+    const url = String(openSpy.mock.calls[0][0]);
+    expect(url).toMatch(/^https:\/\/wa\.me\/\?text=/);
+    const decoded = decodeURIComponent(url);
+    expect(decoded).toContain('ClosIQ Shopping List');
+    expect(decoded).toContain('1.');
+    expect(decoded).not.toContain('(Oxford, Olive)');
+
+    openSpy.mockRestore();
+  });
+
+  it('copies the shopping list to the clipboard', async () => {
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: { writeText },
+    });
+
+    render(
+      <ShoppingListPanel items={insight.missingItems} context={insight.context} />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Shopping list/i }));
+    fireEvent.click(screen.getByTestId('shopping-list-copy-button'));
+
+    await screen.findByTestId('shopping-list-copy-feedback');
+    expect(writeText).toHaveBeenCalled();
+    expect(String(writeText.mock.calls[0][0])).toContain('ClosIQ Shopping List');
+    expect(screen.getByText('Copied to clipboard')).toBeInTheDocument();
+  });
+
+  it('uses the browser print path for PDF export', () => {
+    const printSpy = jest.spyOn(window, 'print').mockImplementation(() => undefined);
+    render(
+      <WardrobeInsightsPage
+        filters={DEFAULT_FILTERS}
+        setFilters={jest.fn()}
+        preferenceText=""
+        setPreferenceText={jest.fn()}
+        onAnalyze={jest.fn()}
+        onNavigateToGuide={jest.fn()}
+        onNavigateToWardrobe={jest.fn()}
+        result={sampleResponse}
+        loading={false}
+        error={null}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Shopping list/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Export as PDF/i }));
+
+    expect(printSpy).toHaveBeenCalled();
+    expect(screen.getByTestId('shopping-list-print')).toBeInTheDocument();
+
+    printSpy.mockRestore();
   });
 });

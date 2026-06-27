@@ -316,4 +316,7 @@ def test_analyze_wardrobe_gaps_parses_large_json_without_using_default_token_lim
     )
 
     assert result["analysis_mode"] == "premium"
-    assert len(result["analysis_by_category"]) == 5
+    assert len(result["analysis_by_category"]) == 7
+    assert "sweater" in result["analysis_by_category"]
+    assert "jacket" in result["analysis_by_category"]
+    assert "tie" not in result["analysis_by_category"]

@@ -31,6 +31,23 @@ enum WardrobeInsightsPresentation {
     static func shouldShowResults(hasResult: Bool) -> Bool {
         hasResult
     }
+
+    static func shouldShowShoppingList(hasResult: Bool) -> Bool {
+        hasResult
+    }
+
+    /// Deprecated alias — shopping list is inline when results are shown.
+    static func shouldShowShoppingListAction(hasResult: Bool) -> Bool {
+        shouldShowShoppingList(hasResult: hasResult)
+    }
+
+    static var shoppingListExportActionTitles: [String] {
+        [
+            InsightsCopy.exportToWhatsAppButton,
+            InsightsCopy.copyListButton,
+            InsightsCopy.exportAsPDFButton,
+        ]
+    }
 }
 
 enum WardrobeCategoryIcon {
@@ -40,6 +57,9 @@ enum WardrobeCategoryIcon {
         case "trouser", "trousers": return "figure.walk"
         case "shoes", "shoe": return "shoe.fill"
         case "blazer", "blazers": return "jacket.fill"
+        case "sweater", "sweaters": return "cloud.snow.fill"
+        case "jacket", "jackets": return "umbrella.fill"
+        case "tie", "ties": return "link"
         case "belt", "belts": return "minus.rectangle.fill"
         case "colors": return "paintpalette.fill"
         case "styles": return "tag.fill"

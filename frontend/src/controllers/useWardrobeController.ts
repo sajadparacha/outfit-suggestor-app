@@ -7,6 +7,9 @@ import { useState, useCallback, useEffect } from 'react';
 import { WardrobeItem, WardrobeItemCreate, WardrobeItemUpdate, WardrobeSummary } from '../models/WardrobeModels';
 import ApiService from '../services/ApiService';
 import { compressImageForWardrobe } from '../utils/imageUtils';
+import { apiCategoryParamForFilter, usesClientSideCategoryFilter } from '../utils/wardrobeCategory';
+
+const CLIENT_SIDE_FILTER_LOAD_LIMIT = 100;
 
 interface UseWardrobeControllerReturn {
   // State
@@ -21,7 +24,7 @@ interface UseWardrobeControllerReturn {
   searchQuery: string;
   
   // Actions
-  loadWardrobe: (category?: string, search?: string, page?: number) => Promise<void>;
+  loadWardrobe: (category?: string, search?: string, page?: number, limit?: number) => Promise<void>;
   loadSummary: () => Promise<void>;
   analyzeImage: (image: File, modelType?: string) => Promise<Record<string, any>>;
   addItem: (itemData: WardrobeItemCreate, image?: File) => Promise<void>;
@@ -46,13 +49,19 @@ export const useWardrobeController = (): UseWardrobeControllerReturn => {
   /**
    * Load wardrobe items with pagination and search
    */
-  const loadWardrobe = useCallback(async (category?: string, search?: string, page: number = 1) => {
+  const loadWardrobe = useCallback(async (
+    category?: string,
+    search?: string,
+    page: number = 1,
+    limit?: number
+  ) => {
     setLoading(true);
     setError(null);
     
     try {
-      const offset = (page - 1) * itemsPerPage;
-      const response = await ApiService.getWardrobe(category, search, itemsPerPage, offset);
+      const pageSize = limit ?? itemsPerPage;
+      const offset = (page - 1) * pageSize;
+      const response = await ApiService.getWardrobe(category, search, pageSize, offset);
       // Handle both old array format and new paginated format
       if (Array.isArray(response)) {
         // Old format - array of items (backward compatibility)
@@ -68,7 +77,6 @@ export const useWardrobeController = (): UseWardrobeControllerReturn => {
         setTotalCount(0);
       }
       setCurrentPage(page);
-      setSelectedCategory(category || null);
       if (search !== undefined) {
         setSearchQuery(search);
       }
@@ -80,6 +88,14 @@ export const useWardrobeController = (): UseWardrobeControllerReturn => {
       setLoading(false);
     }
   }, [itemsPerPage]);
+
+  const reloadWardrobeForCurrentFilter = useCallback(async (page: number = 1) => {
+    const apiCategory = apiCategoryParamForFilter(selectedCategory);
+    const bulkLimit = usesClientSideCategoryFilter(selectedCategory)
+      ? CLIENT_SIDE_FILTER_LOAD_LIMIT
+      : undefined;
+    await loadWardrobe(apiCategory, searchQuery || undefined, page, bulkLimit);
+  }, [loadWardrobe, searchQuery, selectedCategory]);
 
   /**
    * Load wardrobe summary/statistics
@@ -128,7 +144,7 @@ export const useWardrobeController = (): UseWardrobeControllerReturn => {
       const imageToSend = image ? await compressImageForWardrobe(image) : undefined;
       await ApiService.addWardrobeItem(itemData, imageToSend);
       // Reload wardrobe after adding (reset to page 1)
-      await loadWardrobe(selectedCategory || undefined, searchQuery || undefined, 1);
+      await reloadWardrobeForCurrentFilter(1);
       await loadSummary();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to add wardrobe item';
@@ -137,7 +153,7 @@ export const useWardrobeController = (): UseWardrobeControllerReturn => {
     } finally {
       setLoading(false);
     }
-  }, [loadWardrobe, loadSummary, searchQuery, selectedCategory]);
+  }, [loadSummary, reloadWardrobeForCurrentFilter]);
 
   /**
    * Update a wardrobe item
@@ -154,7 +170,7 @@ export const useWardrobeController = (): UseWardrobeControllerReturn => {
       const imageToSend = image ? await compressImageForWardrobe(image) : undefined;
       await ApiService.updateWardrobeItem(itemId, itemData, imageToSend);
       // Reload wardrobe after updating
-      await loadWardrobe(selectedCategory || undefined, searchQuery || undefined, currentPage);
+      await reloadWardrobeForCurrentFilter(currentPage);
       await loadSummary();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update wardrobe item';
@@ -163,7 +179,7 @@ export const useWardrobeController = (): UseWardrobeControllerReturn => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, loadWardrobe, loadSummary, searchQuery, selectedCategory]);
+  }, [currentPage, loadSummary, reloadWardrobeForCurrentFilter]);
 
   /**
    * Delete a wardrobe item
@@ -176,7 +192,7 @@ export const useWardrobeController = (): UseWardrobeControllerReturn => {
       await ApiService.deleteWardrobeItem(itemId);
       // Reload wardrobe after deleting (may need to go back a page if current page is empty)
       const newPage = wardrobeItems.length === 1 && currentPage > 1 ? currentPage - 1 : currentPage;
-      await loadWardrobe(selectedCategory || undefined, searchQuery || undefined, newPage);
+      await reloadWardrobeForCurrentFilter(newPage);
       await loadSummary();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete wardrobe item';
@@ -185,7 +201,7 @@ export const useWardrobeController = (): UseWardrobeControllerReturn => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, loadWardrobe, loadSummary, searchQuery, selectedCategory, wardrobeItems.length]);
+  }, [currentPage, loadSummary, reloadWardrobeForCurrentFilter, wardrobeItems.length]);
 
   /**
    * Clear error message

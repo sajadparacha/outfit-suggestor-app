@@ -16,16 +16,16 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 | **Random pick result: regenerate + upload** | ✅ | ✅ | Compact result shows upload new item + Generate Another; shared `mainFlowResultRegenerate` / `MainFlowResultRegenerateLogic` |
 | **Preferences layout** | ✅ | ✅ | Occasion, season, style, notes; **Use my wardrobe only** last (auth); Colors removed from UI |
 | **Get suggestion (photo)** | ✅ | ✅ | Upload image → AI suggestion |
-| **Filters / preference text** | ✅ | ✅ | Occasion, season, style; free text |
+| **Filters / preference text** | ✅ | ✅ | Occasion, season, style use shared recommended option vocabulary; free text |
 | **Wardrobe-only mode** | ✅ | ✅ | Toggle when logged in (Main flow) |
 | **Model image generation** | ✅ | ✅ | Toggle + model picker (DALL-E 3, Stable Diffusion, Nano Banana); full-screen view |
-| **Wardrobe** | ✅ | ✅ | List, add, edit, delete, category filter, search, "Get suggestion" from item |
+| **Wardrobe** | ✅ | ✅ | List, add, edit, delete, category filter (core chips: shirt/trouser/blazer/shoes/belt + extended chips when owned: polo, T-shirt, jeans, shorts, sweater, jacket, tie, other), human-readable category badges, search, "Get suggestion" from item, select 1-5 items (one per slot) to complete outfit with AI; **completion panel shows clickable selection thumbnails** (tap to full-screen) beside Complete outfit with AI; completion aliases map polo/T-shirt to shirt, pants/jeans/shorts to trouser, and jacket to blazer slot (5 slots unchanged); **blazer filter chip counts blazer/suit only** (jacket has its own extended chip); inline **Preferences** (occasion/season/style/notes + wardrobe-only) synced with Suggest |
 | **Outfit history** | ✅ | ✅ | List, search, sort (newest/oldest), delete, load into main view |
 | **Random from wardrobe** | ✅ | ✅ | Button on Main; GET /api/wardrobe/random-outfit |
 | **Random from history** | ✅ | ✅ | Button on Main; client picks from history; **Your inputs** syncs preview + **From history** caption + entry filters |
 | **Duplicate detection** | ✅ | ✅ | Check before suggestion; use cached or force new |
 | **Next / Alternate outfit** | ✅ | ✅ | Button after suggestion; requests a different outfit |
-| **Wardrobe Insights** | ✅ | ✅ | Premium summary-first redesign: gap score + label, top 3 priorities, **Top items to add** cards (tap **Best colors** → Google Shopping; **Shop similar** per item), **Wardrobe coverage** dashboard (7 categories), collapsible **Detailed category analysis** with owned/missing color & style counts, quick tip; no outfit-generation CTAs from insights; preferences collapse to context bar after analysis; admin/debug gated; modes **Quick Wardrobe Check** (free) and **AI Stylist Review** (premium) in expanded preferences |
+| **Wardrobe Insights** | ✅ | ✅ | Premium summary-first redesign: gap score + label, top 3 priorities, **Top items to add** cards (tap **Best colors** → Google Shopping; **Shop similar** per item), **Shopping list** (collapsed by default; Buy / Look for / Search online; priority badges; **canonical category labels** via `cleanShoppingItemLabel`—dedupes AI junk names, prefers taxonomy label when name mismatches), per style+color Google Shopping chips + Search all using **`men's` + category phrase** queries (e.g. men's sweater, men's jacket, men's tie; gender prefix hardcoded this iteration—future `REACT_APP_SHOPPING_GENDER` / `AppConfig` documented in spec), Copy list; WhatsApp/PDF export), **Wardrobe coverage** dashboard (7 core clothing categories—shirt, trouser, blazer, sweater, jacket, shoes, belt—plus **tie** when occasion is business/formal/office; then Colors + Styles aggregates), collapsible **Detailed category analysis** with owned/missing color & style counts, quick tip; **jacket wardrobe items count under jacket row, not blazer**; no outfit-generation CTAs from insights; preferences collapse to context bar after analysis; admin/debug gated; modes **Quick Wardrobe Check** (free) and **AI Stylist Review** (premium) in expanded preferences |
 | **User Guide** | ✅ | ✅ | In-app documentation with feature walkthroughs |
 | **Integration Tests (Admin)** | ✅ | ✅ | Admin-only test runner (list/run/run-all) |
 | **Settings** | ✅ | ✅ | Change password, account info, logout |
@@ -67,9 +67,9 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 
 **Flow (both platforms)**:
 1. **Creation** — upload, preferences (occasion/season/style/notes), **Generate Outfit** CTA; wardrobe / random picks / advanced options collapsed on input side
-2. **Result** — styled look hero (model image or placeholder, not upload repeat), context line (`Style · Season`), simplified item cards with source tags, **Why this works** bullets
+2. **Result** — styled look hero (model image or placeholder, not upload repeat), context line (`Style · Season`), simplified item cards with source tags, optional **Also wear** collapsible section (sweater / outerwear / tie when API returns them — not part of core five), **Why this works** bullets
 3. **Actions** — **Generate Another Look**, **Save Look**, **Refine** (formal / casual / wardrobe-only / change occasion inside menu)
-4. **Layout** — web two-column on desktop; iOS two-column on iPad regular width; mobile scroll-to-result
+4. **Layout** — side-by-side on wide viewports: creation = input column \| empty preview; result = compact input \| styled look; sticky bottom actions on result (no inline primary actions in result panel on wide). Web uses `md:` (768px) two-column grid aligned with iPad regular width; max content width 980px; shared `mainFlowLayoutLogic.ts` / `MainFlowLayoutLogic.swift`. iPhone / mobile web stay single-column stacked with scroll-to-result.
 
 **Web**: Upload image (drag/drop or pick), optional preference text, occasion/season/style filters, **Generate Outfit**, loading state, display result. Optional: generate model image (advanced, input side).
 
@@ -86,6 +86,8 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 - `generate_model_image` (optional bool)
 - `image_model` (optional: "dalle3", "stable-diffusion", "nano-banana")
 - `use_wardrobe_only` (optional bool, requires auth)
+
+**Response (optional layers, main suggest flow only)**: nullable `sweater`, `outerwear`, `tie` plus `sweater_id`, `outerwear_id`, `tie_id` for wardrobe thumbnails. Random-outfit and wardrobe-complete-outfit remain five core slots only.
 
 **iOS work**:
 
@@ -110,11 +112,11 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 
 ## 4. Wardrobe Management
 
-**Web**: List wardrobe items, add (with optional AI analysis), edit, delete, filter by category, get suggestion from a single item. Duplicate check before add. Full-screen image view.
+**Web**: List wardrobe items, add (with optional AI analysis), edit, delete, filter by category (core chips always visible; extended chips—polo, T-shirt, jeans, shorts, sweater, jacket, tie, other—when items exist), human-readable category badges on cards, get suggestion from a single item, select 1-5 eligible items across unique outfit slots and complete the outfit with AI. Duplicate check before add. Full-screen image view.
 
 **Wardrobe item card actions (web + iOS)**: Primary **Style this item** + overflow menu (View image, Edit, **Past Suggestions**, Delete). Past Suggestions opens per-item outfit history modal/sheet.
 
-**iOS status**: Full parity. List, add (with "Analyze with AI" and duplicate check), edit, delete, category filter, "Get suggestion" from item; history has full-screen image viewer.
+**iOS status**: Full parity. List, add (with "Analyze with AI" and duplicate check), edit, delete, category filter (core + extended chips when owned), human-readable category badges, "Get suggestion" from item, multi-select complete outfit with AI; history has full-screen image viewer.
 
 **API endpoints**:
 
@@ -125,6 +127,7 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 - `POST /api/wardrobe/check-duplicate`
 - `POST /api/wardrobe/analyze-image`
 - `POST /api/suggest-outfit-from-wardrobe-item/{item_id}`
+- `POST /api/suggest-outfit-from-wardrobe` with optional `selected_wardrobe_item_ids`
 
 **iOS work** (remaining, optional):
 
@@ -220,9 +223,9 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 
 ## 11. Admin Reports
 
-**Web**: Admin-only Reports tab with four sections — **Overview**, **Utilization**, **Users**, **Searches**. Shared filters (date range, user, country, **city**, operation type, endpoint). Recharts line/bar charts; timeline from `GET /api/access-logs/timeline`; search aggregates from `GET /api/reports/searches`.
+**Web**: Admin-only Reports tab with four sections — **Overview**, **Utilization**, **Users**, **Searches**. Shared filters (date range, user, country, **city**, operation type, endpoint). Recharts line/bar charts; timeline from `GET /api/access-logs/timeline`; search aggregates from `GET /api/reports/searches`. Network/CORS failures show friendly banner (not raw `Failed to fetch`); backend CORS allows `localhost:3000`, `127.0.0.1:3000`, `closiq.me`, `www.closiq.me`.
 
-**iOS status**: **Implemented** — same four tabs, shared filters (no **city** filter — web-only), Swift Charts where practical, same APIs.
+**iOS status**: **Implemented** — same four tabs, shared filters (no **city** filter — web-only), Swift Charts where practical, same APIs; network errors use same friendly copy as web via `ReportsErrorFormatter`.
 
 **API**: `/api/access-logs/` (list), `/stats`, `/usage`, `/timeline`; `/api/reports/searches` (outfit_history occasion/season/style aggregates).
 
@@ -230,7 +233,7 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 
 - [ ] **City filter** — web only (by design).
 - [x] Tabbed layout and copy match.
-- [x] Timeline + search report endpoints wired on both platforms.
+- [x] Network/CORS error copy matches (friendly message, not raw `Failed to fetch`).
 
 ---
 

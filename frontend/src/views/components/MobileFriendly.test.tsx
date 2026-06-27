@@ -80,10 +80,11 @@ describe('Mobile-friendly layout and touch targets', () => {
       isAuthenticated: false,
     };
 
-    it('is sticky on large screens (lg:sticky)', () => {
+    it('is sticky from md breakpoint (md:sticky)', () => {
       const { container } = render(<Sidebar {...defaultProps} />);
-      const root = container.firstElementChild;
-      expect(root?.getAttribute('class')).toMatch(/lg:sticky/);
+      const root = container.querySelector('[data-testid="main-flow-sidebar"]');
+      expect(root?.getAttribute('class')).toMatch(/md:sticky/);
+      expect(root?.getAttribute('class')).toMatch(/md:top-20/);
     });
 
     it('Generate Outfit button has min-h-[48px] and touch-manipulation', () => {
@@ -224,6 +225,23 @@ describe('Mobile-friendly layout and touch targets', () => {
       const searchForm = container.querySelector('form');
       expect(searchForm?.getAttribute('class')).toMatch(/flex-col/);
       expect(searchForm?.getAttribute('class')).toMatch(/sm:flex-row/);
+    });
+  });
+
+  describe('Main flow grid (App)', () => {
+    it('main flow uses md:grid-cols-2 and max-w-[980px]', async () => {
+      renderApp();
+      await screen.findByRole('button', { name: /Get AI outfit suggestion/i });
+      const grid = document.querySelector('.max-w-\\[980px\\].md\\:grid-cols-2');
+      expect(grid).toBeInTheDocument();
+      expect(grid?.className).toMatch(/md:gap-5/);
+    });
+
+    it('HowItWorks stepper is wrapped for md:hidden', async () => {
+      renderApp();
+      await screen.findByRole('button', { name: /Get AI outfit suggestion/i });
+      const howItWorks = screen.getByRole('heading', { name: /How it works/i });
+      expect(howItWorks.closest('.md\\:hidden')).toBeInTheDocument();
     });
   });
 

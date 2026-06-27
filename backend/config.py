@@ -60,8 +60,10 @@ class Config:
     else:
         ALLOWED_ORIGINS = [
             "http://localhost:3000",  # React dev server
+            "http://127.0.0.1:3000",  # React dev server (IP alias — must match for CORS)
             "https://sajadparacha.github.io",  # Legacy GitHub Pages URL
             "https://closiq.me",  # Production custom domain
+            "https://www.closiq.me",  # Production www subdomain
         ]
     
     # Image similarity threshold for duplicate detection

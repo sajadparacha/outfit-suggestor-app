@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import UIKit
 
 enum WardrobeCardMenuAction: String, CaseIterable {
     case viewImage
@@ -67,5 +68,55 @@ enum WardrobeCardUx {
 
     static func historyUseThisIdentifier(entryId: Int) -> String {
         "wardrobe.history.useThis.\(entryId)"
+    }
+}
+
+enum WardrobeCompletionCopy {
+    static let noItemsSelected = "No items selected"
+    static let sharedPreferencesHint = InsightsCopy.sharedPreferencesNote
+    static let preferencesPanelAccessibilityId = "wardrobe.completion.preferences"
+    static let wardrobeOnlyCheckboxAccessibilityId = "wardrobe.completion.wardrobeOnlyCheckbox"
+
+    static func filterAccessibilityId(for title: String) -> String {
+        "wardrobe.completion.filter.\(title.lowercased())"
+    }
+}
+
+enum WardrobeImageData {
+    static func decodeUIImage(from value: String?) -> UIImage? {
+        guard let raw = value, !raw.isEmpty else { return nil }
+        let payload = raw.contains("base64,") ? String(raw.split(separator: ",").last ?? "") : raw
+        let cleaned = payload.replacingOccurrences(of: "\\s", with: "", options: .regularExpression)
+        guard let data = Data(base64Encoded: cleaned) else { return nil }
+        return UIImage(data: data)
+    }
+}
+
+enum WardrobeCompletionThumbnails {
+    static let rowAccessibilityId = "wardrobe.multiSelect.thumbnails"
+
+    static func thumbnailAccessibilityId(itemId: Int) -> String {
+        "wardrobe.multiSelect.thumb.\(itemId)"
+    }
+
+    static func viewImageAccessibilityLabel(for item: WardrobeItem) -> String {
+        let slot = WardrobeCompletionSlot.normalized(from: item.category)
+        let name = slot?.summaryLabel ?? item.category
+        return "View \(name)"
+    }
+
+    static func selectedItemsInOrder(selectedItemIds: [Int], allItems: [WardrobeItem]) -> [WardrobeItem] {
+        selectedItemIds.compactMap { id in
+            allItems.first { $0.id == id }
+        }
+    }
+
+    static func thumbnailItemsInOrder(selectedItemIds: [Int], allItems: [WardrobeItem]) -> [WardrobeItem] {
+        selectedItemsInOrder(selectedItemIds: selectedItemIds, allItems: allItems)
+            .filter { hasDecodableImageData($0.image_data) }
+    }
+
+    static func hasDecodableImageData(_ value: String?) -> Bool {
+        WardrobeImageData.decodeUIImage(from: value) != nil
     }
 }

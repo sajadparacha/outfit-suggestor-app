@@ -18,6 +18,10 @@ describe('Guide and footer navigation (App)', () => {
       expect(screen.getByRole('heading', { name: /How to use/i })).toBeInTheDocument();
     });
     expect(screen.getByText(/Jump to a section/i)).toBeInTheDocument();
+    expect(screen.getByText(/Add to outfit completion/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Complete outfit with AI/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Choose one item per outfit slot/i)).toBeInTheDocument();
+    expect(screen.getByText(/Tap Shopping list to open a market-ready table/i)).toBeInTheDocument();
   });
 
   it('opens About from footer', async () => {
@@ -39,6 +43,8 @@ describe('Guide and footer navigation (App)', () => {
       expect(screen.getByRole('heading', { name: /^AI Outfit Suggestor$/i })).toBeInTheDocument();
     });
     expect(screen.getByText(/Developed by Sajjad Ahmed Paracha/i)).toBeInTheDocument();
+    expect(screen.getByText(/select one or more saved pieces/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/market-ready shopping list/i).length).toBeGreaterThan(0);
   });
 
   it('opens User guide from footer link', async () => {

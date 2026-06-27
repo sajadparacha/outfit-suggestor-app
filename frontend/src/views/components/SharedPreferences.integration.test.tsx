@@ -7,9 +7,9 @@ import AnalysisPreferences from './AnalysisPreferences';
 
 function SharedPreferencesHarness() {
   const [filters, setFilters] = React.useState({
-    occasion: 'casual',
-    season: 'all',
-    style: 'modern',
+    occasion: 'everyday',
+    season: 'all-season',
+    style: 'classic',
   });
   const [preferenceText, setPreferenceText] = React.useState('');
 
@@ -43,16 +43,16 @@ describe('SharedPreferences integration', () => {
     const seasonSelects = screen.getAllByLabelText(/select season/i);
     const styleSelects = screen.getAllByLabelText(/select style/i);
 
-    fireEvent.change(occasionSelects[0], { target: { value: 'business' } });
+    fireEvent.change(occasionSelects[0], { target: { value: 'work' } });
     fireEvent.change(seasonSelects[0], { target: { value: 'summer' } });
-    fireEvent.change(styleSelects[0], { target: { value: 'business casual' } });
+    fireEvent.change(styleSelects[0], { target: { value: 'smart-casual' } });
 
-    expect(occasionSelects[0]).toHaveValue('business');
-    expect(occasionSelects[1]).toHaveValue('business');
+    expect(occasionSelects[0]).toHaveValue('work');
+    expect(occasionSelects[1]).toHaveValue('work');
     expect(seasonSelects[0]).toHaveValue('summer');
     expect(seasonSelects[1]).toHaveValue('summer');
-    expect(styleSelects[0]).toHaveValue('business casual');
-    expect(styleSelects[1]).toHaveValue('business casual');
+    expect(styleSelects[0]).toHaveValue('smart-casual');
+    expect(styleSelects[1]).toHaveValue('smart-casual');
 
     const notesField = screen.getByLabelText(/extra notes for wardrobe insights/i);
     fireEvent.change(notesField, { target: { value: 'navy and brown, no sneakers' } });

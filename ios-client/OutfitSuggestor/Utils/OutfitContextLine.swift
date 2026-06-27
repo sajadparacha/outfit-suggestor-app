@@ -7,36 +7,47 @@ import Foundation
 
 enum OutfitContextLine {
     private static let occasionDisplay: [String: String] = [
-        "casual": "Casual",
-        "business": "Business",
-        "formal": "Formal",
+        "everyday": "Everyday",
+        "work": "Work",
+        "date-night": "Date Night",
+        "dinner-night-out": "Dinner / Night Out",
         "party": "Party",
-        "date": "Date Night",
-        "sports": "Sports/Active",
+        "wedding-guest": "Wedding Guest",
+        "formal-event": "Formal Event",
+        "travel": "Travel",
+        "workout": "Workout",
+        "errands": "Errands",
+        "lounge": "Lounge",
+        "outdoor": "Outdoor",
     ]
 
     private static let seasonDisplay: [String: String] = [
-        "all": "All Seasons",
         "spring": "Spring",
         "summer": "Summer",
         "fall": "Fall",
         "winter": "Winter",
+        "transitional": "Transitional",
+        "all-season": "All Season",
     ]
 
     private static let styleDisplay: [String: String] = [
-        "modern": "Modern",
         "classic": "Classic",
+        "minimal": "Minimal",
+        "smart-casual": "Smart Casual",
+        "streetwear": "Streetwear",
+        "sporty": "Sporty",
+        "preppy": "Preppy",
+        "boho": "Boho",
+        "edgy": "Edgy",
+        "romantic": "Romantic",
         "trendy": "Trendy",
-        "minimalist": "Minimalist",
-        "bold": "Bold",
         "vintage": "Vintage",
-        "casual": "Casual",
-        "business casual": "Business Casual",
+        "elegant": "Elegant",
     ]
 
     static func format(occasion: String, season: String, style: String) -> String {
         let styleLabel = styleDisplay[style] ?? style
-        let seasonLabel = season != "all" ? (seasonDisplay[season] ?? season) : ""
+        let seasonLabel = season != "all-season" ? (seasonDisplay[season] ?? season) : ""
         let occasionLabel = occasionDisplay[occasion] ?? occasion
 
         if !styleLabel.isEmpty, !seasonLabel.isEmpty {

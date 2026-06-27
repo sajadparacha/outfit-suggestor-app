@@ -199,8 +199,10 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
             ]}
           />
           <TipBox>
-            <strong className="text-white">From your wardrobe:</strong> if you start a suggestion from a saved item,
-            that piece is loaded for you and the result stays linked to your pick.
+            <strong className="text-white">From your wardrobe:</strong> start with one item via{' '}
+            <span className="text-white font-medium">Style this item with AI</span>, or combine several on the Wardrobe tab
+            with <span className="text-white font-medium">Complete outfit with AI</span>—set Preferences there first when you want
+            occasion, season, style, or notes to shape the result.
           </TipBox>
         </SectionCard>
 
@@ -216,7 +218,9 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               <span className="text-brand-blue font-bold shrink-0">•</span>
               <span>
                 You will see <strong className="text-white">shirt, trousers, blazer, shoes, and belt</strong> with short
-                descriptions. Small images may show your upload, items from your wardrobe, or an AI-only suggestion.
+                descriptions. Small images may show your upload, items from your wardrobe, or an AI-only suggestion. When
+                the occasion calls for it, the AI may also suggest a <strong className="text-white">sweater, coat or jacket, or tie</strong>{' '}
+                in an <strong className="text-white">Also wear</strong> section below the core five pieces.
               </span>
             </li>
             <li className="flex gap-3">
@@ -260,8 +264,10 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               'You can also start from Wardrobe by clicking Analyze My Wardrobe in the header.',
               'Choose Quick Wardrobe Check (rules-based) or AI Stylist Review (deeper AI styling advice).',
               'After analysis, preferences collapse into an Analyzed for bar—tap Change preferences to edit and re-run.',
-              'Review the summary card, Top items to add, Wardrobe coverage dashboard, and expand Detailed category analysis for specifics.',
+              'Review the summary card, Top items to add, Wardrobe coverage dashboard (shirts through belts plus sweaters and jackets; ties appear for business, formal, or office), and expand Detailed category analysis for specifics.',
               'Tap a best color on any item card to search Google Shopping for that category and color. Use Shop similar for a broader search.',
+              'Tap Shopping list to open a market-ready table with Buy labels, priority badges, human Look for guidance, and per style/color Search online chips.',
+              'Use Copy list, Export to WhatsApp, or Export as PDF—the export uses numbered items with one focused Google Shopping link per row (no raw style/color tuples).',
             ]}
           />
           {isAdmin && (
@@ -281,14 +287,22 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
         >
           <StepList
             items={[
-              'Open the Wardrobe tab to browse shirts, trousers, blazers, shoes, and belts.',
+              'Open the Wardrobe tab to browse shirts, trousers, blazers, shoes, and belts. When you own specific types—polo, T-shirt, jeans, shorts, sweater, jacket, tie, and more—extra filter chips appear so you can narrow the list quickly.',
               'Add items with the guided flow: we suggest category, color, and a description—edit anything before saving.',
               'Tap an item anytime to update details or swap the photo.',
-              'Tap Build outfit from this item to open Suggest with that piece loaded.',
-              'Set occasion, season, style, and notes on Suggest, then tap Generate Outfit.',
+              'For one saved piece, tap Style this item with AI to open Suggest with that item loaded—set preferences and tap Generate Outfit.',
+              'To combine multiple pieces, use Complete an outfit from selected wardrobe pieces: tap Add to outfit completion on item cards (1 to 5 items, one per slot: shirt, trousers, blazer, shoes, belt).',
+              'Expand Preferences on Wardrobe to set occasion, season, style, and notes—the same pickers as Suggest. Logged in? Toggle Use my wardrobe only if you want recommendations limited to saved items.',
+              'Preferences on Wardrobe stay in sync with Suggest and Insights—change them inline without switching tabs first.',
+              'Tap Complete outfit with AI when at least one item is selected. The AI keeps your picks and fills missing shirt, trousers, blazer, shoes, or belt slots.',
               'We warn you if a new photo looks like something you already saved—no accidental twins.',
             ]}
           />
+          <TipBox>
+            <strong className="text-white">One item per slot:</strong> you cannot select two shirts (or two of any slot). If you try,
+            you will see <span className="text-white font-medium">Choose one item per outfit slot</span>—deselect first or pick a
+            different category. Your selection summary shows slots like <span className="text-white font-medium">2 selected: shirt, trousers</span>.
+          </TipBox>
         </SectionCard>
 
         <SectionCard

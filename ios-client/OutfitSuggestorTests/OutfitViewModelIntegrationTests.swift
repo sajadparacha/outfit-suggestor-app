@@ -42,6 +42,75 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
         XCTAssertEqual(mock.randomOutfitCalls, 1)
     }
 
+    func testCompleteOutfitFromOneWardrobeItemCallsAPIAndSetsSuggestion() async {
+        AuthService.shared.authToken = "test-token"
+        AuthService.shared.currentUser = makeUser()
+        let mock = MockAPIService()
+        mock.wardrobeItemsResult = .success(
+            OutfitSuggestion(
+                shirt: "selected blue shirt",
+                trouser: "navy trouser",
+                blazer: "gray blazer",
+                shoes: "black loafers",
+                belt: "black belt",
+                reasoning: "completed around one selected wardrobe piece"
+            )
+        )
+        let viewModel = OutfitViewModel(apiService: mock)
+        viewModel.filters.occasion = "work"
+        viewModel.filters.season = "all-season"
+        viewModel.filters.style = "smart-casual"
+        viewModel.preferenceText = "no sneakers"
+
+        await viewModel.completeOutfitFromWardrobeItems([
+            makeWardrobeItem(id: 11, category: "shirt")
+        ])
+
+        XCTAssertEqual(mock.wardrobeItemsCalls.count, 1)
+        XCTAssertEqual(mock.wardrobeItemsCalls.first?.selectedIds, [11])
+        XCTAssertEqual(mock.wardrobeItemsCalls.first?.textInput, "no sneakers")
+        XCTAssertEqual(mock.wardrobeItemsCalls.first?.occasion, "work")
+        XCTAssertEqual(mock.wardrobeItemsCalls.first?.style, "smart-casual")
+        XCTAssertEqual(viewModel.currentSuggestion?.reasoning, "completed around one selected wardrobe piece")
+        XCTAssertEqual(viewModel.inputPanelSource, .wardrobe)
+        XCTAssertFalse(viewModel.showError)
+    }
+
+    func testCompleteOutfitFromMultipleWardrobeItemsCallsAPIAndSetsSuggestion() async {
+        AuthService.shared.authToken = "test-token"
+        AuthService.shared.currentUser = makeUser()
+        let mock = MockAPIService()
+        mock.wardrobeItemsResult = .success(
+            OutfitSuggestion(
+                shirt: "selected blue shirt",
+                trouser: "selected navy trouser",
+                blazer: "gray blazer",
+                shoes: "black loafers",
+                belt: "black belt",
+                reasoning: "completed around selected wardrobe pieces"
+            )
+        )
+        let viewModel = OutfitViewModel(apiService: mock)
+        viewModel.filters.occasion = "work"
+        viewModel.filters.season = "all-season"
+        viewModel.filters.style = "smart-casual"
+        viewModel.preferenceText = "no sneakers"
+
+        await viewModel.completeOutfitFromWardrobeItems([
+            makeWardrobeItem(id: 11, category: "shirt"),
+            makeWardrobeItem(id: 12, category: "trouser")
+        ])
+
+        XCTAssertEqual(mock.wardrobeItemsCalls.count, 1)
+        XCTAssertEqual(mock.wardrobeItemsCalls.first?.selectedIds, [11, 12])
+        XCTAssertEqual(mock.wardrobeItemsCalls.first?.textInput, "no sneakers")
+        XCTAssertEqual(mock.wardrobeItemsCalls.first?.occasion, "work")
+        XCTAssertEqual(mock.wardrobeItemsCalls.first?.style, "smart-casual")
+        XCTAssertEqual(viewModel.currentSuggestion?.reasoning, "completed around selected wardrobe pieces")
+        XCTAssertEqual(viewModel.inputPanelSource, .wardrobe)
+        XCTAssertFalse(viewModel.showError)
+    }
+
     func testGetRandomFromWardrobeClearsUploadAndSetsPreviewState() async {
         AuthService.shared.authToken = "test-token"
         AuthService.shared.currentUser = makeUser()
@@ -68,7 +137,10 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
                     trouser: nil,
                     blazer: nil,
                     shoes: nil,
-                    belt: nil
+                    belt: nil,
+                    sweater: nil,
+                    outerwear: nil,
+                    tie: nil
                 )
             )
         )
@@ -105,9 +177,9 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
 
     func testSuggestPreferencesCarryToInsightsContext() {
         let viewModel = OutfitViewModel(apiService: MockAPIService())
-        viewModel.filters.occasion = "business"
+        viewModel.filters.occasion = "work"
         viewModel.filters.season = "summer"
-        viewModel.filters.style = "business casual"
+        viewModel.filters.style = "smart-casual"
         viewModel.preferenceText = "navy and brown, no sneakers"
 
         let request = WardrobeGapAnalysisRequest(
@@ -118,15 +190,15 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
             analysis_mode: "free"
         )
 
-        XCTAssertEqual(request.occasion, "business")
+        XCTAssertEqual(request.occasion, "work")
         XCTAssertEqual(request.season, "summer")
-        XCTAssertEqual(request.style, "business casual")
+        XCTAssertEqual(request.style, "smart-casual")
         XCTAssertEqual(request.text_input, "navy and brown, no sneakers")
     }
 
     func testFilterEnumsAlignWithSharedWebOptions() {
-        XCTAssertEqual(Occasion.sports.apiValue, "sports")
-        XCTAssertEqual(Style.businessCasual.apiValue, "business casual")
+        XCTAssertEqual(Occasion.workout.apiValue, "workout")
+        XCTAssertEqual(Style.smartCasual.apiValue, "smart-casual")
         XCTAssertEqual(Style.vintage.apiValue, "vintage")
     }
 
@@ -213,20 +285,20 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
                 shoes: "loafers",
                 belt: "brown belt",
                 reasoning: "smart casual",
-                occasion: "business",
+                occasion: "work",
                 season: "summer",
                 style: "vintage"
             )
         ])
         let viewModel = OutfitViewModel(apiService: mock)
-        viewModel.filters.occasion = "casual"
-        viewModel.filters.season = "all"
-        viewModel.filters.style = "modern"
+        viewModel.filters.occasion = "everyday"
+        viewModel.filters.season = "all-season"
+        viewModel.filters.style = "classic"
 
         await viewModel.getRandomFromHistory()
 
         XCTAssertEqual(viewModel.inputPanelSource, .history)
-        XCTAssertEqual(viewModel.compactSummaryFilters.occasion, "business")
+        XCTAssertEqual(viewModel.compactSummaryFilters.occasion, "work")
         XCTAssertEqual(viewModel.compactSummaryFilters.season, "summer")
         XCTAssertEqual(viewModel.compactSummaryFilters.style, "vintage")
         XCTAssertEqual(viewModel.compactSummaryPreferenceText, "navy and brown")
@@ -413,7 +485,7 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
         viewModel.isLoading = true
         viewModel.loadingMessage = "Working..."
         viewModel.loadingContext = .suggestion
-        viewModel.filters.occasion = "business"
+        viewModel.filters.occasion = "work"
         viewModel.filters.season = "summer"
         viewModel.filters.style = "vintage"
         viewModel.preferenceText = "navy and brown"
@@ -437,9 +509,9 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
         XCTAssertFalse(viewModel.isLoading)
         XCTAssertNil(viewModel.loadingMessage)
         XCTAssertNil(viewModel.loadingContext)
-        XCTAssertEqual(viewModel.filters.occasion, "casual")
-        XCTAssertEqual(viewModel.filters.season, "all")
-        XCTAssertEqual(viewModel.filters.style, "modern")
+        XCTAssertEqual(viewModel.filters.occasion, "everyday")
+        XCTAssertEqual(viewModel.filters.season, "all-season")
+        XCTAssertEqual(viewModel.filters.style, "classic")
         XCTAssertEqual(viewModel.preferenceText, "")
         XCTAssertFalse(viewModel.useWardrobeOnly)
         XCTAssertFalse(viewModel.showDuplicateModal)
@@ -582,12 +654,12 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
         makeTestImage().pngData()!.base64EncodedString()
     }
 
-    private func makeWardrobeItem(id: Int, includeImage: Bool = true) -> WardrobeItem {
+    private func makeWardrobeItem(id: Int, category: String = "shirt", includeImage: Bool = true) -> WardrobeItem {
         WardrobeItem(
             id: id,
-            category: "shirt",
-            name: "Blue shirt",
-            description: "Casual blue shirt",
+            category: category,
+            name: "Blue \(category)",
+            description: "Casual blue \(category)",
             color: "blue",
             brand: nil,
             size: nil,
@@ -632,12 +704,22 @@ private final class MockAPIService: APIServiceProtocol {
         let previousOutfitText: String?
     }
 
+    struct RecordedWardrobeItemsCall {
+        let selectedIds: [Int]
+        let textInput: String
+        let occasion: String?
+        let season: String?
+        let style: String?
+    }
+
     var randomOutfitResult: Result<OutfitSuggestion, Error> = .failure(APIServiceError.invalidResponse)
     var historyResult: Result<[OutfitHistoryEntry], Error> = .failure(APIServiceError.invalidResponse)
     var suggestionResult: Result<OutfitSuggestion, Error> = .failure(APIServiceError.invalidResponse)
+    var wardrobeItemsResult: Result<OutfitSuggestion, Error> = .failure(APIServiceError.invalidResponse)
     var randomOutfitCalls = 0
     var historyCalls = 0
     var suggestionCalls: [RecordedSuggestionCall] = []
+    var wardrobeItemsCalls: [RecordedWardrobeItemsCall] = []
 
     func getSuggestion(
         image: UIImage,
@@ -673,6 +755,25 @@ private final class MockAPIService: APIServiceProtocol {
         style: String?
     ) async throws -> OutfitSuggestion {
         throw APIServiceError.invalidResponse
+    }
+
+    func getSuggestionFromWardrobeItems(
+        selectedWardrobeItemIds: [Int],
+        textInput: String,
+        occasion: String?,
+        season: String?,
+        style: String?
+    ) async throws -> OutfitSuggestion {
+        wardrobeItemsCalls.append(
+            RecordedWardrobeItemsCall(
+                selectedIds: selectedWardrobeItemIds,
+                textInput: textInput,
+                occasion: occasion,
+                season: season,
+                style: style
+            )
+        )
+        return try wardrobeItemsResult.get()
     }
 
     func getOutfitHistory(limit: Int) async throws -> [OutfitHistoryEntry] {

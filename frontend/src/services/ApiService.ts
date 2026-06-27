@@ -247,16 +247,26 @@ class ApiService {
     season: string,
     style: string,
     textInput: string = '',
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    selectedWardrobeItemIds?: number[]
   ): Promise<OutfitResponse> {
     try {
       const url = `${this.baseUrl}/api/suggest-outfit-from-wardrobe`;
-      const body = {
+      const body: {
+        occasion: string;
+        season: string;
+        style: string;
+        text_input: string;
+        selected_wardrobe_item_ids?: number[];
+      } = {
         occasion,
         season,
         style,
         text_input: textInput,
       };
+      if (selectedWardrobeItemIds && selectedWardrobeItemIds.length > 0) {
+        body.selected_wardrobe_item_ids = selectedWardrobeItemIds;
+      }
 
       const response = await this.fetchWithLogging(url, {
         method: 'POST',
@@ -817,9 +827,9 @@ class ApiService {
    * Get a random outfit from wardrobe based on occasion, season, and style
    */
   async getRandomOutfit(
-    occasion: string = 'casual',
-    season: string = 'all',
-    style: string = 'modern'
+    occasion: string = 'everyday',
+    season: string = 'all-season',
+    style: string = 'classic'
   ): Promise<OutfitResponse> {
     try {
       const params = new URLSearchParams({ occasion, season, style });

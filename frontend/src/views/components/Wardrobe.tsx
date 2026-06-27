@@ -1,16 +1,65 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useWardrobeController } from '../../controllers/useWardrobeController';
 import { WardrobeItem, WardrobeItemCreate, WardrobeItemUpdate } from '../../models/WardrobeModels';
-import { OutfitHistoryEntry, SourceWardrobeItem } from '../../models/OutfitModels';
+import { Filters, OutfitHistoryEntry, SourceWardrobeItem } from '../../models/OutfitModels';
 import ApiService from '../../services/ApiService';
 import { isValidImageSize, formatFileSize } from '../../utils/imageUtils';
 import { WARDROBE_MAX_SIZE_MB } from '../../constants/imageLimits';
 import { UI_CONFIG } from '../../utils/constants';
 import ConfirmationModal from './ConfirmationModal';
+import AnalysisPreferences from './AnalysisPreferences';
 import { historyEntryToSuggestion } from '../../utils/historyUtils';
+import { MAIN_FLOW_UX_COPY } from '../../utils/mainFlowUxCopy';
+import {
+  WARDROBE_FORM_CATEGORIES,
+  apiCategoryParamForFilter,
+  getFilterChipCount,
+  getVisibleFilterChips,
+  matchesWardrobeCategoryFilter,
+  usesClientSideCategoryFilter,
+  wardrobeCategoryLabel,
+} from '../../utils/wardrobeCategory';
+
+const CLIENT_SIDE_FILTER_LOAD_LIMIT = 100;
+
+const COMPLETE_OUTFIT_SLOTS = ['shirt', 'trouser', 'blazer', 'shoes', 'belt'] as const;
+type CompleteOutfitSlot = typeof COMPLETE_OUTFIT_SLOTS[number];
+
+const COMPLETE_OUTFIT_SLOT_ALIASES: Record<string, CompleteOutfitSlot> = {
+  shirt: 'shirt',
+  shirts: 'shirt',
+  polo: 'shirt',
+  t_shirt: 'shirt',
+  't-shirt': 'shirt',
+  tshirt: 'shirt',
+  tee: 'shirt',
+  trouser: 'trouser',
+  trousers: 'trouser',
+  pant: 'trouser',
+  pants: 'trouser',
+  jeans: 'trouser',
+  shorts: 'trouser',
+  blazer: 'blazer',
+  blazers: 'blazer',
+  jacket: 'blazer',
+  jackets: 'blazer',
+  shoes: 'shoes',
+  shoe: 'shoes',
+  belt: 'belt',
+  belts: 'belt',
+};
+
+const normalizeCompleteOutfitSlot = (category: string): CompleteOutfitSlot | null => {
+  const normalized = category.trim().toLowerCase();
+  return COMPLETE_OUTFIT_SLOT_ALIASES[normalized] ?? null;
+};
+
+const formatCompleteOutfitSlot = (slot: CompleteOutfitSlot): string =>
+  slot === 'trouser' ? 'trousers' : slot;
 
 interface WardrobeProps {
   initialCategory?: string | null;
+  isAuthenticated?: boolean;
   onSuggestionReady?: (suggestion: any) => void; // Callback when outfit suggestion is ready
   onNavigateToMain?: () => void; // Callback to navigate to main view
   onSourceImageLoaded?: () => void; // Callback after source wardrobe image is preloaded in main flow
@@ -20,21 +69,28 @@ interface WardrobeProps {
     setImage: (image: File | null) => void;
     setSourceWardrobeItem?: (item: SourceWardrobeItem | null) => void;
     prepareStyleFromWardrobeItem?: (item: WardrobeItem) => Promise<void>;
+    completeOutfitFromWardrobeSelection?: (selectedWardrobeItemIds: number[]) => Promise<void>;
     getSuggestion: (
       skipDuplicateCheck?: boolean,
       sourceImage?: File | null,
       alternateFromPrevious?: boolean
     ) => Promise<void>;
+    filters?: Filters;
+    setFilters?: (filters: Filters) => void;
+    preferenceText?: string;
+    setPreferenceText?: (text: string) => void;
     loading: boolean;
     error: string | null;
     showDuplicateModal: boolean;
     handleUseCachedSuggestion: () => void;
-    useWardrobeOnly?: boolean; // Used in fallback getSuggestionFromWardrobeItem
+    useWardrobeOnly?: boolean;
+    setUseWardrobeOnly?: (value: boolean) => void;
   }; // Outfit controller to use same logic as main view
 }
 
 const Wardrobe: React.FC<WardrobeProps> = ({ 
   initialCategory = null,
+  isAuthenticated = false,
   onSuggestionReady,
   onNavigateToMain,
   onSourceImageLoaded,
@@ -105,6 +161,8 @@ const Wardrobe: React.FC<WardrobeProps> = ({
   const [flowTipDismissed, setFlowTipDismissed] = useState(
     () => localStorage.getItem('wardrobe_flow_tip_dismissed') === 'true'
   );
+  const [selectedCompleteOutfitItems, setSelectedCompleteOutfitItems] = useState<WardrobeItem[]>([]);
+  const [completionLoading, setCompletionLoading] = useState(false);
 
   const [hiddenItemIds, setHiddenItemIds] = useState<Set<number>>(new Set());
   const [openMenuItemId, setOpenMenuItemId] = useState<number | null>(null);
@@ -114,9 +172,29 @@ const Wardrobe: React.FC<WardrobeProps> = ({
     timeoutId: ReturnType<typeof setTimeout>;
   } | null>(null);
 
-  const visibleWardrobeItems = useMemo(
-    () => wardrobeItems.filter((item) => !hiddenItemIds.has(item.id)),
-    [wardrobeItems, hiddenItemIds]
+  const visibleWardrobeItems = useMemo(() => {
+    let items = wardrobeItems.filter((item) => !hiddenItemIds.has(item.id));
+    if (selectedCategory) {
+      items = items.filter((item) => matchesWardrobeCategoryFilter(item.category, selectedCategory));
+    }
+    return items;
+  }, [wardrobeItems, hiddenItemIds, selectedCategory]);
+
+  const visibleFilterChips = useMemo(() => getVisibleFilterChips(summary), [summary]);
+  const selectedCompleteOutfitIds = useMemo(
+    () => new Set(selectedCompleteOutfitItems.map((item) => item.id)),
+    [selectedCompleteOutfitItems]
+  );
+  const selectedCompleteOutfitSlots = useMemo(
+    () => {
+      const slots = new Set<CompleteOutfitSlot>();
+      selectedCompleteOutfitItems.forEach((item) => {
+        const slot = normalizeCompleteOutfitSlot(item.category);
+        if (slot) slots.add(slot);
+      });
+      return slots;
+    },
+    [selectedCompleteOutfitItems]
   );
 
   const clearPendingDeleteUi = useCallback(() => {
@@ -255,19 +333,30 @@ const Wardrobe: React.FC<WardrobeProps> = ({
     return !!item.image_data && !!entry.image_data && entry.image_data === item.image_data;
   }, []);
 
-  // Essential categories only - matches outfit suggestion structure
-  const categories = ['shirt', 'trouser', 'blazer', 'shoes', 'belt', 'other'];
+  const categories = WARDROBE_FORM_CATEGORIES;
+
+  const loadWardrobeWithCategoryFilter = useCallback((
+    category: string | null,
+    search?: string,
+    page: number = 1
+  ) => {
+    const apiCategory = apiCategoryParamForFilter(category);
+    const bulkLimit = usesClientSideCategoryFilter(category) ? CLIENT_SIDE_FILTER_LOAD_LIMIT : undefined;
+    loadWardrobe(apiCategory, search, page, bulkLimit);
+  }, [loadWardrobe]);
+
+  const isClientSideCategoryFilter = usesClientSideCategoryFilter(selectedCategory);
 
   // Load wardrobe and summary on mount or when initialCategory changes
   React.useEffect(() => {
     // Summary is loaded by the wardrobe controller hook on mount.
     if (initialCategory) {
       setSelectedCategory(initialCategory);
-      loadWardrobe(initialCategory, undefined, 1);
+      loadWardrobeWithCategoryFilter(initialCategory, undefined, 1);
     } else {
       loadWardrobe(undefined, undefined, 1);
     }
-  }, [loadWardrobe, loadSummary, initialCategory, setSelectedCategory]);
+  }, [loadWardrobe, loadSummary, initialCategory, setSelectedCategory, loadWardrobeWithCategoryFilter]);
 
   // Handle category filter
   const handleCategoryFilter = (category: string | null) => {
@@ -277,7 +366,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
       loadWardrobe(undefined, searchQuery || undefined, 1);
     } else {
       setSelectedCategory(category);
-      loadWardrobe(category || undefined, searchQuery || undefined, 1);
+      loadWardrobeWithCategoryFilter(category, searchQuery || undefined, 1);
     }
   };
 
@@ -285,16 +374,20 @@ const Wardrobe: React.FC<WardrobeProps> = ({
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setSearchQuery(localSearchQuery);
-    loadWardrobe(selectedCategory || undefined, localSearchQuery || undefined, 1);
+    loadWardrobeWithCategoryFilter(selectedCategory, localSearchQuery || undefined, 1);
   };
 
   // Handle pagination
   const handlePageChange = (page: number) => {
-    loadWardrobe(selectedCategory || undefined, searchQuery || undefined, page);
+    loadWardrobeWithCategoryFilter(selectedCategory, searchQuery || undefined, page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const totalPages = totalCount > 0 ? Math.ceil(totalCount / itemsPerPage) : 0;
+  const totalPages = isClientSideCategoryFilter
+    ? 0
+    : totalCount > 0
+      ? Math.ceil(totalCount / itemsPerPage)
+      : 0;
 
   // Function to highlight search term in text
   const highlightSearchTerm = (text: string | null, searchTerm: string): React.ReactNode => {
@@ -316,25 +409,6 @@ const Wardrobe: React.FC<WardrobeProps> = ({
         )}
       </>
     );
-  };
-
-  // Get category count from summary (case-insensitive)
-  const getCategoryCount = (category: string): number => {
-    if (!summary || !summary.by_category) {
-      return 0;
-    }
-    // Try exact match first
-    if (summary.by_category[category]) {
-      return summary.by_category[category];
-    }
-    // Try case-insensitive match
-    const categoryLower = category.toLowerCase();
-    for (const [key, value] of Object.entries(summary.by_category)) {
-      if (key.toLowerCase() === categoryLower) {
-        return value as number;
-      }
-    }
-    return 0;
   };
 
   const handleImageUpload = async (file: File) => {
@@ -570,6 +644,69 @@ const Wardrobe: React.FC<WardrobeProps> = ({
     }
   };
 
+  const handleToggleCompleteOutfitItem = (item: WardrobeItem) => {
+    const slot = normalizeCompleteOutfitSlot(item.category);
+    if (!slot) {
+      setSuggestionError('This item is not eligible for outfit completion.');
+      return;
+    }
+
+    setSelectedCompleteOutfitItems((current) => {
+      if (current.some((selected) => selected.id === item.id)) {
+        setSuggestionError(null);
+        return current.filter((selected) => selected.id !== item.id);
+      }
+
+      if (current.some((selected) => normalizeCompleteOutfitSlot(selected.category) === slot)) {
+        setSuggestionError('Choose one item per outfit slot');
+        return current;
+      }
+
+      if (current.length >= COMPLETE_OUTFIT_SLOTS.length) {
+        setSuggestionError('Choose up to 5 items');
+        return current;
+      }
+
+      setSuggestionError(null);
+      return [...current, item];
+    });
+  };
+
+  const handleCompleteOutfitWithAI = async () => {
+    if (selectedCompleteOutfitItems.length < 1) {
+      setSuggestionError('Select at least 1 item');
+      return;
+    }
+
+    const selectedIds = selectedCompleteOutfitItems.map((item) => item.id);
+    setCompletionLoading(true);
+    setSuggestionError(null);
+
+    try {
+      if (outfitController?.completeOutfitFromWardrobeSelection) {
+        await outfitController.completeOutfitFromWardrobeSelection(selectedIds);
+      } else {
+        const data = await ApiService.getWardrobeOnlySuggestion('', '', '', '', undefined, selectedIds);
+        onSuggestionReady?.({
+          ...data,
+          id: Date.now().toString(),
+          model_image: data.model_image || null,
+          raw: data,
+          matching_wardrobe_items: data.matching_wardrobe_items,
+          meta: { source: 'wardrobe_multi_select', selectedWardrobeItemIds: selectedIds },
+        });
+      }
+
+      setSelectedCompleteOutfitItems([]);
+      onNavigateToMain?.();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to complete outfit';
+      setSuggestionError(errorMessage);
+    } finally {
+      setCompletionLoading(false);
+    }
+  };
+
   const handleOpenHistorySuggestions = async (item: WardrobeItem) => {
     setHistoryLoadingForItem(item.id);
     setHistorySuggestionsError(null);
@@ -624,6 +761,21 @@ const Wardrobe: React.FC<WardrobeProps> = ({
         ? 'btn-brand'
         : 'bg-white/10 text-slate-200 hover:bg-white/20 border border-white/10'
     }`;
+  const completeOutfitActionDisabled =
+    completionLoading ||
+    (outfitController?.loading ?? false) ||
+    selectedCompleteOutfitItems.length < 1;
+  const completeOutfitActionCopy = completionLoading || (outfitController?.loading ?? false)
+    ? 'Completing your outfit...'
+    : selectedCompleteOutfitItems.length < 1
+      ? 'Select at least 1 item'
+      : 'Complete outfit with AI';
+  const selectedSlotSummary = selectedCompleteOutfitItems
+    .map((item) => {
+      const slot = normalizeCompleteOutfitSlot(item.category);
+      return slot ? formatCompleteOutfitSlot(slot) : item.category;
+    })
+    .join(', ');
 
   return (
     <div className="overflow-x-hidden py-4 px-3 sm:py-8 sm:px-4">
@@ -701,15 +853,15 @@ const Wardrobe: React.FC<WardrobeProps> = ({
               >
                 All <span className="ml-1 font-semibold">({summary ? summary.total_items || 0 : 0})</span>
               </button>
-              {categories.map((category) => (
+              {visibleFilterChips.map((chip) => (
                 <button
-                  key={category}
-                  onClick={() => handleCategoryFilter(category)}
-                  className={`${filterChipClass(selectedCategory === category)} capitalize`}
+                  key={chip.key}
+                  onClick={() => handleCategoryFilter(chip.key)}
+                  className={filterChipClass(selectedCategory === chip.key)}
                 >
-                  {category === 'trouser' ? 'Trousers' : category.charAt(0).toUpperCase() + category.slice(1)}
+                  {chip.label}
                   <span className="ml-1 font-semibold">
-                    {summary ? `(${getCategoryCount(category)})` : '(0)'}
+                    ({getFilterChipCount(summary, chip.key)})
                   </span>
                 </button>
               ))}
@@ -740,7 +892,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                   onClick={() => {
                     setLocalSearchQuery('');
                     setSearchQuery('');
-                    loadWardrobe(selectedCategory || undefined, undefined, 1);
+                    loadWardrobeWithCategoryFilter(selectedCategory, undefined, 1);
                   }}
                   className="min-h-[44px] flex-1 touch-manipulation rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-medium text-slate-200 transition-colors hover:bg-white/20 sm:flex-none"
                 >
@@ -755,6 +907,108 @@ const Wardrobe: React.FC<WardrobeProps> = ({
             </p>
           )}
         </div>
+
+        {/* Complete Outfit Multi-Select */}
+        {!loading && wardrobeItems && wardrobeItems.length > 0 && (
+          <div
+            className="mb-4 rounded-2xl border border-brand-blue/25 bg-brand-gradient-soft p-4 shadow-xl backdrop-blur sm:mb-6 sm:p-5"
+            data-testid="wardrobe-completion-panel"
+          >
+            <div>
+              <p className="text-base font-semibold text-white">Complete an outfit from selected wardrobe pieces</p>
+              <p className="mt-1 text-sm text-slate-200">
+                Select 1 to 5 items across different slots: shirt, trousers, blazer, shoes, and belt.
+              </p>
+              <p
+                className="mt-2 text-xs font-medium text-slate-300"
+                aria-live="polite"
+                data-testid="wardrobe-selection-status"
+              >
+                {selectedCompleteOutfitItems.length === 0
+                  ? 'No items selected'
+                  : `${selectedCompleteOutfitItems.length} selected${selectedSlotSummary ? `: ${selectedSlotSummary}` : ''}`}
+              </p>
+            </div>
+
+            {outfitController?.filters && outfitController.setFilters && outfitController.setPreferenceText && (
+              <details
+                className="group mt-4 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]"
+                open={selectedCompleteOutfitItems.length > 0}
+                data-testid="wardrobe-completion-preferences"
+              >
+                <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-slate-300 [&::-webkit-details-marker]:hidden">
+                  <span>{MAIN_FLOW_UX_COPY.preferencesSection}</span>
+                  <span className="text-slate-500 transition-transform group-open:rotate-180">▼</span>
+                </summary>
+                <div className="border-t border-white/10 px-4 py-4">
+                  <AnalysisPreferences
+                    filters={outfitController.filters}
+                    setFilters={outfitController.setFilters}
+                    preferenceText={outfitController.preferenceText ?? ''}
+                    setPreferenceText={outfitController.setPreferenceText}
+                    variant="sidebar"
+                    showSharedHint
+                    useWardrobeOnly={outfitController.useWardrobeOnly ?? false}
+                    setUseWardrobeOnly={outfitController.setUseWardrobeOnly}
+                    showWardrobeOnly={isAuthenticated && !!outfitController.setUseWardrobeOnly}
+                  />
+                </div>
+              </details>
+            )}
+
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+              {selectedCompleteOutfitItems.some((item) => item.image_data) && (
+                <div
+                  className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-1 sm:order-first sm:mr-auto"
+                  data-testid="wardrobe-selection-thumbnails"
+                >
+                  {selectedCompleteOutfitItems
+                    .filter((item) => item.image_data)
+                    .map((item) => {
+                      const slot = normalizeCompleteOutfitSlot(item.category);
+                      const slotLabel = slot ? formatCompleteOutfitSlot(slot) : item.category;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => handleViewImage(item.image_data!)}
+                          className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg border border-white/10 bg-slate-800/80 transition hover:border-brand-blue/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/50"
+                          aria-label={`View ${slotLabel}`}
+                          data-testid={`wardrobe-selection-thumb-${item.id}`}
+                        >
+                          <img
+                            src={`data:image/jpeg;base64,${item.image_data}`}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        </button>
+                      );
+                    })}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={handleCompleteOutfitWithAI}
+                disabled={completeOutfitActionDisabled}
+                className="min-h-[48px] rounded-xl px-5 py-3 text-sm font-semibold shadow-md btn-brand transition-all disabled:cursor-not-allowed disabled:opacity-50 sm:min-w-[220px]"
+              >
+                {completeOutfitActionCopy}
+              </button>
+              {selectedCompleteOutfitItems.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCompleteOutfitItems([]);
+                    setSuggestionError(null);
+                  }}
+                  className="min-h-[40px] rounded-xl border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/20 sm:min-w-[140px]"
+                >
+                  Clear selection
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Error Messages */}
         {error && (
@@ -796,13 +1050,32 @@ const Wardrobe: React.FC<WardrobeProps> = ({
           </div>
         ) : (
           <div className="space-y-4 pb-6 sm:pb-8">
-            {visibleWardrobeItems.map((item) => (
+            {visibleWardrobeItems.map((item) => {
+              const completeOutfitSlot = normalizeCompleteOutfitSlot(item.category);
+              const isCompleteOutfitEligible = !!completeOutfitSlot;
+              const isSelectedForCompleteOutfit = selectedCompleteOutfitIds.has(item.id);
+              const slotAlreadySelected =
+                !!completeOutfitSlot &&
+                selectedCompleteOutfitSlots.has(completeOutfitSlot) &&
+                !isSelectedForCompleteOutfit;
+              const completeOutfitSelectionAction = isSelectedForCompleteOutfit ? 'Remove' : 'Add';
+              const completeOutfitSelectionAriaLabel = isSelectedForCompleteOutfit
+                ? `${completeOutfitSelectionAction} ${item.category} from outfit completion`
+                : `${completeOutfitSelectionAction} ${item.category} to outfit completion`;
+              const completeOutfitSelectionCopy = isSelectedForCompleteOutfit
+                ? 'Remove from outfit completion'
+                : isCompleteOutfitEligible
+                  ? 'Add to outfit completion'
+                  : 'Outfit completion unavailable';
+              return (
               <div
                 key={item.id}
                 data-testid={`wardrobe-item-card-${item.id}`}
-                className={`overflow-visible rounded-2xl border border-white/10 bg-white/5 p-3 shadow-xl backdrop-blur transition-shadow hover:shadow-2xl sm:p-4${
-                  openMenuItemId === item.id ? ' relative z-50' : ''
-                }`}
+                className={`overflow-visible rounded-2xl border p-3 shadow-xl backdrop-blur transition-shadow hover:shadow-2xl sm:p-4${
+                  isSelectedForCompleteOutfit
+                    ? ' border-brand-blue/70 bg-brand-blue/15 ring-2 ring-brand-blue/40'
+                    : ' border-white/10 bg-white/5'
+                }${openMenuItemId === item.id ? ' relative z-50' : ''}`}
               >
                 <div className="flex gap-3 sm:gap-4">
                   {item.image_data ? (
@@ -819,7 +1092,14 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-base font-bold capitalize text-white sm:text-lg">{item.category}</h3>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <h3 className="text-base font-bold text-white sm:text-lg">{wardrobeCategoryLabel(item.category)}</h3>
+                      {isSelectedForCompleteOutfit && (
+                        <span className="inline-flex w-fit items-center rounded-full border border-brand-blue/30 bg-brand-blue/20 px-2.5 py-1 text-xs font-semibold text-brand-blue">
+                          ✓ Selected
+                        </span>
+                      )}
+                    </div>
                     {item.color && (
                       <p className="mt-1 text-sm text-slate-300">
                         <span className="font-medium text-slate-200">Color:</span>{' '}
@@ -837,10 +1117,38 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                         {searchQuery ? highlightSearchTerm(item.name, searchQuery) : item.name}
                       </p>
                     )}
+                    <div className="mt-3">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleCompleteOutfitItem(item)}
+                        disabled={!isCompleteOutfitEligible || completionLoading || (outfitController?.loading ?? false)}
+                        aria-pressed={isSelectedForCompleteOutfit}
+                        aria-label={completeOutfitSelectionAriaLabel}
+                        className={`min-h-[40px] w-full rounded-xl border px-3 py-2 text-sm font-semibold transition sm:w-auto ${
+                          isSelectedForCompleteOutfit
+                            ? 'border-brand-blue/50 bg-brand-blue/20 text-white hover:bg-brand-blue/30'
+                            : isCompleteOutfitEligible
+                              ? 'border-white/15 bg-white/10 text-slate-200 hover:bg-white/20'
+                              : 'cursor-not-allowed border-white/10 bg-white/5 text-slate-500'
+                        }`}
+                        title={
+                          !isCompleteOutfitEligible
+                            ? 'Unsupported item category for outfit completion'
+                            : slotAlreadySelected
+                              ? 'Choose one item per outfit slot'
+                              : undefined
+                        }
+                      >
+                        {completeOutfitSelectionCopy}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
                 <div className="mt-3 border-t border-white/10 pt-3 sm:mt-4">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Single-item styling
+                  </p>
                   <div className="flex items-stretch gap-2">
                     <button
                       onClick={() => handleGetAISuggestion(item)}
@@ -849,7 +1157,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                         suggestionLoading === item.id ||
                         (outfitController?.loading ?? false)
                       }
-                      className="flex min-h-[48px] flex-1 touch-manipulation flex-col items-center justify-center gap-0.5 rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm btn-brand transition-all disabled:cursor-not-allowed disabled:opacity-50"
+                      className="flex min-h-[48px] flex-1 touch-manipulation flex-col items-center justify-center gap-0.5 rounded-xl border border-brand-blue/30 bg-brand-blue/10 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-brand-blue/20 disabled:cursor-not-allowed disabled:opacity-50"
                       title="Open Suggest with this wardrobe item loaded"
                       aria-label="Style this item with AI"
                     >
@@ -862,7 +1170,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                         <>
                           <span>✨ Style this item</span>
                           <span className="text-xs font-normal text-white/80">
-                            Opens Suggest — tune options, then Generate Outfit
+                            Single-item Suggest flow
                           </span>
                         </>
                       )}
@@ -948,7 +1256,8 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -1548,7 +1857,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                       className="w-full max-h-32 object-contain mb-3 rounded"
                     />
                   )}
-                  <p className="font-semibold text-white capitalize">{duplicateItem.category}</p>
+                  <p className="font-semibold text-white">{wardrobeCategoryLabel(duplicateItem.category)}</p>
                   {duplicateItem.color && (
                     <p className="text-sm text-slate-300">Color: {duplicateItem.color}</p>
                   )}
@@ -1604,7 +1913,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
 
                 {historySourceItem && (
                   <p className="text-slate-300 mb-4">
-                    Showing history outfits for selected item: <span className="text-white font-medium capitalize">{historySourceItem.category}</span>
+                    Showing history outfits for selected item: <span className="text-white font-medium">{wardrobeCategoryLabel(historySourceItem.category)}</span>
                   </p>
                 )}
 

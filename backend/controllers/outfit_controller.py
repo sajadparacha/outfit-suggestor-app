@@ -51,15 +51,34 @@ class OutfitController:
     def _normalize_item_category_for_outfit(self, category: str) -> str:
         """Map wardrobe category variants to outfit categories."""
         normalized = (category or "").lower()
+        if normalized in {"shirts", "polo", "t_shirt", "t-shirt", "tshirt", "tee"}:
+            return "shirt"
         if normalized in {"jacket", "jackets", "blazers"}:
             return "blazer"
-        if normalized in {"jeans", "pants", "pant", "trousers"}:
+        if normalized in {"jeans", "pants", "pant", "trousers", "shorts"}:
             return "trouser"
         if normalized in {"shoe"}:
             return "shoes"
         if normalized in {"belts"}:
             return "belt"
+        if normalized in {"sweater", "sweaters"}:
+            return "sweater"
+        if normalized in {"tie", "ties"}:
+            return "tie"
+        if normalized in {"coat", "coats", "outerwear"}:
+            return "outerwear"
         return normalized
+
+    def _wardrobe_item_matches_outfit_slot(self, wardrobe_category: str, outfit_slot: str) -> bool:
+        """Match wardrobe category to outfit slot including optional layers."""
+        normalized = (wardrobe_category or "").lower()
+        if outfit_slot == "outerwear":
+            return normalized in {"jacket", "jackets", "coat", "coats", "outerwear"}
+        if outfit_slot == "sweater":
+            return normalized in {"sweater", "sweaters"}
+        if outfit_slot == "tie":
+            return normalized in {"tie", "ties"}
+        return self._normalize_item_category_for_outfit(wardrobe_category) == outfit_slot
 
     def _apply_selected_ids_to_matches(
         self,
@@ -74,6 +93,9 @@ class OutfitController:
             "blazer": suggestion.blazer_id,
             "shoes": suggestion.shoes_id,
             "belt": suggestion.belt_id,
+            "sweater": suggestion.sweater_id,
+            "outerwear": suggestion.outerwear_id,
+            "tie": suggestion.tie_id,
         }
 
         for category, selected_id in selected_by_category.items():
@@ -93,8 +115,7 @@ class OutfitController:
             if not selected_item:
                 continue
 
-            selected_category = self._normalize_item_category_for_outfit(selected_item.category or "")
-            if selected_category != category:
+            if not self._wardrobe_item_matches_outfit_slot(selected_item.category or "", category):
                 continue
 
             matching_items[category].insert(0, {
@@ -114,6 +135,82 @@ class OutfitController:
             "image_data": item.image_data,
         }
 
+    def _group_items_by_outfit_slot(self, items: List[WardrobeItem]) -> Dict[str, List[WardrobeItem]]:
+        grouped: Dict[str, List[WardrobeItem]] = {
+            "shirt": [],
+            "trouser": [],
+            "blazer": [],
+            "shoes": [],
+            "belt": [],
+        }
+        for item in items:
+            slot = self._normalize_item_category_for_outfit(item.category or "")
+            if slot in grouped:
+                grouped[slot].append(item)
+        return grouped
+
+    def _validate_selected_wardrobe_items(
+        self,
+        db: Session,
+        user_id: int,
+        selected_wardrobe_item_ids: Optional[List[int]],
+    ) -> Tuple[Dict[str, WardrobeItem], List[WardrobeItem]]:
+        ids = selected_wardrobe_item_ids or []
+        if not ids:
+            return {}, []
+        if len(ids) != len(set(ids)):
+            raise HTTPException(status_code=400, detail="Select each wardrobe item only once")
+        if len(ids) > 5:
+            raise HTTPException(status_code=400, detail="Select no more than 5 wardrobe items")
+
+        selected_items = (
+            db.query(WardrobeItem)
+            .filter(WardrobeItem.user_id == user_id)
+            .filter(WardrobeItem.id.in_(ids))
+            .all()
+        )
+        items_by_id = {item.id: item for item in selected_items}
+        missing_ids = [item_id for item_id in ids if item_id not in items_by_id]
+        if missing_ids:
+            raise HTTPException(
+                status_code=404,
+                detail="Selected wardrobe item not found or doesn't belong to user"
+            )
+
+        selected_by_slot: Dict[str, WardrobeItem] = {}
+        ordered_items = [items_by_id[item_id] for item_id in ids]
+        for item in ordered_items:
+            slot = self._normalize_item_category_for_outfit(item.category or "")
+            if slot not in {"shirt", "trouser", "blazer", "shoes", "belt"}:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Selected items must be shirt, trouser, blazer, shoes, or belt"
+                )
+            if slot in selected_by_slot:
+                raise HTTPException(status_code=400, detail="Choose one item per outfit slot")
+            selected_by_slot[slot] = item
+        return selected_by_slot, ordered_items
+
+    def _pin_selected_items_to_suggestion(
+        self,
+        suggestion: OutfitSuggestion,
+        selected_by_slot: Dict[str, WardrobeItem],
+        ordered_items: List[WardrobeItem],
+    ) -> None:
+        if not selected_by_slot:
+            return
+        slot_id_fields = {
+            "shirt": "shirt_id",
+            "trouser": "trouser_id",
+            "blazer": "blazer_id",
+            "shoes": "shoes_id",
+            "belt": "belt_id",
+        }
+        for slot, item in selected_by_slot.items():
+            setattr(suggestion, slot_id_fields[slot], item.id)
+        if ordered_items and not suggestion.source_wardrobe_item_id:
+            suggestion.source_wardrobe_item_id = ordered_items[0].id
+
     def _build_history_matching_items(
         self,
         db: Session,
@@ -126,6 +223,9 @@ class OutfitController:
             "blazer": [],
             "shoes": [],
             "belt": [],
+            "sweater": [],
+            "outerwear": [],
+            "tie": [],
         }
         selected_ids = {
             "shirt": getattr(entry, "shirt_id", None),
@@ -133,6 +233,9 @@ class OutfitController:
             "blazer": getattr(entry, "blazer_id", None),
             "shoes": getattr(entry, "shoes_id", None),
             "belt": getattr(entry, "belt_id", None),
+            "sweater": getattr(entry, "sweater_id", None),
+            "outerwear": getattr(entry, "outerwear_id", None),
+            "tie": getattr(entry, "tie_id", None),
         }
         id_values = [item_id for item_id in selected_ids.values() if item_id]
         if not id_values:
@@ -153,7 +256,7 @@ class OutfitController:
             if not wardrobe_item:
                 continue
             normalized_item_category = self._normalize_item_category_for_outfit(wardrobe_item.category or "")
-            if normalized_item_category == category:
+            if self._wardrobe_item_matches_outfit_slot(wardrobe_item.category or "", category) or normalized_item_category == category:
                 matching_items[category] = [self._serialize_wardrobe_item(wardrobe_item)]
 
         return matching_items
@@ -212,7 +315,7 @@ class OutfitController:
                 wardrobe_items_dict = wardrobe_service.get_wardrobe_items_by_categories(
                     db=db,
                     user_id=current_user.id,
-                    categories=["shirt", "trouser", "blazer", "shoes", "belt"]
+                    categories=["shirt", "trouser", "blazer", "shoes", "belt", "sweater", "jacket", "tie"]
                 )
                 # Only enable wardrobe_only if user has at least some items
                 has_items = any(items for items in wardrobe_items_dict.values())
@@ -356,7 +459,8 @@ class OutfitController:
         season: str,
         style: str,
         db: Session,
-        current_user: Optional[User]
+        current_user: Optional[User],
+        selected_wardrobe_item_ids: Optional[List[int]] = None,
     ) -> OutfitSuggestion:
         """
         Suggest an outfit using ONLY the user's wardrobe items (no uploaded image).
@@ -383,16 +487,41 @@ class OutfitController:
 
             wardrobe_service = WardrobeService()
 
-            # Load wardrobe items grouped by main outfit categories
-            wardrobe_items_dict = wardrobe_service.get_wardrobe_items_by_categories(
+            selected_by_slot, ordered_selected_items = self._validate_selected_wardrobe_items(
                 db=db,
                 user_id=current_user.id,
-                categories=["shirt", "trouser", "blazer", "shoes", "belt"]
+                selected_wardrobe_item_ids=selected_wardrobe_item_ids,
             )
+            all_wardrobe_items, _ = wardrobe_service.get_user_wardrobe(
+                db=db,
+                user_id=current_user.id,
+                category=None,
+                search=None,
+                limit=None,
+                offset=None
+            )
+            wardrobe_items_dict = self._group_items_by_outfit_slot(all_wardrobe_items)
 
             # Build combined context for the AI prompt
             filters_context = f"Occasion: {occasion}, Season: {season}, Style: {style}"
             combined_text_input = filters_context
+            if selected_by_slot:
+                selected_lines = []
+                missing_slots = [
+                    slot for slot in ["shirt", "trouser", "blazer", "shoes", "belt"]
+                    if slot not in selected_by_slot
+                ]
+                for slot, item in selected_by_slot.items():
+                    selected_lines.append(
+                        f"{slot}: ID {item.id}, {item.color or 'unknown color'}, {item.description or item.category}"
+                    )
+                combined_text_input += (
+                    ". REQUIRED SELECTED WARDROBE ITEMS: Keep these exact selected items in their slots: "
+                    + "; ".join(selected_lines)
+                    + ". Generate the remaining outfit slots: "
+                    + ", ".join(missing_slots)
+                    + ". Return each selected item's exact ID in the matching JSON ID field."
+                )
             extra = text_input.strip()
             if extra:
                 combined_text_input += f". Additional preferences: {extra}"
@@ -403,16 +532,13 @@ class OutfitController:
                 wardrobe_items=wardrobe_items_dict,
                 wardrobe_only=True
             )
+            self._pin_selected_items_to_suggestion(
+                suggestion,
+                selected_by_slot,
+                ordered_selected_items,
+            )
 
             # Match wardrobe items to outfit suggestion (for UI purposes)
-            all_wardrobe_items, _ = wardrobe_service.get_user_wardrobe(
-                db=db,
-                user_id=current_user.id,
-                category=None,
-                search=None,
-                limit=None,
-                offset=None
-            )
             matching_items = self.wardrobe_matcher.match_wardrobe_to_outfit(
                 suggestion,
                 all_wardrobe_items
@@ -642,11 +768,17 @@ class OutfitController:
                     "shoes": entry.shoes,
                     "belt": entry.belt,
                     "reasoning": entry.reasoning,
+                    "sweater": getattr(entry, "sweater", None),
+                    "outerwear": getattr(entry, "outerwear", None),
+                    "tie": getattr(entry, "tie", None),
                     "shirt_id": getattr(entry, "shirt_id", None),
                     "trouser_id": getattr(entry, "trouser_id", None),
                     "blazer_id": getattr(entry, "blazer_id", None),
                     "shoes_id": getattr(entry, "shoes_id", None),
                     "belt_id": getattr(entry, "belt_id", None),
+                    "sweater_id": getattr(entry, "sweater_id", None),
+                    "outerwear_id": getattr(entry, "outerwear_id", None),
+                    "tie_id": getattr(entry, "tie_id", None),
                     "source_wardrobe_item_id": getattr(entry, "source_wardrobe_item_id", None),
                     "matching_wardrobe_items": matching_items,
                 })
@@ -792,7 +924,7 @@ class OutfitController:
                     wardrobe_items_dict = wardrobe_service.get_wardrobe_items_by_categories(
                         db=db,
                         user_id=current_user.id,
-                        categories=["shirt", "trouser", "blazer", "shoes", "belt"]
+                        categories=["shirt", "trouser", "blazer", "shoes", "belt", "sweater", "jacket", "tie"]
                     )
                     wardrobe_only_mode = True
             

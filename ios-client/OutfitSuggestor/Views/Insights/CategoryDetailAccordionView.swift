@@ -10,7 +10,9 @@ struct CategoryDetailAccordionView: View {
     let defaultStyle: String
     @State private var expandedIds: Set<String> = WardrobeInsightsAccordionLogic.initialExpandedIds
 
-    private static let clothingCategoryIds: Set<String> = ["shirt", "trouser", "shoes", "blazer", "belt"]
+    private static func isClothingCategory(_ categoryId: String) -> Bool {
+        categoryId != "colors" && categoryId != "styles"
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -71,8 +73,8 @@ struct CategoryDetailAccordionView: View {
                 .foregroundColor(AppTheme.textPrimary)
                 .accessibilityIdentifier("insights.categoryDetails.summary.\(category.id)")
 
-            if Self.clothingCategoryIds.contains(category.id) || category.id == "colors" {
-                if Self.clothingCategoryIds.contains(category.id) || !category.ownedColors.isEmpty {
+            if Self.isClothingCategory(category.id) || category.id == "colors" {
+                if Self.isClothingCategory(category.id) || !category.ownedColors.isEmpty {
                     InsightsColorSwatchRow(
                         title: InsightsCopy.ownedColorsLabel,
                         colors: category.ownedColors,
@@ -89,8 +91,8 @@ struct CategoryDetailAccordionView: View {
                 )
             }
 
-            if Self.clothingCategoryIds.contains(category.id) || category.id == "styles" {
-                if Self.clothingCategoryIds.contains(category.id) || !category.ownedStyles.isEmpty {
+            if Self.isClothingCategory(category.id) || category.id == "styles" {
+                if Self.isClothingCategory(category.id) || !category.ownedStyles.isEmpty {
                     InsightsStyleChipRow(
                         title: InsightsCopy.ownedStylesLabel,
                         styles: category.ownedStyles,
@@ -118,7 +120,7 @@ struct CategoryDetailAccordionView: View {
 
     private func missingColorSearchCategory(for category: WardrobeInsightCategoryHealth) -> String? {
         guard !category.missingColors.isEmpty else { return nil }
-        if Self.clothingCategoryIds.contains(category.id) {
+        if Self.isClothingCategory(category.id) {
             return category.id
         }
         if category.id == "colors" {

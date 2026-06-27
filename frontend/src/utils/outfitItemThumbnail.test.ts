@@ -64,4 +64,38 @@ describe('outfitItemThumbnail', () => {
   it('firstWardrobePreviewUrl returns first category with image data', () => {
     expect(firstWardrobePreviewUrl(baseSuggestion)).toContain('abc123');
   });
+
+  it('resolves optional sweater category by id', () => {
+    const suggestion: OutfitSuggestion = {
+      ...baseSuggestion,
+      sweater_id: 30,
+      matching_wardrobe_items: {
+        ...baseMatchingItems,
+        sweater: [
+          { id: 30, category: 'sweater', color: 'navy', description: 'Merino', image_data: 'sweater_img' },
+        ],
+      },
+    };
+    expect(resolveMatchingWardrobeItem(suggestion, 'sweater')?.image_data).toBe('sweater_img');
+    const resolved = resolveOutfitItemThumbnail(suggestion, 'outerwear');
+    expect(resolved.tag).toBe('ai');
+    expect(resolved.imageSrc).toBeNull();
+  });
+
+  it('resolves optional outerwear and tie wardrobe thumbnails', () => {
+    const suggestion: OutfitSuggestion = {
+      ...baseSuggestion,
+      outerwear_id: 40,
+      tie_id: 50,
+      matching_wardrobe_items: {
+        ...baseMatchingItems,
+        outerwear: [
+          { id: 40, category: 'jacket', color: 'charcoal', description: 'Overcoat', image_data: 'coat_img' },
+        ],
+        tie: [{ id: 50, category: 'tie', color: 'burgundy', description: 'Silk tie', image_data: 'tie_img' }],
+      },
+    };
+    expect(resolveOutfitItemThumbnail(suggestion, 'outerwear').imageSrc).toContain('coat_img');
+    expect(resolveOutfitItemThumbnail(suggestion, 'tie').tag).toBe('wardrobe');
+  });
 });

@@ -8,12 +8,15 @@
 import Foundation
 
 enum NormalizeWardrobeInsight {
-    private static let categoryOrder = ["shirt", "trouser", "shoes", "blazer", "belt"]
+    private static let categoryOrder = ["shirt", "trouser", "blazer", "sweater", "jacket", "shoes", "belt"]
     private static let displayNames: [String: String] = [
         "shirt": "Shirts",
         "trouser": "Trousers",
         "shoes": "Shoes",
         "blazer": "Blazers",
+        "sweater": "Sweaters",
+        "jacket": "Jackets",
+        "tie": "Ties",
         "belt": "Belts",
         "colors": "Colors",
         "styles": "Styles",
@@ -29,6 +32,9 @@ enum NormalizeWardrobeInsight {
         "shirt": ["oxford", "linen", "textured", "smart casual", "overshirt"],
         "trouser": ["chino", "slim-fit", "relaxed-fit", "tailored", "straight-leg"],
         "blazer": ["unstructured", "lightweight", "casual blazer", "linen blazer", "soft shoulder"],
+        "sweater": ["crew neck", "v-neck", "cardigan", "merino", "cable knit"],
+        "jacket": ["bomber", "denim jacket", "field jacket", "lightweight shell", "harrington"],
+        "tie": ["silk", "knit tie", "classic width", "textured", "solid"],
         "shoes": ["loafers", "clean sneakers", "derby shoes", "driving shoes", "minimal leather sneakers"],
         "belt": ["leather", "braided", "reversible", "formal leather", "casual leather"],
     ]
@@ -104,7 +110,8 @@ enum NormalizeWardrobeInsight {
 
     private static func computeScore(response: WardrobeGapAnalysisResponse, orderedKeys: [String]) -> Int {
         var score = 100
-        for key in categoryOrder {
+        let clothingKeys = orderedKeys.filter { $0 != "colors" && $0 != "styles" }
+        for key in clothingKeys {
             guard let entry = response.analysis_by_category[key] else {
                 score -= 12
                 continue
@@ -240,7 +247,8 @@ enum NormalizeWardrobeInsight {
         response: WardrobeGapAnalysisResponse,
         orderedKeys: [String]
     ) -> [WardrobeInsightCategoryHealth] {
-        var health: [WardrobeInsightCategoryHealth] = categoryOrder.map { key in
+        let clothingKeys = orderedKeys.filter { $0 != "colors" && $0 != "styles" }
+        var health: [WardrobeInsightCategoryHealth] = clothingKeys.map { key in
             let entry = response.analysis_by_category[key]
             let display = displayNames[key] ?? key.capitalized
             let status = categoryStatus(entry: entry)
@@ -371,6 +379,11 @@ enum NormalizeWardrobeInsight {
         let fromResponse = Array(response.analysis_by_category.keys)
         let extras = fromResponse.filter { !categoryOrder.contains($0) }
         return (categoryOrder + extras).filter { response.analysis_by_category[$0] != nil }
+    }
+
+    /// Clothing categories only (excludes aggregate colors/styles keys).
+    private static func clothingCategoryKeys(from response: WardrobeGapAnalysisResponse) -> [String] {
+        orderedCategories(from: response).filter { $0 != "colors" && $0 != "styles" }
     }
 
     private static func uniqueOwnedColors(response: WardrobeGapAnalysisResponse, orderedKeys: [String]) -> [String] {

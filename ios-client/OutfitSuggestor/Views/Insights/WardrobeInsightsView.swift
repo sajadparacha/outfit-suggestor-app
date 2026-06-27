@@ -10,6 +10,7 @@ import SwiftUI
 struct WardrobeInsightsView: View {
     let result: WardrobeInsightResult
     let isAdmin: Bool
+    @State private var showingShoppingList = false
 
     var body: some View {
         VStack(spacing: 24) {
@@ -17,6 +18,14 @@ struct WardrobeInsightsView: View {
                 score: result.score,
                 topPriorities: result.topPriorities
             )
+
+            if WardrobeInsightsPresentation.shouldShowShoppingListAction(hasResult: true) {
+                InsightsSecondaryButton(title: InsightsCopy.shoppingListButton) {
+                    showingShoppingList = true
+                }
+                .padding(.horizontal)
+                .accessibilityIdentifier("insights.shoppingListButton")
+            }
 
             TopMissingItemsView(
                 items: result.missingItems,
@@ -37,5 +46,10 @@ struct WardrobeInsightsView: View {
             }
         }
         .accessibilityIdentifier("insights.results")
+        .sheet(isPresented: $showingShoppingList) {
+            ShoppingListView(result: result) {
+                showingShoppingList = false
+            }
+        }
     }
 }

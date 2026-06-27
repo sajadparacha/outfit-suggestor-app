@@ -34,7 +34,10 @@ class WardrobeMatcher:
             "trouser": [],
             "blazer": [],
             "shoes": [],
-            "belt": []
+            "belt": [],
+            "sweater": [],
+            "outerwear": [],
+            "tie": [],
         }
         
         if not wardrobe_items:
@@ -46,23 +49,30 @@ class WardrobeMatcher:
         suggested_blazer = outfit_suggestion.blazer.lower() if outfit_suggestion.blazer else ""
         suggested_shoes = outfit_suggestion.shoes.lower() if outfit_suggestion.shoes else ""
         suggested_belt = outfit_suggestion.belt.lower() if outfit_suggestion.belt else ""
+        suggested_sweater = (outfit_suggestion.sweater or "").lower()
+        suggested_outerwear = (outfit_suggestion.outerwear or "").lower()
+        suggested_tie = (outfit_suggestion.tie or "").lower()
         
         # Match each wardrobe item
         for item in wardrobe_items:
             item_category = item.category.lower()
-            item_color = (item.color or "").lower()
-            item_description = (item.description or "").lower()
             
             # Check if item matches suggested outfit by category and keywords
-            if item_category == "shirt" and self._matches_suggestion(item, suggested_shirt):
+            if item_category in {"shirt", "shirts"} and self._matches_suggestion(item, suggested_shirt):
                 matches["shirt"].append(self._item_to_dict(item))
-            elif item_category == "trouser" and self._matches_suggestion(item, suggested_trouser):
+            elif item_category in {"trouser", "trousers", "pants", "pant", "jeans", "shorts"} and self._matches_suggestion(item, suggested_trouser):
                 matches["trouser"].append(self._item_to_dict(item))
-            elif item_category in ["blazer", "jacket"] and self._matches_suggestion(item, suggested_blazer):
+            elif item_category in {"blazer", "blazers"} and self._matches_suggestion(item, suggested_blazer):
                 matches["blazer"].append(self._item_to_dict(item))
-            elif item_category == "shoes" and self._matches_suggestion(item, suggested_shoes):
+            elif item_category in {"jacket", "jackets", "coat", "coats"} and suggested_outerwear and self._matches_suggestion(item, suggested_outerwear):
+                matches["outerwear"].append(self._item_to_dict(item))
+            elif item_category in {"sweater", "sweaters"} and suggested_sweater and self._matches_suggestion(item, suggested_sweater):
+                matches["sweater"].append(self._item_to_dict(item))
+            elif item_category in {"tie", "ties"} and suggested_tie and self._matches_suggestion(item, suggested_tie):
+                matches["tie"].append(self._item_to_dict(item))
+            elif item_category in {"shoes", "shoe"} and self._matches_suggestion(item, suggested_shoes):
                 matches["shoes"].append(self._item_to_dict(item))
-            elif item_category == "belt" and self._matches_suggestion(item, suggested_belt):
+            elif item_category in {"belt", "belts"} and self._matches_suggestion(item, suggested_belt):
                 matches["belt"].append(self._item_to_dict(item))
         
         return matches

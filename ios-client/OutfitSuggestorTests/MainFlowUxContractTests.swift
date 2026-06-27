@@ -49,6 +49,10 @@ final class MainFlowUxContractTests: XCTestCase {
         XCTAssertEqual(MainFlowUxCopy.saveLookAuthPrompt, "Sign in to save looks")
         XCTAssertEqual(MainFlowUxCopy.uploadNewItem, "Upload new item")
         XCTAssertEqual(MainFlowUxCopy.compactUploadHint, "Upload a new photo to start a fresh outfit")
+        XCTAssertEqual(MainFlowUxCopy.alsoWearSection, "Also wear")
+        XCTAssertEqual(MainFlowUxCopy.layerLabel, "Layer")
+        XCTAssertEqual(MainFlowUxCopy.outerwearLabel, "Outerwear")
+        XCTAssertEqual(MainFlowUxCopy.tieLabel, "Tie")
     }
 
     // MARK: - ReasoningBullets
@@ -111,22 +115,22 @@ final class MainFlowUxContractTests: XCTestCase {
 
     func testContextLineStyleAndSeason() {
         XCTAssertEqual(
-            OutfitContextLine.format(occasion: "business", season: "summer", style: "business casual"),
-            "Business Casual · Summer"
+            OutfitContextLine.format(occasion: "work", season: "summer", style: "smart-casual"),
+            "Smart Casual · Summer"
         )
     }
 
     func testContextLineStyleOnly() {
         XCTAssertEqual(
-            OutfitContextLine.format(occasion: "casual", season: "all", style: "modern"),
-            "Modern"
+            OutfitContextLine.format(occasion: "everyday", season: "all-season", style: "classic"),
+            "Classic"
         )
     }
 
     func testContextLineOccasionFallback() {
         XCTAssertEqual(
-            OutfitContextLine.format(occasion: "formal", season: "all", style: ""),
-            "Formal"
+            OutfitContextLine.format(occasion: "formal-event", season: "all-season", style: ""),
+            "Formal Event"
         )
     }
 

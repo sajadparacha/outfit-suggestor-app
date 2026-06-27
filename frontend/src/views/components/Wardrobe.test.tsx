@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import Wardrobe from './Wardrobe';
 import type { WardrobeItem } from '../../models/WardrobeModels';
 import ApiService from '../../services/ApiService';
@@ -7,28 +7,33 @@ import ApiService from '../../services/ApiService';
 // Mock state: shared array so we can test both empty and with-items in one file
 const mockWardrobeItems: WardrobeItem[] = [];
 
+const mockSummary = {
+  total_items: 0,
+  by_category: {} as Record<string, number>,
+  by_color: {},
+  categories: [] as string[],
+};
+
 const mockLoadWardrobe = jest.fn();
 const mockLoadSummary = jest.fn();
 const mockAnalyzeImage = jest.fn();
 const mockAddItem = jest.fn();
 const mockUpdateItem = jest.fn();
 const mockDeleteItem = jest.fn();
-const mockSetSelectedCategory = jest.fn();
+const mockSetSelectedCategory = jest.fn((category: string | null) => {
+  mockSelectedCategory = category;
+});
+let mockSelectedCategory: string | null = null;
 const mockSetSearchQuery = jest.fn();
 const mockClearError = jest.fn();
 
 jest.mock('../../controllers/useWardrobeController', () => ({
   useWardrobeController: () => ({
     wardrobeItems: mockWardrobeItems,
-    summary: {
-      total_items: mockWardrobeItems.length,
-      by_category: { shirt: mockWardrobeItems.filter((i) => i.category === 'shirt').length },
-      by_color: {},
-      categories: ['shirt'],
-    },
+    summary: mockSummary,
     loading: false,
     error: null,
-    selectedCategory: null,
+    selectedCategory: mockSelectedCategory,
     totalCount: mockWardrobeItems.length,
     currentPage: 1,
     itemsPerPage: 10,
@@ -61,6 +66,27 @@ const mockWardrobeItem: WardrobeItem = {
   updated_at: '2024-01-01T00:00:00Z',
 };
 
+const defaultOutfitControllerPrefs = {
+  filters: { occasion: 'everyday', season: 'all-season', style: 'classic' },
+  setFilters: jest.fn(),
+  preferenceText: '',
+  setPreferenceText: jest.fn(),
+  useWardrobeOnly: false,
+  setUseWardrobeOnly: jest.fn(),
+};
+
+const outfitControllerWithPrefs = (overrides: Record<string, unknown> = {}) => ({
+  setImage: jest.fn(),
+  setSourceWardrobeItem: jest.fn(),
+  getSuggestion: jest.fn(),
+  loading: false,
+  error: null,
+  showDuplicateModal: false,
+  handleUseCachedSuggestion: jest.fn(),
+  ...defaultOutfitControllerPrefs,
+  ...overrides,
+});
+
 const openItemMenu = (itemId = 1) => {
   fireEvent.click(screen.getByTestId(`wardrobe-item-menu-${itemId}`));
 };
@@ -74,6 +100,10 @@ describe('Wardrobe page', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockWardrobeItems.length = 0;
+    mockSummary.total_items = 0;
+    mockSummary.by_category = {};
+    mockSummary.categories = [];
+    mockSelectedCategory = null;
     localStorage.removeItem('wardrobe_flow_tip_dismissed');
   });
 
@@ -91,6 +121,8 @@ describe('Wardrobe page', () => {
 
   it('shows wardrobe item list when items exist', () => {
     mockWardrobeItems.push(mockWardrobeItem);
+    mockSummary.total_items = 1;
+    mockSummary.by_category = { shirt: 1 };
     render(<Wardrobe />);
     expect(screen.getByRole('heading', { name: /My Wardrobe/i })).toBeInTheDocument();
     expect(screen.getByText('Test shirt')).toBeInTheDocument();
@@ -106,6 +138,30 @@ describe('Wardrobe page', () => {
     });
     render(<Wardrobe />);
     expect(screen.getByRole('button', { name: /Style this item with AI/i })).toBeInTheDocument();
+  });
+
+  it('renders one outfit-completion action per card and keeps Style this item distinct', () => {
+    localStorage.setItem('wardrobe_flow_tip_dismissed', 'true');
+    mockWardrobeItems.push({
+      ...mockWardrobeItem,
+      image_data: 'base64-image-a',
+    });
+
+    render(<Wardrobe />);
+
+    const card = screen.getByTestId('wardrobe-item-card-1');
+    const outfitCompletionButtons = within(card)
+      .getAllByRole('button')
+      .filter((button) => /outfit completion/i.test(button.getAttribute('aria-label') ?? ''));
+
+    expect(outfitCompletionButtons).toHaveLength(1);
+    expect(within(card).getByRole('button', { name: /Add shirt to outfit completion/i }))
+      .toHaveTextContent('Add to outfit completion');
+
+    const styleButton = within(card).getByRole('button', { name: /Style this item with AI/i });
+    expect(styleButton).toHaveTextContent('Style this item');
+    expect(styleButton).toHaveTextContent('Single-item Suggest flow');
+    expect(styleButton).not.toHaveTextContent(/Add to outfit completion|Remove from outfit completion/i);
   });
 
   it('opens overflow menu with View image, Edit, Past Suggestions, and Delete in order', () => {
@@ -259,6 +315,107 @@ describe('Wardrobe page', () => {
       expect(onSourceImageLoaded).toHaveBeenCalledTimes(1);
       expect(onNavigateToMain).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('enables Complete outfit with AI when one eligible item is selected', async () => {
+    mockWardrobeItems.push(
+      { ...mockWardrobeItem, id: 1, category: 'shirt', description: 'Blue shirt' },
+      { ...mockWardrobeItem, id: 2, category: 'trouser', description: 'Navy trousers', color: 'Navy' }
+    );
+
+    const completeOutfitFromWardrobeSelection = jest.fn().mockResolvedValue(undefined);
+    const onNavigateToMain = jest.fn();
+
+    render(
+      <Wardrobe
+        onNavigateToMain={onNavigateToMain}
+        outfitController={{
+          setImage: jest.fn(),
+          setSourceWardrobeItem: jest.fn(),
+          getSuggestion: jest.fn(),
+          completeOutfitFromWardrobeSelection,
+          loading: false,
+          error: null,
+          showDuplicateModal: false,
+          handleUseCachedSuggestion: jest.fn(),
+        }}
+      />
+    );
+
+    const action = screen.getByRole('button', { name: /Select at least 1 item/i });
+    expect(action).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: /Add shirt to outfit completion/i }));
+    const readyAction = screen.getByRole('button', { name: /Complete outfit with AI/i });
+    expect(readyAction).not.toBeDisabled();
+
+    fireEvent.click(readyAction);
+
+    await waitFor(() => {
+      expect(completeOutfitFromWardrobeSelection).toHaveBeenCalledWith([1]);
+      expect(onNavigateToMain).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('treats shirt and trouser aliases as eligible outfit-completion slots', () => {
+    mockWardrobeItems.push(
+      { ...mockWardrobeItem, id: 1, category: 'polo', description: 'Navy polo' },
+      { ...mockWardrobeItem, id: 2, category: 't-shirt', description: 'White T-shirt', color: 'White' },
+      { ...mockWardrobeItem, id: 3, category: 't_shirt', description: 'Training T-shirt', color: 'Gray' },
+      { ...mockWardrobeItem, id: 4, category: 'pants', description: 'Khaki pants', color: 'Khaki' },
+      { ...mockWardrobeItem, id: 5, category: 'jeans', description: 'Blue jeans', color: 'Blue' },
+      { ...mockWardrobeItem, id: 6, category: 'shorts', description: 'Tan shorts', color: 'Tan' }
+    );
+
+    render(<Wardrobe />);
+
+    const aliasSlots = [
+      { category: 'polo', summary: '1 selected: shirt' },
+      { category: 't-shirt', summary: '1 selected: shirt' },
+      { category: 't_shirt', summary: '1 selected: shirt' },
+      { category: 'pants', summary: '1 selected: trousers' },
+      { category: 'jeans', summary: '1 selected: trousers' },
+      { category: 'shorts', summary: '1 selected: trousers' },
+    ];
+
+    aliasSlots.forEach(({ category }) => {
+      const button = screen.getByRole('button', { name: new RegExp(`Add ${category} to outfit completion`, 'i') });
+      expect(button).toBeEnabled();
+      expect(button).toHaveTextContent('Add to outfit completion');
+    });
+    expect(screen.queryByText('Outfit completion unavailable')).not.toBeInTheDocument();
+
+    aliasSlots.forEach(({ category, summary }) => {
+      fireEvent.click(screen.getByRole('button', { name: new RegExp(`Add ${category} to outfit completion`, 'i') }));
+
+      const selectedButton = screen.getByRole('button', { name: new RegExp(`Remove ${category} from outfit completion`, 'i') });
+      expect(selectedButton).toHaveTextContent('Remove from outfit completion');
+      expect(selectedButton).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent(summary);
+
+      fireEvent.click(selectedButton);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Add polo to outfit completion/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Add pants to outfit completion/i }));
+    expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('2 selected: shirt, trousers');
+    expect(screen.getByRole('button', { name: /Complete outfit with AI/i })).not.toBeDisabled();
+  });
+
+  it('prevents duplicate outfit-slot selections with clear copy', () => {
+    mockWardrobeItems.push(
+      { ...mockWardrobeItem, id: 1, category: 'shirt', description: 'Blue shirt' },
+      { ...mockWardrobeItem, id: 2, category: 'polo', description: 'White polo', color: 'White' }
+    );
+
+    render(<Wardrobe />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Add shirt to outfit completion/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Add polo to outfit completion/i }));
+
+    expect(screen.getByText('Choose one item per outfit slot')).toBeInTheDocument();
+    expect(screen.getAllByText('Remove from outfit completion')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /Complete outfit with AI/i })).not.toBeDisabled();
   });
 
   it('shows undo toast on delete via menu and restores item when undo is tapped', async () => {
@@ -511,5 +668,190 @@ describe('Wardrobe page', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: /View image/i }));
 
     expect(screen.getByAltText('Full size view')).toBeInTheDocument();
+  });
+
+  it('renders Preferences section with Occasion, Season, Style, and Notes when outfit controller provides prefs', () => {
+    mockWardrobeItems.push(
+      { ...mockWardrobeItem, id: 1, category: 'shirt', description: 'Blue shirt' },
+      { ...mockWardrobeItem, id: 2, category: 'trouser', description: 'Navy trousers', color: 'Navy' }
+    );
+
+    render(<Wardrobe isAuthenticated outfitController={outfitControllerWithPrefs()} />);
+
+    expect(screen.getByTestId('wardrobe-completion-preferences')).toBeInTheDocument();
+    expect(screen.getByText('Shared with Suggest — occasion, season, style, and notes stay in sync across outfit suggestions and wardrobe insights.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Select occasion')).toBeInTheDocument();
+    expect(screen.getByLabelText('Select season')).toBeInTheDocument();
+    expect(screen.getByLabelText('Select style preference')).toBeInTheDocument();
+    expect(screen.getByText('Notes')).toBeInTheDocument();
+  });
+
+  it('shows selection summary with slot names when multiple items are selected', () => {
+    mockWardrobeItems.push(
+      { ...mockWardrobeItem, id: 1, category: 'shirt', description: 'Blue shirt' },
+      { ...mockWardrobeItem, id: 2, category: 'trouser', description: 'Navy trousers', color: 'Navy' }
+    );
+
+    render(<Wardrobe outfitController={outfitControllerWithPrefs()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Add shirt to outfit completion/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Add trouser to outfit completion/i }));
+
+    expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('2 selected: shirt, trousers');
+  });
+
+  describe('completion selection thumbnails', () => {
+    it('renders thumbnails in selection order when items with images are selected', () => {
+      mockWardrobeItems.push(
+        { ...mockWardrobeItem, id: 1, category: 'shirt', description: 'Blue shirt', image_data: 'shirt-thumb' },
+        { ...mockWardrobeItem, id: 2, category: 'trouser', description: 'Navy trousers', color: 'Navy', image_data: 'trouser-thumb' }
+      );
+
+      render(<Wardrobe />);
+
+      expect(screen.queryByTestId('wardrobe-selection-thumbnails')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /Add shirt to outfit completion/i }));
+      expect(screen.getByTestId('wardrobe-selection-thumbnails')).toBeInTheDocument();
+      expect(screen.getByTestId('wardrobe-selection-thumb-1')).toBeInTheDocument();
+      expect(screen.queryByTestId('wardrobe-selection-thumb-2')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /Add trouser to outfit completion/i }));
+
+      const row = screen.getByTestId('wardrobe-selection-thumbnails');
+      const thumbs = within(row).getAllByRole('button');
+      expect(thumbs).toHaveLength(2);
+      expect(thumbs[0]).toHaveAttribute('data-testid', 'wardrobe-selection-thumb-1');
+      expect(thumbs[1]).toHaveAttribute('data-testid', 'wardrobe-selection-thumb-2');
+      expect(screen.getByRole('button', { name: /View shirt/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /View trousers/i })).toBeInTheDocument();
+    });
+
+    it('opens the full-size image viewer when a selection thumbnail is clicked', () => {
+      mockWardrobeItems.push(
+        { ...mockWardrobeItem, id: 1, category: 'shirt', description: 'Blue shirt', image_data: 'shirt-thumb' }
+      );
+
+      render(<Wardrobe />);
+
+      fireEvent.click(screen.getByRole('button', { name: /Add shirt to outfit completion/i }));
+      fireEvent.click(screen.getByTestId('wardrobe-selection-thumb-1'));
+
+      expect(screen.getByAltText('Full size view')).toHaveAttribute(
+        'src',
+        'data:image/jpeg;base64,shirt-thumb'
+      );
+    });
+
+    it('omits items without image_data from the thumbnail row', () => {
+      mockWardrobeItems.push(
+        { ...mockWardrobeItem, id: 1, category: 'shirt', description: 'Blue shirt', image_data: 'shirt-thumb' },
+        { ...mockWardrobeItem, id: 2, category: 'trouser', description: 'Navy trousers', color: 'Navy', image_data: null }
+      );
+
+      render(<Wardrobe />);
+
+      fireEvent.click(screen.getByRole('button', { name: /Add shirt to outfit completion/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Add trouser to outfit completion/i }));
+
+      expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('2 selected: shirt, trousers');
+      expect(screen.getByTestId('wardrobe-selection-thumbnails')).toBeInTheDocument();
+      expect(screen.getByTestId('wardrobe-selection-thumb-1')).toBeInTheDocument();
+      expect(screen.queryByTestId('wardrobe-selection-thumb-2')).not.toBeInTheDocument();
+      expect(within(screen.getByTestId('wardrobe-selection-thumbnails')).getAllByRole('button')).toHaveLength(1);
+    });
+  });
+
+  it('shows Use my wardrobe only checkbox when authenticated and prefs are wired', () => {
+    mockWardrobeItems.push({ ...mockWardrobeItem, id: 1, category: 'shirt' });
+
+    render(<Wardrobe isAuthenticated outfitController={outfitControllerWithPrefs()} />);
+
+    expect(screen.getByLabelText('Use my wardrobe only')).toBeInTheDocument();
+    expect(screen.getByText('Only recommend items from your saved wardrobe.')).toBeInTheDocument();
+  });
+
+  it('hides Use my wardrobe only checkbox when not authenticated', () => {
+    mockWardrobeItems.push({ ...mockWardrobeItem, id: 1, category: 'shirt' });
+
+    render(<Wardrobe isAuthenticated={false} outfitController={outfitControllerWithPrefs()} />);
+
+    expect(screen.queryByLabelText('Use my wardrobe only')).not.toBeInTheDocument();
+  });
+
+  it('always renders core filter chips', () => {
+    mockSummary.total_items = 2;
+    mockSummary.by_category = { shirt: 1, trouser: 1 };
+    mockWardrobeItems.push(
+      { ...mockWardrobeItem, id: 1, category: 'shirt' },
+      { ...mockWardrobeItem, id: 2, category: 'trouser', description: 'Navy trousers', color: 'Navy' }
+    );
+
+    render(<Wardrobe />);
+
+    expect(screen.getByRole('button', { name: /All/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Shirt\b/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Trousers/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Blazer\b/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Shoes\b/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Belt\b/i })).toBeInTheDocument();
+  });
+
+  it('renders extended filter chips when summary has matching counts', () => {
+    mockSummary.total_items = 4;
+    mockSummary.by_category = { polo: 1, t_shirt: 1, jeans: 1, watch: 1 };
+    mockWardrobeItems.push(
+      { ...mockWardrobeItem, id: 1, category: 'polo', description: 'Navy polo' },
+      { ...mockWardrobeItem, id: 2, category: 't_shirt', description: 'White tee', color: 'White' },
+      { ...mockWardrobeItem, id: 3, category: 'jeans', description: 'Blue jeans', color: 'Blue' },
+      { ...mockWardrobeItem, id: 4, category: 'watch', description: 'Sport watch', color: 'Black' }
+    );
+
+    render(<Wardrobe />);
+
+    expect(screen.getByRole('button', { name: /^Polo\b/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /T-shirt/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Jeans\b/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Other\b/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Shorts\b/i })).not.toBeInTheDocument();
+  });
+
+  it('shows human-readable category badge on item cards', () => {
+    mockSummary.total_items = 1;
+    mockSummary.by_category = { t_shirt: 1 };
+    mockWardrobeItems.push({
+      ...mockWardrobeItem,
+      category: 't_shirt',
+      description: 'Training tee',
+    });
+
+    render(<Wardrobe />);
+
+    const card = screen.getByTestId('wardrobe-item-card-1');
+    expect(within(card).getByText('T-shirt')).toBeInTheDocument();
+    expect(within(card).queryByText('t_shirt')).not.toBeInTheDocument();
+  });
+
+  it('keeps shirt filter selected and shows filtered items after chip click', () => {
+    mockSummary.total_items = 2;
+    mockSummary.by_category = { shirt: 1, trouser: 1 };
+    mockWardrobeItems.push(
+      { ...mockWardrobeItem, id: 1, category: 'shirt', description: 'Blue shirt' },
+      { ...mockWardrobeItem, id: 2, category: 'trouser', description: 'Navy trousers', color: 'Navy' }
+    );
+
+    const { rerender } = render(<Wardrobe />);
+
+    fireEvent.click(screen.getByRole('button', { name: /^Shirt\b/i }));
+
+    expect(mockSetSelectedCategory).toHaveBeenCalledWith('shirt');
+    expect(mockLoadWardrobe).toHaveBeenCalledWith(undefined, undefined, 1, 100);
+
+    mockSelectedCategory = 'shirt';
+    rerender(<Wardrobe />);
+
+    expect(screen.getByText('Blue shirt')).toBeInTheDocument();
+    expect(screen.queryByText('Navy trousers')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Shirt\b/i })).toHaveClass('btn-brand');
   });
 });

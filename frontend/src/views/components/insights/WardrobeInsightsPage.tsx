@@ -10,6 +10,7 @@ import CategoryDetailAccordion from './CategoryDetailAccordion';
 import InsightSummaryCard from './InsightSummaryCard';
 import InsightsHeader from './InsightsHeader';
 import QuickTipCard from './QuickTipCard';
+import ShoppingListPanel from './ShoppingListPanel';
 import TopMissingItemsSection from './TopMissingItemsSection';
 import WardrobeCoverageDashboard from './WardrobeCoverageDashboard';
 
@@ -113,6 +114,8 @@ const WardrobeInsightsPage: React.FC<WardrobeInsightsPageProps> = ({
           )}
 
           <InsightSummaryCard score={insight.score} topPriorities={insight.topPriorities} />
+
+          <ShoppingListPanel items={insight.missingItems} context={insight.context} />
 
           <TopMissingItemsSection
             items={insight.missingItems}

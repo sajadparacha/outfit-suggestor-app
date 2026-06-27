@@ -1,9 +1,10 @@
 import { Filters } from '../models/OutfitModels';
+import { FILTER_OPTIONS } from './constants';
 
 export const DEFAULT_FILTERS: Filters = {
-  occasion: 'casual',
-  season: 'all',
-  style: 'modern',
+  occasion: 'everyday',
+  season: 'all-season',
+  style: 'classic',
 };
 
 const STORAGE_KEYS = {
@@ -11,11 +12,24 @@ const STORAGE_KEYS = {
   preferenceText: 'outfit_preference_text',
 } as const;
 
+const validFilterValues = {
+  occasion: new Set(FILTER_OPTIONS.occasions.map((option) => option.value)),
+  season: new Set(FILTER_OPTIONS.seasons.map((option) => option.value)),
+  style: new Set(FILTER_OPTIONS.styles.map((option) => option.value)),
+};
+
+function resolveFilterValue(key: keyof Filters, value: unknown): string {
+  if (typeof value === 'string' && validFilterValues[key].has(value)) {
+    return value;
+  }
+  return DEFAULT_FILTERS[key];
+}
+
 export function resolveFilters(filters: Filters): Filters {
   return {
-    occasion: filters.occasion || DEFAULT_FILTERS.occasion,
-    season: filters.season || DEFAULT_FILTERS.season,
-    style: filters.style || DEFAULT_FILTERS.style,
+    occasion: resolveFilterValue('occasion', filters.occasion),
+    season: resolveFilterValue('season', filters.season),
+    style: resolveFilterValue('style', filters.style),
   };
 }
 
@@ -34,9 +48,9 @@ export function loadStoredFilters(): Filters {
     if (!raw) return { ...DEFAULT_FILTERS };
     const parsed = JSON.parse(raw) as Partial<Filters>;
     return {
-      occasion: typeof parsed.occasion === 'string' ? parsed.occasion : DEFAULT_FILTERS.occasion,
-      season: typeof parsed.season === 'string' ? parsed.season : DEFAULT_FILTERS.season,
-      style: typeof parsed.style === 'string' ? parsed.style : DEFAULT_FILTERS.style,
+      occasion: resolveFilterValue('occasion', parsed.occasion),
+      season: resolveFilterValue('season', parsed.season),
+      style: resolveFilterValue('style', parsed.style),
     };
   } catch {
     return { ...DEFAULT_FILTERS };

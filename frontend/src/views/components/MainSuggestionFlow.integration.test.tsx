@@ -8,6 +8,7 @@
 import { screen, waitFor, fireEvent } from '@testing-library/react';
 import { renderApp } from '../../test/renderWithRouter';
 import ApiService from '../../services/ApiService';
+import { MAIN_FLOW_UX_COPY } from '../../utils/mainFlowUxCopy';
 
 jest.setTimeout(25000);
 
@@ -28,6 +29,9 @@ const mockOutfitResponse = {
   belt: 'Brown leather belt',
   reasoning: 'Classic business casual combination.',
   model_image: null,
+  sweater: 'Navy merino sweater',
+  outerwear: null,
+  tie: 'Burgundy silk tie',
 };
 
 describe('Main suggestion flow integration', () => {
@@ -72,6 +76,10 @@ describe('Main suggestion flow integration', () => {
       () => {
         expect(screen.getAllByText(/Your Styled Look/i).length).toBeGreaterThan(0);
         expect(screen.getByText('White linen shirt')).toBeInTheDocument();
+        expect(screen.getByTestId('also-wear-section')).toBeInTheDocument();
+        expect(screen.getByText(MAIN_FLOW_UX_COPY.alsoWearSection)).toBeInTheDocument();
+        expect(screen.getByText('Navy merino sweater')).toBeInTheDocument();
+        expect(screen.getByText('Burgundy silk tie')).toBeInTheDocument();
       },
       { timeout: 15000 }
     );
