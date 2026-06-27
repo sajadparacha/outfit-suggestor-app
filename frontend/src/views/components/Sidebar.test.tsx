@@ -2,7 +2,7 @@
  * Unit tests for Sidebar - file size validation
  */
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import Sidebar from './Sidebar';
 import { MICRO_HELP } from '../../utils/microHelpCopy';
 import {

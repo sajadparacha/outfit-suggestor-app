@@ -585,8 +585,8 @@ function App() {
             </div>
           ) : (
           <>
-            {/* Hero section — 2 columns on desktop */}
-            <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-2 lg:gap-12">
+            {/* Main flow — side-by-side from md (matches iPad regular width) */}
+            <div className="mx-auto grid max-w-[980px] grid-cols-1 items-start gap-8 md:grid-cols-2 md:items-stretch md:gap-5">
               <Sidebar
                 filters={filters}
                 setFilters={setFilters}
@@ -667,8 +667,12 @@ function App() {
                   }
                 }}
                 addingToWardrobe={addingToWardrobe}
+                recentLooksHistory={history}
+                recentLooksLoading={historyLoading}
+                onViewAllRecentLooks={() => navigate(ROUTES.HISTORY)}
               />
 
+              <div className="flex h-full min-h-0 flex-col">
               <OutfitPreview
                 suggestion={currentSuggestion}
                 loading={loading}
@@ -686,6 +690,7 @@ function App() {
                 isAuthenticated={isAuthenticated}
                 guestLimitReached={guestLimitReached}
               />
+              </div>
             </div>
 
             {!isAuthenticated && showFirstOutfitBanner && currentSuggestion && (
@@ -696,13 +701,17 @@ function App() {
               />
             )}
 
-            <HowItWorksStepper />
-            <RecentLooksSection
-              history={history}
-              loading={historyLoading}
-              isAuthenticated={isAuthenticated}
-              onViewAll={() => navigate(ROUTES.HISTORY)}
-            />
+            <div className="md:hidden">
+              <HowItWorksStepper />
+            </div>
+            <div className="md:hidden">
+              <RecentLooksSection
+                history={history}
+                loading={historyLoading}
+                isAuthenticated={isAuthenticated}
+                onViewAll={() => navigate(ROUTES.HISTORY)}
+              />
+            </div>
           </>
           )
             }

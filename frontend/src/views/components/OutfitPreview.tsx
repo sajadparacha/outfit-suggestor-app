@@ -131,7 +131,11 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
   }
 
   if (!suggestion) {
-    return <EmptyOutfitPreview />;
+    return (
+      <div className="flex h-full min-h-0 flex-1 flex-col">
+        <EmptyOutfitPreview />
+      </div>
+    );
   }
 
   const renderHero = () => {
@@ -183,6 +187,44 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
 
   const saveLookClass =
     'min-h-[48px] flex-1 touch-manipulation rounded-xl border border-white/20 bg-white/5 px-5 py-3 text-sm font-medium text-slate-100 transition hover:border-rose-400/50 hover:bg-rose-500/10 hover:text-rose-200';
+
+  const renderStickyActionBar = (wrapperClassName: string, testId: string) => (
+    <div className={wrapperClassName}>
+      <div
+        className="mx-auto flex max-w-md gap-2 rounded-2xl border border-white/10 bg-slate-900/90 p-2 backdrop-blur md:max-w-[980px]"
+        data-testid={testId}
+      >
+        {onSaveLook && (
+          <button
+            type="button"
+            onClick={onSaveLook}
+            className="min-h-[44px] flex-1 rounded-xl border border-white/20 bg-white/5 px-2 py-2 text-xs font-medium text-slate-100 md:min-h-[48px] md:text-sm"
+            aria-label={MAIN_FLOW_UX_COPY.saveLook}
+          >
+            {MAIN_FLOW_UX_COPY.saveLook}
+          </button>
+        )}
+        <button
+          onClick={onGenerateAnother}
+          disabled={aiActionsDisabled}
+          className="btn-brand min-h-[44px] flex-1 rounded-xl px-2 py-2 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-40 md:min-h-[48px] md:text-sm"
+          aria-label={MAIN_FLOW_UX_COPY.generateAnother}
+        >
+          {MAIN_FLOW_UX_COPY.generateAnother}
+        </button>
+        <RefineMenu
+          variant="compact"
+          onMakeMoreFormal={onMakeMoreFormal}
+          onMakeMoreCasual={onMakeMoreCasual}
+          onUseWardrobeOnly={onUseWardrobeOnly}
+          onChangeOccasion={onChangeOccasion}
+          showWardrobeOnlyAction={showWardrobeOnlyAction}
+          refineDisabled={aiActionsDisabled}
+          wardrobeOnlyDisabled={!canRegenerate || !isAuthenticated}
+        />
+      </div>
+    </div>
+  );
 
   const isOptionalItemPresent = (value: string | null | undefined) =>
     value != null && value.trim() !== '';
@@ -284,7 +326,10 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
         </ul>
       </div>
 
-      <div className="mt-6 hidden flex-col gap-3 sm:flex sm:flex-row sm:items-center" data-testid="result-primary-actions">
+      <div
+        className="mt-6 hidden flex-col gap-3 sm:flex sm:flex-row sm:items-center md:hidden"
+        data-testid="result-primary-actions"
+      >
         <button
           onClick={onGenerateAnother}
           disabled={aiActionsDisabled}
@@ -314,41 +359,8 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
         />
       </div>
 
-      <div className="fixed inset-x-0 bottom-3 z-40 px-4 sm:hidden">
-        <div
-          className="mx-auto flex max-w-md gap-2 rounded-2xl border border-white/10 bg-slate-900/90 p-2 backdrop-blur"
-          data-testid="result-sticky-mobile-actions"
-        >
-          {onSaveLook && (
-            <button
-              type="button"
-              onClick={onSaveLook}
-              className="min-h-[44px] flex-1 rounded-xl border border-white/20 bg-white/5 px-2 py-2 text-xs font-medium text-slate-100"
-              aria-label={MAIN_FLOW_UX_COPY.saveLook}
-            >
-              {MAIN_FLOW_UX_COPY.saveLook}
-            </button>
-          )}
-          <button
-            onClick={onGenerateAnother}
-            disabled={aiActionsDisabled}
-            className="btn-brand min-h-[44px] flex-1 rounded-xl px-2 py-2 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-40"
-            aria-label={MAIN_FLOW_UX_COPY.generateAnother}
-          >
-            {MAIN_FLOW_UX_COPY.generateAnother}
-          </button>
-          <RefineMenu
-            variant="compact"
-            onMakeMoreFormal={onMakeMoreFormal}
-            onMakeMoreCasual={onMakeMoreCasual}
-            onUseWardrobeOnly={onUseWardrobeOnly}
-            onChangeOccasion={onChangeOccasion}
-            showWardrobeOnlyAction={showWardrobeOnlyAction}
-            refineDisabled={aiActionsDisabled}
-            wardrobeOnlyDisabled={!canRegenerate || !isAuthenticated}
-          />
-        </div>
-      </div>
+      {renderStickyActionBar('fixed inset-x-0 bottom-3 z-40 px-4 sm:hidden', 'result-sticky-mobile-actions')}
+      {renderStickyActionBar('fixed inset-x-0 bottom-3 z-40 hidden px-4 md:block', 'result-sticky-wide-actions')}
 
       {fullWardrobeImage && (
         <div

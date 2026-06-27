@@ -371,4 +371,52 @@ describe('OutfitPreview', () => {
       expect(mockOnUseWardrobeOnly).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe('side-by-side result actions (md+)', () => {
+    it('hides inline primary actions on md+ breakpoints', () => {
+      render(
+        <OutfitPreview
+          suggestion={baseSuggestion}
+          loading={false}
+          error={null}
+          {...actionProps}
+          hasImage={true}
+          onSaveLook={mockOnSaveLook}
+        />
+      );
+      const primaryRow = screen.getByTestId('result-primary-actions');
+      expect(primaryRow.className).toMatch(/md:hidden/);
+    });
+
+    it('shows wide sticky action bar for tablet/desktop result state', () => {
+      render(
+        <OutfitPreview
+          suggestion={baseSuggestion}
+          loading={false}
+          error={null}
+          {...actionProps}
+          hasImage={true}
+          onSaveLook={mockOnSaveLook}
+        />
+      );
+      const wideSticky = screen.getByTestId('result-sticky-wide-actions');
+      expect(wideSticky).toBeInTheDocument();
+      expect(wideSticky.closest('.md\\:block')).toBeTruthy();
+    });
+
+    it('keeps mobile-only sticky bar separate from wide sticky bar', () => {
+      render(
+        <OutfitPreview
+          suggestion={baseSuggestion}
+          loading={false}
+          error={null}
+          {...actionProps}
+          hasImage={true}
+          onSaveLook={mockOnSaveLook}
+        />
+      );
+      expect(screen.getByTestId('result-sticky-mobile-actions')).toBeInTheDocument();
+      expect(screen.getByTestId('result-sticky-wide-actions')).toBeInTheDocument();
+    });
+  });
 });

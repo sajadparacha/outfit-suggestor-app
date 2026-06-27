@@ -1,11 +1,12 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
-import { InputPanelSource, SourceWardrobeItem } from '../../models/OutfitModels';
+import { InputPanelSource, OutfitHistoryEntry, SourceWardrobeItem } from '../../models/OutfitModels';
 import { isValidImageSize, formatFileSize, createImagePreviewUrl, revokeImagePreviewUrl } from '../../utils/imageUtils';
 import { CLIENT_MAX_SIZE_MB } from '../../constants/imageLimits';
 import ModernSwitch from './suggestion/ModernSwitch';
 import AnalysisPreferences from './AnalysisPreferences';
 import FirstRunCoach from './FirstRunCoach';
 import MainFlowCompactSummary from './MainFlowCompactSummary';
+import RecentLooksSection from './RecentLooksSection';
 import { DEFAULT_FILTERS } from '../../utils/outfitPreferences';
 import { MICRO_HELP } from '../../utils/microHelpCopy';
 import { MAIN_FLOW_UX_COPY } from '../../utils/mainFlowUxCopy';
@@ -18,6 +19,7 @@ import {
   isFirstRunPrefsExpanded,
   setFirstRunPrefsExpanded,
 } from '../../utils/firstRunCoach';
+import { showsCompactResultLayout } from '../../utils/mainFlowLayoutLogic';
 
 interface Filters {
   occasion: string;
@@ -143,6 +145,9 @@ interface SidebarProps {
   hasSuggestion?: boolean;
   onStartFreshUpload?: (file: File) => void;
   onGenerateAnother?: () => void;
+  recentLooksHistory?: OutfitHistoryEntry[];
+  recentLooksLoading?: boolean;
+  onViewAllRecentLooks?: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -186,6 +191,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   hasSuggestion = false,
   onStartFreshUpload,
   onGenerateAnother,
+  recentLooksHistory = [],
+  recentLooksLoading = false,
+  onViewAllRecentLooks,
 }) => {
   const generateButtonRef = useRef<HTMLButtonElement>(null);
   const generateDisabled = !image || loading || guestLimitReached;
@@ -251,7 +259,11 @@ const Sidebar: React.FC<SidebarProps> = ({
     };
   }, [stream]);
 
-  const compactMode = hasSuggestion && !(sourceWardrobeItem && image);
+  const compactMode = showsCompactResultLayout(
+    hasSuggestion,
+    sourceWardrobeItem?.id ?? null,
+    highlightGenerateButton
+  );
   const showCompactUploadActions = compactMode && shouldShowCompactUploadActions(hasSuggestion);
   const showGenerateAnotherInSidebar = canGenerateAnotherFromResult(
     inputPanelSource,
@@ -434,7 +446,8 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <div
-      className="lg:sticky lg:top-20"
+      className="md:sticky md:top-20"
+      data-testid="main-flow-sidebar"
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
@@ -589,7 +602,6 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
       )}
 
-      {/* Image preview when uploaded (creation mode only) */}
       {!compactMode && effectivePreviewUrl && (
         <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
           <button
@@ -611,49 +623,49 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
       )}
 
-      {/* Action cards — creation mode only */}
       {!compactMode && (
-      <div className="mt-5 grid grid-cols-2 gap-3">
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className={`flex flex-col items-center gap-2 rounded-2xl border p-4 transition touch-manipulation ${
-            isDragging
-              ? 'border-brand-blue/60 bg-brand-gradient-soft'
-              : 'border-white/10 bg-white/[0.03] hover:border-brand-blue/40 hover:bg-white/[0.05]'
-          }`}
-          aria-label="Upload clothing photo - click or drag and drop"
-        >
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradient-soft text-brand-blue">
-            <UploadIcon />
-          </div>
-          <span className="text-sm font-medium text-white">Upload Item</span>
-        </button>
-
-        {hasCamera ? (
+        <div className="mt-5 grid grid-cols-2 gap-3">
           <button
             type="button"
-            onClick={openCamera}
-            className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-brand-blue/40 hover:bg-white/[0.05] touch-manipulation"
-            aria-label="Take photo with camera"
+            onClick={() => fileInputRef.current?.click()}
+            data-testid="main.uploadButton"
+            className={`flex flex-col items-center gap-2 rounded-2xl border p-4 transition touch-manipulation ${
+              isDragging
+                ? 'border-brand-blue/60 bg-brand-gradient-soft'
+                : 'border-white/10 bg-white/[0.03] hover:border-brand-blue/40 hover:bg-white/[0.05]'
+            }`}
+            aria-label="Upload clothing photo - click or drag and drop"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradient-soft text-brand-blue">
-              <CameraIcon />
+              <UploadIcon />
             </div>
-            <span className="text-sm font-medium text-white">Take Photo</span>
+            <span className="text-sm font-medium text-white">Upload Item</span>
           </button>
-        ) : (
-          <div
-            className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.02] p-4 opacity-50"
-            aria-hidden
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-slate-500">
-              <CameraIcon />
+
+          {hasCamera ? (
+            <button
+              type="button"
+              onClick={openCamera}
+              className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-brand-blue/40 hover:bg-white/[0.05] touch-manipulation"
+              aria-label="Take photo with camera"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradient-soft text-brand-blue">
+                <CameraIcon />
+              </div>
+              <span className="text-sm font-medium text-white">Take Photo</span>
+            </button>
+          ) : (
+            <div
+              className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.02] p-4 opacity-50"
+              aria-hidden
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-slate-500">
+                <CameraIcon />
+              </div>
+              <span className="text-sm font-medium text-slate-500">Take Photo</span>
             </div>
-            <span className="text-sm font-medium text-slate-500">Take Photo</span>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
       )}
 
       <input
@@ -897,6 +909,18 @@ const Sidebar: React.FC<SidebarProps> = ({
             {MICRO_HELP.INSIGHTS}
           </span>
         </button>
+      )}
+
+      {!compactMode && isAuthenticated && onViewAllRecentLooks && (
+        <div className="mt-6 hidden md:block" data-testid="sidebar-recent-looks">
+          <RecentLooksSection
+            history={recentLooksHistory}
+            loading={recentLooksLoading}
+            isAuthenticated={isAuthenticated}
+            onViewAll={onViewAllRecentLooks}
+            embedded
+          />
+        </div>
       )}
 
       {/* Camera Modal */}

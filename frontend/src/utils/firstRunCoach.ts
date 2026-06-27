@@ -41,6 +41,9 @@ export function setFirstRunPrefsExpanded(): void {
   }
 }
 
+export const READY_TO_GENERATE_HINT = 'Ready — tap Generate Outfit';
+export const CREATION_PHOTO_REQUIRED_HINT = 'Add a photo to enable outfit suggestions.';
+
 export function shouldCollapsePreferences(hasSuggestion: boolean): boolean {
   if (isFirstRunCoachDismissed()) return false;
   if (hasSuggestion) return false;
