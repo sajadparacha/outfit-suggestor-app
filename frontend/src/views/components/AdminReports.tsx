@@ -13,6 +13,7 @@ import {
 } from 'recharts';
 import ApiService from '../../services/ApiService';
 import type { User } from '../../models/AuthModels';
+import { formatApiErrorMessage } from '../../utils/apiErrorMessage';
 
 type AdminReportsProps = {
   user: User;
@@ -131,8 +132,7 @@ export default function AdminReports({ user }: AdminReportsProps) {
       setSearchReports(sr);
       setHasSearched(true);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Failed to load reports';
-      setError(msg);
+      setError(formatApiErrorMessage(e));
     } finally {
       setLoading(false);
     }

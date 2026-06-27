@@ -36,6 +36,44 @@ enum ReportsCopy {
     static let clearButton = "Clear"
     static let headerTitle = "Admin Reports"
     static let headerSubtitle = "Access logs and usage analytics (admin-only)"
+    static let networkUnreachableMessage =
+        "Can't reach the API. Make sure the backend is running and open the app at http://localhost:3000 (not 127.0.0.1)."
+}
+
+enum ReportsErrorFormatter {
+    static func message(for error: Error) -> String {
+        if isNetworkUnreachableError(error) {
+            return ReportsCopy.networkUnreachableMessage
+        }
+        return error.localizedDescription
+    }
+
+    static func isNetworkUnreachableError(_ error: Error) -> Bool {
+        if case APIServiceError.networkError(let underlying) = error {
+            return isNetworkUnreachableError(underlying)
+        }
+
+        if let urlError = error as? URLError, isNetworkUnreachableURLError(urlError) {
+            return true
+        }
+
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain,
+           isNetworkUnreachableURLError(URLError(URLError.Code(rawValue: nsError.code))) {
+            return true
+        }
+
+        return error.localizedDescription.contains("Failed to fetch")
+    }
+
+    private static func isNetworkUnreachableURLError(_ error: URLError) -> Bool {
+        switch error.code {
+        case .notConnectedToInternet, .cannotConnectToHost, .networkConnectionLost:
+            return true
+        default:
+            return false
+        }
+    }
 }
 
 enum ReportsQueryBuilder {
@@ -199,7 +237,7 @@ final class ReportsViewModel: ObservableObject {
             hasSearched = true
             isLoading = false
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ReportsErrorFormatter.message(for: error)
             isLoading = false
         }
     }

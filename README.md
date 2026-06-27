@@ -206,7 +206,7 @@ ios-client/OutfitSuggestor/
 ## 📚 Documentation
 
 - **[USER_GUIDE.md](./USER_GUIDE.md)** - End-user guide: how to use the app (suggestions, wardrobe, history, random picks, mobile)
-- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Complete architecture overview and design patterns
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Canonical technical reference (architecture, stack, API, DB, AI, deployment)
 - **[API_DOCUMENTATION.md](./API_DOCUMENTATION.md)** - REST API reference for developers
 - **[SETUP_GUIDE.md](./SETUP_GUIDE.md)** - Detailed setup instructions
 - **[DEPLOYMENT_INSTRUCTIONS.md](./DEPLOYMENT_INSTRUCTIONS.md)** - Railway and GitHub Pages deployment

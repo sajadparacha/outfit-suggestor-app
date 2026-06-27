@@ -238,4 +238,20 @@ describe('AdminReports', () => {
       expect(screen.getByTestId('line-chart')).toBeInTheDocument();
     });
   });
+
+  it('shows friendly banner when API rejects with Failed to fetch', async () => {
+    mockGetAccessLogStats.mockRejectedValue(new Error('Failed to fetch'));
+
+    render(<AdminReports user={adminUser} />);
+    fireEvent.click(screen.getByRole('button', { name: /Search/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          /Can't reach the API\. Make sure the backend is running and open the app at http:\/\/localhost:3000 \(not 127\.0\.0\.1\)\./
+        )
+      ).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Failed to fetch')).not.toBeInTheDocument();
+  });
 });

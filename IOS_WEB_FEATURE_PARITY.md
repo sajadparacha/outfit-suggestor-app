@@ -223,9 +223,9 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 
 ## 11. Admin Reports
 
-**Web**: Admin-only Reports tab with four sections — **Overview**, **Utilization**, **Users**, **Searches**. Shared filters (date range, user, country, **city**, operation type, endpoint). Recharts line/bar charts; timeline from `GET /api/access-logs/timeline`; search aggregates from `GET /api/reports/searches`.
+**Web**: Admin-only Reports tab with four sections — **Overview**, **Utilization**, **Users**, **Searches**. Shared filters (date range, user, country, **city**, operation type, endpoint). Recharts line/bar charts; timeline from `GET /api/access-logs/timeline`; search aggregates from `GET /api/reports/searches`. Network/CORS failures show friendly banner (not raw `Failed to fetch`); backend CORS allows `localhost:3000`, `127.0.0.1:3000`, `closiq.me`, `www.closiq.me`.
 
-**iOS status**: **Implemented** — same four tabs, shared filters (no **city** filter — web-only), Swift Charts where practical, same APIs.
+**iOS status**: **Implemented** — same four tabs, shared filters (no **city** filter — web-only), Swift Charts where practical, same APIs; network errors use same friendly copy as web via `ReportsErrorFormatter`.
 
 **API**: `/api/access-logs/` (list), `/stats`, `/usage`, `/timeline`; `/api/reports/searches` (outfit_history occasion/season/style aggregates).
 
@@ -233,7 +233,7 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 
 - [ ] **City filter** — web only (by design).
 - [x] Tabbed layout and copy match.
-- [x] Timeline + search report endpoints wired on both platforms.
+- [x] Network/CORS error copy matches (friendly message, not raw `Failed to fetch`).
 
 ---
 

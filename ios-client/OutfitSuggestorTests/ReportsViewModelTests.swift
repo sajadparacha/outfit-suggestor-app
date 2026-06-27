@@ -128,4 +128,58 @@ final class ReportsViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.hasSearched)
         XCTAssertFalse(viewModel.isLoading)
     }
+
+    // MARK: - Network error mapping
+
+    func testNetworkErrorFormatterMapsNotConnectedToInternet() {
+        let error = URLError(.notConnectedToInternet)
+        XCTAssertEqual(
+            ReportsErrorFormatter.message(for: error),
+            ReportsCopy.networkUnreachableMessage
+        )
+    }
+
+    func testNetworkErrorFormatterMapsCannotConnectToHost() {
+        let error = URLError(.cannotConnectToHost)
+        XCTAssertEqual(
+            ReportsErrorFormatter.message(for: error),
+            ReportsCopy.networkUnreachableMessage
+        )
+    }
+
+    func testNetworkErrorFormatterMapsNetworkConnectionLost() {
+        let error = URLError(.networkConnectionLost)
+        XCTAssertEqual(
+            ReportsErrorFormatter.message(for: error),
+            ReportsCopy.networkUnreachableMessage
+        )
+    }
+
+    func testNetworkErrorFormatterMapsFailedToFetchDescription() {
+        struct FailedToFetchError: LocalizedError {
+            var errorDescription: String? { "Failed to fetch" }
+        }
+        XCTAssertEqual(
+            ReportsErrorFormatter.message(for: FailedToFetchError()),
+            ReportsCopy.networkUnreachableMessage
+        )
+    }
+
+    func testNetworkErrorFormatterMapsWrappedNetworkError() {
+        let error = APIServiceError.networkError(URLError(.cannotConnectToHost))
+        XCTAssertEqual(
+            ReportsErrorFormatter.message(for: error),
+            ReportsCopy.networkUnreachableMessage
+        )
+    }
+
+    func testNetworkErrorFormatterKeepsServerErrorDetail() {
+        let error = APIServiceError.serverError("Session expired")
+        XCTAssertEqual(ReportsErrorFormatter.message(for: error), "Session expired")
+    }
+
+    func testNetworkErrorFormatterKeepsOtherErrorDescriptions() {
+        let error = APIServiceError.invalidURL
+        XCTAssertEqual(ReportsErrorFormatter.message(for: error), error.localizedDescription)
+    }
 }

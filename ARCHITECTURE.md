@@ -1,560 +1,619 @@
-# AI Outfit Suggester - Architecture Documentation
+# AI Outfit Suggestor — Architecture Documentation
 
-## Overview
+Canonical technical reference for the application: system design, stack, data flow, API surface, database, AI integration, security, deployment, and multi-platform clients.
 
-This application has been refactored to follow a clean, modular architecture that separates the **Backend API** from **Client Applications**. This allows multiple client platforms (Web, Android, iOS) to consume the same backend services.
+**Related docs (by topic):**
 
-## Architecture Pattern
-
-The application follows a **strict MVC (Model-View-Controller) architecture** with:
-- **Backend**: MVC with RESTful services (Routes → Controllers → Services → Models)
-- **Frontend**: Strict MVC pattern (Views → Controllers → Services → Models)
+| Document | Focus |
+|----------|--------|
+| [WEB_USER_INTERACTION.md](./WEB_USER_INTERACTION.md) | Web UX flows, view state, auth gating |
+| [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) | REST endpoint reference |
+| [IOS_WEB_FEATURE_PARITY.md](./IOS_WEB_FEATURE_PARITY.md) | Web vs iOS feature alignment |
+| [ios-client/README.md](./ios-client/README.md) | iOS client setup |
+| [DB_SCHEMA_COMPARISON.md](./DB_SCHEMA_COMPARISON.md) | Schema migrations |
+| [USER_GUIDE.md](./USER_GUIDE.md) | End-user guide |
 
 ---
 
-## Backend Architecture
+## Table of Contents
 
-### Directory Structure
+1. [Project Overview](#project-overview)
+2. [System Architecture](#system-architecture)
+3. [Technology Stack](#technology-stack)
+4. [Project Structure](#project-structure)
+5. [Backend Layers](#backend-layers)
+6. [Frontend Architecture](#frontend-architecture)
+7. [Core Functions](#core-functions)
+8. [API Endpoints](#api-endpoints)
+9. [Data Flow](#data-flow)
+10. [Database Schema](#database-schema)
+11. [AI Integration](#ai-integration)
+12. [Authentication & Security](#authentication--security)
+13. [Multi-Platform Clients](#multi-platform-clients)
+14. [Environment & Running Locally](#environment--running-locally)
+15. [Deployment](#deployment)
+16. [Contributing](#contributing)
+17. [Key Design Decisions](#key-design-decisions)
+18. [Future Enhancements](#future-enhancements)
+
+---
+
+## Project Overview
+
+The AI Outfit Suggestor is a full-stack application that analyzes clothing images and provides personalized outfit recommendations. It combines computer vision, NLP, and generative AI behind a **platform-agnostic REST API** consumed by web and iOS clients (Android-ready).
+
+### Key Features
+
+- **Image analysis** — GPT-4 Vision analyzes uploaded clothing
+- **Outfit recommendations** — Shirt, trousers, blazer, shoes, belt, and reasoning
+- **AI model images** — DALL-E 3, Stable Diffusion, or Nano Banana
+- **Virtual wardrobe** — AI-powered item recognition, categories, duplicate detection
+- **Duplicate detection** — Perceptual hashing to avoid redundant AI calls
+- **User authentication** — JWT, email verification, password management
+- **Outfit history** — Searchable history with model images
+- **Random picks** — Random from wardrobe or history (logged-in users)
+- **Location-based customization** — Model appearance adapted to user location
+- **Admin reports** — Access logs and usage statistics (admin users)
+- **Feature flags** — URL-based toggles for controlled rollout
+
+---
+
+## System Architecture
+
+Strict **MVC** on both backend and frontend:
+
+- **Backend:** Routes → Controllers → Services → Models
+- **Frontend:** Views → Controllers (hooks) → Services → Models
+
+### Backend
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     FastAPI Application                      │
+│                         (main.py)                            │
+└───────────────────────┬─────────────────────────────────────┘
+                        │
+        ┌───────────────┴───────────────┐
+        │                               │
+┌───────▼────────┐            ┌────────▼────────┐
+│  Routes Layer  │            │  Routes Layer   │
+│ outfit_routes  │            │  auth_routes    │
+│ wardrobe_routes│            │  admin_routes   │
+└───────┬────────┘            └────────┬────────┘
+        │                               │
+┌───────▼────────┐            ┌────────▼────────┐
+│ Controllers    │            │  Controllers    │
+│OutfitController│            │ AuthController  │
+└───────┬────────┘            └────────┬────────┘
+        │                               │
+┌───────▼────────┐            ┌────────▼────────┐
+│   Services     │            │   Services      │
+│OutfitService   │            │ AuthService     │
+│AIService       │            │ WardrobeService │
+└───────┬────────┘            └────────┬────────┘
+        │                               │
+┌───────▼───────────────────────────────▼────────┐
+│              Model Layer (ORM + Pydantic)       │
+│  User │ OutfitHistory │ WardrobeItem │ …       │
+└───────────────────────┬────────────────────────┘
+                        │
+        ┌───────────────┴───────────────┐
+┌───────▼────────┐            ┌────────▼────────┐
+│  PostgreSQL    │            │  External AI    │
+│   Database     │            │ OpenAI, Replicate│
+└────────────────┘            └─────────────────┘
+```
+
+### Frontend
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    React Application (App.tsx)                 │
+└───────────────────────┬─────────────────────────────────────┘
+                        │
+┌───────▼────────┐            ┌────────▼────────┐
+│  Views         │            │  Controllers    │
+│ Sidebar        │            │ useOutfitCtrl   │
+│ OutfitPreview  │            │ useAuthCtrl     │
+│ OutfitHistory  │            │ useHistoryCtrl  │
+│ Wardrobe …     │            │ useWardrobeCtrl │
+└───────┬────────┘            └────────┬────────┘
+        │                               │
+┌───────▼───────────────────────────────▼────────┐
+│ ApiService (HTTP) │ Models │ Utils              │
+└───────────────────────┬────────────────────────┘
+                        ▼
+                   FastAPI Backend
+```
+
+### Principles
+
+1. **Separation of concerns** — Each layer has one responsibility
+2. **Dependency injection** — Services and controllers wired in `config.py`
+3. **Thin routes** — HTTP only; business logic in services
+4. **Testability** — Layers mock independently
+5. **Multi-platform API** — Same REST contract for web, iOS, and future clients
+
+---
+
+## Technology Stack
+
+### Backend
+
+| Technology | Purpose |
+|------------|---------|
+| Python 3.12+ | Runtime |
+| FastAPI | Web framework, OpenAPI docs |
+| Uvicorn | ASGI server |
+| SQLAlchemy | ORM |
+| PostgreSQL | Primary database |
+| Pydantic | Validation / serialization |
+| OpenAI | GPT-4 Vision, DALL-E 3 |
+| Replicate | Stable Diffusion |
+| Pillow | Image processing |
+| python-jose, passlib | JWT, bcrypt |
+| imagehash | Perceptual duplicate detection |
+
+### Frontend
+
+| Technology | Purpose |
+|------------|---------|
+| React 19 | UI |
+| TypeScript | Type safety |
+| Tailwind CSS | Styling |
+
+### Clients & Deployment
+
+| Technology | Purpose |
+|------------|---------|
+| Swift / SwiftUI | iOS client (`ios-client/`) |
+| GitHub Pages | Web hosting |
+| Railway | Backend hosting |
+
+---
+
+## Project Structure
+
+### Backend
 
 ```
 backend/
-├── main.py                 # Application entry point
-├── config.py              # Configuration and dependency injection
-├── models/                # Data models (Pydantic schemas + SQLAlchemy ORM)
-│   ├── __init__.py
-│   ├── outfit.py          # Outfit-related models
-│   ├── user.py            # User models
-│   └── outfit_history.py  # Outfit history models
-├── controllers/           # Request orchestration layer (NEW)
-│   ├── __init__.py
-│   ├── outfit_controller.py  # Outfit request handling
-│   └── auth_controller.py   # Authentication request handling
-├── services/              # Business logic layer (pure, reusable)
-│   ├── __init__.py
-│   ├── ai_service.py      # AI/OpenAI integration
-│   ├── outfit_service.py # Outfit business logic
-│   └── auth_service.py   # Authentication business logic
-├── routes/                # API endpoints (thin HTTP layer)
-│   ├── __init__.py
-│   ├── outfit_routes.py   # Outfit suggestion endpoints
-│   └── auth_routes.py     # Authentication endpoints
-└── utils/                 # Utility functions
-    ├── __init__.py
-    ├── image_processor.py # Image processing utilities
-    └── auth.py            # Authentication utilities
+├── main.py                 # FastAPI entry point
+├── config.py               # Configuration, DI
+├── dependencies.py         # Auth, DB dependencies
+├── routes/                 # HTTP endpoints (thin)
+├── controllers/            # Request orchestration
+├── services/               # Business logic
+├── models/                 # ORM + Pydantic
+├── utils/                  # Image, auth, email helpers
+└── tests/                  # pytest suite
 ```
 
-### Layers
+### Frontend
 
-#### 1. **Models Layer** (`models/`)
-- Defines data structures using Pydantic (for API) and SQLAlchemy (for database)
-- Provides validation and serialization
-- No business logic, just data structures
-- Examples: `OutfitSuggestion`, `User`, `OutfitHistory`
-
-#### 2. **Services Layer** (`services/`)
-- **Pure business logic** - no HTTP concerns
-- Handles external API calls (OpenAI)
-- Database operations
-- Reusable across different entry points (controllers, CLI tools, background jobs)
-- Independent of HTTP/API layer
-
-**Key Services:**
-- `AIService`: Manages OpenAI API integration for outfit suggestions and model image generation
-- `OutfitService`: Outfit history management, duplicate detection
-- `AuthService`: User authentication, password management, token generation
-
-#### 3. **Controllers Layer** (`controllers/`) - NEW
-- Request validation and orchestration
-- Coordinates service calls
-- Handles business-level errors
-- Formats responses
-- Manages transactions (if needed)
-- No HTTP-specific code (that's in Routes)
-
-**Key Controllers:**
-- `OutfitController`: Handles outfit suggestion requests, duplicate checking, model image generation
-- `AuthController`: Handles authentication requests, registration, login, password changes
-
-#### 4. **Routes Layer** (`routes/`)
-- **Thin HTTP layer** - only HTTP concerns
-- Defines API endpoints
-- Extracts request data (query params, body, files)
-- Calls controllers
-- Returns HTTP responses
-- No business logic
-
-**Available Endpoints:**
-- `GET /` - Health check
-- `GET /health` - Detailed health status
-- `POST /api/suggest-outfit` - Get outfit suggestions
-- `POST /api/check-duplicate` - Check for duplicate images
-- `GET /api/outfit-history` - Get outfit history
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login
-- `GET /api/auth/me` - Get current user
-- `POST /api/auth/change-password` - Change password
-
-#### 5. **Utils Layer** (`utils/`)
-- Helper functions for common tasks
-- Image processing and validation
-- Authentication utilities (JWT, password hashing)
-- No business logic
-
-### Dependency Injection
-
-The application uses dependency injection for:
-- Service instances (singleton pattern): `AIService`, `OutfitService`, `AuthService`
-- Controller instances: `OutfitController`, `AuthController`
-- Configuration management
-- Database sessions
-- Easy testing and mocking
-
-### API Specification
-
-#### POST /api/suggest-outfit
-
-**Request:**
 ```
-Content-Type: multipart/form-data
-
-Fields:
-- image: File (required) - Image file to analyze
-- text_input: String (optional) - Additional context or preferences
+frontend/src/
+├── App.tsx                 # View orchestration
+├── models/                 # TypeScript interfaces
+├── services/ApiService.ts    # HTTP client (singleton)
+├── controllers/            # Business logic hooks
+├── views/components/       # Presentation components
+└── utils/                  # imageUtils, geolocation, constants
 ```
 
-**Response:**
-```json
-{
-  "shirt": "Description of recommended shirt",
-  "trouser": "Description of recommended trousers",
-  "blazer": "Description of recommended blazer",
-  "shoes": "Description of recommended shoes",
-  "belt": "Description of recommended belt",
-  "reasoning": "Explanation of why this outfit works"
-}
+### iOS
+
+```
+ios-client/
+├── OutfitSuggestor/        # SwiftUI app
+├── OutfitSuggestorTests/   # Unit tests
+└── OutfitSuggestorUITests/ # UI tests
 ```
 
-**Error Response:**
-```json
-{
-  "detail": "Error message"
-}
-```
+---
+
+## Backend Layers
+
+### Models (`models/`)
+
+Pydantic schemas and SQLAlchemy ORM. Validation and serialization only — no business logic.
+
+### Services (`services/`)
+
+Pure business logic, no HTTP concerns. Reusable from controllers, CLI, or jobs.
+
+| Service | Responsibility |
+|---------|----------------|
+| `AIService` | OpenAI, Replicate, Nano Banana integration |
+| `OutfitService` | History, duplicate detection |
+| `AuthService` | Registration, login, tokens |
+| `WardrobeService` | Wardrobe CRUD, AI categorization |
+
+### Controllers (`controllers/`)
+
+Validate requests, orchestrate services, format responses.
+
+### Routes (`routes/`)
+
+Define endpoints, extract request data, call controllers, return HTTP responses.
+
+### Utils (`utils/`)
+
+Image processing, JWT helpers, email — shared helpers without domain logic.
 
 ---
 
 ## Frontend Architecture
 
-### Directory Structure
+### Models (`models/`)
 
-```
-frontend/src/
-├── App.tsx                     # Application orchestration (routes views, coordinates controllers)
-├── models/                     # Data models and TypeScript interfaces (pure types)
-│   ├── index.ts
-│   ├── OutfitModels.ts        # Outfit-related interfaces
-│   └── AuthModels.ts          # Authentication-related interfaces
-├── services/                   # API communication layer (HTTP only)
-│   ├── index.ts
-│   └── ApiService.ts          # Backend API client (singleton)
-├── controllers/                # Business logic (React hooks)
-│   ├── index.ts
-│   ├── useOutfitController.ts      # Outfit suggestion logic (duplicate checking, compression, location)
-│   ├── useHistoryController.ts     # Outfit history management
-│   ├── useHistorySearchController.ts # History search/filter logic
-│   ├── useAuthController.ts        # Authentication logic
-│   └── useToastController.ts      # Toast notification logic
-├── views/                      # Presentation layer (pure components)
-│   └── components/            # React components
-│       ├── Hero.tsx           # Landing section
-│       ├── Sidebar.tsx        # Input and filters
-│       ├── OutfitPreview.tsx  # Results display
-│       ├── OutfitHistory.tsx   # History display
-│       ├── Login.tsx          # Login form
-│       ├── Register.tsx       # Registration form
-│       ├── ChangePassword.tsx # Password change form
-│       ├── Footer.tsx         # Page footer
-│       └── Toast.tsx          # Notifications
-└── utils/                      # Utility functions (pure helpers)
-    ├── index.ts
-    ├── imageUtils.ts          # Image helpers (compression, etc.)
-    ├── geolocation.ts         # Location utilities
-    └── constants.ts           # Application constants
-```
+TypeScript interfaces only — `OutfitSuggestion`, `User`, `Filters`, wardrobe types, etc.
 
-### MVC Pattern (Strict Implementation)
+### Views (`views/components/`)
 
-#### 1. **Models** (`models/`)
-- TypeScript interfaces and types
-- Define data structures
-- **No logic, just type definitions**
-- Pure data contracts
+Pure presentation: props in, callbacks out. No API calls or business logic (except trivial UI state).
 
-**Key Models:**
-- `OutfitSuggestion`: Complete outfit data
-- `OutfitHistoryEntry`: History entry structure
-- `Filters`: User preference filters
-- `User`: User data structure
-- `TokenResponse`: Authentication token response
+Key components: `Hero`, `Sidebar`, `OutfitPreview`, `OutfitHistory`, `Login`, `Register`, wardrobe views, `Toast`, `Footer`.
 
-#### 2. **Views** (`views/components/`)
-- **Pure presentation components**
-- Receive data via props
-- Emit events via callbacks
-- **No business logic**
-- **No API calls**
-- **No state management** (except UI-only state like modal open/close)
-- Focused solely on rendering
+### Controllers (`controllers/`)
 
-**Key Components:**
-- `Hero`: Landing section
-- `Sidebar`: Input and filters (receives callbacks, no logic)
-- `OutfitPreview`: Results display (receives data, emits actions)
-- `OutfitHistory`: History display (uses search controller for logic)
-- `Login`, `Register`, `ChangePassword`: Form components
-- `Toast`: Notifications
-- `Footer`: Page footer
+React hooks holding business logic and state.
 
-#### 3. **Controllers** (`controllers/`)
-- Custom React hooks
-- **All business logic lives here**
-- State management
-- API orchestration
-- Data transformation
-- Error handling
-- Event handling
+| Hook | Responsibility |
+|------|----------------|
+| `useOutfitController` | Suggestions, compression, duplicates, model images |
+| `useHistoryController` | History fetch and state |
+| `useHistorySearchController` | Search, filter, highlight |
+| `useAuthController` | Login, register, token storage |
+| `useWardrobeController` | Wardrobe management |
+| `useToastController` | Notifications |
 
-**Key Controllers:**
-- `useOutfitController`: 
-  - Manages outfit suggestion flow
-  - Handles duplicate checking
-  - Image compression
-  - Location fetching
-  - Model image generation coordination
-- `useHistoryController`: 
-  - Manages outfit history state
-  - Fetches history from API
-  - Handles authentication changes
-- `useHistorySearchController`:
-  - Search and filter logic
-  - Text highlighting
-  - Sorting
-- `useAuthController`: 
-  - Authentication state
-  - Login/logout/register logic
-  - Token management
-- `useToastController`: 
-  - Toast notification state
+### Services (`services/`)
 
-#### 4. **Services** (`services/`)
-- **API communication only**
-- HTTP request handling
-- Request/response formatting
-- **No business logic**
-- Can be reused by other platforms (Android/iOS)
+`ApiService` — HTTP only. Methods mirror backend endpoints; token attached from `localStorage`.
 
-**Key Service:**
-- `ApiService`: Singleton service for backend communication
-  - Methods: `getSuggestion()`, `checkDuplicate()`, `getOutfitHistory()`, `register()`, `login()`, etc.
+For web interaction flows (views, modals, auth gating), see [WEB_USER_INTERACTION.md](./WEB_USER_INTERACTION.md).
 
 ---
 
-## Multi-Platform Support
+## Core Functions
 
-### How Other Clients Can Use the Backend
+### 1. Image Analysis & Outfit Suggestion
 
-The backend is designed as a **platform-agnostic RESTful API**. Any client (Web, Android, iOS, Desktop) can consume it.
+1. User uploads image → frontend compresses
+2. `POST /api/suggest-outfit` with image and preferences
+3. `AIService.get_outfit_suggestion()` → GPT-4 Vision → `OutfitSuggestion`
+4. Optional model image generation if enabled
+5. History saved; result shown in `OutfitPreview`
 
-#### For Android (Kotlin/Java)
+### 2. AI Model Image Generation
+
+Triggered when `generate_model_image=true`. Supports DALL-E 3, Stable Diffusion (Replicate), Nano Banana. Location-aware prompts; fallback to DALL-E 3 on failure.
+
+### 3. Duplicate Detection
+
+Perceptual hash (`imagehash`) compared against user history before new AI calls. Threshold configurable via `IMAGE_SIMILARITY_THRESHOLD`.
+
+### 4. User Authentication
+
+Register → activation email → JWT on login → bearer token on protected routes. See [Authentication & Security](#authentication--security).
+
+### 5. Outfit History
+
+Persisted per user; searchable/filterable in the web UI. Includes original and model images when available.
+
+### 6. Virtual Wardrobe
+
+Upload → AI categorization (OpenAI or Hugging Face models) → save with duplicate checks. Wardrobe-only vs free-generation modes for suggestions.
+
+### 7. Feature Flags
+
+URL parameters (e.g. `modelGeneration=true`) toggle UI features at load time.
+
+---
+
+## API Endpoints
+
+Interactive docs when the backend is running: `http://localhost:8001/docs`
+
+### Outfit
+
+| Method | Endpoint | Auth |
+|--------|----------|------|
+| POST | `/api/suggest-outfit` | Optional |
+| POST | `/api/check-duplicate` | Optional |
+| GET | `/api/outfit-history` | Yes |
+
+**`POST /api/suggest-outfit`** (multipart):
+
+- `image` (file, required)
+- `text_input` (optional preferences)
+- `location` (optional)
+- `generate_model_image` (`"true"` / `"false"`)
+- `image_model` (`dalle3`, `stable-diffusion`, `nano-banana`)
+
+**Response:**
+
+```json
+{
+  "shirt": "…",
+  "trouser": "…",
+  "blazer": "…",
+  "shoes": "…",
+  "belt": "…",
+  "reasoning": "…",
+  "model_image": "base64_or_null"
+}
+```
+
+### Authentication
+
+| Method | Endpoint | Auth |
+|--------|----------|------|
+| POST | `/api/auth/register` | No |
+| POST | `/api/auth/login` | No |
+| GET | `/api/auth/activate/{token}` | No |
+| GET | `/api/auth/me` | Yes |
+| POST | `/api/auth/change-password` | Yes |
+
+Wardrobe, admin, and additional routes are documented in OpenAPI (`/docs`) and [API_DOCUMENTATION.md](./API_DOCUMENTATION.md).
+
+### Health
+
+| Method | Endpoint |
+|--------|----------|
+| GET | `/` |
+| GET | `/health` |
+
+---
+
+## Data Flow
+
+### Outfit suggestion (end-to-end)
+
+```
+User upload (View)
+  → App.tsx handler
+  → useOutfitController (compress, duplicate check, location)
+  → ApiService.getSuggestion()
+  → outfit_routes → OutfitController
+  → AIService (GPT-4 Vision) [+ optional image generation]
+  → OutfitService.save_outfit_history()
+  → JSON response
+  → OutfitPreview
+```
+
+### Authentication
+
+```
+Register/Login (View)
+  → useAuthController
+  → ApiService
+  → AuthController → AuthService
+  → JWT returned → localStorage
+  → Bearer header on subsequent requests
+```
+
+---
+
+## Database Schema
+
+### Users
+
+```sql
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    hashed_password VARCHAR(255) NOT NULL,
+    full_name VARCHAR(255),
+    is_active BOOLEAN DEFAULT FALSE,
+    email_verified BOOLEAN DEFAULT FALSE,
+    activation_token VARCHAR(255),
+    activation_token_expires TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### Outfit history
+
+```sql
+CREATE TABLE outfit_history (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    text_input TEXT,
+    image_data TEXT,
+    model_image TEXT,
+    shirt VARCHAR(512) NOT NULL,
+    trouser VARCHAR(512) NOT NULL,
+    blazer VARCHAR(512) NOT NULL,
+    shoes VARCHAR(512) NOT NULL,
+    belt VARCHAR(512) NOT NULL,
+    reasoning TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+Perceptual hashes are computed at query time (not stored). Wardrobe and admin tables are defined in ORM models — see [DB_SCHEMA_COMPARISON.md](./DB_SCHEMA_COMPARISON.md) for migration history.
+
+---
+
+## AI Integration
+
+| Provider | Models | Use |
+|----------|--------|-----|
+| OpenAI | GPT-4 Vision (`gpt-4o`), DALL-E 3 | Analysis, outfit JSON, image gen |
+| Replicate | SDXL | Alternative image generation |
+| Nano Banana | Image-to-image | Detail preservation (API key required) |
+| Hugging Face | BLIP / ViT-GPT2 | Wardrobe categorization (optional) |
+
+Prompt engineering emphasizes exact color extraction, full outfit completeness, full-body model shots, and location-aware appearance.
+
+---
+
+## Authentication & Security
+
+1. **Registration** → inactive account → activation email
+2. **Activation** → `GET /api/auth/activate/{token}`
+3. **Login** → JWT (7-day expiry typical)
+4. **Protected routes** → `Authorization: Bearer <token>`
+
+| Control | Implementation |
+|---------|----------------|
+| Passwords | bcrypt |
+| Tokens | JWT (`sub`, `exp`, `iat`) |
+| Input validation | Pydantic |
+| SQL injection | SQLAlchemy ORM |
+| XSS | React escaping |
+| CORS | Configured allowed origins |
+
+---
+
+## Multi-Platform Clients
+
+The backend is a **REST API** — any HTTP client can consume it.
+
+### iOS
+
+Native SwiftUI client in `ios-client/`. Shares the same API contract; parity tracked in [IOS_WEB_FEATURE_PARITY.md](./IOS_WEB_FEATURE_PARITY.md).
+
+### Android (Kotlin example)
 
 ```kotlin
-// Example using Retrofit or OkHttp
-val client = OkHttpClient()
 val requestBody = MultipartBody.Builder()
     .setType(MultipartBody.FORM)
-    .addFormDataPart("image", "photo.jpg", 
+    .addFormDataPart("image", "photo.jpg",
         RequestBody.create(MediaType.parse("image/jpeg"), imageFile))
-    .addFormDataPart("text_input", "Business casual, blue shirt")
+    .addFormDataPart("text_input", "Business casual")
     .build()
 
 val request = Request.Builder()
     .url("https://your-api.com/api/suggest-outfit")
     .post(requestBody)
     .build()
-
-client.newCall(request).enqueue(object : Callback {
-    override fun onResponse(call: Call, response: Response) {
-        val outfit = gson.fromJson(response.body?.string(), OutfitSuggestion::class.java)
-        // Use outfit data
-    }
-})
 ```
 
-#### For iOS (Swift)
+### iOS / Swift (URLSession)
 
 ```swift
-// Example using URLSession
 var request = URLRequest(url: URL(string: "https://your-api.com/api/suggest-outfit")!)
 request.httpMethod = "POST"
-
-let boundary = UUID().uuidString
-request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-
-var body = Data()
-// Add image and text_input to multipart body
-
-URLSession.shared.dataTask(with: request) { data, response, error in
-    if let data = data {
-        let outfit = try? JSONDecoder().decode(OutfitSuggestion.self, from: data)
-        // Use outfit data
-    }
-}.resume()
+// multipart body with image + text_input
 ```
 
-#### For React Native
+### React Native
 
-The same `ApiService` from the web frontend can be reused with minimal modifications.
+Reuse `ApiService` patterns from the web frontend with minimal changes.
 
 ---
 
-## Data Flow
+## Environment & Running Locally
 
-### Complete Request Flow
+### Backend (`.env`)
 
-#### Frontend Flow
-
-```
-1. User uploads image in UI (View - Sidebar)
-   ↓
-2. View emits event via callback (onGetSuggestion)
-   ↓
-3. App.tsx orchestrates (handleGetSuggestion)
-   ↓
-4. Controller (useOutfitController) receives request
-   ↓
-5. Controller compresses image (business logic)
-   ↓
-6. Controller checks for duplicates (business logic)
-   ↓
-7. Controller fetches location if needed (business logic)
-   ↓
-8. Controller calls ApiService.getSuggestion()
-   ↓
-9. ApiService sends POST request to backend (HTTP only)
-   ↓
-10. ApiService receives response
-   ↓
-11. Controller updates state with suggestion
-   ↓
-12. View (OutfitPreview) renders the outfit suggestion
-```
-
-#### Backend Flow
-
-```
-1. HTTP Request arrives at Route (outfit_routes.py)
-   ↓
-2. Route extracts request data (file, form data)
-   ↓
-3. Route calls Controller (OutfitController)
-   ↓
-4. Controller validates request data
-   ↓
-5. Controller orchestrates service calls:
-   - Calls AIService for outfit suggestion
-   - Calls OutfitService for history operations
-   ↓
-6. Service (AIService) encodes image and calls OpenAI
-   ↓
-7. Service (AIService) parses response and returns OutfitSuggestion
-   ↓
-8. Controller formats response
-   ↓
-9. Route returns HTTP response
-```
-
----
-
-## Benefits of This Architecture
-
-### 1. **Separation of Concerns**
-- Each layer has a single responsibility
-- Easy to understand and maintain
-- Changes in one layer don't affect others
-
-### 2. **Multi-Platform Ready**
-- Backend is platform-agnostic
-- Same API for web, mobile, desktop
-- Service layer can be reused across clients
-
-### 3. **Testability**
-- Each layer can be tested independently
-- Services can be mocked for testing
-- Business logic is separate from UI
-
-### 4. **Scalability**
-- Easy to add new features
-- Can add new endpoints without changing existing code
-- Can scale backend and frontend independently
-
-### 5. **Maintainability**
-- Clear structure makes code easy to find
-- New developers can understand quickly
-- Follows industry best practices
-
-### 6. **Reusability**
-- Services can be reused
-- Models define contracts
-- Utils can be shared
-
----
-
-## Environment Configuration
-
-### Backend (.env)
 ```bash
-OPENAI_API_KEY=your_api_key_here
+OPENAI_API_KEY=your_key
+DATABASE_URL=postgresql://...
+JWT_SECRET_KEY=your_secret
 PORT=8001
 ```
 
-### Frontend (.env)
+### Frontend (`.env`)
+
 ```bash
 REACT_APP_API_URL=http://localhost:8001
 ```
 
----
+### Commands
 
-## Running the Application
-
-### Backend
 ```bash
-cd backend
-source venv/bin/activate
-python main.py
-```
+# Backend
+cd backend && source venv/bin/activate && python main.py
 
-### Frontend
-```bash
-cd frontend
-npm start
-```
+# Frontend
+cd frontend && npm start
 
-### Both (using start script)
-```bash
-chmod +x start.sh
+# Both
 ./start.sh
 ```
 
 ---
 
-## API Documentation
+## Deployment
 
-Once the backend is running, you can access:
-- **Interactive API Docs**: http://localhost:8001/docs
-- **Alternative API Docs**: http://localhost:8001/redoc
+| Layer | Platform | Notes |
+|-------|----------|-------|
+| Frontend | GitHub Pages | `npm run build` + `npm run deploy` |
+| Backend | Railway | See [DEPLOYMENT_INSTRUCTIONS.md](./DEPLOYMENT_INSTRUCTIONS.md) |
+| Database | PostgreSQL | Railway or managed provider |
 
-These are automatically generated by FastAPI and show all available endpoints, request/response schemas, and allow you to test the API directly.
+**Backend env (production):** `OPENAI_API_KEY`, `DATABASE_URL`, `JWT_SECRET_KEY`, optional `REPLICATE_API_TOKEN`, `NANO_BANANA_API_KEY`, email SMTP vars, `CHATGPT_MODEL`, `PORT`.
 
----
-
-## Future Enhancements
-
-1. **Authentication & Authorization**
-   - Add user accounts
-   - API key management
-   - Rate limiting
-
-2. **Database Integration**
-   - Save outfit history
-   - User preferences
-   - Analytics
-
-3. **Caching**
-   - Cache AI responses
-   - Reduce API costs
-   - Faster responses
-
-4. **Advanced Features**
-   - Multiple image upload
-   - Virtual try-on
-   - Shopping links
-   - Social sharing
-
-5. **Mobile Apps**
-   - Native Android app
-   - Native iOS app
-   - React Native version
+Tables are created on startup via SQLAlchemy; use Alembic or migration scripts for schema changes.
 
 ---
 
 ## Contributing
 
-When adding new features:
+### Backend feature
 
-### Backend:
-1. **Define Model** - Add Pydantic/SQLAlchemy models
-2. **Create/Update Service** - Add business logic to services
-3. **Create/Update Controller** - Add request orchestration to controllers
-4. **Add Route** - Add HTTP endpoint (thin layer, calls controller)
-5. **Test** each layer independently
+1. Model (Pydantic / ORM)
+2. Service (business logic)
+3. Controller (orchestration)
+4. Route (HTTP)
+5. Tests in `backend/tests/`
 
-### Frontend:
-1. **Define Model** - Add TypeScript interfaces
-2. **Update Service** - Add API method to ApiService
-3. **Create/Update Controller** - Add business logic to controller hook
-4. **Update View** - Add presentation component (pure, receives props, emits callbacks)
-5. **Update App.tsx** - Orchestrate view and controller
-6. **Test** each layer independently
+### Frontend feature
 
-### Testing Strategy:
-- **Models**: Type checking
-- **Services**: Unit tests with mocked dependencies
-- **Controllers**: Integration tests with mocked services
-- **Routes/Views**: Component/endpoint tests
+1. Model (TypeScript interface)
+2. `ApiService` method
+3. Controller hook
+4. View component (pure)
+5. Wire in `App.tsx`
+6. Tests in `frontend/src`
+
+### Testing strategy
+
+| Layer | Approach |
+|-------|----------|
+| Models | Types / validation |
+| Services | Unit tests, mocked deps |
+| Controllers | Integration tests |
+| Routes / Views | Endpoint / component tests |
 
 ---
 
-## Architecture Benefits
+## Key Design Decisions
 
-### Strict Separation of Concerns
-- **Backend Routes**: Only HTTP handling
-- **Backend Controllers**: Request orchestration
-- **Backend Services**: Pure business logic
-- **Frontend Views**: Pure presentation
-- **Frontend Controllers**: All business logic
-- **Frontend Services**: API communication only
+1. MVC with strict layer boundaries
+2. Platform-agnostic REST API
+3. Perceptual hashing for cost control
+4. Multi-model image generation with fallback
+5. JWT stateless auth
+6. Email verification before activation
+7. Feature flags for gradual rollout
+8. Separate web and iOS clients, shared backend
 
-### Testability
-- Each layer can be tested independently
-- Services can be mocked for testing
-- Controllers can be tested with mocked services
-- Views can be tested with mock props
+---
 
-### Maintainability
-- Clear boundaries make code easy to find
-- Changes in one layer don't affect others
-- New developers can understand quickly
-- Follows industry best practices
+## Future Enhancements
 
-### Scalability
-- Easy to add new features following the same pattern
-- Can scale backend and frontend independently
-- Services can be reused across different entry points
+- WebSocket / real-time generation progress
+- Recommendation engine from user preferences
+- E-commerce / shopping integrations
+- Social sharing and collections
+- Expanded admin analytics
+- Multi-language support
+- Deeper Android client
+
+---
 
 ## Questions?
 
-For questions about this architecture, please refer to:
-- **Backend**: 
-  - Routes: `backend/routes/`
-  - Controllers: `backend/controllers/`
-  - Services: `backend/services/`
-  - Models: `backend/models/`
-- **Frontend**: 
-  - Views: `frontend/src/views/components/`
-  - Controllers: `frontend/src/controllers/`
-  - Services: `frontend/src/services/`
-  - Models: `frontend/src/models/`
-- **API Documentation**: Visit http://localhost:8001/docs when backend is running
-- **Refactoring Plan**: See `MVC_REFACTORING_PLAN.md` for detailed refactoring documentation
-
+| Area | Location |
+|------|----------|
+| Backend code | `backend/routes/`, `controllers/`, `services/`, `models/` |
+| Frontend code | `frontend/src/views/`, `controllers/`, `services/` |
+| iOS code | `ios-client/OutfitSuggestor/` |
+| Live API | `http://localhost:8001/docs` |
+| Refactoring history | [MVC_REFACTORING_PLAN.md](./MVC_REFACTORING_PLAN.md) |
