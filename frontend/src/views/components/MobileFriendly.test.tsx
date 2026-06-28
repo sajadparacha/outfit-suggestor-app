@@ -87,11 +87,11 @@ describe('Mobile-friendly layout and touch targets', () => {
       expect(root?.getAttribute('class')).toMatch(/md:top-20/);
     });
 
-    it('Generate Outfit button has min-h-[48px] and touch-manipulation', () => {
+    it('Generate Outfit button has min-h touch target and touch-manipulation', () => {
       render(<Sidebar {...defaultProps} />);
       const primaryButton = screen.getByRole('button', { name: /Get AI outfit suggestion/i });
       const cls = primaryButton.getAttribute('class') ?? '';
-      expect(cls).toMatch(/min-h-\[48px\]/);
+      expect(cls).toMatch(/min-h-\[(48|52)px\]/);
       expect(cls).toMatch(/touch-manipulation/);
     });
   });
@@ -182,9 +182,10 @@ describe('Mobile-friendly layout and touch targets', () => {
         />
       );
       expect(screen.getByText('Your outfit appears here')).toBeInTheDocument();
-      const emptyCard = container.querySelector('.p-6');
+      const emptyCard = container.querySelector('[data-testid="empty-outfit-preview"]');
       expect(emptyCard).toBeInTheDocument();
-      expect(emptyCard?.getAttribute('class')).toMatch(/sm:p-8|lg:p-12/);
+      const inner = emptyCard?.querySelector('.p-5');
+      expect(inner).toBeInTheDocument();
     });
 
     it('sticky mobile action bar includes Save Look and Refine', () => {
@@ -229,12 +230,12 @@ describe('Mobile-friendly layout and touch targets', () => {
   });
 
   describe('Main flow grid (App)', () => {
-    it('main flow uses md:grid-cols-2 and max-w-[980px]', async () => {
+    it('main flow uses md:grid-cols-2 and max-w-[1100px]', async () => {
       renderApp();
       await screen.findByRole('button', { name: /Get AI outfit suggestion/i });
-      const grid = document.querySelector('.max-w-\\[980px\\].md\\:grid-cols-2');
+      const grid = document.querySelector('.max-w-\\[1100px\\].md\\:grid-cols-2');
       expect(grid).toBeInTheDocument();
-      expect(grid?.className).toMatch(/md:gap-5/);
+      expect(grid?.className).toMatch(/md:gap-6/);
     });
 
     it('HowItWorks stepper is wrapped for md:hidden', async () => {

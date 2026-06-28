@@ -79,10 +79,10 @@ describe('Random from Wardrobe regenerate integration', () => {
     renderApp();
 
     await waitFor(() => {
-      expect(screen.getByText('Random picks')).toBeInTheDocument();
+      expect(screen.getByTestId('main-flow-more-options-trigger')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText('Random picks'));
+    fireEvent.click(screen.getByTestId('main-flow-more-options-trigger'));
     fireEvent.click(screen.getByRole('button', { name: /get random outfit from wardrobe/i }));
 
     await waitFor(() => {

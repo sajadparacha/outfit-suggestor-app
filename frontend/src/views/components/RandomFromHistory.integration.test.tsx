@@ -77,13 +77,13 @@ describe('Random from History integration', () => {
   it('displays random outfit from history when button is clicked', async () => {
     renderApp();
 
-    // Wait for app to load and expand Random picks for Random from History
+    // Wait for app to load and expand More options for Random from History
     await waitFor(() => {
       expect(screen.getByRole('link', { name: /^Suggest$/ })).toBeInTheDocument();
-      expect(screen.getByText('Random picks')).toBeInTheDocument();
+      expect(screen.getByTestId('main-flow-more-options-trigger')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText('Random picks'));
+    fireEvent.click(screen.getByTestId('main-flow-more-options-trigger'));
 
     const randomFromHistoryBtn = await screen.findByRole('button', {
       name: /show random outfit from your history/i,
@@ -142,10 +142,10 @@ describe('Random from History integration', () => {
     renderApp();
 
     await waitFor(() => {
-      expect(screen.getByText('Random picks')).toBeInTheDocument();
+      expect(screen.getByTestId('main-flow-more-options-trigger')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText('Random picks'));
+    fireEvent.click(screen.getByTestId('main-flow-more-options-trigger'));
     fireEvent.click(screen.getByRole('button', { name: /get random outfit from wardrobe/i }));
 
     await waitFor(() => {
@@ -184,10 +184,10 @@ describe('Random from History integration', () => {
     renderApp();
 
     await waitFor(() => {
-      expect(screen.getByText('Random picks')).toBeInTheDocument();
+      expect(screen.getByTestId('main-flow-more-options-trigger')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText('Random picks'));
+    fireEvent.click(screen.getByTestId('main-flow-more-options-trigger'));
     fireEvent.click(screen.getByRole('button', { name: /show random outfit from your history/i }));
 
     await waitFor(() => {
@@ -224,10 +224,10 @@ describe('Random from History integration', () => {
     renderApp();
 
     await waitFor(() => {
-      expect(screen.getByText('Random picks')).toBeInTheDocument();
+      expect(screen.getByTestId('main-flow-more-options-trigger')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText('Random picks'));
+    fireEvent.click(screen.getByTestId('main-flow-more-options-trigger'));
     fireEvent.click(screen.getByRole('button', { name: /show random outfit from your history/i }));
 
     await waitFor(() => {
@@ -256,10 +256,10 @@ describe('Random from History integration', () => {
     renderApp();
 
     await waitFor(() => {
-      expect(screen.getByText('Random picks')).toBeInTheDocument();
+      expect(screen.getByTestId('main-flow-more-options-trigger')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText('Random picks'));
+    fireEvent.click(screen.getByTestId('main-flow-more-options-trigger'));
 
     const randomFromHistoryBtn = await screen.findByRole('button', {
       name: /show random outfit from your history/i,

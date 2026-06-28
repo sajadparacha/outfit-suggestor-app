@@ -4,7 +4,6 @@ import OutfitItemCard from './suggestion/OutfitItemCard';
 import EmptyOutfitPreview from './EmptyOutfitPreview';
 import RefineMenu from './RefineMenu';
 import { MAIN_FLOW_UX_COPY } from '../../utils/mainFlowUxCopy';
-import { formatOutfitContextLine } from '../../utils/outfitContextLine';
 import { parseOutfitItemCardText } from '../../utils/outfitItemCardText';
 import { reasoningToBullets } from '../../utils/reasoningBullets';
 import {
@@ -60,7 +59,6 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
   const [showFullImage, setShowFullImage] = React.useState(false);
   const [fullWardrobeImage, setFullWardrobeImage] = React.useState<{ src: string; label: string } | null>(null);
 
-  const contextLine = formatOutfitContextLine(filters);
   const reasoningBullets = suggestion ? reasoningToBullets(suggestion.reasoning) : [];
 
   React.useEffect(() => {
@@ -139,44 +137,33 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
   }
 
   const renderHero = () => {
-    if (suggestion.model_image) {
-      return (
-        <button
-          type="button"
-          onClick={() => setShowFullImage(true)}
-          className="relative flex min-h-[280px] w-full items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-left lg:min-h-[360px]"
-        >
-          <span className="absolute left-3 top-3 rounded-full bg-brand-gradient px-3 py-1 text-xs font-semibold text-white">
-            AI model preview
-          </span>
-          <img
-            src={`data:image/png;base64,${suggestion.model_image}`}
-            alt="AI generated model wearing recommended outfit"
-            className="max-h-[520px] w-full object-contain"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              if (target.src.includes('image/png')) {
-                target.src = `data:image/jpeg;base64,${suggestion.model_image}`;
-              }
-            }}
-          />
-        </button>
-      );
-    }
+    if (!suggestion.model_image) return null;
 
     return (
-      <div className="relative flex min-h-[280px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900 via-slate-800 to-brand-purple/20 p-8 lg:min-h-[360px]">
-        <div className="absolute inset-0 bg-brand-gradient-soft opacity-20" aria-hidden />
-        <div className="relative flex flex-wrap items-center justify-center gap-4">
-          <span className="text-4xl" aria-hidden>👔</span>
-          <span className="text-4xl" aria-hidden>👖</span>
-          <span className="text-4xl" aria-hidden>👞</span>
-        </div>
-        <p className="relative mt-6 text-center text-lg font-semibold text-white">{contextLine}</p>
-        <p className="relative mt-1 text-center text-sm text-slate-400">Styled outfit preview</p>
-      </div>
+      <button
+        type="button"
+        onClick={() => setShowFullImage(true)}
+        className="relative flex min-h-[280px] w-full items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-left lg:min-h-[360px]"
+      >
+        <span className="absolute left-3 top-3 rounded-full bg-brand-gradient px-3 py-1 text-xs font-semibold text-white">
+          AI model preview
+        </span>
+        <img
+          src={`data:image/png;base64,${suggestion.model_image}`}
+          alt="AI generated model wearing recommended outfit"
+          className="max-h-[520px] w-full object-contain"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            if (target.src.includes('image/png')) {
+              target.src = `data:image/jpeg;base64,${suggestion.model_image}`;
+            }
+          }}
+        />
+      </button>
     );
   };
+
+  const hero = renderHero();
 
   const primaryActionClass = (enabled: boolean) =>
     `min-h-[48px] flex-1 touch-manipulation rounded-xl px-4 py-3 text-sm font-semibold transition-all ${
@@ -276,13 +263,16 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
       className="rounded-3xl border border-white/10 bg-slate-950/70 p-4 shadow-[0_18px_50px_rgba(2,8,23,0.55)] backdrop-blur sm:p-6 lg:p-8"
       data-testid="outfit-preview-result"
     >
-      <div id="outfit-result-hero" className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/70 shadow-xl">
-        {renderHero()}
+      <div id="outfit-result-hero">
+        {hero && (
+          <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/70 shadow-xl">
+            {hero}
+          </div>
+        )}
       </div>
 
-      <div className="mt-6">
+      <div className={hero ? 'mt-6' : 'mt-0'}>
         <h2 className="text-2xl font-bold text-white sm:text-3xl">{MAIN_FLOW_UX_COPY.resultTitle}</h2>
-        <p className="mt-1 text-sm text-brand-blue">{contextLine}</p>
       </div>
 
       <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">

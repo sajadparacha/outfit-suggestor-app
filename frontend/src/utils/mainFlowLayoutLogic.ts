@@ -3,11 +3,11 @@
  * Keep in sync with MainFlowLayoutLogic.swift
  */
 
-/** Max content width for main flow (matches web `max-w-[980px]`). */
-export const MAIN_FLOW_MAX_CONTENT_WIDTH = 980;
+/** Max content width for main flow (matches web `max-w-[1100px]`). */
+export const MAIN_FLOW_MAX_CONTENT_WIDTH = 1100;
 
-/** Gap between side-by-side columns (matches web `gap-5` / 20px). */
-export const MAIN_FLOW_SIDE_BY_SIDE_GAP_PX = 20;
+/** Gap between side-by-side columns (matches web `gap-6` / 24px). */
+export const MAIN_FLOW_SIDE_BY_SIDE_GAP_PX = 24;
 
 /** True when sticky bottom result actions should appear (compact result, not guest-gated). */
 export function showsStickyResultActions(

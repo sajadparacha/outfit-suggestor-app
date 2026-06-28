@@ -96,7 +96,7 @@ describe('Sidebar file validation', () => {
 
   it('displays max size hint', () => {
     render(<Sidebar {...defaultProps} />);
-    expect(screen.getByText(/JPG, PNG, WebP up to 10MB/i)).toBeInTheDocument();
+    expect(screen.getByText(/PNG, JPG up to 10MB/i)).toBeInTheDocument();
   });
 
   it('does not show random outfit button when not authenticated', () => {
@@ -116,7 +116,7 @@ describe('Sidebar file validation', () => {
       />
     );
 
-    fireEvent.click(screen.getByText('Random picks'));
+    fireEvent.click(screen.getByText('More options'));
 
     const button = screen.getByRole('button', { name: /get random outfit from wardrobe/i });
     expect(button).toBeInTheDocument();
@@ -134,7 +134,7 @@ describe('Sidebar file validation', () => {
       />
     );
 
-    fireEvent.click(screen.getByText('Random picks'));
+    fireEvent.click(screen.getByText('More options'));
 
     const button = screen.getByRole('button', { name: /show random outfit from your history/i });
     expect(button).toBeInTheDocument();
@@ -238,7 +238,7 @@ describe('Sidebar file validation', () => {
         />
       );
 
-      fireEvent.click(screen.getByText('Advanced options'));
+      fireEvent.click(screen.getByText('More options'));
       expect(screen.getByText(MICRO_HELP.MODEL_PREVIEW)).toBeInTheDocument();
       expect(screen.queryByText(/This may take longer/i)).not.toBeInTheDocument();
     });
@@ -255,7 +255,7 @@ describe('Sidebar file validation', () => {
       );
 
       expect(screen.queryByText(MICRO_HELP.MODEL_PREVIEW)).not.toBeInTheDocument();
-      expect(screen.queryByText(/Advanced options/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/^Advanced options$/i)).not.toBeInTheDocument();
     });
   });
 

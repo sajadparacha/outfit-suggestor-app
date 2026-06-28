@@ -2,7 +2,7 @@
  * Shared main-flow UX labels — keep in sync with MainFlowUxCopy.swift and docs/main-flow-ux-contract.md
  */
 export const MAIN_FLOW_UX_COPY = {
-  primaryCta: 'Generate Outfit',
+  primaryCta: 'Generate AI Outfit',
   primaryCtaAria: 'Get AI outfit suggestion',
   emptyPreviewHeadline: 'Your outfit appears here',
   emptyPreviewSubline: 'Upload a photo, set preferences, then tap Generate Outfit',

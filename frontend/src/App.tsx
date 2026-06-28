@@ -9,6 +9,7 @@ import { Navigate, Route, Routes, useLocation, useNavigate, useSearchParams } fr
 import Hero from './views/components/Hero';
 import NavBar from './views/components/NavBar';
 import HowItWorksStepper from './views/components/HowItWorksStepper';
+import MainWardrobeBar from './views/components/MainWardrobeBar';
 import RecentLooksSection from './views/components/RecentLooksSection';
 import Sidebar from './views/components/Sidebar';
 import OutfitPreview from './views/components/OutfitPreview';
@@ -204,10 +205,16 @@ function App() {
   const { toast, showToast, hideToast } = useToastController();
 
   // Wardrobe controller for auto-add functionality
-  const { analyzeImage, addItem, loading: wardrobeLoading } = useWardrobeController();
+  const { analyzeImage, addItem, loading: wardrobeLoading, loadWardrobe, wardrobeItems, totalCount: wardrobeTotalCount } = useWardrobeController();
   const [addingToWardrobe, setAddingToWardrobe] = useState(false);
   const wardrobeAnalysisAbortRef = useRef<AbortController | null>(null);
   const wasAuthenticatedRef = useRef<boolean | null>(null);
+
+  React.useEffect(() => {
+    if (isAuthenticated && location.pathname === ROUTES.MAIN) {
+      void loadWardrobe(undefined, undefined, 1, 4);
+    }
+  }, [isAuthenticated, location.pathname, loadWardrobe]);
 
   const clearMainFlowOnLogout = useCallback(() => {
     resetMainFlowState();
@@ -586,7 +593,7 @@ function App() {
           ) : (
           <>
             {/* Main flow — side-by-side from md (matches iPad regular width) */}
-            <div className="mx-auto grid max-w-[980px] grid-cols-1 items-start gap-8 md:grid-cols-2 md:items-stretch md:gap-5">
+            <div className="mx-auto grid max-w-[1100px] grid-cols-1 items-start gap-8 md:grid-cols-2 md:items-stretch md:gap-6">
               <Sidebar
                 filters={filters}
                 setFilters={setFilters}
@@ -692,6 +699,15 @@ function App() {
               />
               </div>
             </div>
+
+            <MainWardrobeBar
+              items={wardrobeItems}
+              totalCount={wardrobeTotalCount}
+              isAuthenticated={isAuthenticated}
+              loading={wardrobeLoading}
+              onViewWardrobe={() => navigate(ROUTES.WARDROBE)}
+              onSignIn={() => openAuthPromptSignIn('wardrobe')}
+            />
 
             {!isAuthenticated && showFirstOutfitBanner && currentSuggestion && (
               <FirstOutfitPromptBanner

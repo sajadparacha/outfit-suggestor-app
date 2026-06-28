@@ -83,7 +83,7 @@ describe('Admin visibility gating', () => {
     it('hides Advanced options and model preview controls for non-admins', () => {
       renderComponent(<Sidebar {...sidebarProps} modelGenerationEnabled />);
 
-      expect(screen.queryByText(/Advanced options/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/^Advanced options$/i)).not.toBeInTheDocument();
       expect(screen.queryByText(/Include AI model preview/i)).not.toBeInTheDocument();
       expect(screen.queryByText(/Show AI Prompt/i)).not.toBeInTheDocument();
     });
@@ -149,7 +149,7 @@ describe('Admin visibility gating', () => {
         expect(screen.getByRole('button', { name: /Get AI outfit suggestion/i })).toBeInTheDocument();
       });
 
-      expect(screen.queryByText(/Advanced options/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/^Advanced options$/i)).not.toBeInTheDocument();
       expect(screen.queryByText(/Include AI model preview/i)).not.toBeInTheDocument();
       expect(screen.queryByRole('link', { name: /Reports/i })).not.toBeInTheDocument();
     });

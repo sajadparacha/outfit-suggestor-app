@@ -599,7 +599,7 @@ class OutfitController:
             location: User's location
             
         Returns:
-            Base64 encoded model image or None if generation fails
+            Tuple of (base64 model image or None, generation cost)
         """
         try:
             # Parse location details if provided as JSON string
@@ -639,17 +639,17 @@ class OutfitController:
                     return result, cost
                 except Exception as fallback_err:
                     print(f"❌ DALL-E 3 fallback also failed: {str(fallback_err)}")
-                    return None
+                    return None, 0.0
             else:
                 # DALL-E 3 failed, just return None
                 print(f"❌ ERROR: Failed to generate model image with {model}: {str(http_err)}")
-                return None
+                return None, 0.0
         except Exception as e:
             # Log error but don't fail the request
             print(f"❌ ERROR: Failed to generate model image: {str(e)}")
             import traceback
             traceback.print_exc()
-            return None
+            return None, 0.0
     
     async def check_duplicate(
         self,

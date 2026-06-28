@@ -47,15 +47,15 @@ describe('Main flow side-by-side layout', () => {
     jest.restoreAllMocks();
   });
 
-  it('uses max-width 980px and md two-column grid on main flow shell', async () => {
+  it('uses max-width 1100px and md two-column grid on main flow shell', async () => {
     renderApp();
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Get AI outfit suggestion/i })).toBeInTheDocument();
     });
 
-    const grid = document.querySelector('.max-w-\\[980px\\].md\\:grid-cols-2');
+    const grid = document.querySelector('.max-w-\\[1100px\\].md\\:grid-cols-2');
     expect(grid).toBeInTheDocument();
-    expect(grid?.className).toMatch(/md:gap-5/);
+    expect(grid?.className).toMatch(/md:gap-6/);
   });
 
   it('shows empty preview alongside upload in creation state (side-by-side DOM)', async () => {

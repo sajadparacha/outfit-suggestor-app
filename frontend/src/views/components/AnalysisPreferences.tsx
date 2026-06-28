@@ -11,21 +11,44 @@ interface AnalysisPreferencesProps {
   setPreferenceText: (text: string) => void;
   onClear?: () => void;
   variant?: 'sidebar' | 'insights';
+  quickLayout?: boolean;
   showSharedHint?: boolean;
   useWardrobeOnly?: boolean;
   setUseWardrobeOnly?: (v: boolean) => void;
   showWardrobeOnly?: boolean;
 }
 
+const OccasionIcon = () => (
+  <svg className="h-3.5 w-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 14.15v4.25c0 .414-.336.75-.75.75h-4.5a.75.75 0 01-.75-.75v-4.25m0 0h4.125c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9m9 3.75h-4.125A1.125 1.125 0 0112 9.375v1.5m0 0h4.125A1.125 1.125 0 0120.25 11.25v1.775c0 .621-.504 1.125-1.125 1.125H12m0 0v4.125" />
+  </svg>
+);
+
+const SeasonIcon = () => (
+  <svg className="h-3.5 w-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+  </svg>
+);
+
+const StyleIcon = () => (
+  <svg className="h-3.5 w-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z" />
+  </svg>
+);
+
 const FilterSelect: React.FC<{
   label: string;
   value: string;
   onChange: (value: string) => void;
   ariaLabel: string;
+  icon?: React.ReactNode;
   children: React.ReactNode;
-}> = ({ label, value, onChange, ariaLabel, children }) => (
+}> = ({ label, value, onChange, ariaLabel, icon, children }) => (
   <div className="rounded-2xl border border-white/15 bg-white/[0.04] px-3 py-2.5 transition hover:border-brand-blue/40">
-    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</label>
+    <label className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+      {icon}
+      {label}
+    </label>
     <div className="relative">
       <select
         value={value}
@@ -54,6 +77,7 @@ const AnalysisPreferences: React.FC<AnalysisPreferencesProps> = ({
   setPreferenceText,
   onClear,
   variant = 'insights',
+  quickLayout = false,
   showSharedHint = true,
   useWardrobeOnly = false,
   setUseWardrobeOnly,
@@ -86,10 +110,10 @@ const AnalysisPreferences: React.FC<AnalysisPreferencesProps> = ({
 
   if (variant === 'sidebar') {
     return (
-      <div id="outfit-preferences" className="mt-5 space-y-3">
-        {sharedHint}
+      <div id="outfit-preferences" className={quickLayout ? 'space-y-3' : 'mt-5 space-y-3'}>
+        {!quickLayout && sharedHint}
         <div
-          className="grid grid-cols-2 gap-2 lg:grid-cols-4"
+          className={quickLayout ? 'grid grid-cols-1 gap-2 sm:grid-cols-3' : 'grid grid-cols-2 gap-2 lg:grid-cols-4'}
           role="group"
           aria-label="Outfit preferences"
         >
@@ -98,6 +122,7 @@ const AnalysisPreferences: React.FC<AnalysisPreferencesProps> = ({
             value={resolved.occasion}
             onChange={(value) => handleFilterChange('occasion', value)}
             ariaLabel="Select occasion"
+            icon={quickLayout ? <OccasionIcon /> : undefined}
           >
             {FILTER_OPTIONS.occasions.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -111,6 +136,7 @@ const AnalysisPreferences: React.FC<AnalysisPreferencesProps> = ({
             value={resolved.season}
             onChange={(value) => handleFilterChange('season', value)}
             ariaLabel="Select season"
+            icon={quickLayout ? <SeasonIcon /> : undefined}
           >
             {FILTER_OPTIONS.seasons.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -124,6 +150,7 @@ const AnalysisPreferences: React.FC<AnalysisPreferencesProps> = ({
             value={resolved.style}
             onChange={(value) => handleFilterChange('style', value)}
             ariaLabel="Select style preference"
+            icon={quickLayout ? <StyleIcon /> : undefined}
           >
             {FILTER_OPTIONS.styles.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -132,27 +159,20 @@ const AnalysisPreferences: React.FC<AnalysisPreferencesProps> = ({
             ))}
           </FilterSelect>
 
-          <NotesCell preferenceText={preferenceText} setPreferenceText={setPreferenceText} />
+          {!quickLayout && (
+            <NotesCell preferenceText={preferenceText} setPreferenceText={setPreferenceText} />
+          )}
         </div>
 
+        {quickLayout && (
+          <QuickNotesField preferenceText={preferenceText} setPreferenceText={setPreferenceText} />
+        )}
+
         {showWardrobeOnly && setUseWardrobeOnly && (
-          <label
-            htmlFor="wardrobe-mode"
-            className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3"
-          >
-            <input
-              type="checkbox"
-              id="wardrobe-mode"
-              checked={useWardrobeOnly}
-              onChange={(event) => setUseWardrobeOnly(event.target.checked)}
-              className="mt-0.5 h-4 w-4 shrink-0 rounded border-white/20 bg-slate-800 text-brand-blue focus:ring-brand-blue focus:ring-offset-slate-900"
-              aria-label="Use my wardrobe only"
-            />
-            <span className="min-w-0">
-              <span className="block text-sm font-medium text-slate-100">Use my wardrobe only</span>
-              <span className="mt-1 block text-xs text-slate-400">{MICRO_HELP.WARDROBE_ONLY}</span>
-            </span>
-          </label>
+          <WardrobeOnlyCheckbox
+            useWardrobeOnly={useWardrobeOnly}
+            setUseWardrobeOnly={setUseWardrobeOnly}
+          />
         )}
       </div>
     );
@@ -238,7 +258,53 @@ const AnalysisPreferences: React.FC<AnalysisPreferencesProps> = ({
   );
 };
 
-const NotesCell: React.FC<{
+export const WardrobeOnlyCheckbox: React.FC<{
+  useWardrobeOnly: boolean;
+  setUseWardrobeOnly: (v: boolean) => void;
+}> = ({ useWardrobeOnly, setUseWardrobeOnly }) => (
+  <label
+    htmlFor="wardrobe-mode"
+    className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3"
+  >
+    <input
+      type="checkbox"
+      id="wardrobe-mode"
+      checked={useWardrobeOnly}
+      onChange={(event) => setUseWardrobeOnly(event.target.checked)}
+      className="mt-0.5 h-4 w-4 shrink-0 rounded border-white/20 bg-slate-800 text-brand-blue focus:ring-brand-blue focus:ring-offset-slate-900"
+      aria-label="Use my wardrobe only"
+    />
+    <span className="min-w-0">
+      <span className="block text-sm font-medium text-slate-100">Use my wardrobe only</span>
+      <span className="mt-1 block text-xs text-slate-400">{MICRO_HELP.WARDROBE_ONLY}</span>
+    </span>
+  </label>
+);
+
+export const QuickNotesField: React.FC<{
+  preferenceText: string;
+  setPreferenceText: (text: string) => void;
+}> = ({ preferenceText, setPreferenceText }) => (
+  <div className="rounded-2xl border border-white/15 bg-white/[0.04] px-3 py-2.5 transition hover:border-brand-blue/40">
+    <label
+      htmlFor="quick-preference-notes"
+      className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500"
+    >
+      Notes
+    </label>
+    <textarea
+      id="quick-preference-notes"
+      value={preferenceText}
+      onChange={(e) => setPreferenceText(e.target.value)}
+      placeholder="e.g., Smart casual, navy and brown, no sneakers."
+      className="w-full resize-none bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none"
+      rows={2}
+      aria-label="Extra notes"
+    />
+  </div>
+);
+
+export const NotesCell: React.FC<{
   preferenceText: string;
   setPreferenceText: (text: string) => void;
 }> = ({ preferenceText, setPreferenceText }) => {

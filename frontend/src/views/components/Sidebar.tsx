@@ -98,6 +98,36 @@ const CameraIcon = () => (
   </svg>
 );
 
+const GalleryIcon = () => (
+  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+  </svg>
+);
+
+const DragDropIcon = () => (
+  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+  </svg>
+);
+
+const HangerIcon = () => (
+  <svg className="h-5 w-5 text-brand-purple" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v.75M17.25 3v.75M6.75 3a2.25 2.25 0 012.25-2.25h6.5A2.25 2.25 0 0117.25 3v.75M6.75 3h10.5M3.75 7.5h16.5l-1.5 9.75A2.25 2.25 0 0116.5 19.5h-9a2.25 2.25 0 01-2.25-2.25L3.75 7.5z" />
+  </svg>
+);
+
+const ArrowRightIcon = () => (
+  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+  </svg>
+);
+
+const LockIcon = () => (
+  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+  </svg>
+);
+
 const SparkleIcon = () => (
   <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
     <path d="M12 2l1.5 5.5L19 9l-5.5 1.5L12 16l-1.5-5.5L5 9l5.5-1.5L12 2z" />
@@ -196,6 +226,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   onViewAllRecentLooks,
 }) => {
   const generateButtonRef = useRef<HTMLButtonElement>(null);
+  const moreOptionsRef = useRef<HTMLDetailsElement>(null);
   const generateDisabled = !image || loading || guestLimitReached;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -444,6 +475,20 @@ const Sidebar: React.FC<SidebarProps> = ({
   const selectClass =
     'w-full rounded-lg border border-white/15 bg-slate-800/80 px-3 py-2 text-sm text-white focus:border-brand-blue focus:outline-none focus:ring-1 focus:ring-brand-blue';
 
+  const openMoreOptions = () => {
+    if (moreOptionsRef.current) {
+      moreOptionsRef.current.open = true;
+      moreOptionsRef.current.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
+    }
+  };
+
+  const uploadCardClass = (active = false) =>
+    `flex flex-col items-center gap-2 rounded-2xl border p-3 transition touch-manipulation sm:p-4 ${
+      active
+        ? 'border-brand-purple/60 bg-brand-purple/10'
+        : 'border-white/10 bg-white/[0.03] hover:border-brand-purple/40 hover:bg-white/[0.05]'
+    }`;
+
   return (
     <div
       className="md:sticky md:top-20"
@@ -454,22 +499,22 @@ const Sidebar: React.FC<SidebarProps> = ({
       onDrop={handleDrop}
     >
       {!compactMode && (
-        <>
-          <span className="inline-block rounded-full border border-brand-blue/30 bg-brand-gradient-soft px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-blue">
-            AI-Powered Style
-          </span>
-          <h1 className="mt-4 text-3xl font-bold leading-tight text-white sm:text-4xl lg:text-[2.75rem]">
-            Dress Better.{' '}
-            <span className="text-brand-gradient">Every Day.</span>
-          </h1>
-          <p className="mt-3 max-w-lg text-sm leading-relaxed text-slate-400 sm:text-base">
-            Upload a clothing item and get complete outfit suggestions tailored to you.
-          </p>
-        </>
+        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+          <div className="flex items-start gap-3">
+            <HangerIcon />
+            <div>
+              <h1 className="text-lg font-semibold text-white sm:text-xl">Upload a clothing item</h1>
+              <p className="mt-1 text-sm text-slate-400">
+                We&apos;ll identify colors, fabric and style to suggest the perfect outfit.
+              </p>
+            </div>
+          </div>
+        </div>
       )}
 
       {compactMode && effectivePreviewUrl && (
-        <MainFlowCompactSummary
+        <div className="mt-4">
+          <MainFlowCompactSummary
           filters={filters}
           preferenceText={preferenceText}
           imagePreviewUrl={effectivePreviewUrl}
@@ -479,6 +524,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           summaryFilters={summaryFilters}
           summaryPreferenceText={summaryPreferenceText}
         />
+        </div>
       )}
 
       {showCompactUploadActions && (
@@ -624,47 +670,53 @@ const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       {!compactMode && (
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            data-testid="main.uploadButton"
-            className={`flex flex-col items-center gap-2 rounded-2xl border p-4 transition touch-manipulation ${
-              isDragging
-                ? 'border-brand-blue/60 bg-brand-gradient-soft'
-                : 'border-white/10 bg-white/[0.03] hover:border-brand-blue/40 hover:bg-white/[0.05]'
-            }`}
-            aria-label="Upload clothing photo - click or drag and drop"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradient-soft text-brand-blue">
-              <UploadIcon />
-            </div>
-            <span className="text-sm font-medium text-white">Upload Item</span>
-          </button>
-
+        <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
           {hasCamera ? (
             <button
               type="button"
               onClick={openCamera}
-              className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-brand-blue/40 hover:bg-white/[0.05] touch-manipulation"
+              className={uploadCardClass()}
               aria-label="Take photo with camera"
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradient-soft text-brand-blue">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-purple/15 text-brand-purple">
                 <CameraIcon />
               </div>
-              <span className="text-sm font-medium text-white">Take Photo</span>
+              <span className="text-center text-xs font-medium text-white sm:text-sm">Take Photo</span>
             </button>
           ) : (
-            <div
-              className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.02] p-4 opacity-50"
-              aria-hidden
-            >
+            <div className={`${uploadCardClass()} opacity-50`} aria-hidden>
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-slate-500">
                 <CameraIcon />
               </div>
-              <span className="text-sm font-medium text-slate-500">Take Photo</span>
+              <span className="text-center text-xs font-medium text-slate-500 sm:text-sm">Take Photo</span>
             </div>
           )}
+
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            data-testid="main.uploadButton"
+            className={uploadCardClass(isDragging)}
+            aria-label="Upload clothing photo - click or drag and drop"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-purple/15 text-brand-purple">
+              <GalleryIcon />
+            </div>
+            <span className="text-center text-xs font-medium text-white sm:text-sm">Choose from Gallery</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className={uploadCardClass(isDragging)}
+            aria-label="Drag and drop image here"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-purple/15 text-brand-purple">
+              <DragDropIcon />
+            </div>
+            <span className="text-center text-xs font-medium text-white sm:text-sm">Drag &amp; Drop</span>
+            <span className="text-[10px] text-slate-500">PNG, JPG up to {CLIENT_MAX_SIZE_MB}MB</span>
+          </button>
         </div>
       )}
 
@@ -678,59 +730,94 @@ const Sidebar: React.FC<SidebarProps> = ({
       />
 
       {!compactMode && (
-        <p className="mt-2 text-center text-xs text-slate-500">
-          JPG, PNG, WebP up to {CLIENT_MAX_SIZE_MB}MB
-        </p>
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[10px] text-slate-500 sm:text-xs">
+          <span className="inline-flex items-center gap-1">
+            <LockIcon />
+            Your photos are private
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+            </svg>
+            No background required
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Takes about 5 seconds
+          </span>
+        </div>
       )}
 
       {compactMode ? (
-        <details className={`${detailsClass} mt-4`} open>
-          <summary className={summaryClass}>
-            <span>{MAIN_FLOW_UX_COPY.preferencesSection}</span>
-            <span className="text-slate-500 transition-transform group-open:rotate-180">▼</span>
-          </summary>
-          <div className="border-t border-white/10 px-4 py-4">
-            <AnalysisPreferences
-              filters={filters}
-              setFilters={setFilters}
-              preferenceText={preferenceText}
-              setPreferenceText={setPreferenceText}
-              onClear={handleClearPreferences}
-              variant="sidebar"
-              {...wardrobePrefsProps}
-            />
+        <div className="mt-4">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-white">Quick Preferences</h2>
+            <span className="text-xs text-slate-500">Edit to refine your next look</span>
           </div>
-        </details>
+          <AnalysisPreferences
+            filters={filters}
+            setFilters={setFilters}
+            preferenceText={preferenceText}
+            setPreferenceText={setPreferenceText}
+            onClear={handleClearPreferences}
+            variant="sidebar"
+            quickLayout
+            showSharedHint={false}
+            {...wardrobePrefsProps}
+          />
+        </div>
       ) : showCollapsedPrefs ? (
-        <button
-          type="button"
-          onClick={() => {
-            setFirstRunPrefsExpanded();
-            setPrefsManuallyExpanded(true);
-          }}
-          className="mt-5 flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-left transition hover:border-brand-blue/40 hover:bg-white/[0.05]"
-          aria-expanded="false"
-          aria-controls="outfit-preferences"
-          data-testid="first-run-prefs-collapsed"
-        >
-          <span className="text-sm text-slate-300">Occasion, season, style (optional)</span>
-          <span className="flex items-center gap-1 text-xs font-medium text-brand-blue">
-            Expand
-            <span className="text-slate-500" aria-hidden>
-              ▼
+        <div className="mt-6">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-white">Quick Preferences (optional)</h2>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setFirstRunPrefsExpanded();
+              setPrefsManuallyExpanded(true);
+            }}
+            className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-left transition hover:border-brand-purple/40 hover:bg-white/[0.05]"
+            aria-expanded="false"
+            aria-controls="outfit-preferences"
+            data-testid="first-run-prefs-collapsed"
+          >
+            <span className="text-sm text-slate-300">Occasion, season, style (optional)</span>
+            <span className="flex items-center gap-1 text-xs font-medium text-brand-purple">
+              Expand
+              <span className="text-slate-500" aria-hidden>
+                ▼
+              </span>
             </span>
-          </span>
-        </button>
+          </button>
+        </div>
       ) : (
-        <AnalysisPreferences
-          filters={filters}
-          setFilters={setFilters}
-          preferenceText={preferenceText}
-          setPreferenceText={setPreferenceText}
-          onClear={handleClearPreferences}
-          variant="sidebar"
-          {...wardrobePrefsProps}
-        />
+        <div className="mt-6">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-white">Quick Preferences (optional)</h2>
+            <button
+              type="button"
+              onClick={openMoreOptions}
+              className="text-xs font-medium text-brand-purple transition hover:text-brand-blue touch-manipulation"
+              data-testid="main-flow-more-options-trigger"
+            >
+              More Options →
+            </button>
+          </div>
+          <AnalysisPreferences
+            filters={filters}
+            setFilters={setFilters}
+            preferenceText={preferenceText}
+            setPreferenceText={setPreferenceText}
+            onClear={handleClearPreferences}
+            variant="sidebar"
+            quickLayout
+            showSharedHint={false}
+            {...wardrobePrefsProps}
+          />
+        </div>
       )}
 
       {/* Primary: generate outfit */}
@@ -745,7 +832,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           ref={generateButtonRef}
           onClick={onGetSuggestion}
           disabled={generateDisabled}
-          className={`${!isAuthenticated && guestRemaining !== null && guestRemaining > 0 ? 'mt-2' : 'mt-5'} flex w-full min-h-[48px] touch-manipulation items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-semibold text-white transition-all duration-200 ${
+          className={`${!isAuthenticated && guestRemaining !== null && guestRemaining > 0 ? 'mt-2' : 'mt-5'} flex w-full min-h-[52px] touch-manipulation items-center justify-between gap-3 rounded-2xl px-5 py-3.5 text-sm font-semibold text-white transition-all duration-200 ${
             generateDisabled
               ? 'cursor-not-allowed bg-white/10 text-slate-500'
               : highlightGenerateButton
@@ -764,20 +851,131 @@ const Sidebar: React.FC<SidebarProps> = ({
             </>
           ) : (
             <>
-              <SparkleIcon />
-              {MAIN_FLOW_UX_COPY.primaryCta}
+              <span className="flex items-center gap-2">
+                <SparkleIcon />
+                {MAIN_FLOW_UX_COPY.primaryCta}
+              </span>
+              <ArrowRightIcon />
             </>
           )}
         </button>
       )}
 
       {!compactMode && (
-        <p className="mt-3 text-center text-xs text-slate-500">
-          Your images are private and secure.
+        <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-xs text-slate-500">
+          <LockIcon />
+          AI will analyze your item and create the best matching outfit.
         </p>
       )}
 
-      {showWardrobeSection && (
+      {!compactMode && (
+        <details ref={moreOptionsRef} className={`${detailsClass} mt-4`} data-testid="main-flow-more-options">
+          <summary className={summaryClass}>
+            <span>More options</span>
+            <span className="text-slate-500 transition-transform group-open:rotate-180">▼</span>
+          </summary>
+          <div className="space-y-4 border-t border-white/10 px-4 py-4">
+            {onAddToWardrobe && (
+              <button
+                onClick={onAddToWardrobe}
+                disabled={!image || loading || addingToWardrobe}
+                className={`w-full rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${
+                  !image || loading || addingToWardrobe
+                    ? 'cursor-not-allowed border border-white/10 bg-white/10 text-slate-500'
+                    : 'border border-white/15 bg-white/5 text-slate-100 hover:border-brand-purple/40 hover:bg-brand-purple/10'
+                }`}
+                aria-label="Add current image to wardrobe"
+              >
+                {addingToWardrobe ? 'Adding...' : 'Add to Wardrobe'}
+              </button>
+            )}
+            {onGetRandomSuggestion && (
+              <button
+                onClick={onGetRandomSuggestion}
+                disabled={loading}
+                className={`w-full rounded-xl px-4 py-2.5 text-sm font-medium transition ${
+                  loading
+                    ? 'cursor-not-allowed border border-white/10 bg-white/10 text-slate-500'
+                    : 'border border-white/15 bg-white/5 text-slate-200 hover:border-brand-purple/40 hover:bg-brand-purple/10'
+                }`}
+                aria-label="Get random outfit from wardrobe"
+              >
+                Random from Wardrobe
+              </button>
+            )}
+            {onGetRandomFromHistory && (
+              <button
+                onClick={onGetRandomFromHistory}
+                disabled={loading}
+                className={`w-full rounded-xl px-4 py-2.5 text-sm font-medium transition ${
+                  loading
+                    ? 'cursor-not-allowed border border-white/10 bg-white/10 text-slate-500'
+                    : 'border border-white/15 bg-white/5 text-slate-200 hover:border-brand-blue/40 hover:bg-brand-blue/10'
+                }`}
+                aria-label="Show random outfit from your history"
+              >
+                Random from History
+              </button>
+            )}
+            {showModelGenerationControls && setGenerateModelImage && (
+              <ModernSwitch
+                id="include-model-preview"
+                checked={generateModelImage}
+                onChange={(value) => setGenerateModelImage(value)}
+                label="Include AI model preview"
+                description={MICRO_HELP.MODEL_PREVIEW}
+              />
+            )}
+            {showModelGenerationControls && generateModelImage && (
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-200">Image model</label>
+                <select
+                  value={imageModel}
+                  onChange={(e) => setImageModel(e.target.value)}
+                  className={selectClass}
+                  aria-label="Select image generation model"
+                >
+                  <option value="dalle3">DALL-E 3 (OpenAI)</option>
+                  <option value="stable-diffusion">Stable Diffusion</option>
+                  <option value="nano-banana">Nano Banana</option>
+                </select>
+              </div>
+            )}
+            {isAdmin && setShowAiPromptResponse && (
+              <ModernSwitch
+                id="ai-prompt-response-toggle-more"
+                checked={showAiPromptResponse}
+                onChange={(value) => setShowAiPromptResponse(value)}
+                label="Show AI Prompt & Response"
+                description="Toggle full AI input/output panel in results."
+              />
+            )}
+            <button
+              type="button"
+              onClick={handleClearPreferences}
+              className="w-full py-2 text-xs text-slate-500 transition hover:text-slate-300"
+              aria-label="Clear preferences"
+            >
+              Clear preferences
+            </button>
+            {isAuthenticated && onOpenInsights && (
+              <button
+                type="button"
+                onClick={onOpenInsights}
+                className="w-full text-left transition hover:text-brand-blue"
+                aria-label="Open insights for wardrobe analysis"
+              >
+                <span className="text-xs text-slate-500">Open Insights →</span>
+                <span className="mt-1 block text-[11px] leading-snug text-slate-500">
+                  {MICRO_HELP.INSIGHTS}
+                </span>
+              </button>
+            )}
+          </div>
+        </details>
+      )}
+
+      {compactMode && showWardrobeSection && (
         <details className={`${detailsClass} ${compactMode ? 'mt-4' : 'mt-5'}`}>
           <summary className={summaryClass}>
             <span>{MAIN_FLOW_UX_COPY.wardrobeSection}</span>
@@ -802,7 +1000,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </details>
       )}
 
-      {showRandomPicksSection && (
+      {compactMode && showRandomPicksSection && (
         <details className={detailsClass}>
           <summary className={summaryClass}>
             <span>{MAIN_FLOW_UX_COPY.randomPicksSection}</span>
@@ -841,8 +1039,8 @@ const Sidebar: React.FC<SidebarProps> = ({
         </details>
       )}
 
-      {/* Advanced: admin-only model & diagnostics */}
-      {showAdvancedOptions && (
+      {/* Advanced: admin-only model & diagnostics (compact result mode) */}
+      {compactMode && showAdvancedOptions && (
         <details className={detailsClass}>
           <summary className={summaryClass}>
             <span>{MAIN_FLOW_UX_COPY.advancedOptionsSection}</span>
@@ -886,7 +1084,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </details>
       )}
 
-      {!compactMode && (
+      {compactMode && (
         <button
           type="button"
           onClick={handleClearPreferences}
@@ -897,7 +1095,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </button>
       )}
 
-      {!compactMode && isAuthenticated && onOpenInsights && (
+      {compactMode && isAuthenticated && onOpenInsights && (
         <button
           type="button"
           onClick={onOpenInsights}
@@ -911,7 +1109,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </button>
       )}
 
-      {!compactMode && isAuthenticated && onViewAllRecentLooks && (
+      {compactMode && isAuthenticated && onViewAllRecentLooks && (
         <div className="mt-6 hidden md:block" data-testid="sidebar-recent-looks">
           <RecentLooksSection
             history={recentLooksHistory}

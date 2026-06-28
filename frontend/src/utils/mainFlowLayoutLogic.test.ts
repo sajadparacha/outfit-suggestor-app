@@ -9,8 +9,8 @@ import {
 describe('mainFlowLayoutLogic', () => {
   describe('layout constants (iOS parity)', () => {
     it('matches side-by-side shell constants', () => {
-      expect(MAIN_FLOW_MAX_CONTENT_WIDTH).toBe(980);
-      expect(MAIN_FLOW_SIDE_BY_SIDE_GAP_PX).toBe(20);
+      expect(MAIN_FLOW_MAX_CONTENT_WIDTH).toBe(1100);
+      expect(MAIN_FLOW_SIDE_BY_SIDE_GAP_PX).toBe(24);
     });
   });
 
