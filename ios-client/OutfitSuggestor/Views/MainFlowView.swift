@@ -190,6 +190,11 @@ struct MainFlowView: View {
             guard newId != nil else { return }
             showTransientMessage("Item loaded — set preferences, then \(MainFlowUxCopy.primaryCta).")
         }
+        .onChange(of: viewModel.infoToastMessage) { message in
+            guard let message else { return }
+            showTransientMessage(message)
+            viewModel.clearInfoToast()
+        }
         .sheet(isPresented: $showImagePicker) {
             ImagePicker(
                 selectedImage: Binding(

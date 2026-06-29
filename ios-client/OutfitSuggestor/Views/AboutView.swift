@@ -15,7 +15,7 @@ struct AboutView: View {
                     .font(.title.bold())
                 Text("Your Personal AI Fashion Stylist")
                     .foregroundColor(.secondary)
-                Text("Upload a photo of any clothing item and get outfit recommendations. When logged in, manage your wardrobe, view history, and use Random from Wardrobe or Random from History.")
+                Text("Upload a photo of any clothing item and get outfit recommendations. When logged in, manage your wardrobe, view history, and use AI-powered Random from Wardrobe or Random from History.")
                     .padding(.vertical, 8)
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Features")

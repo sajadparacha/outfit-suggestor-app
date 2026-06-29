@@ -59,6 +59,20 @@ export const useHistoryController = (options?: UseHistoryControllerOptions) => {
   };
 
   /**
+   * Fresh history fetch for Random from History — always hits API (no stale cache).
+   */
+  const fetchHistoryForRandomPick = async (limit: number = 150): Promise<OutfitHistoryEntry[]> => {
+    try {
+      return await apiService.getOutfitHistory(limit);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load history';
+      setError(errorMessage);
+      console.error('Error fetching history for random pick:', err);
+      throw err;
+    }
+  };
+
+  /**
    * Ensure all history is loaded (for searching)
    * @returns Current history entries (fetched if not already in full view)
    */
@@ -118,6 +132,7 @@ export const useHistoryController = (options?: UseHistoryControllerOptions) => {
     fetchRecentHistory,
     fetchHistory,
     ensureFullHistory,
+    fetchHistoryForRandomPick,
     deleteHistoryEntry,
   };
 };

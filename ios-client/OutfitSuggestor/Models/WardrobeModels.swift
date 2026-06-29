@@ -256,6 +256,26 @@ struct WardrobeOutfitSuggestionRequest: Encodable {
     let style: String?
     let text_input: String?
     let selected_wardrobe_item_ids: [Int]
+    let previous_outfit_text: String?
+    let avoid_outfit_texts: [String]?
+
+    enum CodingKeys: String, CodingKey {
+        case occasion, season, style, text_input, selected_wardrobe_item_ids
+        case previous_outfit_text, avoid_outfit_texts
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(occasion, forKey: .occasion)
+        try container.encodeIfPresent(season, forKey: .season)
+        try container.encodeIfPresent(style, forKey: .style)
+        try container.encodeIfPresent(text_input, forKey: .text_input)
+        try container.encode(selected_wardrobe_item_ids, forKey: .selected_wardrobe_item_ids)
+        try container.encodeIfPresent(previous_outfit_text, forKey: .previous_outfit_text)
+        if let avoidOutfitTexts = avoid_outfit_texts, !avoidOutfitTexts.isEmpty {
+            try container.encode(avoidOutfitTexts, forKey: .avoid_outfit_texts)
+        }
+    }
 }
 
 // MARK: - Wardrobe Gap Analysis

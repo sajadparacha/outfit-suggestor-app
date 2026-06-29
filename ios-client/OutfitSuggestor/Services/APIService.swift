@@ -39,6 +39,14 @@ protocol APIServiceProtocol {
         season: String?,
         style: String?
     ) async throws -> OutfitSuggestion
+    func getWardrobeOnlySuggestion(
+        occasion: String,
+        season: String,
+        style: String,
+        textInput: String,
+        previousOutfitText: String?,
+        avoidOutfitTexts: [String]?
+    ) async throws -> OutfitSuggestion
     func getOutfitHistory(limit: Int) async throws -> [OutfitHistoryEntry]
     func checkOutfitDuplicate(image: UIImage) async throws -> OutfitDuplicateResponse
     func getRandomOutfit(occasion: String, season: String, style: String) async throws -> OutfitSuggestion
@@ -280,7 +288,53 @@ class APIService {
             season: season?.isEmpty == false ? season : nil,
             style: style?.isEmpty == false ? style : nil,
             text_input: trimmedText.isEmpty ? nil : trimmedText,
-            selected_wardrobe_item_ids: selectedWardrobeItemIds
+            selected_wardrobe_item_ids: selectedWardrobeItemIds,
+            previous_outfit_text: nil,
+            avoid_outfit_texts: nil
+        )
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw APIServiceError.invalidResponse
+        }
+        guard http.statusCode == 200 else {
+            try throwAPIError(from: data, statusCode: http.statusCode)
+        }
+        return try JSONDecoder().decode(OutfitSuggestion.self, from: data)
+    }
+
+    /// AI wardrobe-only outfit (empty selection) — used for Random from Wardrobe.
+    func getWardrobeOnlySuggestion(
+        occasion: String,
+        season: String,
+        style: String,
+        textInput: String = "",
+        previousOutfitText: String? = nil,
+        avoidOutfitTexts: [String]? = nil
+    ) async throws -> OutfitSuggestion {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
+        if AppConfig.isUITestMode {
+            await maybeSimulateUITestDelay()
+            return uiTestStore.randomSuggestion()
+        }
+        guard let url = URL(string: "\(baseURL)/api/suggest-outfit-from-wardrobe") else { throw APIServiceError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        setAuthIfNeeded(&request)
+        request.timeoutInterval = 30
+
+        let trimmedText = textInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        let body = WardrobeOutfitSuggestionRequest(
+            occasion: occasion.isEmpty ? nil : occasion,
+            season: season.isEmpty ? nil : season,
+            style: style.isEmpty ? nil : style,
+            text_input: trimmedText.isEmpty ? nil : trimmedText,
+            selected_wardrobe_item_ids: [],
+            previous_outfit_text: previousOutfitText,
+            avoid_outfit_texts: avoidOutfitTexts
         )
         request.httpBody = try JSONEncoder().encode(body)
 

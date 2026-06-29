@@ -126,3 +126,34 @@ def test_prompt_includes_previous_outfit_when_requesting_alternative():
     assert "white linen" in prompt
     assert "Do NOT repeat" in prompt
 
+
+def test_prompt_includes_avoid_outfit_texts_for_wardrobe_only():
+    """Session variety can send a list of recent outfits to avoid."""
+    ai = AIService(api_key="test-key")
+    prompt = ai._build_prompt(  # type: ignore[attr-defined]
+        text_input="Occasion: work",
+        wardrobe_items={"shirt": []},
+        wardrobe_only=True,
+        avoid_outfit_texts=[
+            "Shirt: blue oxford\nTrousers: grey wool",
+            "Shirt: white tee\nTrousers: denim",
+        ],
+    )
+    assert "ALSO AVOID" in prompt
+    assert "blue oxford" in prompt
+    assert "white tee" in prompt
+
+
+def test_wardrobe_only_previous_outfit_includes_alternative_block():
+    """Wardrobe-only text path supports previous_outfit_text like photo flow."""
+    ai = AIService(api_key="test-key")
+    prev = "Shirt: navy blazer look\nTrousers: charcoal"
+    prompt = ai._build_prompt(  # type: ignore[attr-defined]
+        text_input="Occasion: business",
+        wardrobe_items={"shirt": []},
+        wardrobe_only=True,
+        previous_outfit_text=prev,
+    )
+    assert "ALTERNATIVE" in prompt or "ALTERNATIVE OUTFIT" in prompt
+    assert "navy blazer look" in prompt
+

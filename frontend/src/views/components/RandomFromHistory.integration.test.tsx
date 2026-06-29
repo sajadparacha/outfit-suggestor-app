@@ -8,6 +8,7 @@ import ApiService from '../../services/ApiService';
 import { server } from '../../test/msw/server';
 import { MAIN_FLOW_UX_COPY } from '../../utils/mainFlowUxCopy';
 import { formatPreviousOutfitForPrompt } from '../../utils/outfitPromptUtils';
+import { outfitFingerprint } from '../../utils/randomHistorySelection';
 
 jest.mock('../../utils/imageUtils', () => {
   const actual = jest.requireActual('../../utils/imageUtils');
@@ -244,6 +245,77 @@ describe('Random from History integration', () => {
       expect(screen.queryByTestId('result-primary-actions')).not.toBeInTheDocument();
       expect(screen.getByRole('button', { name: MAIN_FLOW_UX_COPY.primaryCtaAria })).toBeInTheDocument();
     });
+  });
+
+  it('consecutive picks prefer different fingerprints when duplicates exist in history', async () => {
+    const duplicateOlder = {
+      ...mockHistoryEntry,
+      id: 100,
+      created_at: '2024-06-10T10:00:00Z',
+      shirt: 'Blue casual shirt',
+    };
+    const duplicateNewer = {
+      ...mockHistoryEntry,
+      id: 101,
+      created_at: '2024-06-15T10:00:00Z',
+      shirt: 'Blue casual shirt',
+    };
+    const distinctLook = {
+      ...mockHistoryEntry,
+      id: 102,
+      created_at: '2024-06-20T10:00:00Z',
+      shirt: 'Green linen shirt',
+      trouser: 'Navy chinos',
+      reasoning: 'Distinct saved look.',
+    };
+
+    server.use(
+      rest.get(`${API_BASE}/api/auth/me`, (_req, res, ctx) => {
+        return res(ctx.json(mockUser));
+      }),
+      rest.get(`${API_BASE}/api/outfit-history`, (req, res, ctx) => {
+        const limit = Number(req.url.searchParams.get('limit') ?? 2);
+        if (limit >= 100) {
+          return res(ctx.json([duplicateOlder, duplicateNewer, distinctLook]));
+        }
+        return res(ctx.json([duplicateNewer]));
+      })
+    );
+
+    renderApp();
+
+    await waitFor(() => {
+      expect(screen.getByText('Random picks')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Random picks'));
+
+    const shirtsSeen = new Set<string>();
+    for (let click = 0; click < 2; click++) {
+      const randomFromHistoryBtn = await screen.findByRole('button', {
+        name: /show random outfit from your history/i,
+      });
+      fireEvent.click(randomFromHistoryBtn);
+
+      await waitFor(() => {
+        expect(screen.getAllByText(/Your Styled Look/i).length).toBeGreaterThan(0);
+        expect(
+          screen.queryAllByText('Blue casual shirt').length +
+            screen.queryAllByText('Green linen shirt').length
+        ).toBeGreaterThan(0);
+      });
+
+      if (screen.queryAllByText('Green linen shirt').length > 0) {
+        shirtsSeen.add('green');
+      }
+      if (screen.queryAllByText('Blue casual shirt').length > 0) {
+        shirtsSeen.add('blue');
+      }
+    }
+
+    expect(outfitFingerprint(duplicateOlder)).toBe(outfitFingerprint(duplicateNewer));
+    expect(outfitFingerprint(distinctLook)).not.toBe(outfitFingerprint(duplicateOlder));
+    expect(shirtsSeen.size).toBe(2);
   });
 
   it('shows error toast when history is empty', async () => {

@@ -75,7 +75,7 @@ class _MockAIService:
             {"gpt4_cost": 0.0, "model_image_cost": 0.0, "total_cost": 0.0},
         )
 
-    def get_outfit_suggestion_text_only(self, text_input="", wardrobe_items=None, wardrobe_only=False):
+    def get_outfit_suggestion_text_only(self, text_input="", wardrobe_items=None, wardrobe_only=False, previous_outfit_text=None, avoid_outfit_texts=None):
         """Used by /api/suggest-outfit-from-wardrobe (no image)."""
         suggestion = OutfitSuggestion(
             shirt="Test shirt",
@@ -85,7 +85,12 @@ class _MockAIService:
             belt="Test belt",
             reasoning="Test reasoning",
         )
-        suggestion.ai_prompt = text_input
+        parts = [text_input or ""]
+        if previous_outfit_text:
+            parts.append(f"PREV:{previous_outfit_text}")
+        if avoid_outfit_texts:
+            parts.append("AVOID:" + "|".join(avoid_outfit_texts))
+        suggestion.ai_prompt = " ".join(parts)
         return (
             suggestion,
             {"gpt4_cost": 0.0, "model_image_cost": 0.0, "total_cost": 0.0},

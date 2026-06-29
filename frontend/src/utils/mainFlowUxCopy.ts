@@ -34,6 +34,7 @@ export const MAIN_FLOW_UX_COPY = {
   layerLabel: 'Layer',
   outerwearLabel: 'Outerwear',
   tieLabel: 'Tie',
+  randomHistoryOnlyOneLook: 'Only one saved look in your history so far.',
 } as const;
 
 export type MainFlowUxCopyKey = keyof typeof MAIN_FLOW_UX_COPY;

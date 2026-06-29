@@ -81,11 +81,15 @@ class OutfitViewModel: ObservableObject {
     @Published var loadingContext: LoadingContext?
     @Published var guestRemaining: Int?
     @Published var guestRequiresSignup = false
+    @Published var infoToastMessage: String?
     
     private let apiService: APIServiceProtocol
     private var cancellables = Set<AnyCancellable>()
     private var cachedHistory: [OutfitHistoryEntry] = []
     private var hasLoadedHistory = false
+    private var currentHistoryEntryId: Int?
+    private var randomHistorySelection = RandomHistorySelection()
+    private var wardrobeRandomSession = WardrobeRandomSession()
     private var activeOperationTask: Task<Void, Never>?
     
     var aiOperationType: AiOperationType? {
@@ -106,6 +110,14 @@ class OutfitViewModel: ObservableObject {
     
     init(apiService: APIServiceProtocol = APIService.shared) {
         self.apiService = apiService
+        $filters
+            .map { ($0.occasion, $0.season, $0.style) }
+            .removeDuplicates(by: ==)
+            .dropFirst()
+            .sink { [weak self] _ in
+                self?.wardrobeRandomSession.reset()
+            }
+            .store(in: &cancellables)
     }
     
     var isAuthenticated: Bool { AuthService.shared.isAuthenticated }
@@ -214,6 +226,14 @@ class OutfitViewModel: ObservableObject {
         existingDuplicateSuggestion = nil
         hasLoadedHistory = false
         cachedHistory = []
+        currentHistoryEntryId = nil
+        randomHistorySelection.reset()
+        wardrobeRandomSession.reset()
+        infoToastMessage = nil
+    }
+
+    func clearInfoToast() {
+        infoToastMessage = nil
     }
 
     func startGetSuggestion(skipDuplicateCheck: Bool = false) {
@@ -505,6 +525,7 @@ class OutfitViewModel: ObservableObject {
     
     /// Load a suggestion from history (e.g. after tapping in History tab)
     func loadFromHistory(_ entry: OutfitHistoryEntry) {
+        currentHistoryEntryId = entry.id
         currentSuggestion = entry.toOutfitSuggestion()
     }
     
@@ -675,7 +696,7 @@ class OutfitViewModel: ObservableObject {
         return snapshot
     }
     
-    /// Random outfit from wardrobe (auth required)
+    /// Random outfit from wardrobe via AI (auth required)
     func getRandomFromWardrobe() async {
         guard isAuthenticated else { showErrorMessage("Please log in"); return }
         isLoading = true
@@ -691,15 +712,49 @@ class OutfitViewModel: ObservableObject {
         }
         do {
             try Task.checkCancellation()
+            let previousOutfitText: String?
+            if inputPanelSource == .wardrobeRandom, let current = currentSuggestion {
+                previousOutfitText = OutfitPromptUtils.formatPreviousOutfitForPrompt(current)
+            } else {
+                previousOutfitText = nil
+            }
+            let avoidTexts = wardrobeRandomSession.avoidOutfitTexts(excludingPrevious: previousOutfitText)
+            let trimmedNotes = preferenceText.trimmingCharacters(in: .whitespacesAndNewlines)
+            let occasion = filters.occasion.lowercased()
+            let season = filters.season.lowercased()
+            let style = filters.style.lowercased()
+
             selectedImage = nil
             flowPreviewImage = nil
             sourceWardrobeItem = nil
             loadedFromRandomPick = true
-            let suggestion = try await apiService.getRandomOutfit(
-                occasion: filters.occasion.lowercased(),
-                season: filters.season.lowercased(),
-                style: filters.style.lowercased()
-            )
+
+            var suggestion: OutfitSuggestion?
+            var attempt = 0
+            while attempt < WardrobeRandomSession.wardrobeRandomMaxRetries {
+                try Task.checkCancellation()
+                let candidate = try await apiService.getWardrobeOnlySuggestion(
+                    occasion: occasion,
+                    season: season,
+                    style: style,
+                    textInput: trimmedNotes,
+                    previousOutfitText: previousOutfitText,
+                    avoidOutfitTexts: avoidTexts.isEmpty ? nil : avoidTexts
+                )
+                let fingerprint = WardrobeRandomSession.suggestionFingerprint(for: candidate)
+                if !wardrobeRandomSession.isDuplicate(fingerprint) {
+                    suggestion = candidate
+                    break
+                }
+                attempt += 1
+                if attempt >= WardrobeRandomSession.wardrobeRandomMaxRetries {
+                    suggestion = candidate
+                    break
+                }
+            }
+
+            guard let suggestion else { return }
+            wardrobeRandomSession.record(suggestion)
             currentSuggestion = suggestion
             flowPreviewImage = Self.previewImageFromWardrobeMatches(suggestion)
             captureInputSnapshotForResult(source: .wardrobeRandom)
@@ -788,19 +843,28 @@ class OutfitViewModel: ObservableObject {
         }
         do {
             try Task.checkCancellation()
-            if !hasLoadedHistory {
-                cachedHistory = try await apiService.getOutfitHistory(limit: 100)
-                hasLoadedHistory = true
-            }
-            guard let entry = cachedHistory.randomElement() else {
+            hasLoadedHistory = false
+            cachedHistory = try await apiService.getOutfitHistory(limit: 100)
+            hasLoadedHistory = true
+
+            let excludeCurrentId = inputPanelSource == .history ? currentHistoryEntryId : nil
+            let pickResult = randomHistorySelection.pick(
+                from: cachedHistory,
+                excludeCurrentId: excludeCurrentId
+            )
+            guard let entry = pickResult.entry else {
                 showErrorMessage("No history yet. Get some outfit suggestions first.")
                 return
+            }
+            if pickResult.shouldShowSingleLookToast {
+                infoToastMessage = MainFlowUxCopy.randomHistoryOnlyOneLook
             }
             selectedImage = nil
             flowPreviewImage = nil
             sourceWardrobeItem = nil
             loadedFromRandomPick = true
             inputPanelSource = .history
+            currentHistoryEntryId = entry.id
             summaryFilters = Self.filtersFromHistoryEntry(entry, fallback: filters)
             summaryPreferenceText = entry.text_input ?? ""
             let suggestion = entry.toOutfitSuggestion()

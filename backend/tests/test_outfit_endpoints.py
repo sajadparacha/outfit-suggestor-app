@@ -507,6 +507,31 @@ class TestOutfitEndpoints:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "shirt, trouser, blazer, shoes, or belt" in response.json()["detail"]
 
+    def test_suggest_outfit_from_wardrobe_only_accepts_previous_outfit_text(
+        self, client, auth_headers, wardrobe_item
+    ):
+        """Wardrobe-only endpoint accepts variety fields for session dedupe."""
+        payload = {
+            "occasion": "casual",
+            "season": "all",
+            "style": "modern",
+            "text_input": "Comfortable look",
+            "previous_outfit_text": "Shirt: white\nTrousers: navy",
+            "avoid_outfit_texts": ["Shirt: blue\nTrousers: grey"],
+        }
+        response = client.post(
+            "/api/suggest-outfit-from-wardrobe",
+            json=payload,
+            headers=auth_headers,
+        )
+        assert response.status_code != status.HTTP_401_UNAUTHORIZED
+        assert response.status_code != status.HTTP_403_FORBIDDEN
+        assert response.status_code != status.HTTP_422_UNPROCESSABLE_ENTITY
+        if response.status_code == status.HTTP_200_OK:
+            data = response.json()
+            prompt = data.get("ai_prompt") or ""
+            assert "PREV:Shirt: white" in prompt or "white" in prompt.lower()
+
 
 class TestOutfitSuggestionOptionalLayers:
     """Schema tests for optional sweater/outerwear/tie fields."""

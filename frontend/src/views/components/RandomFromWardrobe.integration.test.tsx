@@ -7,6 +7,7 @@ import { renderApp } from '../../test/renderWithRouter';
 import ApiService from '../../services/ApiService';
 import { server } from '../../test/msw/server';
 import { MAIN_FLOW_UX_COPY } from '../../utils/mainFlowUxCopy';
+import { formatPreviousOutfitForPrompt } from '../../utils/outfitPromptUtils';
 
 const API_BASE = 'http://localhost:8001';
 
@@ -99,5 +100,13 @@ describe('Random from Wardrobe regenerate integration', () => {
       expect(ApiService.getWardrobeOnlySuggestion).toHaveBeenCalledTimes(2);
       expect(screen.getByText('Blue oxford')).toBeInTheDocument();
     });
+
+    const secondCall = (ApiService.getWardrobeOnlySuggestion as jest.Mock).mock.calls[1];
+    const previousText = formatPreviousOutfitForPrompt({
+      id: '1',
+      ...wardrobeOutfitFirst,
+    });
+    expect(secondCall[6]).toBe(previousText);
+    expect(secondCall[7]).toEqual([previousText]);
   });
 });

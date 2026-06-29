@@ -238,3 +238,92 @@ describe('ApiService.analyzeWardrobeGaps', () => {
     );
   });
 });
+
+describe('ApiService.getWardrobeOnlySuggestion', () => {
+  const originalFetch = global.fetch;
+
+  function mockJsonResponse(body?: object, status = 200, ok = true) {
+    const responseBody = body ?? {
+      shirt: 'x',
+      trouser: 'x',
+      blazer: 'x',
+      shoes: 'x',
+      belt: 'x',
+      reasoning: 'x',
+    };
+    const res = {
+      ok,
+      status,
+      headers: { get: (h: string) => (h === 'content-type' ? 'application/json' : null) },
+      json: async () => responseBody,
+      clone() {
+        return res;
+      },
+    };
+    return res;
+  }
+
+  beforeEach(() => {
+    localStorage.clear();
+    apiService.setAuthToken('test-token');
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+    global.fetch = jest.fn().mockResolvedValue(mockJsonResponse()) as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    jest.restoreAllMocks();
+  });
+
+  it('sends wardrobe-only JSON without variety fields by default', async () => {
+    await apiService.getWardrobeOnlySuggestion('casual', 'summer', 'modern', 'notes');
+
+    const [, init] = (global.fetch as jest.Mock).mock.calls[0] as [string, RequestInit];
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual({
+      occasion: 'casual',
+      season: 'summer',
+      style: 'modern',
+      text_input: 'notes',
+    });
+  });
+
+  it('includes previous_outfit_text and avoid_outfit_texts when provided', async () => {
+    await apiService.getWardrobeOnlySuggestion(
+      'casual',
+      'summer',
+      'modern',
+      '',
+      undefined,
+      undefined,
+      'Shirt: white\nTrousers: navy',
+      ['Shirt: blue\nTrousers: grey']
+    );
+
+    const [, init] = (global.fetch as jest.Mock).mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toEqual({
+      occasion: 'casual',
+      season: 'summer',
+      style: 'modern',
+      text_input: '',
+      previous_outfit_text: 'Shirt: white\nTrousers: navy',
+      avoid_outfit_texts: ['Shirt: blue\nTrousers: grey'],
+    });
+  });
+
+  it('omits blank previous_outfit_text', async () => {
+    await apiService.getWardrobeOnlySuggestion(
+      'casual',
+      'summer',
+      'modern',
+      '',
+      undefined,
+      undefined,
+      '   '
+    );
+
+    const [, init] = (global.fetch as jest.Mock).mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(init.body as string);
+    expect(body.previous_outfit_text).toBeUndefined();
+  });
+});

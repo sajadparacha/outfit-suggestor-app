@@ -85,6 +85,11 @@
 		M1F2L3O4W5U6X7C8O9P0Y0F /* MainFlowUxContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1F2L3O4W5U6X7C8O9P0Y10 /* MainFlowUxContractTests.swift */; };
 		R1E2G3E4N5L6O7G8I9C001 /* MainFlowResultRegenerateLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = R1E2G3E4N5L6O7G8I9C002 /* MainFlowResultRegenerateLogic.swift */; };
 		R1E2G3E4N5L6O7G8I9C003 /* MainFlowResultRegenerateLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = R1E2G3E4N5L6O7G8I9C004 /* MainFlowResultRegenerateLogicTests.swift */; };
+		R1H2I3S4T5O6R7Y8S9E0L01 /* RandomHistorySelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = R1H2I3S4T5O6R7Y8S9E0L02 /* RandomHistorySelection.swift */; };
+		R1H2I3S4T5O6R7Y8S9E0L03 /* RandomHistorySelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = R1H2I3S4T5O6R7Y8S9E0L04 /* RandomHistorySelectionTests.swift */; };
+		WRS01BF0000000000000001 /* WardrobeRandomSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = WRS01FR0000000000000001 /* WardrobeRandomSession.swift */; };
+		OPU01BF0000000000000001 /* OutfitPromptUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = OPU01FR0000000000000001 /* OutfitPromptUtils.swift */; };
+		WRS01BF0000000000000002 /* WardrobeRandomSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WRS01FR0000000000000002 /* WardrobeRandomSessionTests.swift */; };
 		M1F2L3A4Y5O6U7T8L9O0G03 /* MainFlowLayoutLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1F2L3A4Y5O6U7T8L9O0G04 /* MainFlowLayoutLogicTests.swift */; };
 		F1L2T3E4R5V6I7E8W900001 /* FiltersViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L2T3E4R5V6I7E8W900002 /* FiltersViewTests.swift */; };
 		O1I2T3H4U5M6B7N8A9I0L02 /* OutfitItemThumbnail.swift in Sources */ = {isa = PBXBuildFile; fileRef = O1I2T3H4U5M6B7N8A9I0L01 /* OutfitItemThumbnail.swift */; };
@@ -212,6 +217,11 @@
 		M1F2L3O4W5U6X7C8O9P0Y10 /* MainFlowUxContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlowUxContractTests.swift; sourceTree = "<group>"; };
 		R1E2G3E4N5L6O7G8I9C002 /* MainFlowResultRegenerateLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlowResultRegenerateLogic.swift; sourceTree = "<group>"; };
 		R1E2G3E4N5L6O7G8I9C004 /* MainFlowResultRegenerateLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlowResultRegenerateLogicTests.swift; sourceTree = "<group>"; };
+		R1H2I3S4T5O6R7Y8S9E0L02 /* RandomHistorySelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RandomHistorySelection.swift; sourceTree = "<group>"; };
+		R1H2I3S4T5O6R7Y8S9E0L04 /* RandomHistorySelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RandomHistorySelectionTests.swift; sourceTree = "<group>"; };
+		WRS01FR0000000000000001 /* WardrobeRandomSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeRandomSession.swift; sourceTree = "<group>"; };
+		OPU01FR0000000000000001 /* OutfitPromptUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitPromptUtils.swift; sourceTree = "<group>"; };
+		WRS01FR0000000000000002 /* WardrobeRandomSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeRandomSessionTests.swift; sourceTree = "<group>"; };
 		M1F2L3A4Y5O6U7T8L9O0G04 /* MainFlowLayoutLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlowLayoutLogicTests.swift; sourceTree = "<group>"; };
 		F1L2T3E4R5V6I7E8W900002 /* FiltersViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FiltersViewTests.swift; sourceTree = "<group>"; };
 		O1I2T3H4U5M6B7N8A9I0L01 /* OutfitItemThumbnail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitItemThumbnail.swift; sourceTree = "<group>"; };
@@ -257,6 +267,8 @@
 				A1R2E3P4O5R6T7M8O9D0E05 /* ReportsViewModelTests.swift */,
 				M1F2L3O4W5U6X7C8O9P0Y10 /* MainFlowUxContractTests.swift */,
 				R1E2G3E4N5L6O7G8I9C004 /* MainFlowResultRegenerateLogicTests.swift */,
+				R1H2I3S4T5O6R7Y8S9E0L04 /* RandomHistorySelectionTests.swift */,
+				WRS01FR0000000000000002 /* WardrobeRandomSessionTests.swift */,
 				M1F2L3A4Y5O6U7T8L9O0G04 /* MainFlowLayoutLogicTests.swift */,
 				F1L2T3E4R5V6I7E8W900002 /* FiltersViewTests.swift */,
 				O1I2T3H4U5M6B7N8A9I0L03 /* OutfitItemThumbnailTests.swift */,
@@ -385,6 +397,9 @@
 				G1U2E3S4T5L6I7M8I900002 /* MainFlowGuestLimitLogic.swift */,
 				M1F2L3A4Y5O6U7T8L9O0G02 /* MainFlowLayoutLogic.swift */,
 				R1E2G3E4N5L6O7G8I9C002 /* MainFlowResultRegenerateLogic.swift */,
+				R1H2I3S4T5O6R7Y8S9E0L02 /* RandomHistorySelection.swift */,
+				WRS01FR0000000000000001 /* WardrobeRandomSession.swift */,
+				OPU01FR0000000000000001 /* OutfitPromptUtils.swift */,
 				M1F2L3O4W5U6X7C8O9P0Y02 /* MainFlowUxCopy.swift */,
 				M1F2L3O4W5U6X7C8O9P0Y04 /* ReasoningBullets.swift */,
 				M1F2L3O4W5U6X7C8O9P0Y06 /* OutfitContextLine.swift */,
@@ -627,6 +642,9 @@
 				G1U2E3S4T5L6I7M8I900001 /* MainFlowGuestLimitLogic.swift in Sources */,
 				M1F2L3A4Y5O6U7T8L9O0G01 /* MainFlowLayoutLogic.swift in Sources */,
 				R1E2G3E4N5L6O7G8I9C001 /* MainFlowResultRegenerateLogic.swift in Sources */,
+				R1H2I3S4T5O6R7Y8S9E0L01 /* RandomHistorySelection.swift in Sources */,
+				WRS01BF0000000000000001 /* WardrobeRandomSession.swift in Sources */,
+				OPU01BF0000000000000001 /* OutfitPromptUtils.swift in Sources */,
 				A1R2E3P4O5R6T7M8O9D0E02 /* ReportsModels.swift in Sources */,
 				A1R2E3P4O5R6T7M8O9D0E04 /* ReportsViewModel.swift in Sources */,
 				M1F2L3O4W5U6X7C8O9P0Y01 /* MainFlowUxCopy.swift in Sources */,
@@ -677,6 +695,8 @@
 				A1R2E3P4O5R6T7M8O9D0E06 /* ReportsViewModelTests.swift in Sources */,
 				M1F2L3O4W5U6X7C8O9P0Y0F /* MainFlowUxContractTests.swift in Sources */,
 				R1E2G3E4N5L6O7G8I9C003 /* MainFlowResultRegenerateLogicTests.swift in Sources */,
+				R1H2I3S4T5O6R7Y8S9E0L03 /* RandomHistorySelectionTests.swift in Sources */,
+				WRS01BF0000000000000002 /* WardrobeRandomSessionTests.swift in Sources */,
 				M1F2L3A4Y5O6U7T8L9O0G03 /* MainFlowLayoutLogicTests.swift in Sources */,
 				F1L2T3E4R5V6I7E8W900001 /* FiltersViewTests.swift in Sources */,
 				O1I2T3H4U5M6B7N8A9I0L04 /* OutfitItemThumbnailTests.swift in Sources */,

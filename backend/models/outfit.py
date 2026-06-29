@@ -94,4 +94,12 @@ class WardrobeOnlyOutfitRequest(BaseModel):
         default_factory=list,
         description="Optional selected wardrobe item IDs that AI must keep while completing missing outfit slots"
     )
+    previous_outfit_text: str = Field(
+        default="",
+        description="Prior outfit description so AI suggests a different combination",
+    )
+    avoid_outfit_texts: list[str] = Field(
+        default_factory=list,
+        description="Short list of recent outfit descriptions to avoid repeating",
+    )
 

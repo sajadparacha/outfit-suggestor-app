@@ -29,6 +29,53 @@ final class APIServiceIntegrationTests: XCTestCase {
         super.tearDown()
     }
 
+    func testGetWardrobeOnlySuggestionPostsToSuggestEndpoint() async throws {
+        let service = makeService { request in
+            XCTAssertEqual(request.url?.path, "/api/suggest-outfit-from-wardrobe")
+            XCTAssertEqual(request.httpMethod, "POST")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
+            let body = try XCTUnwrap(httpBodyData(from: request))
+            let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+            XCTAssertEqual(json["occasion"] as? String, "everyday")
+            XCTAssertEqual(json["season"] as? String, "all-season")
+            XCTAssertEqual(json["style"] as? String, "classic")
+            XCTAssertEqual(json["text_input"] as? String, "no sneakers")
+            XCTAssertEqual(json["selected_wardrobe_item_ids"] as? [Int], [])
+            XCTAssertEqual(json["previous_outfit_text"] as? String, "Shirt: white\nTrousers: navy")
+            XCTAssertEqual(json["avoid_outfit_texts"] as? [String], ["Shirt: green\nTrousers: olive"])
+            return (
+                HTTPURLResponse(
+                    url: request.url!,
+                    statusCode: 200,
+                    httpVersion: nil,
+                    headerFields: nil
+                )!,
+                """
+                {
+                  "shirt":"white oxford shirt",
+                  "trouser":"navy trouser",
+                  "blazer":"charcoal blazer",
+                  "shoes":"brown loafers",
+                  "belt":"brown belt",
+                  "reasoning":"balanced smart-casual outfit"
+                }
+                """.data(using: .utf8)!
+            )
+        }
+
+        let suggestion = try await service.getWardrobeOnlySuggestion(
+            occasion: "everyday",
+            season: "all-season",
+            style: "classic",
+            textInput: "no sneakers",
+            previousOutfitText: "Shirt: white\nTrousers: navy",
+            avoidOutfitTexts: ["Shirt: green\nTrousers: olive"]
+        )
+        XCTAssertEqual(suggestion.shirt, "white oxford shirt")
+        XCTAssertEqual(suggestion.belt, "brown belt")
+    }
+
     func testGetRandomOutfitDecodesRandomResponseShape() async throws {
         let service = makeService { request in
             XCTAssertEqual(request.url?.path, "/api/wardrobe/random-outfit")

@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 
 interface ToastProps {
   message: string;
-  type: 'success' | 'error';
+  type: 'success' | 'error' | 'info';
   onClose: () => void;
 }
 
@@ -21,12 +21,14 @@ const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
         className={`px-6 py-4 rounded-lg shadow-2xl flex items-center space-x-3 max-w-md ${
           type === 'success'
             ? 'btn-brand'
-            : 'bg-red-500 text-white'
+            : type === 'info'
+              ? 'bg-slate-700 text-white border border-white/20'
+              : 'bg-red-500 text-white'
         }`}
         role="alert"
       >
         <div className="text-2xl">
-          {type === 'success' ? '✅' : '❌'}
+          {type === 'success' ? '✅' : type === 'info' ? 'ℹ️' : '❌'}
         </div>
         <p className="font-medium">{message}</p>
         <button

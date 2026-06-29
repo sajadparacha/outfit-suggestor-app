@@ -248,7 +248,9 @@ class ApiService {
     style: string,
     textInput: string = '',
     signal?: AbortSignal,
-    selectedWardrobeItemIds?: number[]
+    selectedWardrobeItemIds?: number[],
+    previousOutfitText?: string,
+    avoidOutfitTexts?: string[]
   ): Promise<OutfitResponse> {
     try {
       const url = `${this.baseUrl}/api/suggest-outfit-from-wardrobe`;
@@ -258,6 +260,8 @@ class ApiService {
         style: string;
         text_input: string;
         selected_wardrobe_item_ids?: number[];
+        previous_outfit_text?: string;
+        avoid_outfit_texts?: string[];
       } = {
         occasion,
         season,
@@ -266,6 +270,13 @@ class ApiService {
       };
       if (selectedWardrobeItemIds && selectedWardrobeItemIds.length > 0) {
         body.selected_wardrobe_item_ids = selectedWardrobeItemIds;
+      }
+      const prev = previousOutfitText?.trim();
+      if (prev) {
+        body.previous_outfit_text = prev;
+      }
+      if (avoidOutfitTexts && avoidOutfitTexts.length > 0) {
+        body.avoid_outfit_texts = avoidOutfitTexts;
       }
 
       const response = await this.fetchWithLogging(url, {

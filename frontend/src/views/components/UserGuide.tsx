@@ -319,7 +319,8 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               </p>
               <h3 className="font-semibold text-white mb-2">Random from Wardrobe</h3>
               <p className="text-slate-400 text-sm leading-relaxed">
-                Builds an outfit from what you own, using your Preferences (occasion, season, style, notes).
+                AI combines items from your wardrobe into a fresh outfit, using your Preferences (occasion,
+                season, style, notes). Repeated taps aim for different looks within your session.
               </p>
             </div>
             <div className="rounded-2xl bg-white/5 border border-white/10 p-5">
@@ -329,6 +330,7 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               <h3 className="font-semibold text-white mb-2">Random from History</h3>
               <p className="text-slate-400 text-sm leading-relaxed">
                 Surfaces a past suggestion for instant inspiration—great when you are feeling indecisive.
+                Repeated taps rotate through varied saved looks instead of showing the same outfit.
               </p>
             </div>
           </div>

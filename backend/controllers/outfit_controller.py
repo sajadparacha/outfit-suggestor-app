@@ -461,6 +461,8 @@ class OutfitController:
         db: Session,
         current_user: Optional[User],
         selected_wardrobe_item_ids: Optional[List[int]] = None,
+        previous_outfit_text: Optional[str] = None,
+        avoid_outfit_texts: Optional[List[str]] = None,
     ) -> OutfitSuggestion:
         """
         Suggest an outfit using ONLY the user's wardrobe items (no uploaded image).
@@ -530,7 +532,9 @@ class OutfitController:
             suggestion, cost_info = self.ai_service.get_outfit_suggestion_text_only(
                 text_input=combined_text_input,
                 wardrobe_items=wardrobe_items_dict,
-                wardrobe_only=True
+                wardrobe_only=True,
+                previous_outfit_text=previous_outfit_text,
+                avoid_outfit_texts=avoid_outfit_texts,
             )
             self._pin_selected_items_to_suggestion(
                 suggestion,

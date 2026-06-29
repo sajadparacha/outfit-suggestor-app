@@ -213,6 +213,13 @@ async def suggest_outfit_from_wardrobe_only(
         from fastapi import HTTPException
         raise HTTPException(status_code=401, detail="Authentication required")
 
+    prev = (body.previous_outfit_text or "").strip() or None
+    avoid = [
+        t.strip()
+        for t in (body.avoid_outfit_texts or [])
+        if t and str(t).strip()
+    ]
+
     return await outfit_controller.suggest_outfit_from_wardrobe_only(
         text_input=body.text_input or "",
         occasion=body.occasion,
@@ -221,6 +228,8 @@ async def suggest_outfit_from_wardrobe_only(
         db=db,
         current_user=current_user,
         selected_wardrobe_item_ids=body.selected_wardrobe_item_ids,
+        previous_outfit_text=prev,
+        avoid_outfit_texts=avoid or None,
     )
 
 

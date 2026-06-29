@@ -188,6 +188,7 @@ function App() {
     refreshHistory,
     fetchRecentHistory,
     ensureFullHistory,
+    fetchHistoryForRandomPick,
     deleteHistoryEntry,
   } = useHistoryController({
     userId: user?.id ?? null,
@@ -393,13 +394,18 @@ function App() {
 
   const handleGetRandomFromHistory = async () => {
     try {
-      const result = await loadRandomFromHistory(ensureFullHistory);
-      if (result === 'empty') {
+      const result = await loadRandomFromHistory(() => fetchHistoryForRandomPick(150));
+      if (result.status === 'empty') {
         showToast('No history yet. Get some outfit suggestions first! 📋', 'error');
         return;
       }
       navigate(ROUTES.MAIN);
       showToast('Random outfit from your history! 📋', 'success');
+      if (result.showSingleLookToast) {
+        window.setTimeout(() => {
+          showToast(MAIN_FLOW_UX_COPY.randomHistoryOnlyOneLook, 'info');
+        }, 3200);
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load history';
       showToast(errorMessage, 'error');

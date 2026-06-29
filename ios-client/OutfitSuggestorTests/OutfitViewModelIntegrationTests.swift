@@ -23,7 +23,7 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
         AuthService.shared.authToken = "test-token"
         AuthService.shared.currentUser = makeUser()
         let mock = MockAPIService()
-        mock.randomOutfitResult = .success(
+        mock.wardrobeOnlyResult = .success(
             OutfitSuggestion(
                 shirt: "blue shirt",
                 trouser: "grey trouser",
@@ -39,7 +39,12 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
 
         XCTAssertEqual(viewModel.currentSuggestion?.shirt, "blue shirt")
         XCTAssertFalse(viewModel.showError)
-        XCTAssertEqual(mock.randomOutfitCalls, 1)
+        XCTAssertEqual(mock.wardrobeOnlyCalls.count, 1)
+        XCTAssertEqual(mock.randomOutfitCalls, 0)
+        XCTAssertEqual(mock.wardrobeOnlyCalls.first?.occasion, "everyday")
+        XCTAssertEqual(mock.wardrobeOnlyCalls.first?.season, "all-season")
+        XCTAssertEqual(mock.wardrobeOnlyCalls.first?.style, "classic")
+        XCTAssertNil(mock.wardrobeOnlyCalls.first?.previousOutfitText)
     }
 
     func testCompleteOutfitFromOneWardrobeItemCallsAPIAndSetsSuggestion() async {
@@ -116,7 +121,7 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
         AuthService.shared.currentUser = makeUser()
         let b64 = makeBase64TestImage()
         let mock = MockAPIService()
-        mock.randomOutfitResult = .success(
+        mock.wardrobeOnlyResult = .success(
             OutfitSuggestion(
                 shirt: "wardrobe shirt",
                 trouser: "grey trouser",
@@ -164,7 +169,7 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
         AuthService.shared.authToken = "expired-token"
         AuthService.shared.currentUser = makeUser()
         let mock = MockAPIService()
-        mock.randomOutfitResult = .failure(APIServiceError.serverError("Session expired or invalid. Please log in again."))
+        mock.wardrobeOnlyResult = .failure(APIServiceError.serverError("Session expired or invalid. Please log in again."))
         let viewModel = OutfitViewModel(apiService: mock)
 
         await viewModel.getRandomFromWardrobe()
@@ -227,6 +232,87 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
 
         XCTAssertEqual(viewModel.currentSuggestion?.shirt, "white shirt")
         XCTAssertEqual(mock.historyCalls, 1)
+    }
+
+    func testGetRandomFromHistoryRefetchesOnEachPick() async {
+        AuthService.shared.authToken = "test-token"
+        AuthService.shared.currentUser = makeUser()
+        let mock = MockAPIService()
+        mock.historyResult = .success(makeDiverseHistoryEntries())
+        let viewModel = OutfitViewModel(apiService: mock)
+
+        await viewModel.getRandomFromHistory()
+        await viewModel.getRandomFromHistory()
+
+        XCTAssertEqual(mock.historyCalls, 2)
+    }
+
+    func testGetRandomFromHistoryDeduplicatesNearDuplicateFingerprints() async {
+        AuthService.shared.authToken = "test-token"
+        AuthService.shared.currentUser = makeUser()
+        let mock = MockAPIService()
+        mock.historyResult = .success([
+            makeHistoryEntry(id: 1, shirt: "white shirt", createdAt: "2026-01-01T00:00:00Z"),
+            makeHistoryEntry(id: 2, shirt: "white shirt", createdAt: "2026-01-02T00:00:00Z"),
+            makeHistoryEntry(id: 3, shirt: "blue shirt", createdAt: "2026-01-03T00:00:00Z"),
+        ])
+        let viewModel = OutfitViewModel(apiService: mock)
+
+        await viewModel.getRandomFromHistory()
+        let firstId = viewModel.currentSuggestion?.id
+        await viewModel.getRandomFromHistory()
+        let secondId = viewModel.currentSuggestion?.id
+
+        XCTAssertNotEqual(firstId, secondId)
+        XCTAssertTrue([firstId, secondId].contains("2"))
+        XCTAssertTrue([firstId, secondId].contains("3"))
+    }
+
+    func testGetRandomFromHistoryExcludesCurrentLookOnConsecutivePicks() async {
+        AuthService.shared.authToken = "test-token"
+        AuthService.shared.currentUser = makeUser()
+        let mock = MockAPIService()
+        mock.historyResult = .success(makeDiverseHistoryEntries())
+        let viewModel = OutfitViewModel(apiService: mock)
+
+        await viewModel.getRandomFromHistory()
+        let firstId = viewModel.currentSuggestion?.id
+        await viewModel.getRandomFromHistory()
+        let secondId = viewModel.currentSuggestion?.id
+
+        XCTAssertNotEqual(firstId, secondId)
+    }
+
+    func testGetRandomFromHistoryShowsSingleLookToastOnce() async {
+        AuthService.shared.authToken = "test-token"
+        AuthService.shared.currentUser = makeUser()
+        let mock = MockAPIService()
+        mock.historyResult = .success([
+            makeHistoryEntry(id: 1, shirt: "solo shirt", createdAt: "2026-01-01T00:00:00Z")
+        ])
+        let viewModel = OutfitViewModel(apiService: mock)
+
+        await viewModel.getRandomFromHistory()
+        XCTAssertEqual(viewModel.infoToastMessage, MainFlowUxCopy.randomHistoryOnlyOneLook)
+
+        viewModel.clearInfoToast()
+        await viewModel.getRandomFromHistory()
+        XCTAssertNil(viewModel.infoToastMessage)
+    }
+
+    func testResetSessionStateClearsRandomHistorySelection() async {
+        AuthService.shared.authToken = "test-token"
+        AuthService.shared.currentUser = makeUser()
+        let mock = MockAPIService()
+        mock.historyResult = .success(makeDiverseHistoryEntries())
+        let viewModel = OutfitViewModel(apiService: mock)
+
+        await viewModel.getRandomFromHistory()
+        viewModel.resetSessionState()
+        await viewModel.getRandomFromHistory()
+
+        XCTAssertEqual(mock.historyCalls, 2)
+        XCTAssertNil(viewModel.infoToastMessage)
     }
 
     func testGetRandomFromHistoryClearsUploadAndSetsPreviewState() async {
@@ -567,7 +653,7 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
         AuthService.shared.authToken = "test-token"
         AuthService.shared.currentUser = makeUser()
         let mock = MockAPIService()
-        mock.randomOutfitResult = .success(
+        mock.wardrobeOnlyResult = .success(
             OutfitSuggestion(
                 shirt: "new wardrobe shirt",
                 trouser: "grey trouser",
@@ -585,9 +671,73 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
 
         await viewModel.generateAnotherFromResult()
 
-        XCTAssertEqual(mock.randomOutfitCalls, 1)
+        XCTAssertEqual(mock.wardrobeOnlyCalls.count, 1)
+        XCTAssertNotNil(mock.wardrobeOnlyCalls.first?.previousOutfitText)
+        XCTAssertTrue(mock.wardrobeOnlyCalls.first?.previousOutfitText?.contains("White oxford shirt") == true)
         XCTAssertEqual(mock.suggestionCalls.count, 0)
+        XCTAssertEqual(mock.randomOutfitCalls, 0)
         XCTAssertEqual(viewModel.currentSuggestion?.shirt, "new wardrobe shirt")
+    }
+
+    func testGetRandomFromWardrobeRetriesOnDuplicateFingerprint() async {
+        AuthService.shared.authToken = "test-token"
+        AuthService.shared.currentUser = makeUser()
+        let mock = MockAPIService()
+        let duplicate = OutfitSuggestion(
+            shirt: "blue shirt",
+            trouser: "grey trouser",
+            blazer: "navy blazer",
+            shoes: "brown shoes",
+            belt: "brown belt",
+            reasoning: "first pick"
+        )
+        let distinct = OutfitSuggestion(
+            shirt: "green shirt",
+            trouser: "tan trouser",
+            blazer: "olive blazer",
+            shoes: "white shoes",
+            belt: "tan belt",
+            reasoning: "second pick"
+        )
+        mock.wardrobeOnlyResults = [.success(duplicate), .success(distinct)]
+        let viewModel = OutfitViewModel(apiService: mock)
+
+        await viewModel.getRandomFromWardrobe()
+        await viewModel.generateAnotherFromResult()
+
+        XCTAssertEqual(mock.wardrobeOnlyCalls.count, 2)
+        XCTAssertEqual(viewModel.currentSuggestion?.shirt, "green shirt")
+    }
+
+    func testFilterChangeResetsWardrobeRandomSession() async {
+        AuthService.shared.authToken = "test-token"
+        AuthService.shared.currentUser = makeUser()
+        let mock = MockAPIService()
+        let first = OutfitSuggestion(
+            shirt: "blue shirt",
+            trouser: "grey trouser",
+            blazer: "navy blazer",
+            shoes: "brown shoes",
+            belt: "brown belt",
+            reasoning: "first pick"
+        )
+        let second = OutfitSuggestion(
+            shirt: "blue shirt",
+            trouser: "grey trouser",
+            blazer: "navy blazer",
+            shoes: "brown shoes",
+            belt: "brown belt",
+            reasoning: "same fingerprint again"
+        )
+        mock.wardrobeOnlyResults = [.success(first), .success(second)]
+        let viewModel = OutfitViewModel(apiService: mock)
+
+        await viewModel.getRandomFromWardrobe()
+        viewModel.filters.season = "summer"
+        await viewModel.getRandomFromWardrobe()
+
+        XCTAssertEqual(mock.wardrobeOnlyCalls.count, 2)
+        XCTAssertEqual(viewModel.currentSuggestion?.reasoning, "same fingerprint again")
     }
 
     func testCanGenerateAnotherFromResultForWardrobeRandomWithoutUpload() {
@@ -684,6 +834,34 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
         )
     }
 
+    private func makeHistoryEntry(
+        id: Int,
+        shirt: String,
+        createdAt: String
+    ) -> OutfitHistoryEntry {
+        OutfitHistoryEntry(
+            id: id,
+            created_at: createdAt,
+            text_input: nil,
+            image_data: nil,
+            model_image: nil,
+            shirt: shirt,
+            trouser: "black trouser",
+            blazer: "black blazer",
+            shoes: "black shoes",
+            belt: "black belt",
+            reasoning: "test"
+        )
+    }
+
+    private func makeDiverseHistoryEntries() -> [OutfitHistoryEntry] {
+        [
+            makeHistoryEntry(id: 1, shirt: "white shirt", createdAt: "2026-01-01T00:00:00Z"),
+            makeHistoryEntry(id: 2, shirt: "blue shirt", createdAt: "2026-01-02T00:00:00Z"),
+            makeHistoryEntry(id: 3, shirt: "green shirt", createdAt: "2026-01-03T00:00:00Z"),
+        ]
+    }
+
     private func waitForLoggedOutState(timeoutNanoseconds: UInt64 = 2_000_000_000) async {
         let pollInterval: UInt64 = 50_000_000
         var elapsed: UInt64 = 0
@@ -712,11 +890,23 @@ private final class MockAPIService: APIServiceProtocol {
         let style: String?
     }
 
+    struct RecordedWardrobeOnlyCall {
+        let occasion: String
+        let season: String
+        let style: String
+        let textInput: String
+        let previousOutfitText: String?
+        let avoidOutfitTexts: [String]?
+    }
+
     var randomOutfitResult: Result<OutfitSuggestion, Error> = .failure(APIServiceError.invalidResponse)
+    var wardrobeOnlyResult: Result<OutfitSuggestion, Error> = .failure(APIServiceError.invalidResponse)
+    var wardrobeOnlyResults: [Result<OutfitSuggestion, Error>] = []
     var historyResult: Result<[OutfitHistoryEntry], Error> = .failure(APIServiceError.invalidResponse)
     var suggestionResult: Result<OutfitSuggestion, Error> = .failure(APIServiceError.invalidResponse)
     var wardrobeItemsResult: Result<OutfitSuggestion, Error> = .failure(APIServiceError.invalidResponse)
     var randomOutfitCalls = 0
+    var wardrobeOnlyCalls: [RecordedWardrobeOnlyCall] = []
     var historyCalls = 0
     var suggestionCalls: [RecordedSuggestionCall] = []
     var wardrobeItemsCalls: [RecordedWardrobeItemsCall] = []
@@ -788,5 +978,30 @@ private final class MockAPIService: APIServiceProtocol {
     func getRandomOutfit(occasion: String, season: String, style: String) async throws -> OutfitSuggestion {
         randomOutfitCalls += 1
         return try randomOutfitResult.get()
+    }
+
+    func getWardrobeOnlySuggestion(
+        occasion: String,
+        season: String,
+        style: String,
+        textInput: String,
+        previousOutfitText: String?,
+        avoidOutfitTexts: [String]?
+    ) async throws -> OutfitSuggestion {
+        wardrobeOnlyCalls.append(
+            RecordedWardrobeOnlyCall(
+                occasion: occasion,
+                season: season,
+                style: style,
+                textInput: textInput,
+                previousOutfitText: previousOutfitText,
+                avoidOutfitTexts: avoidOutfitTexts
+            )
+        )
+        if !wardrobeOnlyResults.isEmpty {
+            let next = wardrobeOnlyResults.removeFirst()
+            return try next.get()
+        }
+        return try wardrobeOnlyResult.get()
     }
 }

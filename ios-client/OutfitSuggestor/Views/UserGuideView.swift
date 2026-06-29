@@ -88,8 +88,8 @@ struct UserGuideView: View {
                     title: "Random Picks",
                     color: .pink,
                     steps: [
-                        "\"Random from Wardrobe\" — The AI picks items from your wardrobe to build a complete outfit.",
-                        "\"Random from History\" — Shows a random past suggestion for quick inspiration.",
+                        "\"Random from Wardrobe\" — AI combines items from your wardrobe into a complete outfit (not random database picks).",
+                        "\"Random from History\" — Rotates through varied saved looks from your history for quick inspiration.",
                         "Both options respect your current occasion, season, and style filters."
                     ],
                     tip: nil

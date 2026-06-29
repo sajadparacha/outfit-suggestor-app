@@ -21,7 +21,7 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 | **Model image generation** | ✅ | ✅ | Toggle + model picker (DALL-E 3, Stable Diffusion, Nano Banana); full-screen view |
 | **Wardrobe** | ✅ | ✅ | List, add, edit, delete, category filter (core chips: shirt/trouser/blazer/shoes/belt + extended chips when owned: polo, T-shirt, jeans, shorts, sweater, jacket, tie, other), human-readable category badges, search, "Get suggestion" from item, select 1-5 items (one per slot) to complete outfit with AI; **completion panel shows clickable selection thumbnails** (tap to full-screen) beside Complete outfit with AI; completion aliases map polo/T-shirt to shirt, pants/jeans/shorts to trouser, and jacket to blazer slot (5 slots unchanged); **blazer filter chip counts blazer/suit only** (jacket has its own extended chip); inline **Preferences** (occasion/season/style/notes + wardrobe-only) synced with Suggest |
 | **Outfit history** | ✅ | ✅ | List, search, sort (newest/oldest), delete, load into main view |
-| **Random from wardrobe** | ✅ | ✅ | Button on Main; GET /api/wardrobe/random-outfit |
+| **Random from wardrobe** | ✅ | ✅ | AI via `POST /api/suggest-outfit-from-wardrobe`; session variety (`previous_outfit_text`, fingerprint retry). `GET /api/wardrobe/random-outfit` legacy/non-user-facing. |
 | **Random from history** | ✅ | ✅ | Button on Main; client picks from history; **Your inputs** syncs preview + **From history** caption + entry filters |
 | **Duplicate detection** | ✅ | ✅ | Check before suggestion; use cached or force new |
 | **Next / Alternate outfit** | ✅ | ✅ | Button after suggestion; requests a different outfit |
@@ -157,29 +157,29 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 
 ## 6. Random from Wardrobe
 
-**Web**: Sidebar “Random from Wardrobe”. Backend builds one outfit by randomly choosing one item per category from user’s wardrobe (respects filters). No photo upload.
+**Web & iOS**: Sidebar / Main **Random from Wardrobe** (auth required). Both call **`POST /api/suggest-outfit-from-wardrobe`** with occasion, season, style, and notes from Preferences — AI combines items from the user’s wardrobe (no photo upload). Loading copy: **“Scanning your wardrobe…”**. Result caption: **“Random from wardrobe”**; **Generate Another** re-calls the same AI endpoint.
 
-**iOS status**: Not implemented.
+**Session variety** (`wardrobe-random-ai-variety`): fingerprint each result (text fields + wardrobe IDs); pass `previous_outfit_text` when user already has a wardrobe-random result; track last 5 session fingerprints; retry up to 3 times on duplicate with stronger avoid wording; optional `avoid_outfit_texts` in API body. Reset session on logout, main-flow reset, and filter change.
 
-**API**: Typically implemented via `POST /api/suggest-outfit` with no image (or a dedicated random-from-wardrobe endpoint if the backend exposes one). Check backend routes: wardrobe_service.get_random_outfit may be called from an endpoint—confirm in API_DOCUMENTATION.md or backend routes.
+**Legacy**: `GET /api/wardrobe/random-outfit` (DB `random.choice` per slot) — not used by user-facing flows; may remain for tests/admin.
 
-**iOS work**:
+**API**: `POST /api/suggest-outfit-from-wardrobe` with empty `selected_wardrobe_item_ids` for random; optional `previous_outfit_text`, `avoid_outfit_texts`.
 
-- [ ] Confirm backend endpoint (e.g. suggest-outfit with wardrobe_only and no image, or dedicated random endpoint).
-- [ ] Add “Random from Wardrobe” button (when logged in).
-- [ ] Call API and show result in same suggestion view.
+**Parity**: ✅ Both platforms use AI endpoint + session variety helpers (`wardrobeRandomSession.ts` / `WardrobeRandomSession.swift`).
 
 ---
 
 ## 7. Random from History
 
-**Web**: Sidebar “Random from History”. Client fetches full history (or a slice), picks a random entry, maps it to suggestion format, shows in main view.
+**Web**: Sidebar “Random from History”. Client refetches history on each pick (limit ~150), deduplicates by outfit fingerprint, excludes the current look and last 5 session picks, rotates through a shuffled session deck, maps chosen entry to suggestion format, shows in main view.
 
-**iOS**: Same flow on Main.
+**iOS**: Same flow on Main (refetch limit ~100 per pick).
+
+**Diverse random selection** (`random-history-diverse-selection`): both platforms use the same client-side rules — fingerprint dedupe (core items + optional layers + wardrobe IDs), exclude current history id when already showing a history/random result, session recent-N avoidance with relaxed fallbacks, shuffle-deck rotation per session (reset on logout / main-flow reset). Optional once-per-session info toast when only one unique look remains after dedupe.
 
 **Input panel sync** (`random-history-input-summary-sync`): clear stale upload/wardrobe preview; compact **Your inputs** shows entry preview, **From history** caption, and `summaryFilters` from entry occasion/season/style; wardrobe banner hidden in compact result mode.
 
-**API**: `GET /api/outfit-history` (e.g. limit=50 or similar to get a usable list).
+**API**: `GET /api/outfit-history` (fresh fetch per random pick; no dedicated random endpoint).
 
 ---
 

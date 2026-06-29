@@ -9,6 +9,7 @@ import { AiOperationType } from '../utils/aiProgressSteps';
 import {
   InputPanelSource,
   OutfitHistoryEntry,
+  OutfitResponse,
   OutfitSuggestion,
   Filters,
   SourceWardrobeItem,
@@ -34,6 +35,20 @@ import {
   resolveSourceWardrobeItemFromSuggestion,
 } from '../utils/historyUtils';
 import { MAIN_FLOW_UX_COPY } from '../utils/mainFlowUxCopy';
+import {
+  PickRandomHistoryResult,
+  RandomHistorySession,
+  pickRandomHistoryEntry,
+} from '../utils/randomHistorySelection';
+import {
+  WardrobeRandomSession,
+  buildVarietyContext,
+  shouldRetryWardrobeRandom,
+} from '../utils/wardrobeRandomSession';
+
+export type LoadRandomFromHistoryResult =
+  | { status: 'empty' }
+  | { status: 'ok'; showSingleLookToast?: boolean };
 
 interface UseOutfitControllerReturn {
   // State
@@ -75,7 +90,7 @@ interface UseOutfitControllerReturn {
   completeOutfitFromWardrobeSelection: (selectedWardrobeItemIds: number[]) => Promise<void>;
   loadRandomFromHistory: (
     fetchHistory: () => Promise<OutfitHistoryEntry[]>
-  ) => Promise<'empty' | 'ok'>;
+  ) => Promise<LoadRandomFromHistoryResult>;
   clearError: () => void;
   handleUseCachedSuggestion: () => void;
   handleGetNewSuggestion: () => Promise<void>;
@@ -128,6 +143,19 @@ export const useOutfitController = (options?: {
   const [summaryFilters, setSummaryFilters] = useState<Filters | null>(null);
   const [summaryPreferenceText, setSummaryPreferenceText] = useState<string | null>(null);
   const sourceWardrobeItemId = sourceWardrobeItem?.id ?? null;
+  const randomHistorySessionRef = useRef(new RandomHistorySession());
+  const wardrobeRandomSessionRef = useRef(new WardrobeRandomSession());
+  const wardrobeFilterKeyRef = useRef(
+    `${filters.occasion}|${filters.season}|${filters.style}`
+  );
+
+  useEffect(() => {
+    const filterKey = `${filters.occasion}|${filters.season}|${filters.style}`;
+    if (wardrobeFilterKeyRef.current !== filterKey) {
+      wardrobeFilterKeyRef.current = filterKey;
+      wardrobeRandomSessionRef.current.reset();
+    }
+  }, [filters.occasion, filters.season, filters.style]);
 
   const clearInputPanelSummary = useCallback(() => {
     setInputPanelSource(null);
@@ -371,6 +399,11 @@ export const useOutfitController = (options?: {
     abortControllerRef.current = abortController;
     const { signal } = abortController;
 
+    const priorSource = inputPanelSource;
+    const priorSuggestion = currentSuggestion;
+    const hasWardrobeResult =
+      priorSource === 'wardrobe' && priorSuggestion != null && image == null;
+
     setLoading(true);
     setError(null);
     setActiveOperation('wardrobe-outfit');
@@ -381,13 +414,40 @@ export const useOutfitController = (options?: {
     try {
       const resolved = resolveFilters(filters);
       const trimmed = preferenceText.trim();
-      const data = await ApiService.getWardrobeOnlySuggestion(
-        resolved.occasion,
-        resolved.season,
-        resolved.style,
-        trimmed,
-        signal
-      );
+      const session = wardrobeRandomSessionRef.current;
+
+      let attempt = 0;
+      let data: OutfitResponse | null = null;
+      let duplicateResponse: OutfitResponse | null = null;
+
+      while (true) {
+        const variety = buildVarietyContext(
+          hasWardrobeResult ? priorSuggestion : null,
+          session,
+          formatPreviousOutfitForPrompt,
+          attempt,
+          duplicateResponse
+        );
+
+        data = await ApiService.getWardrobeOnlySuggestion(
+          resolved.occasion,
+          resolved.season,
+          resolved.style,
+          trimmed,
+          signal,
+          undefined,
+          variety.previousOutfitText,
+          variety.avoidOutfitTexts
+        );
+
+        if (!shouldRetryWardrobeRandom(data, session, attempt)) {
+          break;
+        }
+
+        duplicateResponse = data;
+        attempt += 1;
+      }
+
       const suggestion: OutfitSuggestion = {
         ...data,
         id: Date.now().toString(),
@@ -400,6 +460,8 @@ export const useOutfitController = (options?: {
           }`
         }
       };
+      session.recordSuggestion(suggestion, formatPreviousOutfitForPrompt);
+
       const previewUrl = firstWardrobePreviewUrl(suggestion);
       setFlowPreviewUrl(previewUrl);
       setFlowPreviewCaption(previewUrl ? 'Random from wardrobe' : null);
@@ -422,7 +484,17 @@ export const useOutfitController = (options?: {
       setActiveOperation(null);
       abortControllerRef.current = null;
     }
-  }, [filters.occasion, filters.season, filters.style, preferenceText, options, clearInputPanelSummary]);
+  }, [
+    filters.occasion,
+    filters.season,
+    filters.style,
+    preferenceText,
+    options,
+    clearInputPanelSummary,
+    inputPanelSource,
+    currentSuggestion,
+    image,
+  ]);
 
   const completeOutfitFromWardrobeSelection = useCallback(async (selectedWardrobeItemIds: number[]) => {
     abortControllerRef.current?.abort();
@@ -487,13 +559,26 @@ export const useOutfitController = (options?: {
   }, [filters, preferenceText, options, clearInputPanelSummary]);
 
   const loadRandomFromHistory = useCallback(
-    async (fetchHistory: () => Promise<OutfitHistoryEntry[]>): Promise<'empty' | 'ok'> => {
+    async (fetchHistory: () => Promise<OutfitHistoryEntry[]>): Promise<LoadRandomFromHistoryResult> => {
       const fullHistory = await fetchHistory();
       if (fullHistory.length === 0) {
-        return 'empty';
+        return { status: 'empty' };
       }
 
-      const randomEntry = fullHistory[Math.floor(Math.random() * fullHistory.length)];
+      const currentHistoryId =
+        inputPanelSource === 'history' && currentSuggestion?.id != null
+          ? Number(currentSuggestion.id)
+          : null;
+
+      const pickResult: PickRandomHistoryResult = pickRandomHistoryEntry(fullHistory, {
+        currentHistoryId: Number.isFinite(currentHistoryId) ? currentHistoryId : null,
+        session: randomHistorySessionRef.current,
+      });
+
+      const randomEntry = pickResult.entry;
+      if (!randomEntry) {
+        return { status: 'empty' };
+      }
 
       setImage(null);
       setSourceWardrobeItem(null);
@@ -515,9 +600,12 @@ export const useOutfitController = (options?: {
         await options.onSuggestionSuccess();
       }
 
-      return 'ok';
+      return {
+        status: 'ok',
+        showSingleLookToast: pickResult.showSingleLookToast,
+      };
     },
-    [filters, options]
+    [filters, options, inputPanelSource, currentSuggestion]
   );
 
   /**
@@ -568,6 +656,8 @@ export const useOutfitController = (options?: {
   const resetMainFlowState = useCallback(() => {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
+    randomHistorySessionRef.current.reset();
+    wardrobeRandomSessionRef.current.reset();
     setImage(null);
     setCurrentSuggestion(null);
     setSourceWardrobeItem(null);

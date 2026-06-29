@@ -40,4 +40,5 @@ enum MainFlowUxCopy {
     static let layerLabel = "Layer"
     static let outerwearLabel = "Outerwear"
     static let tieLabel = "Tie"
+    static let randomHistoryOnlyOneLook = "Only one saved look in your history so far."
 }

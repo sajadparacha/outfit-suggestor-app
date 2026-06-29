@@ -145,7 +145,9 @@ class AIService:
         self,
         text_input: str = "",
         wardrobe_items: Optional[dict] = None,
-        wardrobe_only: bool = True
+        wardrobe_only: bool = True,
+        previous_outfit_text: Optional[str] = None,
+        avoid_outfit_texts: Optional[List[str]] = None,
     ) -> Tuple[OutfitSuggestion, Dict[str, Any]]:
         """
         Get outfit suggestion from OpenAI using ONLY text (no uploaded image).
@@ -159,7 +161,13 @@ class AIService:
         Returns:
             Tuple of (OutfitSuggestion, cost_info)
         """
-        prompt = self._build_prompt(text_input, wardrobe_items, wardrobe_only)
+        prompt = self._build_prompt(
+            text_input,
+            wardrobe_items,
+            wardrobe_only,
+            previous_outfit_text=previous_outfit_text,
+            avoid_outfit_texts=avoid_outfit_texts,
+        )
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -506,6 +514,7 @@ Required JSON shape:
         wardrobe_items: Optional[dict] = None,
         wardrobe_only: bool = False,
         previous_outfit_text: Optional[str] = None,
+        avoid_outfit_texts: Optional[List[str]] = None,
     ) -> str:
         """
         Build the prompt for OpenAI API
@@ -602,9 +611,32 @@ Previous suggestion (do NOT repeat this; use it only as what to avoid):
 
 """
 
+        avoid_block = ""
+        if avoid_outfit_texts:
+            trimmed_avoid = []
+            for entry in avoid_outfit_texts:
+                if not entry or not str(entry).strip():
+                    continue
+                text = str(entry).strip()
+                if len(text) > 4000:
+                    text = text[:4000] + "\n[truncated]"
+                trimmed_avoid.append(text)
+            if trimmed_avoid:
+                lines = "\n---\n".join(trimmed_avoid)
+                avoid_block = f"""
+
+ALSO AVOID these recent outfit suggestions from this session (do NOT repeat or closely mimic):
+---
+{lines}
+---
+
+"""
+
         context_parts: List[str] = []
         if previous_block.strip():
             context_parts.append(previous_block.strip())
+        if avoid_block.strip():
+            context_parts.append(avoid_block.strip())
         if text_input:
             context_parts.append(f"Additional context: {text_input}")
         context = ("\n\n".join(context_parts)) if context_parts else ""
