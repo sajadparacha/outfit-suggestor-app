@@ -297,14 +297,6 @@ function App() {
 
   const authModalCopy = loginPromptContext ? getAuthPromptCopy(loginPromptContext) : null;
 
-  const handleSaveLook = () => {
-    if (!isAuthenticated) {
-      openAuthPrompt('like');
-      return;
-    }
-    showToast(MAIN_FLOW_UX_COPY.saveLookToast, 'success');
-  };
-
   const dismissFirstOutfitBanner = () => {
     setShowFirstOutfitBanner(false);
   };
@@ -685,7 +677,6 @@ function App() {
                 onMakeMoreCasual={handleMakeMoreCasual}
                 onUseWardrobeOnly={handleUseWardrobeOnlyFromResult}
                 onChangeOccasion={handleChangeOccasion}
-                onSaveLook={handleSaveLook}
                 showWardrobeOnlyAction={isAuthenticated}
                 isAuthenticated={isAuthenticated}
                 guestLimitReached={guestLimitReached}

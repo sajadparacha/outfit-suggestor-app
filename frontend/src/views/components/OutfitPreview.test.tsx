@@ -21,7 +21,6 @@ describe('OutfitPreview', () => {
   const mockOnMakeMoreCasual = jest.fn();
   const mockOnUseWardrobeOnly = jest.fn();
   const mockOnChangeOccasion = jest.fn();
-  const mockOnSaveLook = jest.fn();
 
   const actionProps = {
     onGenerateAnother: mockOnGenerateAnother,
@@ -112,8 +111,10 @@ describe('OutfitPreview', () => {
       );
       const hero = document.getElementById('outfit-result-hero');
       expect(hero).toBeInTheDocument();
+      expect(within(hero as HTMLElement).getByText(MAIN_FLOW_UX_COPY.resultTitle)).toBeInTheDocument();
       const heroImg = hero?.querySelector('img');
       expect(heroImg).toBeNull();
+      expect(screen.queryByText(/Styled outfit preview/i)).not.toBeInTheDocument();
     });
 
     it('uses uploaded image as shirt thumbnail when upload matched shirt', () => {
@@ -260,7 +261,7 @@ describe('OutfitPreview', () => {
   });
 
   describe('primary actions', () => {
-    it('shows exactly three primary actions: Generate Another, Save Look, Refine', () => {
+    it('shows exactly two primary actions: Generate Another and Refine', () => {
       render(
         <OutfitPreview
           suggestion={baseSuggestion}
@@ -268,15 +269,14 @@ describe('OutfitPreview', () => {
           error={null}
           {...actionProps}
           hasImage={true}
-          onSaveLook={mockOnSaveLook}
         />
       );
       const primaryRow = screen.getByTestId('result-primary-actions');
       const buttons = within(primaryRow).getAllByRole('button');
-      expect(buttons).toHaveLength(3);
+      expect(buttons).toHaveLength(2);
       expect(within(primaryRow).getByRole('button', { name: MAIN_FLOW_UX_COPY.generateAnother })).toBeInTheDocument();
-      expect(within(primaryRow).getByRole('button', { name: MAIN_FLOW_UX_COPY.saveLook })).toBeInTheDocument();
       expect(within(primaryRow).getByRole('button', { name: MAIN_FLOW_UX_COPY.refine })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: MAIN_FLOW_UX_COPY.saveLook })).not.toBeInTheDocument();
     });
 
     it('does not show standalone refine buttons outside Refine menu', () => {
@@ -287,7 +287,6 @@ describe('OutfitPreview', () => {
           error={null}
           {...actionProps}
           hasImage={true}
-          onSaveLook={mockOnSaveLook}
         />
       );
       expect(screen.queryByRole('button', { name: /Make it more formal/i })).not.toBeInTheDocument();
@@ -303,29 +302,12 @@ describe('OutfitPreview', () => {
           {...actionProps}
           hasImage={true}
           isAuthenticated={true}
-          onSaveLook={mockOnSaveLook}
         />
       );
       const primaryRow = screen.getByTestId('result-primary-actions');
       fireEvent.click(within(primaryRow).getByRole('button', { name: MAIN_FLOW_UX_COPY.refine }));
       fireEvent.click(screen.getByRole('menuitem', { name: MAIN_FLOW_UX_COPY.refineMoreFormal }));
       expect(mockOnMakeMoreFormal).toHaveBeenCalledTimes(1);
-    });
-
-    it('calls onSaveLook when Save Look is clicked', () => {
-      render(
-        <OutfitPreview
-          suggestion={baseSuggestion}
-          loading={false}
-          error={null}
-          {...actionProps}
-          hasImage={true}
-          onSaveLook={mockOnSaveLook}
-        />
-      );
-      const primaryRow = screen.getByTestId('result-primary-actions');
-      fireEvent.click(within(primaryRow).getByRole('button', { name: MAIN_FLOW_UX_COPY.saveLook }));
-      expect(mockOnSaveLook).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -339,7 +321,6 @@ describe('OutfitPreview', () => {
           {...actionProps}
           hasImage={false}
           isAuthenticated={true}
-          onSaveLook={mockOnSaveLook}
         />
       );
       const primaryRow = screen.getByTestId('result-primary-actions');
@@ -360,7 +341,6 @@ describe('OutfitPreview', () => {
           hasImage={false}
           canGenerateAnother={true}
           isAuthenticated={true}
-          onSaveLook={mockOnSaveLook}
         />
       );
       const primaryRow = screen.getByTestId('result-primary-actions');
@@ -381,7 +361,6 @@ describe('OutfitPreview', () => {
           error={null}
           {...actionProps}
           hasImage={true}
-          onSaveLook={mockOnSaveLook}
         />
       );
       const primaryRow = screen.getByTestId('result-primary-actions');
@@ -396,7 +375,6 @@ describe('OutfitPreview', () => {
           error={null}
           {...actionProps}
           hasImage={true}
-          onSaveLook={mockOnSaveLook}
         />
       );
       const wideSticky = screen.getByTestId('result-sticky-wide-actions');
@@ -412,11 +390,23 @@ describe('OutfitPreview', () => {
           error={null}
           {...actionProps}
           hasImage={true}
-          onSaveLook={mockOnSaveLook}
         />
       );
       expect(screen.getByTestId('result-sticky-mobile-actions')).toBeInTheDocument();
       expect(screen.getByTestId('result-sticky-wide-actions')).toBeInTheDocument();
+    });
+
+    it('reserves space below reasoning so fixed action bars do not overlap content', () => {
+      render(
+        <OutfitPreview
+          suggestion={baseSuggestion}
+          loading={false}
+          error={null}
+          {...actionProps}
+          hasImage={true}
+        />
+      );
+      expect(screen.getByTestId('result-sticky-spacer')).toBeInTheDocument();
     });
   });
 });

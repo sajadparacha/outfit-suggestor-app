@@ -30,7 +30,6 @@ interface OutfitPreviewProps {
   onMakeMoreCasual?: () => void;
   onUseWardrobeOnly?: () => void;
   onChangeOccasion?: () => void;
-  onSaveLook?: () => void;
   isAuthenticated?: boolean;
   hasImage?: boolean;
   canGenerateAnother?: boolean;
@@ -48,7 +47,6 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
   onMakeMoreCasual,
   onUseWardrobeOnly,
   onChangeOccasion,
-  onSaveLook,
   isAuthenticated = false,
   hasImage = false,
   canGenerateAnother,
@@ -138,43 +136,32 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
     );
   }
 
-  const renderHero = () => {
-    if (suggestion.model_image) {
-      return (
-        <button
-          type="button"
-          onClick={() => setShowFullImage(true)}
-          className="relative flex min-h-[280px] w-full items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-left lg:min-h-[360px]"
-        >
-          <span className="absolute left-3 top-3 rounded-full bg-brand-gradient px-3 py-1 text-xs font-semibold text-white">
-            AI model preview
-          </span>
-          <img
-            src={`data:image/png;base64,${suggestion.model_image}`}
-            alt="AI generated model wearing recommended outfit"
-            className="max-h-[520px] w-full object-contain"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              if (target.src.includes('image/png')) {
-                target.src = `data:image/jpeg;base64,${suggestion.model_image}`;
-              }
-            }}
-          />
-        </button>
-      );
+  const renderModelImageHero = () => {
+    if (!suggestion.model_image) {
+      return null;
     }
 
     return (
-      <div className="relative flex min-h-[280px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900 via-slate-800 to-brand-purple/20 p-8 lg:min-h-[360px]">
-        <div className="absolute inset-0 bg-brand-gradient-soft opacity-20" aria-hidden />
-        <div className="relative flex flex-wrap items-center justify-center gap-4">
-          <span className="text-4xl" aria-hidden>👔</span>
-          <span className="text-4xl" aria-hidden>👖</span>
-          <span className="text-4xl" aria-hidden>👞</span>
-        </div>
-        <p className="relative mt-6 text-center text-lg font-semibold text-white">{contextLine}</p>
-        <p className="relative mt-1 text-center text-sm text-slate-400">Styled outfit preview</p>
-      </div>
+      <button
+        type="button"
+        onClick={() => setShowFullImage(true)}
+        className="relative flex min-h-[280px] w-full items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-left lg:min-h-[360px]"
+      >
+        <span className="absolute left-3 top-3 rounded-full bg-brand-gradient px-3 py-1 text-xs font-semibold text-white">
+          AI model preview
+        </span>
+        <img
+          src={`data:image/png;base64,${suggestion.model_image}`}
+          alt="AI generated model wearing recommended outfit"
+          className="max-h-[520px] w-full object-contain"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            if (target.src.includes('image/png')) {
+              target.src = `data:image/jpeg;base64,${suggestion.model_image}`;
+            }
+          }}
+        />
+      </button>
     );
   };
 
@@ -185,25 +172,12 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
         : 'cursor-not-allowed border border-white/10 bg-white/10 text-slate-500'
     }`;
 
-  const saveLookClass =
-    'min-h-[48px] flex-1 touch-manipulation rounded-xl border border-white/20 bg-white/5 px-5 py-3 text-sm font-medium text-slate-100 transition hover:border-rose-400/50 hover:bg-rose-500/10 hover:text-rose-200';
-
   const renderStickyActionBar = (wrapperClassName: string, testId: string) => (
     <div className={wrapperClassName}>
       <div
-        className="mx-auto flex max-w-md gap-2 rounded-2xl border border-white/10 bg-slate-900/90 p-2 backdrop-blur md:max-w-[980px]"
+        className="mx-auto flex w-full max-w-[1100px] gap-2 overflow-visible rounded-2xl border border-white/10 bg-slate-900/90 p-2 backdrop-blur"
         data-testid={testId}
       >
-        {onSaveLook && (
-          <button
-            type="button"
-            onClick={onSaveLook}
-            className="min-h-[44px] flex-1 rounded-xl border border-white/20 bg-white/5 px-2 py-2 text-xs font-medium text-slate-100 md:min-h-[48px] md:text-sm"
-            aria-label={MAIN_FLOW_UX_COPY.saveLook}
-          >
-            {MAIN_FLOW_UX_COPY.saveLook}
-          </button>
-        )}
         <button
           onClick={onGenerateAnother}
           disabled={aiActionsDisabled}
@@ -214,6 +188,7 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
         </button>
         <RefineMenu
           variant="compact"
+          wrapperClassName="flex-1 min-w-0"
           onMakeMoreFormal={onMakeMoreFormal}
           onMakeMoreCasual={onMakeMoreCasual}
           onUseWardrobeOnly={onUseWardrobeOnly}
@@ -273,19 +248,28 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
 
   return (
     <div
-      className="rounded-3xl border border-white/10 bg-slate-950/70 p-4 shadow-[0_18px_50px_rgba(2,8,23,0.55)] backdrop-blur sm:p-6 lg:p-8"
+      className="rounded-3xl border border-white/10 bg-slate-950/70 p-4 pb-6 shadow-[0_18px_50px_rgba(2,8,23,0.55)] backdrop-blur sm:p-6 sm:pb-6 lg:p-8 lg:pb-8"
       data-testid="outfit-preview-result"
     >
-      <div id="outfit-result-hero" className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/70 shadow-xl">
-        {renderHero()}
-      </div>
+      {suggestion.model_image ? (
+        <div id="outfit-result-hero" className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/70 shadow-xl">
+          {renderModelImageHero()}
+        </div>
+      ) : (
+        <div id="outfit-result-hero">
+          <h2 className="text-2xl font-bold text-white sm:text-3xl">{MAIN_FLOW_UX_COPY.resultTitle}</h2>
+          <p className="mt-1 text-sm text-brand-blue">{contextLine}</p>
+        </div>
+      )}
 
-      <div className="mt-6">
-        <h2 className="text-2xl font-bold text-white sm:text-3xl">{MAIN_FLOW_UX_COPY.resultTitle}</h2>
-        <p className="mt-1 text-sm text-brand-blue">{contextLine}</p>
-      </div>
+      {suggestion.model_image && (
+        <div className="mt-6">
+          <h2 className="text-2xl font-bold text-white sm:text-3xl">{MAIN_FLOW_UX_COPY.resultTitle}</h2>
+          <p className="mt-1 text-sm text-brand-blue">{contextLine}</p>
+        </div>
+      )}
 
-      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className={`${suggestion.model_image ? 'mt-5' : 'mt-6'} grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3`}>
         {(
           [
             { key: 'shirt', label: 'Shirt', value: suggestion.shirt },
@@ -327,7 +311,13 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
       </div>
 
       <div
-        className="mt-6 hidden flex-col gap-3 sm:flex sm:flex-row sm:items-center md:hidden"
+        className="pointer-events-none h-20 shrink-0 sm:h-20 md:h-24"
+        aria-hidden
+        data-testid="result-sticky-spacer"
+      />
+
+      <div
+        className="mt-6 hidden flex-col gap-3 sm:flex sm:flex-row sm:items-stretch md:hidden"
         data-testid="result-primary-actions"
       >
         <button
@@ -338,17 +328,8 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
         >
           {MAIN_FLOW_UX_COPY.generateAnother}
         </button>
-        {onSaveLook && (
-          <button
-            type="button"
-            onClick={onSaveLook}
-            className={saveLookClass}
-            aria-label={MAIN_FLOW_UX_COPY.saveLook}
-          >
-            {MAIN_FLOW_UX_COPY.saveLook}
-          </button>
-        )}
         <RefineMenu
+          wrapperClassName="flex-1 min-w-0"
           onMakeMoreFormal={onMakeMoreFormal}
           onMakeMoreCasual={onMakeMoreCasual}
           onUseWardrobeOnly={onUseWardrobeOnly}
@@ -359,8 +340,8 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
         />
       </div>
 
-      {renderStickyActionBar('fixed inset-x-0 bottom-3 z-40 px-4 sm:hidden', 'result-sticky-mobile-actions')}
-      {renderStickyActionBar('fixed inset-x-0 bottom-3 z-40 hidden px-4 md:block', 'result-sticky-wide-actions')}
+      {renderStickyActionBar('fixed inset-x-0 bottom-3 z-50 overflow-visible px-4 sm:hidden', 'result-sticky-mobile-actions')}
+      {renderStickyActionBar('fixed inset-x-0 bottom-3 z-50 overflow-visible px-4 hidden md:block', 'result-sticky-wide-actions')}
 
       {fullWardrobeImage && (
         <div

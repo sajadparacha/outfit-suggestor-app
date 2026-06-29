@@ -10,6 +10,7 @@ export interface RefineMenuProps {
   refineDisabled?: boolean;
   wardrobeOnlyDisabled?: boolean;
   variant?: 'default' | 'compact';
+  wrapperClassName?: string;
 }
 
 const RefineMenu: React.FC<RefineMenuProps> = ({
@@ -21,6 +22,7 @@ const RefineMenu: React.FC<RefineMenuProps> = ({
   refineDisabled = false,
   wardrobeOnlyDisabled = false,
   variant = 'default',
+  wrapperClassName = '',
 }) => {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -44,11 +46,19 @@ const RefineMenu: React.FC<RefineMenuProps> = ({
 
   const buttonClass =
     variant === 'compact'
-      ? 'min-h-[40px] flex-1 rounded-xl border border-white/20 bg-white/5 px-2 py-2 text-[11px] font-medium text-slate-100 transition hover:border-brand-purple/60 hover:bg-brand-purple/10 disabled:cursor-not-allowed disabled:opacity-40'
-      : 'min-h-[48px] touch-manipulation rounded-xl border border-white/20 bg-white/5 px-5 py-3 text-sm font-medium text-slate-100 transition hover:border-brand-purple/60 hover:bg-brand-purple/10 disabled:cursor-not-allowed disabled:opacity-40';
+      ? 'min-h-[44px] w-full flex-1 rounded-xl border border-white/20 bg-white/5 px-2 py-2 text-xs font-medium text-slate-100 transition hover:border-brand-purple/60 hover:bg-brand-purple/10 disabled:cursor-not-allowed disabled:opacity-40 md:min-h-[48px] md:text-sm'
+      : 'min-h-[48px] w-full touch-manipulation rounded-xl border border-white/20 bg-white/5 px-5 py-3 text-sm font-medium text-slate-100 transition hover:border-brand-purple/60 hover:bg-brand-purple/10 disabled:cursor-not-allowed disabled:opacity-40';
+
+  const panelPositionClass =
+    variant === 'compact'
+      ? 'absolute bottom-full right-0 mb-2'
+      : 'absolute bottom-full right-0 mb-2 sm:bottom-auto sm:top-full sm:mb-0 sm:mt-2';
 
   return (
-    <div ref={containerRef} className="relative">
+    <div
+      ref={containerRef}
+      className={`relative ${open ? 'z-[60]' : ''} ${wrapperClassName}`.trim()}
+    >
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
@@ -65,7 +75,7 @@ const RefineMenu: React.FC<RefineMenuProps> = ({
       {open && (
         <div
           role="menu"
-          className="absolute bottom-full right-0 z-50 mb-2 min-w-[220px] overflow-hidden rounded-xl border border-white/15 bg-slate-900/95 py-1 shadow-xl backdrop-blur sm:bottom-auto sm:top-full sm:mb-0 sm:mt-2"
+          className={`${panelPositionClass} z-[100] min-w-[220px] overflow-hidden rounded-xl border border-white/15 bg-slate-900/95 py-1 shadow-xl backdrop-blur`}
           data-testid="refine-menu-panel"
         >
           {onMakeMoreFormal && (

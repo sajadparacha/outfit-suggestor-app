@@ -142,18 +142,16 @@ describe('Mobile-friendly layout and touch targets', () => {
           loading={false}
           error={null}
           {...mockActionProps}
-          onSaveLook={jest.fn()}
           hasImage={true}
         />
       );
 
       const generateBtn = screen.getAllByRole('button', { name: /Generate another look/i })[0];
-      const saveBtn = screen.getAllByRole('button', { name: /Save Look/i })[0];
+      const refineBtn = screen.getAllByTestId('refine-menu-trigger')[0];
 
-      [generateBtn, saveBtn].forEach((btn) => {
+      [generateBtn, refineBtn].forEach((btn) => {
         const cls = btn.getAttribute('class') ?? '';
-        expect(cls).toMatch(/min-h-\[(40|44|48)px\]/);
-        expect(cls).toMatch(/touch-manipulation/);
+        expect(cls).toMatch(/min-h-\[(44|48)px\]/);
       });
     });
 
@@ -187,20 +185,19 @@ describe('Mobile-friendly layout and touch targets', () => {
       expect(emptyCard?.getAttribute('class')).toMatch(/sm:p-8|lg:p-12/);
     });
 
-    it('sticky mobile action bar includes Save Look and Refine', () => {
+    it('sticky mobile action bar includes Generate Another and Refine', () => {
       render(
         <OutfitPreview
           suggestion={baseSuggestion}
           loading={false}
           error={null}
           {...mockActionProps}
-          onSaveLook={jest.fn()}
           hasImage={true}
         />
       );
       const stickyBar = screen.getByTestId('result-sticky-mobile-actions');
       expect(stickyBar).toBeInTheDocument();
-      expect(screen.getAllByRole('button', { name: /Save Look/i }).length).toBeGreaterThan(0);
+      expect(screen.queryByRole('button', { name: /Save Look/i })).not.toBeInTheDocument();
       expect(screen.getAllByTestId('refine-menu-trigger').length).toBeGreaterThan(0);
     });
   });

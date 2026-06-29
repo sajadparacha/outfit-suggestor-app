@@ -44,4 +44,14 @@ describe('RefineMenu', () => {
     fireEvent.click(screen.getByTestId('refine-menu-trigger'));
     expect(screen.queryByRole('menuitem', { name: MAIN_FLOW_UX_COPY.refineWardrobeOnly })).not.toBeInTheDocument();
   });
+
+  it('opens compact menu upward so it clears the sticky footer', () => {
+    render(<RefineMenu {...handlers} variant="compact" wrapperClassName="flex-1 min-w-0" showWardrobeOnlyAction />);
+
+    fireEvent.click(screen.getByTestId('refine-menu-trigger'));
+
+    const panel = screen.getByTestId('refine-menu-panel');
+    expect(panel.className).toMatch(/bottom-full/);
+    expect(panel.className).not.toMatch(/top-full/);
+  });
 });
