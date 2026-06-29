@@ -4,7 +4,7 @@ import ApiService from '../services/ApiService';
 import { OUTFIT_VARIATION_MODIFIERS } from '../utils/outfitPromptUtils';
 import { GuestLimitReachedError } from '../models/GuestModels';
 import { DEFAULT_FILTERS } from '../utils/outfitPreferences';
-import type { OutfitSuggestion } from '../models/OutfitModels';
+import type { OutfitHistoryEntry, OutfitSuggestion } from '../models/OutfitModels';
 
 jest.mock('../utils/imageUtils', () => ({
   compressImageForOutfit: async (file: File) => file,
@@ -245,6 +245,121 @@ describe('useOutfitController resetMainFlowState', () => {
 
     expect(hook.result.current.loading).toBe(false);
     expect(hook.result.current.image).toBeNull();
+    expect(hook.result.current.activeOperation).toBeNull();
+  });
+});
+
+describe('useOutfitController loadRandomFromHistory', () => {
+  const historyEntry: OutfitHistoryEntry = {
+    id: 42,
+    created_at: '2024-01-01T00:00:00Z',
+    text_input: '',
+    image_data: null,
+    model_image: null,
+    shirt: 'White shirt',
+    trouser: 'Blue jeans',
+    blazer: 'No blazer',
+    shoes: 'Sneakers',
+    belt: 'Brown belt',
+    reasoning: 'Test look',
+  };
+
+  it('sets loading and random-history operation while fetching', async () => {
+    let resolveFetch: (entries: OutfitHistoryEntry[]) => void = () => {};
+    const fetchHistory = jest.fn(
+      () =>
+        new Promise<OutfitHistoryEntry[]>((resolve) => {
+          resolveFetch = resolve;
+        })
+    );
+
+    const hook = renderHook(() => useOutfitController());
+
+    let loadPromise: Promise<unknown>;
+    act(() => {
+      loadPromise = hook.result.current.loadRandomFromHistory(fetchHistory);
+    });
+
+    expect(hook.result.current.loading).toBe(true);
+    expect(hook.result.current.activeOperation).toBe('random-history');
+    expect(hook.result.current.loadingMessage).toBe('Picking a random look from your history...');
+
+    await act(async () => {
+      resolveFetch([historyEntry]);
+      await loadPromise!;
+    });
+
+    expect(hook.result.current.loading).toBe(false);
+    expect(hook.result.current.activeOperation).toBeNull();
+    expect(hook.result.current.currentSuggestion?.shirt).toBe('White shirt');
+  });
+
+  it('clears loading state when history is empty', async () => {
+    const hook = renderHook(() => useOutfitController());
+
+    await act(async () => {
+      const result = await hook.result.current.loadRandomFromHistory(async () => []);
+    });
+
+    expect(hook.result.current.loading).toBe(false);
+    expect(hook.result.current.activeOperation).toBeNull();
+  });
+
+  it('cancels in-flight random history load', async () => {
+    const fetchHistory = jest.fn(() => new Promise<OutfitHistoryEntry[]>(() => {}));
+    const hook = renderHook(() => useOutfitController());
+
+    act(() => {
+      void hook.result.current.loadRandomFromHistory(fetchHistory);
+    });
+
+    expect(hook.result.current.loading).toBe(true);
+    expect(hook.result.current.activeOperation).toBe('random-history');
+
+    act(() => {
+      hook.result.current.cancelOperation();
+    });
+
+    expect(hook.result.current.loading).toBe(false);
+    expect(hook.result.current.activeOperation).toBeNull();
+  });
+});
+
+describe('useOutfitController getRandomSuggestion', () => {
+  beforeEach(() => {
+    jest.spyOn(ApiService, 'getWardrobeOnlySuggestion').mockResolvedValue(mockApiResponse);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('sets loading and wardrobe-outfit operation before API call', async () => {
+    let resolveApi: (value: typeof mockApiResponse) => void = () => {};
+    jest.spyOn(ApiService, 'getWardrobeOnlySuggestion').mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveApi = resolve;
+        })
+    );
+
+    const hook = renderHook(() => useOutfitController());
+
+    let loadPromise: Promise<void>;
+    act(() => {
+      loadPromise = hook.result.current.getRandomSuggestion();
+    });
+
+    expect(hook.result.current.loading).toBe(true);
+    expect(hook.result.current.activeOperation).toBe('wardrobe-outfit');
+    expect(hook.result.current.loadingMessage).toBe('Scanning your wardrobe...');
+
+    await act(async () => {
+      resolveApi(mockApiResponse);
+      await loadPromise!;
+    });
+
+    expect(hook.result.current.loading).toBe(false);
     expect(hook.result.current.activeOperation).toBeNull();
   });
 });

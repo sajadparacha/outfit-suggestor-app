@@ -234,6 +234,51 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
         XCTAssertEqual(mock.historyCalls, 1)
     }
 
+    func testGetRandomFromHistoryShowsAiProgressPanelWhileLoading() async {
+        AuthService.shared.authToken = "test-token"
+        AuthService.shared.currentUser = makeUser()
+        let mock = MockAPIService()
+        mock.historyFetchDelayNanos = 200_000_000
+        mock.historyResult = .success([makeHistoryEntry(id: 1, shirt: "white shirt", createdAt: "2026-01-01T00:00:00Z")])
+        let viewModel = OutfitViewModel(apiService: mock)
+
+        let loadTask = Task { await viewModel.getRandomFromHistory() }
+        try? await Task.sleep(nanoseconds: 50_000_000)
+
+        XCTAssertTrue(viewModel.showsAiProgressPanel)
+        XCTAssertEqual(viewModel.aiOperationType, .randomHistory)
+
+        await loadTask.value
+        XCTAssertFalse(viewModel.showsAiProgressPanel)
+    }
+
+    func testGetRandomFromWardrobeShowsAiProgressPanelWhileLoading() async {
+        AuthService.shared.authToken = "test-token"
+        AuthService.shared.currentUser = makeUser()
+        let mock = MockAPIService()
+        mock.wardrobeOnlyFetchDelayNanos = 200_000_000
+        mock.wardrobeOnlyResult = .success(
+            OutfitSuggestion(
+                shirt: "blue shirt",
+                trouser: "grey trouser",
+                blazer: "navy blazer",
+                shoes: "brown shoes",
+                belt: "brown belt",
+                reasoning: "clean business casual"
+            )
+        )
+        let viewModel = OutfitViewModel(apiService: mock)
+
+        let loadTask = Task { await viewModel.getRandomFromWardrobe() }
+        try? await Task.sleep(nanoseconds: 50_000_000)
+
+        XCTAssertTrue(viewModel.showsAiProgressPanel)
+        XCTAssertEqual(viewModel.aiOperationType, .wardrobeOutfit)
+
+        await loadTask.value
+        XCTAssertFalse(viewModel.showsAiProgressPanel)
+    }
+
     func testGetRandomFromHistoryRefetchesOnEachPick() async {
         AuthService.shared.authToken = "test-token"
         AuthService.shared.currentUser = makeUser()
@@ -903,6 +948,8 @@ private final class MockAPIService: APIServiceProtocol {
     var wardrobeOnlyResult: Result<OutfitSuggestion, Error> = .failure(APIServiceError.invalidResponse)
     var wardrobeOnlyResults: [Result<OutfitSuggestion, Error>] = []
     var historyResult: Result<[OutfitHistoryEntry], Error> = .failure(APIServiceError.invalidResponse)
+    var historyFetchDelayNanos: UInt64 = 0
+    var wardrobeOnlyFetchDelayNanos: UInt64 = 0
     var suggestionResult: Result<OutfitSuggestion, Error> = .failure(APIServiceError.invalidResponse)
     var wardrobeItemsResult: Result<OutfitSuggestion, Error> = .failure(APIServiceError.invalidResponse)
     var randomOutfitCalls = 0
@@ -968,6 +1015,9 @@ private final class MockAPIService: APIServiceProtocol {
 
     func getOutfitHistory(limit: Int) async throws -> [OutfitHistoryEntry] {
         historyCalls += 1
+        if historyFetchDelayNanos > 0 {
+            try await Task.sleep(nanoseconds: historyFetchDelayNanos)
+        }
         return try historyResult.get()
     }
 
@@ -998,6 +1048,9 @@ private final class MockAPIService: APIServiceProtocol {
                 avoidOutfitTexts: avoidOutfitTexts
             )
         )
+        if wardrobeOnlyFetchDelayNanos > 0 {
+            try await Task.sleep(nanoseconds: wardrobeOnlyFetchDelayNanos)
+        }
         if !wardrobeOnlyResults.isEmpty {
             let next = wardrobeOnlyResults.removeFirst()
             return try next.get()

@@ -13,6 +13,8 @@ enum AiOperationType: Equatable {
     case outfitWithPreview
     case wardrobeOutfit
     case wardrobeAnalysis
+    case randomHistory
+    case pastSuggestions
 }
 
 struct AiProgressStep: Identifiable, Equatable {
@@ -51,6 +53,18 @@ enum AiProgressSteps {
                 AiProgressStep(id: "gaps", label: "Identifying gaps", durationMs: 10000),
                 AiProgressStep(id: "recommend", label: "Preparing recommendations", durationMs: 15000),
             ]
+        case .randomHistory:
+            return [
+                AiProgressStep(id: "fetch", label: "Loading your saved looks", durationMs: 2500),
+                AiProgressStep(id: "pick", label: "Finding a varied outfit", durationMs: 2000),
+                AiProgressStep(id: "prepare", label: "Preparing your look", durationMs: 2000),
+            ]
+        case .pastSuggestions:
+            return [
+                AiProgressStep(id: "fetch", label: "Loading your saved looks", durationMs: 2500),
+                AiProgressStep(id: "filter", label: "Finding outfits for this item", durationMs: 2000),
+                AiProgressStep(id: "prepare", label: "Preparing suggestions", durationMs: 2000),
+            ]
         }
     }
 
@@ -62,6 +76,10 @@ enum AiProgressSteps {
             return "Building from your wardrobe"
         case .wardrobeAnalysis:
             return "Analyzing your wardrobe"
+        case .randomHistory:
+            return "Picking from your history"
+        case .pastSuggestions:
+            return "Loading past suggestions"
         }
     }
 
@@ -80,6 +98,34 @@ enum AiProgressSteps {
     static func stepIndex(for message: String?, steps: [AiProgressStep]) -> Int {
         guard let message else { return 0 }
         let lower = message.lowercased()
+        if steps.first?.id == "fetch" {
+            if lower.contains("saved look") || lower.contains("loading your saved") || lower.contains("history") {
+                return 0
+            }
+            if steps.count > 1, steps[1].id == "filter" {
+                if lower.contains("prepar") {
+                    return steps.count - 1
+                }
+                if lower.contains("filter")
+                    || lower.contains("finding outfit")
+                    || (lower.contains("for this item") && lower.contains("finding")) {
+                    return min(1, steps.count - 1)
+                }
+                if lower.contains("past") || lower.contains("suggestion") {
+                    return 0
+                }
+            } else if lower.contains("varied") || (lower.contains("pick") && !lower.contains("history")) {
+                return min(1, steps.count - 1)
+            }
+            if lower.contains("preparing your look") || lower.contains("prepar") || lower.contains("scan") {
+                return steps.count - 1
+            }
+        }
+        if lower.contains("history") || lower.contains("saved look") { return 0 }
+        if lower.contains("varied") || (lower.contains("pick") && !lower.contains("history")) {
+            return min(1, steps.count - 1)
+        }
+        if lower.contains("preparing your look") { return min(2, steps.count - 1) }
         if lower.contains("compress") || lower.contains("prepar") { return 0 }
         if lower.contains("analyz") || lower.contains("review") { return min(1, steps.count - 1) }
         if lower.contains("match") || lower.contains("color") || lower.contains("scan") { return min(2, steps.count - 1) }

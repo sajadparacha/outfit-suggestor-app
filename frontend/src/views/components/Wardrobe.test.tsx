@@ -464,6 +464,31 @@ describe('Wardrobe page', () => {
     expect(firstInput.accept).toBe('image/jpeg,image/jpg,image/png,image/webp');
   });
 
+  it('shows progress panel while loading past suggestions', async () => {
+    mockWardrobeItems.push({
+      ...mockWardrobeItem,
+      image_data: 'base64-image-a',
+    });
+
+    let resolveHistory!: (value: unknown[]) => void;
+    const historyPromise = new Promise<unknown[]>((resolve) => {
+      resolveHistory = resolve;
+    });
+    jest.spyOn(ApiService, 'getOutfitHistory').mockReturnValue(historyPromise as ReturnType<typeof ApiService.getOutfitHistory>);
+
+    render(<Wardrobe />);
+    clickPastSuggestionsFromMenu();
+
+    expect(screen.getByText('Loading past suggestions')).toBeInTheDocument();
+    expect(screen.getByText('Loading your saved looks')).toBeInTheDocument();
+    expect(screen.getByText(/Loading your saved looks…/i)).toBeInTheDocument();
+
+    resolveHistory([]);
+    await waitFor(() => {
+      expect(screen.queryByText('Loading past suggestions')).not.toBeInTheDocument();
+    });
+  });
+
   it('loads history suggestions via Past Suggestions menu item and allows selecting one', async () => {
     const itemWithImage: WardrobeItem = {
       ...mockWardrobeItem,

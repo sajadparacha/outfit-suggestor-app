@@ -560,50 +560,84 @@ export const useOutfitController = (options?: {
 
   const loadRandomFromHistory = useCallback(
     async (fetchHistory: () => Promise<OutfitHistoryEntry[]>): Promise<LoadRandomFromHistoryResult> => {
-      const fullHistory = await fetchHistory();
-      if (fullHistory.length === 0) {
-        return { status: 'empty' };
+      abortControllerRef.current?.abort();
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+      const { signal } = abortController;
+
+      setLoading(true);
+      setError(null);
+      setActiveOperation('random-history');
+      setLoadingMessage('Picking a random look from your history...');
+
+      try {
+        const fullHistory = await fetchHistory();
+        if (signal.aborted) {
+          return { status: 'empty' };
+        }
+
+        if (fullHistory.length === 0) {
+          return { status: 'empty' };
+        }
+
+        setLoadingMessage('Finding a varied outfit...');
+
+        const currentHistoryId =
+          inputPanelSource === 'history' && currentSuggestion?.id != null
+            ? Number(currentSuggestion.id)
+            : null;
+
+        const pickResult: PickRandomHistoryResult = pickRandomHistoryEntry(fullHistory, {
+          currentHistoryId: Number.isFinite(currentHistoryId) ? currentHistoryId : null,
+          session: randomHistorySessionRef.current,
+        });
+
+        const randomEntry = pickResult.entry;
+        if (!randomEntry) {
+          return { status: 'empty' };
+        }
+
+        if (signal.aborted) {
+          return { status: 'empty' };
+        }
+
+        setLoadingMessage('Preparing your look...');
+
+        setImage(null);
+        setSourceWardrobeItem(null);
+        setFlowPreviewUrl(null);
+        setFlowPreviewCaption(null);
+
+        const suggestion = historyEntryToSuggestion(randomEntry);
+        const previewUrl = suggestion.imageUrl ?? firstWardrobePreviewUrl(suggestion);
+
+        setFlowPreviewUrl(previewUrl);
+        setFlowPreviewCaption(previewUrl ? MAIN_FLOW_UX_COPY.fromHistory : null);
+        setInputPanelSource('history');
+        setSummaryFilters(historyEntrySummaryFilters(randomEntry, filters));
+        setSummaryPreferenceText(randomEntry.text_input?.trim() || null);
+        setSourceWardrobeItem(resolveSourceWardrobeItemFromSuggestion(suggestion));
+        setCurrentSuggestion(suggestion);
+
+        if (options?.onSuggestionSuccess) {
+          await options.onSuggestionSuccess();
+        }
+
+        return {
+          status: 'ok',
+          showSingleLookToast: pickResult.showSingleLookToast,
+        };
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') {
+          return { status: 'empty' };
+        }
+        throw err;
+      } finally {
+        setLoading(false);
+        setLoadingMessage(null);
+        setActiveOperation(null);
+        abortControllerRef.current = null;
       }
-
-      const currentHistoryId =
-        inputPanelSource === 'history' && currentSuggestion?.id != null
-          ? Number(currentSuggestion.id)
-          : null;
-
-      const pickResult: PickRandomHistoryResult = pickRandomHistoryEntry(fullHistory, {
-        currentHistoryId: Number.isFinite(currentHistoryId) ? currentHistoryId : null,
-        session: randomHistorySessionRef.current,
-      });
-
-      const randomEntry = pickResult.entry;
-      if (!randomEntry) {
-        return { status: 'empty' };
-      }
-
-      setImage(null);
-      setSourceWardrobeItem(null);
-      setFlowPreviewUrl(null);
-      setFlowPreviewCaption(null);
-
-      const suggestion = historyEntryToSuggestion(randomEntry);
-      const previewUrl = suggestion.imageUrl ?? firstWardrobePreviewUrl(suggestion);
-
-      setFlowPreviewUrl(previewUrl);
-      setFlowPreviewCaption(previewUrl ? MAIN_FLOW_UX_COPY.fromHistory : null);
-      setInputPanelSource('history');
-      setSummaryFilters(historyEntrySummaryFilters(randomEntry, filters));
-      setSummaryPreferenceText(randomEntry.text_input?.trim() || null);
-      setSourceWardrobeItem(resolveSourceWardrobeItemFromSuggestion(suggestion));
-      setCurrentSuggestion(suggestion);
-
-      if (options?.onSuggestionSuccess) {
-        await options.onSuggestionSuccess();
-      }
-
-      return {
-        status: 'ok',
-        showSingleLookToast: pickResult.showSingleLookToast,
-      };
     },
     [filters, options, inputPanelSource, currentSuggestion]
   );

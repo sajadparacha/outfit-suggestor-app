@@ -31,11 +31,7 @@ struct WardrobeListView: View {
     @Binding var preferenceText: String
     @Binding var useWardrobeOnly: Bool
     var isAuthenticated: Bool = false
-    @State private var historyLoadingForItem: Int?
-    @State private var showHistorySuggestionsSheet = false
-    @State private var historySuggestions: [OutfitHistoryEntry] = []
-    @State private var historySuggestionsError: String?
-    @State private var historySourceItem: WardrobeItem?
+    @StateObject private var pastSuggestionsLoader = WardrobePastSuggestionsLoader()
     @State private var editingItem: WardrobeItem?
     @State private var fullScreenImage: UIImage?
     @AppStorage("wardrobe_flow_tip_dismissed") private var flowTipDismissed = false
@@ -189,8 +185,8 @@ struct WardrobeListView: View {
                                     item: item,
                                     image: WardrobeImageData.decodeUIImage(from: item.image_data),
                                     onGetSuggestion: onGetSuggestionFromItem == nil ? nil : { onGetSuggestionFromItem?(item) },
-                                    onPastSuggestions: { Task { await openHistorySuggestions(for: item) } },
-                                    isPastSuggestionsLoading: historyLoadingForItem == item.id,
+                                    onPastSuggestions: { Task { await pastSuggestionsLoader.open(for: item) } },
+                                    isPastSuggestionsLoading: pastSuggestionsLoader.loadingItemId == item.id,
                                     onEdit: { editingItem = item },
                                     onDelete: { scheduleDelete(item: item) },
                                     onShowImage: { image in fullScreenImage = image },
@@ -246,6 +242,21 @@ struct WardrobeListView: View {
                 }
             }
         }
+        .overlay {
+            if pastSuggestionsLoader.showsProgressPanel {
+                VStack {
+                    Spacer()
+                    AiProgressPanelView(
+                        operationType: pastSuggestionsLoader.progressOperationType,
+                        message: pastSuggestionsLoader.progressMessage,
+                        onCancel: {}
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 12)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
         .navigationTitle("Wardrobe")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -271,7 +282,7 @@ struct WardrobeListView: View {
         .sheet(isPresented: $showAddSheet) {
             WardrobeFormView(item: nil, onSaved: { showAddSheet = false; Task { await load() } }, onCancel: { showAddSheet = false })
         }
-        .sheet(isPresented: $showHistorySuggestionsSheet) {
+        .sheet(isPresented: $pastSuggestionsLoader.showSheet) {
             historySuggestionsSheet
         }
         .sheet(item: $editingItem) { item in
@@ -645,48 +656,10 @@ struct WardrobeListView: View {
         }
     }
 
-    @MainActor
-    private func openHistorySuggestions(for item: WardrobeItem) async {
-        historyLoadingForItem = item.id
-        historySourceItem = item
-        historySuggestionsError = nil
-        historySuggestions = []
-        defer { historyLoadingForItem = nil }
-
-        do {
-            let allHistory = try await APIService.shared.getOutfitHistory(limit: 100)
-            let matches = allHistory.filter { entry in
-                historyEntryReferencesItem(entry, item: item)
-            }
-            historySuggestions = matches
-            if matches.isEmpty {
-                historySuggestionsError = "No history suggestions found for this wardrobe item yet."
-            }
-            showHistorySuggestionsSheet = true
-        } catch {
-            historySuggestionsError = error.localizedDescription
-            showHistorySuggestionsSheet = true
-        }
-    }
-
-    private func historyEntryReferencesItem(_ entry: OutfitHistoryEntry, item: WardrobeItem) -> Bool {
-        if entry.source_wardrobe_item_id == item.id {
-            return true
-        }
-        let slotIds = [entry.shirt_id, entry.trouser_id, entry.blazer_id, entry.shoes_id, entry.belt_id]
-        if slotIds.contains(where: { $0 == item.id }) {
-            return true
-        }
-        guard let itemImage = item.image_data, let entryImage = entry.image_data else {
-            return false
-        }
-        return itemImage == entryImage
-    }
-
     private var historySuggestionsSheet: some View {
         NavigationView {
             VStack(spacing: 14) {
-                if let sourceItem = historySourceItem {
+                if let sourceItem = pastSuggestionsLoader.sourceItem {
                     HStack(spacing: 12) {
                         if let image = WardrobeImageData.decodeUIImage(from: sourceItem.image_data) {
                             Image(uiImage: image)
@@ -714,13 +687,13 @@ struct WardrobeListView: View {
                 }
 
                 Group {
-                if !historySuggestions.isEmpty {
+                if !pastSuggestionsLoader.suggestions.isEmpty {
                     ScrollView {
                         LazyVStack(spacing: 12) {
-                            ForEach(historySuggestions) { entry in
+                            ForEach(pastSuggestionsLoader.suggestions) { entry in
                                 HistorySuggestionCardView(entry: entry) {
                                     onSelectHistorySuggestion?(entry)
-                                    showHistorySuggestionsSheet = false
+                                    pastSuggestionsLoader.showSheet = false
                                 }
                             }
                         }
@@ -728,14 +701,14 @@ struct WardrobeListView: View {
                         .padding(.bottom, 12)
                     }
                     .accessibilityIdentifier("wardrobe.historySuggestionsList")
-                } else if let error = historySuggestionsError {
+                } else if let error = pastSuggestionsLoader.error {
                     VStack(spacing: 16) {
                         Text(error)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
                         Button("Close") {
-                            showHistorySuggestionsSheet = false
+                            pastSuggestionsLoader.showSheet = false
                         }
                         .buttonStyle(.bordered)
                     }
@@ -760,7 +733,7 @@ struct WardrobeListView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") {
-                        showHistorySuggestionsSheet = false
+                        pastSuggestionsLoader.showSheet = false
                     }
                 }
             }

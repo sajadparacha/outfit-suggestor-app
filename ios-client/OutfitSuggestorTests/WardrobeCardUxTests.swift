@@ -11,6 +11,49 @@ final class WardrobeCardUxTests: XCTestCase {
     func testPastSuggestionsCopy() {
         XCTAssertEqual(WardrobeCardUx.pastSuggestionsTitle, "Past Suggestions")
         XCTAssertEqual(WardrobeCardUx.pastSuggestionsAccessibilityLabel, "Past Suggestions")
+        XCTAssertEqual(
+            WardrobeCardUx.pastSuggestionsLoadingMessage,
+            "Loading past suggestions for this item…"
+        )
+    }
+
+    @MainActor
+    func testPastSuggestionsLoaderShowsProgressPanelDuringDelayedFetch() async {
+        let mock = WardrobePastSuggestionsMockAPIService()
+        mock.historyFetchDelayNanos = 200_000_000
+        mock.historyResult = .success([
+            makeHistoryEntry(id: 1, sourceWardrobeItemId: 42)
+        ])
+        let loader = WardrobePastSuggestionsLoader(apiService: mock)
+        let item = wardrobeItem(id: 42, category: "shirt")
+
+        let loadTask = Task { await loader.open(for: item) }
+        try? await Task.sleep(nanoseconds: 50_000_000)
+
+        XCTAssertTrue(loader.showsProgressPanel)
+        XCTAssertEqual(loader.loadingItemId, 42)
+        XCTAssertEqual(loader.progressOperationType, .pastSuggestions)
+        XCTAssertEqual(loader.progressMessage, WardrobeCardUx.pastSuggestionsLoadingMessage)
+        XCTAssertEqual(
+            WardrobeCardUx.pastSuggestionsProgressPanelAccessibilityIdentifier,
+            "ai.progressPanel"
+        )
+        XCTAssertEqual(
+            WardrobeCardUx.pastSuggestionsProgressTitleAccessibilityIdentifier,
+            "ai.progressTitle"
+        )
+
+        await loadTask.value
+        XCTAssertFalse(loader.showsProgressPanel)
+        XCTAssertNil(loader.loadingItemId)
+        XCTAssertTrue(loader.showSheet)
+        XCTAssertEqual(loader.suggestions.count, 1)
+    }
+
+    func testHistoryEntryReferencesItemMatchesSourceWardrobeItemId() {
+        let item = wardrobeItem(id: 7, category: "shirt")
+        let entry = makeHistoryEntry(id: 1, sourceWardrobeItemId: 7)
+        XCTAssertTrue(WardrobePastSuggestionsMatching.historyEntryReferencesItem(entry, item: item))
     }
 
     func testMenuActionsOrderIncludesHistory() {
@@ -235,5 +278,95 @@ final class WardrobeCardUxTests: XCTestCase {
             context.fill(CGRect(x: 0, y: 0, width: 8, height: 8))
         }
         return image.pngData()!.base64EncodedString()
+    }
+
+    private func makeHistoryEntry(id: Int, sourceWardrobeItemId: Int?) -> OutfitHistoryEntry {
+        OutfitHistoryEntry(
+            id: id,
+            created_at: "2026-01-01T00:00:00Z",
+            text_input: nil,
+            image_data: nil,
+            model_image: nil,
+            shirt: "white shirt",
+            trouser: "black trouser",
+            blazer: "black blazer",
+            shoes: "black shoes",
+            belt: "black belt",
+            reasoning: "classic",
+            source_wardrobe_item_id: sourceWardrobeItemId
+        )
+    }
+}
+
+@MainActor
+private final class WardrobePastSuggestionsMockAPIService: APIServiceProtocol {
+    var historyFetchDelayNanos: UInt64 = 0
+    var historyResult: Result<[OutfitHistoryEntry], Error> = .success([])
+    private(set) var historyCalls = 0
+
+    func getSuggestion(
+        image: UIImage,
+        textInput: String,
+        useWardrobeOnly: Bool,
+        generateModelImage: Bool,
+        imageModel: String,
+        location: String?,
+        previousOutfitText: String?,
+        sourceWardrobeItemId: Int?,
+        occasion: String?,
+        season: String?,
+        style: String?
+    ) async throws -> OutfitSuggestion {
+        throw APIServiceError.invalidResponse
+    }
+
+    func getSuggestionFromWardrobeItem(
+        itemId: Int,
+        textInput: String,
+        generateModelImage: Bool,
+        imageModel: String,
+        location: String?,
+        occasion: String?,
+        season: String?,
+        style: String?
+    ) async throws -> OutfitSuggestion {
+        throw APIServiceError.invalidResponse
+    }
+
+    func getSuggestionFromWardrobeItems(
+        selectedWardrobeItemIds: [Int],
+        textInput: String,
+        occasion: String?,
+        season: String?,
+        style: String?
+    ) async throws -> OutfitSuggestion {
+        throw APIServiceError.invalidResponse
+    }
+
+    func getOutfitHistory(limit: Int) async throws -> [OutfitHistoryEntry] {
+        historyCalls += 1
+        if historyFetchDelayNanos > 0 {
+            try await Task.sleep(nanoseconds: historyFetchDelayNanos)
+        }
+        return try historyResult.get()
+    }
+
+    func checkOutfitDuplicate(image: UIImage) async throws -> OutfitDuplicateResponse {
+        OutfitDuplicateResponse(is_duplicate: false, existing_suggestion: nil)
+    }
+
+    func getRandomOutfit(occasion: String, season: String, style: String) async throws -> OutfitSuggestion {
+        throw APIServiceError.invalidResponse
+    }
+
+    func getWardrobeOnlySuggestion(
+        occasion: String,
+        season: String,
+        style: String,
+        textInput: String,
+        previousOutfitText: String?,
+        avoidOutfitTexts: [String]?
+    ) async throws -> OutfitSuggestion {
+        throw APIServiceError.invalidResponse
     }
 }

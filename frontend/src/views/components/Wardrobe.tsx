@@ -8,6 +8,7 @@ import { WARDROBE_MAX_SIZE_MB } from '../../constants/imageLimits';
 import { UI_CONFIG } from '../../utils/constants';
 import ConfirmationModal from './ConfirmationModal';
 import AnalysisPreferences from './AnalysisPreferences';
+import LoadingOverlay from './LoadingOverlay';
 import { historyEntryToSuggestion } from '../../utils/historyUtils';
 import { MAIN_FLOW_UX_COPY } from '../../utils/mainFlowUxCopy';
 import {
@@ -154,6 +155,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
   const [suggestionLoading, setSuggestionLoading] = useState<number | null>(null); // Store item ID being processed
   const [suggestionError, setSuggestionError] = useState<string | null>(null);
   const [historyLoadingForItem, setHistoryLoadingForItem] = useState<number | null>(null);
+  const [historyLoadingMessage, setHistoryLoadingMessage] = useState<string | null>(null);
   const [showHistorySuggestionsModal, setShowHistorySuggestionsModal] = useState(false);
   const [historySuggestions, setHistorySuggestions] = useState<OutfitHistoryEntry[]>([]);
   const [historySuggestionsError, setHistorySuggestionsError] = useState<string | null>(null);
@@ -709,14 +711,19 @@ const Wardrobe: React.FC<WardrobeProps> = ({
 
   const handleOpenHistorySuggestions = async (item: WardrobeItem) => {
     setHistoryLoadingForItem(item.id);
+    setHistoryLoadingMessage('Loading past suggestions for this item…');
     setHistorySuggestionsError(null);
     setHistorySuggestions([]);
     setHistorySourceItem(item);
 
     try {
+      setHistoryLoadingMessage('Loading your saved looks…');
       const allHistory = await ApiService.getOutfitHistory(100);
+
+      setHistoryLoadingMessage('Finding outfits for this item…');
       const matchingByItem = allHistory.filter((entry) => historyEntryReferencesItem(entry, item));
 
+      setHistoryLoadingMessage('Preparing suggestions…');
       setHistorySuggestions(matchingByItem);
       setShowHistorySuggestionsModal(true);
       if (matchingByItem.length === 0) {
@@ -728,6 +735,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
       setShowHistorySuggestionsModal(true);
     } finally {
       setHistoryLoadingForItem(null);
+      setHistoryLoadingMessage(null);
     }
   };
 
@@ -1986,6 +1994,12 @@ const Wardrobe: React.FC<WardrobeProps> = ({
             </div>
           </div>
         )}
+
+        <LoadingOverlay
+          isLoading={historyLoadingForItem !== null}
+          operationType="past-suggestions"
+          message={historyLoadingMessage ?? 'Loading past suggestions for this item…'}
+        />
 
         {showDeleteUndoToast && (
           <div

@@ -17,6 +17,8 @@ const OPERATION_TITLES: Record<AiOperationType, string> = {
   'outfit-with-preview': 'Creating your outfit',
   'wardrobe-outfit': 'Building from your wardrobe',
   'wardrobe-analysis': 'Analyzing your wardrobe',
+  'random-history': 'Picking from your history',
+  'past-suggestions': 'Loading past suggestions',
 };
 
 const LoadingOverlay: React.FC<LoadingOverlayProps> = ({

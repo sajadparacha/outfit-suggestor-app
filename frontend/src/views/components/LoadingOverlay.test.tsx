@@ -49,4 +49,34 @@ describe('LoadingOverlay', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
+
+  it('shows staged progress for random history picks', () => {
+    render(
+      <LoadingOverlay
+        isLoading
+        operationType="random-history"
+        message="Picking a random look from your history..."
+      />
+    );
+
+    expect(screen.getByText('Picking from your history')).toBeInTheDocument();
+    expect(screen.getByText('Loading your saved looks')).toBeInTheDocument();
+    expect(screen.getByText('Finding a varied outfit')).toBeInTheDocument();
+    expect(screen.getByText('Preparing your look')).toBeInTheDocument();
+  });
+
+  it('shows staged progress for past suggestions', () => {
+    render(
+      <LoadingOverlay
+        isLoading
+        operationType="past-suggestions"
+        message="Loading past suggestions for this item…"
+      />
+    );
+
+    expect(screen.getByText('Loading past suggestions')).toBeInTheDocument();
+    expect(screen.getByText('Loading your saved looks')).toBeInTheDocument();
+    expect(screen.getByText('Finding outfits for this item')).toBeInTheDocument();
+    expect(screen.getByText('Preparing suggestions')).toBeInTheDocument();
+  });
 });

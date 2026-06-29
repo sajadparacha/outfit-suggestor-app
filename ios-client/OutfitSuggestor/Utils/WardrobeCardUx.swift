@@ -7,6 +7,7 @@
 
 import Foundation
 import UIKit
+import Combine
 
 enum WardrobeCardMenuAction: String, CaseIterable {
     case viewImage
@@ -39,7 +40,12 @@ enum WardrobeCardUx {
     static let pastSuggestionsTitle = "Past Suggestions"
     static let pastSuggestionsAccessibilityLabel = "Past Suggestions"
     static let pastSuggestionsLoadingAccessibilityLabel = "Loading…"
+    static let pastSuggestionsLoadingMessage = "Loading past suggestions for this item…"
     static let menuTriggerAccessibilityLabel = "More actions"
+
+    static let pastSuggestionsProgressPanelAccessibilityIdentifier = "ai.progressPanel"
+    static let pastSuggestionsProgressTitleAccessibilityIdentifier = "ai.progressTitle"
+    static let pastSuggestionsProgressOperationType: AiOperationType = .pastSuggestions
 
     /// Overflow menu order for wardrobe card actions.
     /// WardrobeCardView uses native SwiftUI `Menu`; the system popover presents outside
@@ -118,5 +124,71 @@ enum WardrobeCompletionThumbnails {
 
     static func hasDecodableImageData(_ value: String?) -> Bool {
         WardrobeImageData.decodeUIImage(from: value) != nil
+    }
+}
+
+enum WardrobePastSuggestionsMatching {
+    static func historyEntryReferencesItem(_ entry: OutfitHistoryEntry, item: WardrobeItem) -> Bool {
+        if entry.source_wardrobe_item_id == item.id {
+            return true
+        }
+        let slotIds = [entry.shirt_id, entry.trouser_id, entry.blazer_id, entry.shoes_id, entry.belt_id]
+        if slotIds.contains(where: { $0 == item.id }) {
+            return true
+        }
+        guard let itemImage = item.image_data, let entryImage = entry.image_data else {
+            return false
+        }
+        return itemImage == entryImage
+    }
+}
+
+@MainActor
+final class WardrobePastSuggestionsLoader: ObservableObject {
+    @Published private(set) var loadingItemId: Int?
+    @Published var showSheet = false
+    @Published var suggestions: [OutfitHistoryEntry] = []
+    @Published var error: String?
+    @Published var sourceItem: WardrobeItem?
+
+    private let apiService: APIServiceProtocol
+
+    init(apiService: APIServiceProtocol = APIService.shared) {
+        self.apiService = apiService
+    }
+
+    var showsProgressPanel: Bool {
+        loadingItemId != nil
+    }
+
+    var progressOperationType: AiOperationType {
+        WardrobeCardUx.pastSuggestionsProgressOperationType
+    }
+
+    var progressMessage: String {
+        WardrobeCardUx.pastSuggestionsLoadingMessage
+    }
+
+    func open(for item: WardrobeItem) async {
+        loadingItemId = item.id
+        sourceItem = item
+        error = nil
+        suggestions = []
+        defer { loadingItemId = nil }
+
+        do {
+            let allHistory = try await apiService.getOutfitHistory(limit: 100)
+            let matches = allHistory.filter { entry in
+                WardrobePastSuggestionsMatching.historyEntryReferencesItem(entry, item: item)
+            }
+            suggestions = matches
+            if matches.isEmpty {
+                error = "No history suggestions found for this wardrobe item yet."
+            }
+            showSheet = true
+        } catch {
+            self.error = error.localizedDescription
+            showSheet = true
+        }
     }
 }

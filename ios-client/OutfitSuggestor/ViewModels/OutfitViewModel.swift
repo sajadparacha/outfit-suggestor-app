@@ -99,7 +99,9 @@ class OutfitViewModel: ObservableObject {
             return generateModelImage ? .outfitWithPreview : .outfitSuggestion
         case .randomWardrobe:
             return .wardrobeOutfit
-        case .randomHistory, .wardrobePreload:
+        case .randomHistory:
+            return .randomHistory
+        case .wardrobePreload:
             return nil
         }
     }

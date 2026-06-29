@@ -4,7 +4,9 @@ export type AiOperationType =
   | 'outfit-suggestion'
   | 'outfit-with-preview'
   | 'wardrobe-outfit'
-  | 'wardrobe-analysis';
+  | 'wardrobe-analysis'
+  | 'random-history'
+  | 'past-suggestions';
 
 export interface AiProgressStep {
   id: string;
@@ -37,6 +39,16 @@ export const AI_PROGRESS_STEPS: Record<AiOperationType, AiProgressStep[]> = {
     { id: 'gaps', label: 'Identifying gaps', durationMs: 10000 },
     { id: 'recommend', label: 'Preparing recommendations', durationMs: 15000 },
   ],
+  'random-history': [
+    { id: 'fetch', label: 'Loading your saved looks', durationMs: 2500 },
+    { id: 'pick', label: 'Finding a varied outfit', durationMs: 2000 },
+    { id: 'prepare', label: 'Preparing your look', durationMs: 2000 },
+  ],
+  'past-suggestions': [
+    { id: 'fetch', label: 'Loading your saved looks', durationMs: 2500 },
+    { id: 'filter', label: 'Finding outfits for this item', durationMs: 2000 },
+    { id: 'prepare', label: 'Preparing suggestions', durationMs: 2000 },
+  ],
 };
 
 export function getEstimatedDurationMs(operationType: AiOperationType): number {
@@ -50,9 +62,34 @@ export function formatDuration(seconds: number): string {
   return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
 }
 
-function resolveStepFromMessage(message: string | null | undefined, steps: AiProgressStep[]): number {
+export function resolveStepFromMessage(message: string | null | undefined, steps: AiProgressStep[]): number {
   if (!message) return 0;
   const lower = message.toLowerCase();
+  if (steps[0]?.id === 'fetch') {
+    if (lower.includes('saved look') || lower.includes('loading your saved') || lower.includes('history')) {
+      return 0;
+    }
+    if (steps[1]?.id === 'filter') {
+      if (lower.includes('prepar')) {
+        return steps.length - 1;
+      }
+      if (
+        lower.includes('filter') ||
+        lower.includes('finding outfit') ||
+        (lower.includes('for this item') && lower.includes('finding'))
+      ) {
+        return Math.min(1, steps.length - 1);
+      }
+      if (lower.includes('past') || lower.includes('suggestion')) {
+        return 0;
+      }
+    } else if (lower.includes('pick') || lower.includes('varied')) {
+      return Math.min(1, steps.length - 1);
+    }
+    if (lower.includes('prepar') || lower.includes('scan')) {
+      return steps.length - 1;
+    }
+  }
   if (lower.includes('compress')) return 0;
   if (lower.includes('analyz')) return 1;
   if (lower.includes('match') || lower.includes('color')) return 2;
