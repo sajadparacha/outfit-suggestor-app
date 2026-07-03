@@ -18,6 +18,7 @@ All triggers use the **strict** workflow: orchestrator never edits `frontend/**`
 ## Workflow checklist
 
 ```
+- [ ] 0. Run cost estimate script; user confirms before any work
 - [ ] 1. Confirm branch (`git branch --show-current`)
 - [ ] 2. Create spec with Tests (required) section filled; mark if **About** / **Guide** need updates
 - [ ] 3. Orchestrator: backend/contract + backend pytest (if needed)
@@ -26,7 +27,8 @@ All triggers use the **strict** workflow: orchestrator never edits `frontend/**`
 - [ ] 6. **Ask user to confirm** before running full web + iOS test suites
 - [ ] 7. Orchestrator: run FULL web + iOS test suites (only after user confirms)
 - [ ] 8. Publish Test Execution Report (required format below)
-- [ ] 9. Mark spec done; summarize for user
+- [ ] 9. Run `estimate-workflow-cost.py end`; include **Workflow actual cost** in report
+- [ ] 10. Mark spec done; summarize for user
 ```
 
 ## Mandatory tests (every Twin UI feature)

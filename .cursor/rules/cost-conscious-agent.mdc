@@ -1,0 +1,90 @@
+---
+description: Reduce Cursor token spend — narrow scope, targeted tests, avoid premium unless needed
+alwaysApply: true
+---
+
+# Cost-conscious agent
+
+Minimize token use without sacrificing correctness. Prefer **smaller, focused work** over broad exploration and long threads.
+
+## Trigger (paste at start of a chat or task)
+
+```text
+Cost mode: minimal context, targeted tests only.
+```
+
+When the user includes this line (or `Cost mode:`), treat it as **strict** cost mode for that turn and the rest of the session unless they say otherwise:
+
+- Read only files/paths they name or that are strictly required.
+- No repo-wide search, no Twin UI/subagents unless they restate `Twin UI:` or `Cost Twin UI:` in the same message.
+- Run the smallest test subset; never full suites without explicit ask.
+- Prefer Auto; do not suggest premium models.
+- If scope is unclear, ask one short question instead of exploring.
+
+## Small Twin UI (cost + both platforms)
+
+Use when the change is **small but must land on web and iOS** (copy tweak, chip style, one button, narrow bug).
+
+```text
+Cost Twin UI:
+
+[one short instruction — name files if you know them]
+```
+
+**Activation:** `Cost Twin UI:` in the same message = strict cost mode **and** abbreviated Twin UI. Takes precedence over the full end-of-run test gate (no full suites unless the user asks).
+
+**Pre-flight:** Same as full Twin UI — orchestrator runs `estimate-workflow-cost.py` and waits for your approval before the spec or agents.
+
+**Post-flight:** Orchestrator runs `estimate-workflow-cost.py end` and reports **actual** spend vs estimate in the final summary.
+
+| Step | Full `Twin UI:` | `Cost Twin UI:` |
+|------|-----------------|-----------------|
+| Spec | Full `_template.md` | Short spec: goal, file paths, 3–5 test bullets |
+| Agents | Web + iOS parallel | Web + iOS parallel (required) |
+| Subagent scope | Feature area | **Only listed files** + their tests |
+| During work | Targeted tests OK | **One test file per platform** max |
+| End | Ask → full web + iOS (+ backend) | **Skip full suites**; report targeted results only |
+| About / Guide | When spec says yes | Only if user-visible copy/flow changes |
+| `IOS_WEB_FEATURE_PARITY.md` | Update if parity changed | Skip for trivial / no new capability |
+
+Orchestrator still must not edit `frontend/**` or `ios-client/**` directly — dispatch two subagents with the narrow prompts above.
+
+## Scope and context
+
+- **Read only files needed** for the task. Do not scan the whole repo unless the user explicitly asks.
+- When the user names a file, path, or spec, start there — do not re-discover the same layout every turn.
+- For requirements already in `.cursor/specs/<slug>.md`, **reference the spec path** instead of re-pasting long handoff text.
+- If the task changed materially (new feature, new branch, finished prior work), suggest a **new chat** to avoid cache-heavy context carryover.
+
+## Model and agent choice
+
+- Assume **Auto/default** is sufficient for implementation, tests, and routine fixes.
+- Use premium / high-reasoning models only when the user asks or the task is genuinely architectural, ambiguous, or security-critical.
+- After plan usage limits are hit, **do not** recommend premium models; stick to Auto and smaller scope.
+
+## Twin UI / parallel agents
+
+- **Twin UI** (`Twin UI:`) only for cross-platform features that need web + iOS in one go.
+- For single-platform or single-file fixes, work inline — **do not** spawn subagents.
+- Subagent prompts must include: spec path, allowed dirs, and **“read only listed files; no full-repo search.”**
+- Do not re-run Twin UI + full parity gates for tiny follow-ups; use one targeted agent or inline edit.
+
+## Tests (mandatory but targeted)
+
+- Add/update tests for new behavior, but **run the smallest relevant subset** during work:
+  - Backend: `pytest tests/test_<module>.py -q` (or one test name)
+  - Web: `npm test -- --watchAll=false <pattern>` for touched files
+  - iOS: one test class or file when possible
+- **Do not** run full web + iOS + backend suites mid-task unless the user asks.
+- At Twin UI end, follow the existing workflow: ask before full suites; do not auto-run them.
+
+## Exploration and tools
+
+- Prefer `Grep` / `Read` on known paths over broad `SemanticSearch` across the repo.
+- Do not attach or re-fetch large artifacts (images, logs, full CI output) unless required; quote the relevant slice.
+- Avoid redundant parallel subagents when one agent can finish the job.
+
+## Communication
+
+- Propose a **short plan** before large multi-file edits.
+- If a request would trigger expensive patterns (full test matrix, repo-wide refactor, second Twin UI pass), **say so** and offer a cheaper alternative first.

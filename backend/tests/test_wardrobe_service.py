@@ -113,6 +113,17 @@ class TestWardrobeGapAnalysisCategories:
         assert "tie" in result["analysis_by_category"]
         assert result["analysis_by_category"]["tie"]["item_count"] == 0
 
+    def test_analyze_wardrobe_gaps_summer_deprioritizes_sweater_and_jacket(self):
+        ws = WardrobeService()
+        db = MagicMock()
+        with patch.object(ws, "get_user_wardrobe", return_value=([], 0)):
+            result = ws.analyze_wardrobe_gaps(db, user_id=1, occasion="casual", season="summer", style="casual")
+
+        top_categories = [item["category"] for item in result["priorityShoppingList"][:3]]
+        assert "sweater" not in top_categories
+        assert "jacket" not in top_categories
+        assert top_categories[0] in {"shirt", "trouser", "shoes"}
+
 
 class TestWardrobeServiceSimilarity:
     """Tests for wardrobe item similarity and reordering"""

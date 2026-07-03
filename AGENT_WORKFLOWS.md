@@ -131,11 +131,13 @@ Agents **do not commit** unless you explicitly ask. Twin UI ends with implemente
 
 ## Publish on Web
 
-**Test everything → commit → push → GitHub Pages → Railway** — all on the **current branch**.
+**Remind user to test in terminal → commit → push → GitHub Pages → Railway** — all on the **current branch**.
 
-Invoking this skill counts as explicit approval to **commit, push, and deploy**.
+Invoking this skill counts as explicit approval to **commit, push, and deploy** (after the user confirms tests passed in their terminal).
 
 **Do not merge to `main`** as part of this workflow. Push `HEAD` on whatever branch you are on (e.g. `feature/ui-ux-final-touches`).
+
+**The agent does not run full test suites** during this workflow. It posts the commands below and waits for the user to confirm **tests passed** before deploy.
 
 ### Trigger
 
@@ -146,28 +148,23 @@ publish on web
 ### What happens (step by step)
 
 1. **Record branch** — e.g. `main` or `feature/ui-ux-final-touches`.
-2. **Run all test suites** (mandatory gate — stop on any failure):
+2. **Remind user to run all test suites in terminal** (agent does not run them — stop until user confirms pass):
 
    | Suite | Command | Typical duration |
    |-------|---------|------------------|
+   | All | `bash .cursor/skills/publish-on-web/scripts/run-all-tests.sh` | ~8–12 min |
    | Web | `cd frontend && npm test -- --watchAll=false --passWithNoTests` | ~3 s |
    | Backend | `cd backend && . venv/bin/activate && pytest -q` | ~4 min |
    | iOS | `xcodebuild test -scheme OutfitSuggestor …` | ~4–8 min |
-
-   Optional one-liner:
-
-   ```bash
-   bash .cursor/skills/publish-on-web/scripts/run-all-tests.sh
-   ```
 
 3. **Commit** — stage relevant changes; **never** commit secrets (`.env.development`), build artifacts, or `xcuserdata/`.
 4. **Push** — `git push -u origin HEAD` (current branch only — **no merge to `main`**).
 5. **GitHub Pages** — `cd frontend && npm run deploy` (build + push to `gh-pages`).
 6. **Railway** — `cd backend && railway up`.
 7. **Verify** — health check and frontend URLs.
-8. **Publish on Web — Report** — summary of tests, git, deploys, and live checks.
+8. **Publish on Web — Report** — summary of user-confirmed tests, git, deploys, and live checks.
 
-**If any test fails:** workflow stops. No commit, push, or deploy.
+**If the user reports test failures or has not confirmed:** workflow stops. No commit, push, or deploy.
 
 ### Prerequisites
 
@@ -200,7 +197,7 @@ Pushing **`main`** may trigger `.github/workflows/deploy.yml` (GitHub Actions �
 | File | Role |
 |------|------|
 | `.cursor/skills/publish-on-web/SKILL.md` | Full workflow and report template |
-| `.cursor/skills/publish-on-web/scripts/run-all-tests.sh` | Test-only gate script |
+| `.cursor/skills/publish-on-web/scripts/run-all-tests.sh` | User-run test gate (not executed by agent) |
 | `DEPLOYMENT_INSTRUCTIONS.md` | Manual deploy reference |
 | `RAILWAY_DEPLOYMENT_STEPS.md` | Railway setup |
 | `.github/workflows/deploy.yml` | CI deploy on push to `main` |
@@ -231,8 +228,8 @@ flowchart LR
 | I want to… | Say this |
 |------------|----------|
 | Change UI on web **and** iOS | `Twin UI: [description]` |
-| Run all tests and deploy | `publish on web` |
-| Run tests only (no deploy) | `bash .cursor/skills/publish-on-web/scripts/run-all-tests.sh` |
+| Run tests in terminal, then deploy | `publish on web` (agent reminds; you run tests) |
+| Run all tests (web + backend + iOS + UITests) | `run_all_tests` (from repo root; see alias below) |
 | See web/iOS parity status | Open `IOS_WEB_FEATURE_PARITY.md` |
 | Read agent entry point | Open `AGENTS.md` |
 

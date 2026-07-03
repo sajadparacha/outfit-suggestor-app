@@ -205,6 +205,64 @@ def test_analyze_wardrobe_gaps_requests_dedicated_token_budget():
     assert captured["max_tokens"] >= MIN_WARDROBE_GAP_MAX_TOKENS
     assert captured["max_tokens"] != ai.max_tokens
     assert captured["response_format"] == {"type": "json_object"}
+    prompt = captured["messages"][0]["content"]
+    assert "Season-aware purchase rules" in prompt
+    assert "summer" in prompt.lower()
+
+
+def test_analyze_wardrobe_gaps_filters_heavy_summer_purchases():
+    ai = _ai_service()
+    payload = json.loads(_build_full_premium_json())
+    payload["priorityShoppingList"] = [
+        {
+            "rank": 1,
+            "itemName": "gray merino sweater",
+            "category": "sweater",
+            "priority": "High",
+            "recommendedColors": ["gray"],
+            "recommendedStyles": ["merino"],
+            "reason": "Essential merino sweater for layering.",
+            "outfitImpact": "Adds warmth.",
+            "actions": ["Add to shopping list", "Show outfit examples"],
+        },
+        {
+            "rank": 2,
+            "itemName": "white linen shirt",
+            "category": "shirt",
+            "priority": "High",
+            "recommendedColors": ["white"],
+            "recommendedStyles": ["linen"],
+            "reason": "Breathable summer top.",
+            "outfitImpact": "Unlocks warm-weather outfits.",
+            "actions": ["Add to shopping list", "Show outfit examples"],
+        },
+    ]
+    payload["analysis_by_category"]["sweater"] = {
+        "category": "sweater",
+        "owned_colors": [],
+        "owned_styles": [],
+        "missing_colors": ["gray"],
+        "missing_styles": ["merino", "linen knit"],
+        "recommended_purchases": [
+            "Gray merino sweater for cool evenings.",
+            "Navy cable knit sweater.",
+        ],
+        "item_count": 0,
+    }
+    _install_openai_mock(ai, content=json.dumps(payload))
+
+    result = ai.analyze_wardrobe_gaps_with_chatgpt(
+        wardrobe_items=[],
+        occasion="casual",
+        season="summer",
+        style="casual",
+    )
+
+    top_categories = [item["category"] for item in result["priorityShoppingList"][:3]]
+    assert "sweater" not in top_categories
+    assert result["priorityShoppingList"][0]["category"] == "shirt"
+    assert result["analysis_by_category"]["sweater"]["recommended_purchases"] == []
+    assert "merino" not in result["analysis_by_category"]["sweater"]["missing_styles"]
 
 
 def test_analyze_wardrobe_gaps_returns_premium_contract():

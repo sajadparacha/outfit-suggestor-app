@@ -10,6 +10,10 @@ Twin UI:
 [your instruction]
 ```
 
+**Small cross-platform task (lower token use):** start with `Cost Twin UI:` instead — still spawns web + iOS agents, but narrow file scope, short spec, targeted tests only (no full-suite gate unless you ask). See `.cursor/rules/cost-conscious-agent.mdc`.
+
+**Before any workflow starts**, the agent runs `.cursor/scripts/estimate-workflow-cost.py` and waits for your **yes/proceed** (Twin UI, Cost Twin UI, and publish on web). After approval it runs `… start`; when the workflow finishes it runs `… end` and reports **actual** Cursor spend vs the estimate.
+
 **Twin** = two platforms, two agents, always in parallel.
 
 ## What happens
@@ -79,7 +83,7 @@ Update About and Guide if user-facing behavior or copy changes.
 | `.cursor/rules/web-ui-ux.mdc` | Web scope (`frontend/**`) |
 | `.cursor/rules/ios-ui-ux.mdc` | iOS scope (`ios-client/**`) |
 | `.cursor/skills/parallel-ui-ux/SKILL.md` | Workflow, prompts, test requirements |
-| `.cursor/skills/publish-on-web/SKILL.md` | Test → commit → push → GitHub Pages + Railway (current branch; **no merge to main**) |
+| `.cursor/skills/publish-on-web/SKILL.md` | Remind user to test in terminal → commit → push → GitHub Pages + Railway (current branch; **no merge to main**) |
 | `.cursor/specs/_template.md` | Spec + Tests (required) template |
 | `.cursor/specs/_test-report-template.md` | End-of-run Test Execution Report |
 

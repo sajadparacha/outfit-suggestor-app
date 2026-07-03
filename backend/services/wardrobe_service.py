@@ -1067,6 +1067,16 @@ class WardrobeService:
             }
         )
 
+        from services.wardrobe_season_rules import apply_wardrobe_gap_season_filters
+
+        analysis_by_category, priority_shopping_list, category_insights = apply_wardrobe_gap_season_filters(
+            season=season,
+            occasion=occasion,
+            analysis_by_category=analysis_by_category,
+            priority_shopping_list=priority_shopping_list,
+            category_insights=category_insights,
+        )
+
         if priority_shopping_list:
             top_items = ", ".join(item["itemName"] for item in priority_shopping_list[:5])
             summary = (

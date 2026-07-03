@@ -15,6 +15,44 @@ alwaysApply: true
 
 Works on the **current git branch** only.
 
+## 0. Cost estimate — required before starting
+
+When the user triggers Twin UI (including `Cost Twin UI:`), **stop** after parsing the instruction. Do **not** write the spec, edit backend, or spawn subagents until the user confirms.
+
+1. Run (adjust flags from the prompt):
+
+```bash
+python3 .cursor/scripts/estimate-workflow-cost.py \
+  --workflow twin-ui \
+  --prompt "<paste the user's full instruction>" \
+  [--backend] [--images] [--about-guide]
+```
+
+For `Cost Twin UI:`, use `--workflow cost-twin-ui` instead.
+
+2. Show the script output verbatim to the user.
+3. **Wait for explicit approval** (`yes`, `proceed`, `go ahead`). If they decline, offer `Cost Twin UI:` or a narrower scope.
+4. Immediately after approval, start tracking:
+
+```bash
+python3 .cursor/scripts/estimate-workflow-cost.py start \
+  --workflow twin-ui \
+  --prompt "<paste the user's full instruction>" \
+  [--backend] [--images] [--about-guide]
+```
+
+5. Only then continue to orchestrator step 1 (Confirm scope) below.
+
+At workflow completion (after test report or if user declined full suites), **always** report actual cost:
+
+```bash
+python3 .cursor/scripts/estimate-workflow-cost.py end
+```
+
+Include the `end` output verbatim in the final summary (Test Execution Report **Cost** section).
+
+If the estimate script fails (no token, offline), show a manual range from `.cursor/workflow-cost-baselines.json` and still ask before proceeding.
+
 ## Orchestrator role — strict
 
 The orchestrator (this chat) may ONLY touch:
@@ -90,7 +128,8 @@ After both agents complete:
 
 6. Mark spec **Tests** checkboxes and parity checklist
 7. Publish the **Test Execution Report** (required — use template in skill)
-8. Report parity gaps, missing About/Guide updates, and missing new-behavior tests
+8. Run `python3 .cursor/scripts/estimate-workflow-cost.py end` and add **Workflow actual cost** to the report
+9. Report parity gaps, missing About/Guide updates, and missing new-behavior tests
 
 **Do not report "done"** if any full suite fails, or if new behavior has no tests added. If the user declined the full-suite run, report implementation status but note verification is pending.
 

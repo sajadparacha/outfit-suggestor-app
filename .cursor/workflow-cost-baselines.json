@@ -1,0 +1,42 @@
+{
+  "_comment": "Heuristic ranges from account usage Apr–Jun 2026. Not exact per-prompt pricing.",
+  "workflows": {
+    "twin-ui": {
+      "label": "Twin UI (full)",
+      "usd_low": 8,
+      "usd_typical": 18,
+      "usd_high": 35,
+      "calls_low": 40,
+      "calls_typical": 80,
+      "calls_high": 130,
+      "notes": "Orchestrator + 2 subagents + spec; full test gate if you confirm at end"
+    },
+    "cost-twin-ui": {
+      "label": "Cost Twin UI (abbreviated)",
+      "usd_low": 2,
+      "usd_typical": 6,
+      "usd_high": 12,
+      "calls_low": 15,
+      "calls_typical": 35,
+      "calls_high": 50,
+      "notes": "Narrow file scope; targeted tests only unless you ask for full suites"
+    },
+    "publish-on-web": {
+      "label": "Publish on web",
+      "usd_low": 3,
+      "usd_typical": 7,
+      "usd_high": 15,
+      "calls_low": 15,
+      "calls_typical": 30,
+      "calls_high": 50,
+      "notes": "User runs tests in terminal; agent commit/push/deploy only; excludes Railway/hosting fees"
+    }
+  },
+  "prompt_multipliers": {
+    "chars_per_dollar_bump": 2500,
+    "max_bump_usd": 8,
+    "image_attachment_bump_usd": 3,
+    "backend_bump_usd": 4,
+    "about_guide_bump_usd": 2
+  }
+}

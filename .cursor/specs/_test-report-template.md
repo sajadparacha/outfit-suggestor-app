@@ -61,3 +61,13 @@ Copy into the orchestrator's final Twin UI message. Fill all sections.
 ### Notes
 
 - 
+
+### Cursor cost (required)
+
+Run:
+
+```bash
+python3 .cursor/scripts/estimate-workflow-cost.py end
+```
+
+Paste the **Workflow actual cost** block (actual $, API calls, vs estimate, on-demand portion).

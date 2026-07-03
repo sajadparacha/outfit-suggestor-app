@@ -11,6 +11,8 @@ frontend/dist/
 # IDE
 .vscode/
 .idea/
+.cursor/workflow-cost-active.json
+.cursor/workflow-cost-history.jsonl
 *.swp
 *.swo
 

@@ -1,18 +1,19 @@
 ---
 name: publish-on-web
 description: >-
-  Run full web, backend, and iOS test suites; on success commit and push the
-  current branch (do not merge to main), publish frontend to GitHub Pages, and
-  deploy backend to Railway. Use when the user says "publish on web",
-  "Publish on web", or wants to ship the web app after tests pass.
+  Remind the user to run full web, backend, and iOS test suites in their
+  terminal (agent does not run them); then commit and push the current branch
+  (do not merge to main), publish frontend to GitHub Pages, and deploy backend
+  to Railway. Use when the user says "publish on web", "Publish on web", or
+  wants to ship the web app.
 disable-model-invocation: true
 ---
 
 # Publish on Web
 
-End-to-end release workflow for **outfit-suggestor-app**: test → commit → push → GitHub Pages → Railway.
+End-to-end release workflow for **outfit-suggestor-app**: remind user to test in terminal → commit → push → GitHub Pages → Railway.
 
-**Stop immediately** if any test suite fails. Do **not** commit, push, or deploy on failure.
+**Do not run test suites in this workflow.** Show the user the terminal commands below and remind them to run all suites locally before deploy. Ask them to confirm tests passed before commit/push/deploy. If they report failures, stop — do **not** commit, push, or deploy.
 
 **Do not merge to `main`.** Ship from the **current branch** only — commit, push `HEAD`, then deploy. Never `git merge main`, `git checkout main && git merge …`, or open/complete a merge-to-main step as part of this workflow.
 
@@ -27,6 +28,30 @@ publish on web
 ```
 
 or invokes this skill by name.
+
+---
+
+## Step 0 — Cost estimate (required)
+
+Before git operations or deploy, **stop** and show an estimate:
+
+```bash
+python3 .cursor/scripts/estimate-workflow-cost.py \
+  --workflow publish-on-web \
+  --prompt "publish on web"
+```
+
+Share the output and **wait for explicit approval** (`yes` / `proceed`). If the user declines, exit. If the script fails, cite the `publish-on-web` range in `.cursor/workflow-cost-baselines.json` and still ask.
+
+After approval, start tracking:
+
+```bash
+python3 .cursor/scripts/estimate-workflow-cost.py start \
+  --workflow publish-on-web \
+  --prompt "publish on web"
+```
+
+_Note: this estimates **Cursor agent** cost only, not Railway/hosting fees._
 
 ---
 
@@ -48,41 +73,62 @@ If Railway is not linked, run `railway link` from repo root (user may need to ap
 
 ```
 - [ ] 1. Record branch name (`git branch --show-current`) — stay on this branch; do not merge to main
-- [ ] 2. Run all test suites (gate)
-- [ ] 3. If all pass → inspect changes, draft commit message
+- [ ] 2. Remind user to run all test suites in terminal (agent does not run them)
+- [ ] 3. User confirms tests passed → inspect changes, draft commit message
 - [ ] 4. Stage, commit (exclude secrets & build artifacts)
 - [ ] 5. Push current branch to origin (`git push -u origin HEAD`) — not a merge to main
 - [ ] 6. Publish GitHub Pages
 - [ ] 7. Deploy backend to Railway
 - [ ] 8. Verify deployments
-- [ ] 9. Publish execution report to user
+- [ ] 9. Run `python3 .cursor/scripts/estimate-workflow-cost.py end` — include actual cost in report
+- [ ] 10. Publish execution report to user
 ```
 
-Optional fast gate script (tests only):
+---
+
+## Step 1 — Remind user to run tests (do not run in agent)
+
+**Do not execute** web, backend, or iOS test commands in this workflow. Post a reminder like the section below and **wait for the user to confirm all suites passed** before continuing to commit/push/deploy.
+
+### Reminder to post to the user
+
+**Run all tests in your terminal before deploy**
+
+The agent does not run full suites during publish on web. Please run these locally and confirm when they pass.
+
+**All suites (one script):**
+
+```bash
+run_all_tests
+```
+
+Or from repo root without alias:
+
+```bash
+./run_all_tests
+```
+
+Legacy path (same script):
 
 ```bash
 bash .cursor/skills/publish-on-web/scripts/run-all-tests.sh
 ```
 
----
+**Or individually:**
 
-## Step 1 — Run all tests (mandatory gate)
-
-Run **all three** suites. Use generous timeouts (iOS ~5–10 min, backend ~4 min).
-
-### Web
+Web (~3 s):
 
 ```bash
 cd frontend && npm test -- --watchAll=false --passWithNoTests
 ```
 
-### Backend
+Backend (~4 min):
 
 ```bash
 cd backend && . venv/bin/activate && pytest -q
 ```
 
-### iOS
+iOS (~4–8 min; adjust simulator if needed):
 
 ```bash
 cd ios-client && xcodebuild test \
@@ -92,9 +138,11 @@ cd ios-client && xcodebuild test \
   -only-testing:OutfitSuggestorUITests
 ```
 
-If simulator name fails, list devices: `xcrun simctl list devices available | grep iPhone` and retry.
+If the simulator name fails: `xcrun simctl list devices available | grep iPhone`
 
-**Gate rule:** Any failure → fix or report to user and **exit workflow**. No commit/push/deploy.
+Reply **tests passed** (or report failures) when done.
+
+**Gate rule:** If the user reports failures or has not confirmed, **exit workflow**. No commit/push/deploy until they confirm all suites passed.
 
 ---
 
@@ -193,12 +241,14 @@ Always post this summary to the user:
 **Branch:** <branch>
 **Overall:** SUCCESS | FAILED (stopped at <step>)
 
-### Tests
+### Tests (user-run in terminal)
 | Suite | Result | Details |
 |-------|--------|---------|
-| Web | PASS/FAIL | X suites, Y tests |
-| Backend | PASS/FAIL | X passed |
-| iOS | PASS/FAIL | X unit + Y UI |
+| Web | PASS/FAIL / not confirmed | user-reported |
+| Backend | PASS/FAIL / not confirmed | user-reported |
+| iOS | PASS/FAIL / not confirmed | user-reported |
+
+_Note: agent did not run suites; user confirmed in terminal._
 
 ### Git
 - **Commit:** `<hash>` — <message>
@@ -215,6 +265,10 @@ Always post this summary to the user:
 - Frontend: <URL> — HTTP status
 - Backend /health: <URL> — response
 
+### Cursor cost (required)
+
+Run `python3 .cursor/scripts/estimate-workflow-cost.py end` and paste the **Workflow actual cost** section here (estimated vs actual, API calls, on-demand portion).
+
 ### Notes
 - Failures, skipped steps, or manual follow-ups
 ```
@@ -225,7 +279,8 @@ Always post this summary to the user:
 
 | Failure | Action |
 |---------|--------|
-| Tests fail | Stop. Show failing test names. No deploy. |
+| User reports test failures | Stop. No deploy until fixed and user re-confirms. |
+| User has not confirmed tests | Stop at step 1 reminder. No deploy. |
 | User or agent about to merge to `main` | **Stop.** Publish ships from the current branch only. |
 | Nothing to commit | Skip commit; ask user if they still want push/deploy. |
 | Push rejected | Report error; do not deploy. |

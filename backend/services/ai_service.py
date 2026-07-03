@@ -256,7 +256,20 @@ Rules:
 4) Be practical and fashion-aware for the provided context.
 5) Return STRICT JSON only, no markdown, no extra prose.
 6) Avoid repeating generic style words like "trendy" across every category.
-7) priorityShoppingList must include every category with meaningful gaps, ranked by impact (do not limit to only three items).
+7) priorityShoppingList: rank by seasonal impact first, then wardrobe gaps. For summer casual,
+   shirt/trouser/shoes gaps outrank sweater/jacket even when those categories are empty.
+8) Season-aware purchase rules (strict):
+   - summer: Top priorityShoppingList items must come from shirt, trouser, or shoes first.
+     Do not put sweater or jacket in the top 3 unless occasion is business/formal/office and
+     shirt/trouser/shoes are already well covered. For sweater suggest only lightweight layers
+     (linen knit, cotton cardigan). For jacket suggest only denim jacket, lightweight shell,
+     linen overshirt, or harrington. Never recommend wool, merino, cashmere, cable knit, fleece,
+     parka, overcoat, or heavy bombers for summer.
+   - winter: Sweater and jacket are high-priority; merino, wool, and insulated outerwear are fine.
+   - spring/fall: Light layers only; avoid heavy winter pieces in top priorities.
+   - all: Balance year-round wardrobe; avoid heavy wool as top casual priorities.
+   Still include sweater and jacket in analysis_by_category for coverage, but mark them Low
+   priority for summer casual when not season-appropriate.
 
 Required JSON shape:
 {{
@@ -365,6 +378,16 @@ Required JSON shape:
                 priority_shopping_list = self._build_priority_shopping_list(categories, occasion, season, style)
             if not isinstance(category_insights, list):
                 category_insights = self._build_category_insights(categories, occasion, season, style)
+
+            from services.wardrobe_season_rules import apply_wardrobe_gap_season_filters
+
+            categories, priority_shopping_list, category_insights = apply_wardrobe_gap_season_filters(
+                season=str(parsed.get("season", season)),
+                occasion=str(parsed.get("occasion", occasion)),
+                analysis_by_category=categories,
+                priority_shopping_list=priority_shopping_list,
+                category_insights=category_insights,
+            )
 
             return {
                 "occasion": str(parsed.get("occasion", occasion)),
