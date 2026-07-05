@@ -18,9 +18,24 @@ enum OutfitOptionalLayers {
         !items(for: suggestion).isEmpty
     }
 
+    static func hasOptionalLayers(
+        _ suggestion: OutfitSuggestion,
+        allowedCategories: [String]? = nil
+    ) -> Bool {
+        !items(for: suggestion, allowedCategories: allowedCategories).isEmpty
+    }
+
     static func items(for suggestion: OutfitSuggestion) -> [OutfitOptionalLayerItem] {
+        items(for: suggestion, allowedCategories: nil)
+    }
+
+    static func items(
+        for suggestion: OutfitSuggestion,
+        allowedCategories: [String]? = nil
+    ) -> [OutfitOptionalLayerItem] {
+        let allowed = Set(allowedCategories ?? ["sweater", "outerwear", "tie"])
         var result: [OutfitOptionalLayerItem] = []
-        if let sweater = normalizedOptionalText(suggestion.sweater) {
+        if allowed.contains("sweater"), let sweater = normalizedOptionalText(suggestion.sweater) {
             result.append(
                 OutfitOptionalLayerItem(
                     category: "sweater",
@@ -29,7 +44,7 @@ enum OutfitOptionalLayers {
                 )
             )
         }
-        if let outerwear = normalizedOptionalText(suggestion.outerwear) {
+        if allowed.contains("outerwear"), let outerwear = normalizedOptionalText(suggestion.outerwear) {
             result.append(
                 OutfitOptionalLayerItem(
                     category: "outerwear",
@@ -38,7 +53,7 @@ enum OutfitOptionalLayers {
                 )
             )
         }
-        if let tie = normalizedOptionalText(suggestion.tie) {
+        if allowed.contains("tie"), let tie = normalizedOptionalText(suggestion.tie) {
             result.append(
                 OutfitOptionalLayerItem(
                     category: "tie",

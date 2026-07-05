@@ -30,6 +30,7 @@
 		A963F0085A29335578FB7847 /* ImagePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3016CC9235E918186E85387 /* ImagePicker.swift */; };
 		A1B2C3D4E5F60718293A4B5D /* AiProgressSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5C /* AiProgressSteps.swift */; };
 		D4E5F60718293A4B5C6D8E2 /* AuthPromptCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F60718293A4B5C6D8E1 /* AuthPromptCopy.swift */; };
+		AFM01BF0000000000000001 /* AuthFormMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFM01FR0000000000000001 /* AuthFormMessages.swift */; };
 		E5F60718293A4B5C6D7E8F3 /* GuestAuthSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5F60718293A4B5C6D7E8F2 /* GuestAuthSheetView.swift */; };
 		B2C3D4E5F60718293A4B5C6E /* AiProgressPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F60718293A4B5C6D /* AiProgressPanelView.swift */; };
 		C3D4E5F60718293A4B5C6D7E /* AiProgressStepsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F60718293A4B5C6D7D /* AiProgressStepsTests.swift */; };
@@ -51,6 +52,7 @@
 		FA023D9F55B7FB5B4FF54BED /* TokenStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E8D18B61E9EF222656069F /* TokenStorage.swift */; };
 		A4B5C6D7E8F9012345678A02 /* GuestSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4B5C6D7E8F9012345678A01 /* GuestSession.swift */; };
 		FD933F9E2EC6AC064C14756F /* AppConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 969C61A8446536869AAFE1CD /* AppConfigTests.swift */; };
+		AFM01TF0000000000000001 /* AuthFormMessagesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFM01TR0000000000000001 /* AuthFormMessagesTests.swift */; };
 		F1A2B3C4D5E6F708192A3B4D /* AppRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A2B3C4D5E6F708192A3B4C /* AppRoute.swift */; };
 		F2A3B4C5D6E7F809293A4B5E /* RouteCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A3B4C5D6E7F809293A4B5D /* RouteCoordinator.swift */; };
 		F3A4B5C6D7E8F90A394A5B6F /* AdminIntegrationTestRunnerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A4B5C6D7E8F90A394A5B6E /* AdminIntegrationTestRunnerView.swift */; };
@@ -93,8 +95,10 @@
 		M1F2L3A4Y5O6U7T8L9O0G03 /* MainFlowLayoutLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1F2L3A4Y5O6U7T8L9O0G04 /* MainFlowLayoutLogicTests.swift */; };
 		F1L2T3E4R5V6I7E8W900001 /* FiltersViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1L2T3E4R5V6I7E8W900002 /* FiltersViewTests.swift */; };
 		O1I2T3H4U5M6B7N8A9I0L02 /* OutfitItemThumbnail.swift in Sources */ = {isa = PBXBuildFile; fileRef = O1I2T3H4U5M6B7N8A9I0L01 /* OutfitItemThumbnail.swift */; };
+		O1U2P3L4O5A6D7C8A9T0G02 /* OutfitUploadCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = O1U2P3L4O5A6D7C8A9T0G01 /* OutfitUploadCategory.swift */; };
 		O1I2T3H4U5M6B7N8A9I0L04 /* OutfitItemThumbnailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = O1I2T3H4U5M6B7N8A9I0L03 /* OutfitItemThumbnailTests.swift */; };
 		O1O2L3A4Y5E6R7S8V9T02 /* OutfitOptionalLayers.swift in Sources */ = {isa = PBXBuildFile; fileRef = O1O2L3A4Y5E6R7S8V9T01 /* OutfitOptionalLayers.swift */; };
+		O1L2A3Y4E5R6E7X8C9L0U02 /* OutfitLayerExclusivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = O1L2A3Y4E5R6E7X8C9L0U01 /* OutfitLayerExclusivity.swift */; };
 		O1S2V3T4E5S6T7V8I9E0W02 /* OutfitSuggestionViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = O1S2V3T4E5S6T7V8I9E0W01 /* OutfitSuggestionViewTests.swift */; };
 		WIR01BF0000000000000001 /* WardrobeInsightResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = WIR01FR0000000000000001 /* WardrobeInsightResult.swift */; };
 		NWI01BF0000000000000001 /* NormalizeWardrobeInsight.swift in Sources */ = {isa = PBXBuildFile; fileRef = NWI01FR0000000000000001 /* NormalizeWardrobeInsight.swift */; };
@@ -154,6 +158,7 @@
 		585D224C3BAB35D9CD03EA3B /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B5C /* AiProgressSteps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AiProgressSteps.swift; sourceTree = "<group>"; };
 		D4E5F60718293A4B5C6D8E1 /* AuthPromptCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthPromptCopy.swift; sourceTree = "<group>"; };
+		AFM01FR0000000000000001 /* AuthFormMessages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthFormMessages.swift; sourceTree = "<group>"; };
 		E5F60718293A4B5C6D7E8F2 /* GuestAuthSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuestAuthSheetView.swift; sourceTree = "<group>"; };
 		B2C3D4E5F60718293A4B5C6D /* AiProgressPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AiProgressPanelView.swift; sourceTree = "<group>"; };
 		C3D4E5F60718293A4B5C6D7D /* AiProgressStepsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AiProgressStepsTests.swift; sourceTree = "<group>"; };
@@ -169,6 +174,7 @@
 		7E8840F40CF3A5119424E263 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		8E0406F4D345CC73138185B9 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		969C61A8446536869AAFE1CD /* AppConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfigTests.swift; sourceTree = "<group>"; };
+		AFM01TR0000000000000001 /* AuthFormMessagesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthFormMessagesTests.swift; sourceTree = "<group>"; };
 		977BD13092DD8A2D98C4471D /* ImageUploadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageUploadView.swift; sourceTree = "<group>"; };
 		9AF4C72CE761E107EEAD6ED6 /* ReportsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportsView.swift; sourceTree = "<group>"; };
 		A4ED51E6300690222125BE0F /* APIServiceIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIServiceIntegrationTests.swift; sourceTree = "<group>"; };
@@ -225,8 +231,10 @@
 		M1F2L3A4Y5O6U7T8L9O0G04 /* MainFlowLayoutLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlowLayoutLogicTests.swift; sourceTree = "<group>"; };
 		F1L2T3E4R5V6I7E8W900002 /* FiltersViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FiltersViewTests.swift; sourceTree = "<group>"; };
 		O1I2T3H4U5M6B7N8A9I0L01 /* OutfitItemThumbnail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitItemThumbnail.swift; sourceTree = "<group>"; };
+		O1U2P3L4O5A6D7C8A9T0G01 /* OutfitUploadCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitUploadCategory.swift; sourceTree = "<group>"; };
 		O1I2T3H4U5M6B7N8A9I0L03 /* OutfitItemThumbnailTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitItemThumbnailTests.swift; sourceTree = "<group>"; };
 		O1O2L3A4Y5E6R7S8V9T01 /* OutfitOptionalLayers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitOptionalLayers.swift; sourceTree = "<group>"; };
+		O1L2A3Y4E5R6E7X8C9L0U01 /* OutfitLayerExclusivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitLayerExclusivity.swift; sourceTree = "<group>"; };
 		O1S2V3T4E5S6T7V8I9E0W01 /* OutfitSuggestionViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitSuggestionViewTests.swift; sourceTree = "<group>"; };
 		WIR01FR0000000000000001 /* WardrobeInsightResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeInsightResult.swift; sourceTree = "<group>"; };
 		NWI01FR0000000000000001 /* NormalizeWardrobeInsight.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NormalizeWardrobeInsight.swift; sourceTree = "<group>"; };
@@ -256,6 +264,7 @@
 				A4ED51E6300690222125BE0F /* APIServiceIntegrationTests.swift */,
 				A1V2I3S4B5I6L7I8T9Y0A04 /* AdminVisibilityTests.swift */,
 				969C61A8446536869AAFE1CD /* AppConfigTests.swift */,
+				AFM01TR0000000000000001 /* AuthFormMessagesTests.swift */,
 				I3A4B5C6D7E8F90A394A5B70 /* InsightsCopyTests.swift */,
 				M3A4B5C6D7E8F90A394A5B71 /* MicroHelpCopyTests.swift */,
 				C3D4E5F60718293A4B5C6D7D /* AiProgressStepsTests.swift */,
@@ -388,6 +397,7 @@
 				A1B2C3D4E5F60718293A4B5C /* AiProgressSteps.swift */,
 				A1V2I3S4B5I6L7I8T9Y0A02 /* AdminVisibility.swift */,
 				D4E5F60718293A4B5C6D8E1 /* AuthPromptCopy.swift */,
+				AFM01FR0000000000000001 /* AuthFormMessages.swift */,
 				I1A2B3C4D5E6F708192A3B52 /* InsightsCopy.swift */,
 				NWI01FR0000000000000001 /* NormalizeWardrobeInsight.swift */,
 				WIP01FR0000000000000001 /* WardrobeInsightsPresentation.swift */,
@@ -405,7 +415,9 @@
 				M1F2L3O4W5U6X7C8O9P0Y06 /* OutfitContextLine.swift */,
 				M1F2L3O4W5U6X7C8O9P0Y08 /* OutfitItemCardText.swift */,
 				O1I2T3H4U5M6B7N8A9I0L01 /* OutfitItemThumbnail.swift */,
+				O1U2P3L4O5A6D7C8A9T0G01 /* OutfitUploadCategory.swift */,
 				O1O2L3A4Y5E6R7S8V9T01 /* OutfitOptionalLayers.swift */,
+				O1L2A3Y4E5R6E7X8C9L0U01 /* OutfitLayerExclusivity.swift */,
 				W1A2B3C4D5E6F708192A3B50 /* WardrobeCardUx.swift */,
 				WCF01FR0000000000000001 /* WardrobeCategoryDisplay.swift */,
 				585D224C3BAB35D9CD03EA3B /* AppConfig.swift */,
@@ -596,6 +608,7 @@
 				23CB85FFAAF34EEC0F240672 /* AppConfig.swift in Sources */,
 				A1B2C3D4E5F60718293A4B5D /* AiProgressSteps.swift in Sources */,
 				D4E5F60718293A4B5C6D8E2 /* AuthPromptCopy.swift in Sources */,
+				AFM01BF0000000000000001 /* AuthFormMessages.swift in Sources */,
 				B2C3D4E5F60718293A4B5C6E /* AiProgressPanelView.swift in Sources */,
 				C9F8C11DE63D85713E22F929 /* AppTheme.swift in Sources */,
 				B030C4AADF57B3488189CD98 /* AuthModels.swift in Sources */,
@@ -655,7 +668,9 @@
 				M1F2L3O4W5U6X7C8O9P0Y0B /* RefineMenuView.swift in Sources */,
 				M1F2L3O4W5U6X7C8O9P0Y0D /* MainFlowCompactSummaryView.swift in Sources */,
 				O1I2T3H4U5M6B7N8A9I0L02 /* OutfitItemThumbnail.swift in Sources */,
+				O1U2P3L4O5A6D7C8A9T0G02 /* OutfitUploadCategory.swift in Sources */,
 				O1O2L3A4Y5E6R7S8V9T02 /* OutfitOptionalLayers.swift in Sources */,
+				O1L2A3Y4E5R6E7X8C9L0U02 /* OutfitLayerExclusivity.swift in Sources */,
 				WIR01BF0000000000000001 /* WardrobeInsightResult.swift in Sources */,
 				NWI01BF0000000000000001 /* NormalizeWardrobeInsight.swift in Sources */,
 				WIP01BF0000000000000001 /* WardrobeInsightsPresentation.swift in Sources */,
@@ -685,6 +700,7 @@
 				A1V2I3S4B5I6L7I8T9Y0A03 /* AdminVisibilityTests.swift in Sources */,
 				C3D4E5F60718293A4B5C6D7E /* AiProgressStepsTests.swift in Sources */,
 				FD933F9E2EC6AC064C14756F /* AppConfigTests.swift in Sources */,
+				AFM01TF0000000000000001 /* AuthFormMessagesTests.swift in Sources */,
 				I4A5B6C7D8E9012345678A03 /* InsightsCopyTests.swift in Sources */,
 				M4A5B6C7D8E9012345678A04 /* MicroHelpCopyTests.swift in Sources */,
 				BDC51E614A7C765FB3FA7572 /* OutfitViewModelIntegrationTests.swift in Sources */,

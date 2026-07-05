@@ -1,5 +1,5 @@
 import React from 'react';
-import { OutfitSuggestion } from '../../models/OutfitModels';
+import { OutfitSuggestion, SourceWardrobeItem } from '../../models/OutfitModels';
 import OutfitItemCard from './suggestion/OutfitItemCard';
 import EmptyOutfitPreview from './EmptyOutfitPreview';
 import RefineMenu from './RefineMenu';
@@ -13,6 +13,14 @@ import {
   type OptionalOutfitCategoryKey,
   type OutfitCategoryKey,
 } from '../../utils/outfitItemThumbnail';
+import {
+  hasVisibleOptionalLayers,
+  optionalLayerCategories,
+  resolveOptionalLayerText,
+  resolveOuterwearDisplayText,
+  shouldShowAnchoredOuterwearInCoreGrid,
+  shouldShowBlazerCard,
+} from '../../utils/outfitLayerExclusivity';
 
 interface OutfitPreviewFilters {
   occasion?: string;
@@ -35,6 +43,7 @@ interface OutfitPreviewProps {
   canGenerateAnother?: boolean;
   showWardrobeOnlyAction?: boolean;
   guestLimitReached?: boolean;
+  sourceWardrobeItem?: SourceWardrobeItem | null;
 }
 
 const OutfitPreview: React.FC<OutfitPreviewProps> = ({
@@ -52,7 +61,9 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
   canGenerateAnother,
   showWardrobeOnlyAction = true,
   guestLimitReached = false,
+  sourceWardrobeItem = null,
 }) => {
+  const sourceWardrobeCategory = sourceWardrobeItem?.category ?? null;
   const canRegenerate = canGenerateAnother ?? hasImage;
   const aiActionsDisabled = !canRegenerate || guestLimitReached;
   const [showFullImage, setShowFullImage] = React.useState(false);
@@ -201,25 +212,47 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
     </div>
   );
 
-  const isOptionalItemPresent = (value: string | null | undefined) =>
-    value != null && value.trim() !== '';
+  const optionalItems = optionalLayerCategories(suggestion, sourceWardrobeCategory).flatMap((key) => {
+    const labels: Record<OptionalOutfitCategoryKey, string> = {
+      sweater: MAIN_FLOW_UX_COPY.layerLabel,
+      outerwear: MAIN_FLOW_UX_COPY.outerwearLabel,
+      tie: MAIN_FLOW_UX_COPY.tieLabel,
+    };
+    const value = resolveOptionalLayerText(suggestion, key, sourceWardrobeCategory);
+    if (value == null) return [];
+    return [{ key, label: labels[key], value }];
+  });
 
-  const optionalItems = (
+  const hasOptionalLayers = hasVisibleOptionalLayers(suggestion, sourceWardrobeCategory);
+
+  const anchoredOuterwearText = resolveOuterwearDisplayText(suggestion, sourceWardrobeCategory);
+
+  const coreItems = (
     [
-      { key: 'sweater', label: MAIN_FLOW_UX_COPY.layerLabel, value: suggestion.sweater },
-      { key: 'outerwear', label: MAIN_FLOW_UX_COPY.outerwearLabel, value: suggestion.outerwear },
-      { key: 'tie', label: MAIN_FLOW_UX_COPY.tieLabel, value: suggestion.tie },
+      { key: 'shirt' as const, label: 'Shirt', value: suggestion.shirt },
+      { key: 'trouser' as const, label: 'Trousers', value: suggestion.trouser },
+      ...(shouldShowAnchoredOuterwearInCoreGrid(suggestion, sourceWardrobeCategory) && anchoredOuterwearText
+        ? [{ key: 'outerwear' as const, label: MAIN_FLOW_UX_COPY.outerwearLabel, value: anchoredOuterwearText }]
+        : []),
+      ...(shouldShowBlazerCard(suggestion, sourceWardrobeCategory)
+        ? [{ key: 'blazer' as const, label: 'Blazer', value: suggestion.blazer }]
+        : []),
+      { key: 'shoes' as const, label: 'Shoes', value: suggestion.shoes },
+      { key: 'belt' as const, label: 'Belt', value: suggestion.belt },
     ] as const
-  ).filter(({ value }) => isOptionalItemPresent(value));
-
-  const hasOptionalLayers = optionalItems.length > 0;
+  );
 
   const renderItemCard = (
     key: OutfitCategoryKey,
     label: string,
     value: string
   ) => {
-    const thumb = resolveOutfitItemThumbnail(suggestion, key, suggestion.imageUrl);
+    const thumb = resolveOutfitItemThumbnail(
+      suggestion,
+      key,
+      suggestion.imageUrl,
+      sourceWardrobeCategory
+    );
     const tagLabel =
       thumb.tag === 'upload'
         ? MAIN_FLOW_UX_COPY.tagFromUpload
@@ -270,15 +303,7 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
       )}
 
       <div className={`${suggestion.model_image ? 'mt-5' : 'mt-6'} grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3`}>
-        {(
-          [
-            { key: 'shirt', label: 'Shirt', value: suggestion.shirt },
-            { key: 'trouser', label: 'Trousers', value: suggestion.trouser },
-            { key: 'blazer', label: 'Blazer', value: suggestion.blazer },
-            { key: 'shoes', label: 'Shoes', value: suggestion.shoes },
-            { key: 'belt', label: 'Belt', value: suggestion.belt },
-          ] as const
-        ).map(({ key, label, value }) => renderItemCard(key, label, value))}
+        {coreItems.map(({ key, label, value }) => renderItemCard(key, label, value))}
       </div>
 
       {hasOptionalLayers && (

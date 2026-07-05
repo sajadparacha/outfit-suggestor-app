@@ -9,7 +9,11 @@ import Foundation
 import Combine
 
 enum AppConfig {
-    private static let defaultAPIBaseURL = "https://web-production-dfcf8.up.railway.app"
+    /// Local backend when developing on simulator/Mac (parity with `frontend/.env.development`).
+    static let localAPIBaseURL = "http://localhost:8001"
+    /// Production Railway backend for Release builds and deployed web (`frontend/.env.production`).
+    static let productionAPIBaseURL = "https://web-production-dfcf8.up.railway.app"
+
     private static let userDefaultsAPIKey = "api_base_url_override"
     private static let defaultEnableAdminTestRunner = false
     private static let uiTestFlag = "UI_TEST_MODE"
@@ -28,7 +32,11 @@ enum AppConfig {
             }
         }
 
-        return defaultAPIBaseURL
+#if DEBUG
+        return localAPIBaseURL
+#else
+        return productionAPIBaseURL
+#endif
     }
 
     static var enableAdminTestRunner: Bool {

@@ -19,7 +19,7 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 | **Filters / preference text** | ✅ | ✅ | Occasion, season, style use shared recommended option vocabulary; free text |
 | **Wardrobe-only mode** | ✅ | ✅ | Toggle when logged in (Main flow) |
 | **Model image generation** | ✅ | ✅ | Toggle + model picker (DALL-E 3, Stable Diffusion, Nano Banana); full-screen view |
-| **Wardrobe** | ✅ | ✅ | List, add, edit, delete, category filter (core chips: shirt/trouser/blazer/shoes/belt + extended chips when owned: polo, T-shirt, jeans, shorts, sweater, jacket, tie, other), human-readable category badges, search, "Get suggestion" from item, select 1-5 items (one per slot) to complete outfit with AI; **completion panel shows clickable selection thumbnails** (tap to full-screen) beside Complete outfit with AI; completion aliases map polo/T-shirt to shirt, pants/jeans/shorts to trouser, and jacket to blazer slot (5 slots unchanged); **blazer filter chip counts blazer/suit only** (jacket has its own extended chip); inline **Preferences** (occasion/season/style/notes + wardrobe-only) synced with Suggest |
+| **Wardrobe** | ✅ | ✅ | List, add, edit, delete, category filter (core chips: shirt/trouser/blazer/shoes/belt + extended chips when owned: polo, T-shirt, jeans, shorts, sweater, jacket, coat, tie, other), human-readable category badges, search, "Get suggestion" from item, select 1-5 items (one per slot) to complete outfit with AI; **completion panel shows clickable selection thumbnails** (tap to full-screen) beside Complete outfit with AI; completion slots: polo/T-shirt→shirt, pants/jeans/shorts→trouser, jacket/coat→**outerwear**, sweater→**sweater**, plus blazer/shoes/belt; **upper-body exclusivity** (only one of blazer, outerwear, sweater); max 5 items total; **blazer filter chip counts blazer/suit only** (jacket/coat have extended chips); inline **Preferences** (occasion/season/style/notes + wardrobe-only) synced with Suggest |
 | **Outfit history** | ✅ | ✅ | List, search, sort (newest/oldest), delete, load into main view |
 | **Random from wardrobe** | ✅ | ✅ | AI via `POST /api/suggest-outfit-from-wardrobe`; session variety (`previous_outfit_text`, fingerprint retry). `GET /api/wardrobe/random-outfit` legacy/non-user-facing. |
 | **Random from history** | ✅ | ✅ | Button on Main; client picks from history; **Your inputs** syncs preview + **From history** caption + entry filters |
@@ -87,7 +87,7 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 - `image_model` (optional: "dalle3", "stable-diffusion", "nano-banana")
 - `use_wardrobe_only` (optional bool, requires auth)
 
-**Response (optional layers, main suggest flow only)**: nullable `sweater`, `outerwear`, `tie` plus `sweater_id`, `outerwear_id`, `tie_id` for wardrobe thumbnails. Random-outfit and wardrobe-complete-outfit remain five core slots only.
+**Response (optional layers, main suggest flow only)**: nullable `sweater`, `outerwear`, `tie` plus `sweater_id`, `outerwear_id`, `tie_id` for wardrobe thumbnails. Wardrobe **complete-outfit** multi-select also accepts jacket/coat (`outerwear_id`) and sweater (`sweater_id`) with upper-body exclusivity vs blazer; max 5 items total.
 
 **iOS work**:
 
@@ -112,11 +112,11 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 
 ## 4. Wardrobe Management
 
-**Web**: List wardrobe items, add (with optional AI analysis), edit, delete, filter by category (core chips always visible; extended chips—polo, T-shirt, jeans, shorts, sweater, jacket, tie, other—when items exist), human-readable category badges on cards, get suggestion from a single item, select 1-5 eligible items across unique outfit slots and complete the outfit with AI. Duplicate check before add. Full-screen image view.
+**Web**: List wardrobe items, add (with optional AI analysis), edit, delete, filter by category (core chips always visible; extended chips—polo, T-shirt, jeans, shorts, sweater, jacket, coat, tie, other—when items exist), human-readable category badges on cards, get suggestion from a single item, select 1-5 eligible items across unique outfit slots (shirt, trouser, blazer, outerwear, sweater, shoes, belt—only one of blazer/outerwear/sweater) and complete the outfit with AI. Duplicate check before add. Full-screen image view.
 
 **Wardrobe item card actions (web + iOS)**: Primary **Style this item** + overflow menu (View image, Edit, **Past Suggestions**, Delete). Past Suggestions opens per-item outfit history modal/sheet.
 
-**iOS status**: Full parity. List, add (with "Analyze with AI" and duplicate check), edit, delete, category filter (core + extended chips when owned), human-readable category badges, "Get suggestion" from item, multi-select complete outfit with AI; history has full-screen image viewer.
+**iOS status**: Full parity. List, add (with "Analyze with AI" and duplicate check), edit, delete, category filter (core + extended chips when owned), human-readable category badges, "Get suggestion" from item, multi-select complete outfit with AI (jacket/coat→outerwear, sweater slot, upper-body exclusivity); history has full-screen image viewer.
 
 **API endpoints**:
 

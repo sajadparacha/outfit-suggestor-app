@@ -19,44 +19,90 @@ struct LoginView: View {
     private var resolvedHeadline: String {
         headline ?? AuthPromptCopy.defaultLoginTitle
     }
-    
+
     var body: some View {
-        Form {
-            if headline != nil || subheadline != nil {
-                Section {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                if headline != nil || subheadline != nil {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(resolvedHeadline)
                             .font(.headline)
+                            .foregroundColor(AppTheme.textPrimary)
                         if let subheadline {
                             Text(subheadline)
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppTheme.textSecondary)
                         }
                     }
-                    .listRowBackground(Color.clear)
                 }
-            }
-            Section(header: Text("Log in")) {
-                TextField("Email", text: $email)
-                    .textContentType(.emailAddress)
-                    .autocapitalization(.none)
-                SecureField("Password", text: $password)
-                    .textContentType(.password)
-            }
-            if let err = errorMessage {
-                Section { Text(err).foregroundColor(.red) }
-            }
-            Section {
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Log in")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(AppTheme.textSecondary)
+
+                    TextField("Email", text: $email)
+                        .textContentType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .padding(12)
+                        .background(AppTheme.surface)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(AppTheme.border, lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .accessibilityIdentifier("auth.login.email")
+
+                    SecureField("Password", text: $password)
+                        .textContentType(.password)
+                        .padding(12)
+                        .background(AppTheme.surface)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(AppTheme.border, lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .accessibilityIdentifier("auth.login.password")
+                }
+
+                if let err = errorMessage {
+                    Text(err)
+                        .font(.footnote)
+                        .foregroundColor(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("auth.login.error")
+                }
+
                 Button(action: doLogin) {
                     HStack {
-                        if isLoading { ProgressView().progressViewStyle(CircularProgressViewStyle(tint: .white)) }
-                        else { Text("Log In") }
+                        Spacer()
+                        if isLoading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        } else {
+                            Text("Log In")
+                                .font(.headline.weight(.semibold))
+                        }
+                        Spacer()
                     }
-                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
                 }
-                .disabled(email.isEmpty || password.isEmpty || isLoading)
+                .buttonStyle(GradientButtonStyle(isEnabled: canSubmit))
+                .disabled(!canSubmit)
+                .accessibilityIdentifier("auth.login.submit")
+
+#if DEBUG
+                Text("API: \(AppConfig.apiBaseURL)")
+                    .font(.caption2)
+                    .foregroundColor(AppTheme.textSecondary)
+                    .accessibilityIdentifier("auth.login.apiBaseURL")
+#endif
             }
+            .padding(20)
         }
+        .scrollDismissesKeyboard(.interactively)
+        .adaptiveContent(maxWidth: 480)
         .navigationTitle(headline == nil ? "Login" : resolvedHeadline)
         .navigationBarTitleDisplayMode(headline == nil ? .automatic : .inline)
         .onChange(of: auth.isAuthenticated) { isAuthenticated in
@@ -65,7 +111,11 @@ struct LoginView: View {
             }
         }
     }
-    
+
+    private var canSubmit: Bool {
+        !email.isEmpty && !password.isEmpty && !isLoading
+    }
+
     private func doLogin() {
         errorMessage = nil
         isLoading = true
@@ -79,7 +129,7 @@ struct LoginView: View {
             } catch {
                 await MainActor.run {
                     isLoading = false
-                    errorMessage = error.localizedDescription
+                    errorMessage = AuthFormMessages.loginErrorDescription(error)
                 }
             }
         }

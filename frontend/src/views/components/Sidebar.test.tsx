@@ -32,6 +32,7 @@ describe('Sidebar file validation', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     localStorage.clear();
+    HTMLElement.prototype.scrollIntoView = jest.fn();
   });
 
   const optionPairs = (select: HTMLElement) =>
@@ -439,12 +440,53 @@ describe('Sidebar file validation', () => {
           image={wardrobeFile}
           sourceWardrobeItem={{ id: 2, category: 'trouser', color: 'Navy' }}
           hasSuggestion={true}
+          highlightGenerateButton={true}
         />
       );
 
       expect(
         screen.getByRole('button', { name: MAIN_FLOW_UX_COPY.primaryCtaAria })
       ).toBeInTheDocument();
+    });
+
+    it('hides primary Generate Outfit in compact mode when wardrobe item already has a result', () => {
+      const onGenerateAnother = jest.fn();
+      render(
+        <Sidebar
+          {...defaultProps}
+          isAuthenticated
+          image={wardrobeFile}
+          hasSuggestion={true}
+          sourceWardrobeItem={{ id: 3, category: 'jacket', color: 'Tan' }}
+          flowPreviewUrl="data:image/jpeg;base64,wardrobe-jacket-thumb"
+          inputPanelSource="wardrobe"
+          onGenerateAnother={onGenerateAnother}
+        />
+      );
+
+      expect(screen.getByTestId('compact-generate-another')).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: MAIN_FLOW_UX_COPY.primaryCtaAria })
+      ).not.toBeInTheDocument();
+    });
+
+    it('shows wardrobe data-url preview in compact summary after result', () => {
+      const dataPreview = 'data:image/jpeg;base64,wardrobe-jacket-thumb';
+      render(
+        <Sidebar
+          {...defaultProps}
+          isAuthenticated
+          image={wardrobeFile}
+          hasSuggestion={true}
+          sourceWardrobeItem={{ id: 3, category: 'jacket', color: 'Tan' }}
+          flowPreviewUrl={dataPreview}
+          suggestionImageUrl={dataPreview}
+          inputPanelSource="wardrobe"
+        />
+      );
+
+      const preview = screen.getByAltText('Wardrobe jacket');
+      expect(preview).toHaveAttribute('src', dataPreview);
     });
   });
 

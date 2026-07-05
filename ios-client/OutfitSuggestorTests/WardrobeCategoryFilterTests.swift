@@ -112,6 +112,9 @@ final class WardrobeCategoryFilterTests: XCTestCase {
         XCTAssertTrue(WardrobeCategoryDisplay.matchesCategoryFilter("suit", filter: "blazer"))
         XCTAssertFalse(WardrobeCategoryDisplay.matchesCategoryFilter("jacket", filter: "blazer"))
         XCTAssertFalse(WardrobeCategoryDisplay.matchesCategoryFilter("jackets", filter: "blazer"))
+        XCTAssertFalse(WardrobeCategoryDisplay.matchesCategoryFilter("coat", filter: "blazer"))
+        XCTAssertFalse(WardrobeCategoryDisplay.matchesCategoryFilter("jacket", filter: "shirt"))
+        XCTAssertFalse(WardrobeCategoryDisplay.matchesCategoryFilter("coat", filter: "shirt"))
     }
 
     func testMatchesCategoryFilterJacketExtendedChipIncludesJacketOnly() {
@@ -131,13 +134,134 @@ final class WardrobeCategoryFilterTests: XCTestCase {
         XCTAssertEqual(counts["jacket"], 1)
     }
 
-    func testCompletionSlotNormalizationUnchangedForAliases() {
+    func testFilterChipCountFromSummaryMatchesWebGrouping() {
+        let summary = WardrobeSummary(
+            total_items: 73,
+            by_category: [
+                "shirt": 20,
+                "polo": 5,
+                "jeans": 1,
+                "blazer": 3,
+                "jacket": 4,
+                "shoes": 19,
+            ],
+            by_color: [:],
+            categories: []
+        )
+
+        XCTAssertEqual(WardrobeCategoryDisplay.filterChipCount(from: summary, filterKey: "All"), 73)
+        XCTAssertEqual(WardrobeCategoryDisplay.filterChipCount(from: summary, filterKey: "shirt"), 25)
+        XCTAssertEqual(WardrobeCategoryDisplay.filterChipCount(from: summary, filterKey: "trouser"), 1)
+        XCTAssertEqual(WardrobeCategoryDisplay.filterChipCount(from: summary, filterKey: "blazer"), 3)
+        XCTAssertEqual(WardrobeCategoryDisplay.filterChipCount(from: summary, filterKey: "jacket"), 4)
+
+        let labels = WardrobeCategoryDisplay.visibleFilterChipKeys(from: summary)
+            .map { WardrobeCategoryDisplay.filterChipLabel(for: $0) }
+        XCTAssertTrue(labels.contains("Jacket"))
+        XCTAssertFalse(labels.contains("T-shirt"))
+    }
+
+    func testRebuildCategoryCountsFromSummary() {
+        let summary = WardrobeSummary(
+            total_items: 10,
+            by_category: ["jacket": 4, "blazer": 2],
+            by_color: [:],
+            categories: []
+        )
+        let counts = WardrobeCategoryDisplay.rebuildCategoryCounts(from: summary)
+        XCTAssertEqual(counts["jacket"], 4)
+        XCTAssertEqual(counts["blazer"], 2)
+    }
+
+    func testCompletionSlotNormalizationMapsJacketCoatAndSweater() {
         XCTAssertEqual(WardrobeCompletionSlot.normalized(from: "polo"), .shirt)
         XCTAssertEqual(WardrobeCompletionSlot.normalized(from: "t_shirt"), .shirt)
         XCTAssertEqual(WardrobeCompletionSlot.normalized(from: "t-shirt"), .shirt)
         XCTAssertEqual(WardrobeCompletionSlot.normalized(from: "jeans"), .trouser)
         XCTAssertEqual(WardrobeCompletionSlot.normalized(from: "shorts"), .trouser)
-        XCTAssertEqual(WardrobeCompletionSlot.normalized(from: "jacket"), .blazer)
+        XCTAssertEqual(WardrobeCompletionSlot.normalized(from: "blazer"), .blazer)
+        XCTAssertEqual(WardrobeCompletionSlot.normalized(from: "suit"), .blazer)
+        XCTAssertEqual(WardrobeCompletionSlot.normalized(from: "jacket"), .outerwear)
+        XCTAssertEqual(WardrobeCompletionSlot.normalized(from: "jackets"), .outerwear)
+        XCTAssertEqual(WardrobeCompletionSlot.normalized(from: "coat"), .outerwear)
+        XCTAssertEqual(WardrobeCompletionSlot.normalized(from: "coats"), .outerwear)
+        XCTAssertEqual(WardrobeCompletionSlot.normalized(from: "outerwear"), .outerwear)
+        XCTAssertEqual(WardrobeCompletionSlot.normalized(from: "sweater"), .sweater)
+        XCTAssertEqual(WardrobeCompletionSlot.normalized(from: "sweaters"), .sweater)
+        XCTAssertNil(WardrobeCompletionSlot.normalized(from: "tie"))
+    }
+
+    func testMultiSelectUpperBodyExclusivityRejectsBlazerWithOuterwear() {
+        var state = WardrobeMultiSelectState()
+        let blazer = wardrobeItem(id: 1, category: "blazer")
+        let jacket = wardrobeItem(id: 2, category: "jacket")
+
+        XCTAssertEqual(state.toggle(blazer), .selected)
+        XCTAssertEqual(state.toggle(jacket), .upperBodySlotConflict)
+        XCTAssertEqual(state.selectedCount, 1)
+    }
+
+    func testMultiSelectUpperBodyExclusivityRejectsSweaterWithBlazer() {
+        var state = WardrobeMultiSelectState()
+        let blazer = wardrobeItem(id: 10, category: "blazer")
+        let sweater = wardrobeItem(id: 11, category: "sweater")
+
+        XCTAssertEqual(state.toggle(blazer), .selected)
+        XCTAssertEqual(state.toggle(sweater), .upperBodySlotConflict)
+        XCTAssertEqual(state.selectedCount, 1)
+    }
+
+    func testMultiSelectUpperBodyExclusivityAllowsReplacingAfterDeselect() {
+        var state = WardrobeMultiSelectState()
+        let blazer = wardrobeItem(id: 20, category: "blazer")
+        let coat = wardrobeItem(id: 21, category: "coat")
+
+        XCTAssertEqual(state.toggle(blazer), .selected)
+        XCTAssertEqual(state.toggle(blazer), .deselected)
+        XCTAssertEqual(state.toggle(coat), .selected)
+        XCTAssertEqual(state.selectedCount, 1)
+    }
+
+    func testMultiSelectUpperBodyConflictMessage() {
+        XCTAssertEqual(
+            WardrobeMultiSelectToggleResult.upperBodySlotConflict.message,
+            "Choose only one of blazer, outerwear, or sweater"
+        )
+    }
+
+    func testMultiSelectMaximumFiveItemsUnchanged() {
+        XCTAssertEqual(WardrobeMultiSelectState.maximumSelectedItems, 5)
+
+        var state = WardrobeMultiSelectState()
+        let shirt = wardrobeItem(id: 101, category: "shirt")
+        let trouser = wardrobeItem(id: 102, category: "trouser")
+        let blazer = wardrobeItem(id: 103, category: "blazer")
+        let shoes = wardrobeItem(id: 104, category: "shoes")
+        let belt = wardrobeItem(id: 105, category: "belt")
+        let jacket = wardrobeItem(id: 106, category: "jacket")
+
+        for item in [shirt, trouser, blazer, shoes, belt] {
+            XCTAssertEqual(state.toggle(item), .selected)
+        }
+        XCTAssertEqual(state.selectedCount, 5)
+        XCTAssertEqual(
+            WardrobeMultiSelectToggleResult.maximumReached.message,
+            "Select up to 5 items"
+        )
+        XCTAssertEqual(state.toggle(jacket), .upperBodySlotConflict)
+        XCTAssertEqual(state.selectedCount, 5)
+    }
+
+    func testMatchesCategoryFilterCoatExtendedChip() {
+        XCTAssertTrue(WardrobeCategoryDisplay.matchesCategoryFilter("coat", filter: "coat"))
+        XCTAssertTrue(WardrobeCategoryDisplay.matchesCategoryFilter("coats", filter: "coat"))
+        XCTAssertFalse(WardrobeCategoryDisplay.matchesCategoryFilter("blazer", filter: "coat"))
+        XCTAssertFalse(WardrobeCategoryDisplay.matchesCategoryFilter("jacket", filter: "coat"))
+    }
+
+    func testWardrobeCategoryLabelReturnsCoatLabel() {
+        XCTAssertEqual(WardrobeCategoryDisplay.wardrobeCategoryLabel("coat"), "Coat")
+        XCTAssertEqual(WardrobeCategoryDisplay.wardrobeCategoryLabel("coats"), "Coat")
     }
 
     func testCategoryFilterChipTapPreservesSelectionWhenCountPositive() {
@@ -233,9 +357,9 @@ final class WardrobeCategoryFilterTests: XCTestCase {
         return current
     }
 
-    private func wardrobeItem(category: String) -> WardrobeItem {
+    private func wardrobeItem(id: Int? = nil, category: String) -> WardrobeItem {
         WardrobeItem(
-            id: Int.random(in: 1...9999),
+            id: id ?? Int.random(in: 1...9999),
             category: category,
             name: category,
             description: nil,

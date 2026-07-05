@@ -113,5 +113,8 @@ def test_category_normalization_handles_completion_aliases():
     assert controller._normalize_item_category_for_outfit("jeans") == "trouser"  # type: ignore[attr-defined]
     assert controller._normalize_item_category_for_outfit("shorts") == "trouser"  # type: ignore[attr-defined]
     assert controller._normalize_item_category_for_outfit("shoe") == "shoes"  # type: ignore[attr-defined]
-    assert controller._normalize_item_category_for_outfit("jackets") == "blazer"  # type: ignore[attr-defined]
+    assert controller._normalize_item_category_for_outfit("jacket") == "outerwear"  # type: ignore[attr-defined]
+    assert controller._normalize_item_category_for_outfit("jackets") == "outerwear"  # type: ignore[attr-defined]
+    assert controller._normalize_item_category_for_outfit("coat") == "outerwear"  # type: ignore[attr-defined]
+    assert controller._normalize_item_category_for_outfit("blazer") == "blazer"  # type: ignore[attr-defined]
 

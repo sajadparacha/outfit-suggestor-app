@@ -12,6 +12,13 @@ enum GuestAuthSheetDestination: Hashable {
     case register
 }
 
+/// Bundles context + destination so `.sheet(item:)` always presents the intended auth screen.
+struct GuestAuthSheetPresentation: Identifiable {
+    let id = UUID()
+    let context: AuthPromptContext
+    let destination: GuestAuthSheetDestination
+}
+
 struct GuestAuthSheetView: View {
     let context: AuthPromptContext
     let destination: GuestAuthSheetDestination
@@ -50,5 +57,7 @@ struct GuestAuthSheetView: View {
                 dismiss()
             }
         }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
     }
 }

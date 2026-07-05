@@ -11,6 +11,8 @@ from PIL import Image
 
 from models.outfit import OutfitSuggestion
 from utils.cost_calculator import CostCalculator
+from services.wardrobe_season_rules import is_heavy_outerwear_for_summer
+from utils.outfit_upload_category import text_suggests_outerwear
 
 # Try to import replicate, but make it optional
 try:
@@ -61,6 +63,8 @@ class AIService:
         wardrobe_items: Optional[dict] = None,
         wardrobe_only: bool = False,
         previous_outfit_text: Optional[str] = None,
+        source_wardrobe_category: Optional[str] = None,
+        source_wardrobe_item_id: Optional[int] = None,
     ) -> Tuple[OutfitSuggestion, Dict[str, Any]]:
         """
         Get outfit suggestion from OpenAI based on image analysis
@@ -79,7 +83,11 @@ class AIService:
             HTTPException: If API call fails
         """
         prompt = self._build_prompt(
-            text_input, wardrobe_items, wardrobe_only, previous_outfit_text=previous_outfit_text
+            text_input,
+            wardrobe_items,
+            wardrobe_only,
+            previous_outfit_text=previous_outfit_text,
+            source_wardrobe_category=source_wardrobe_category,
         )
         
         try:
@@ -121,6 +129,13 @@ class AIService:
             # Extract and parse the response
             content = response.choices[0].message.content
             suggestion = self._parse_response(content)
+            suggestion = self._apply_detected_upload_category(suggestion, content)
+            suggestion = self._correct_misclassified_upload_slot(suggestion)
+            suggestion = self._apply_source_wardrobe_constraints(
+                suggestion,
+                source_wardrobe_category=source_wardrobe_category,
+                source_wardrobe_item_id=source_wardrobe_item_id,
+            )
             suggestion.ai_prompt = prompt
             suggestion.ai_raw_response = content
             
@@ -531,6 +546,162 @@ Required JSON shape:
             raise last_error
         return {}
     
+    def _extract_season_from_text(self, text_input: str) -> Optional[str]:
+        if not text_input:
+            return None
+        match = re.search(r"season\s*:\s*([a-zA-Z]+)", text_input, flags=re.IGNORECASE)
+        if not match:
+            return None
+        return match.group(1).strip().lower()
+
+    def _is_warm_season(self, season: Optional[str]) -> bool:
+        normalized = (season or "").strip().lower()
+        return normalized in {"summer", "warm"}
+
+    def _filter_wardrobe_items_for_season(
+        self,
+        wardrobe_items: Optional[dict],
+        season: Optional[str],
+    ) -> Optional[dict]:
+        if not wardrobe_items or not self._is_warm_season(season):
+            return wardrobe_items
+
+        filtered: Dict[str, List[Any]] = {}
+        for category, items in wardrobe_items.items():
+            kept = []
+            for item in items or []:
+                item_category = getattr(item, "category", None) or category
+                description = getattr(item, "description", None) or ""
+                color = getattr(item, "color", None) or ""
+                if is_heavy_outerwear_for_summer(
+                    category=str(item_category),
+                    description=str(description),
+                    color=str(color),
+                ):
+                    continue
+                kept.append(item)
+            if kept:
+                filtered[category] = kept
+        return filtered
+
+    def _apply_detected_upload_category(
+        self,
+        suggestion: OutfitSuggestion,
+        raw_response: str,
+    ) -> OutfitSuggestion:
+        """Prefer explicit detected_upload_category when vision disagrees with source_slot."""
+        try:
+            start_idx = raw_response.find("{")
+            end_idx = raw_response.rfind("}") + 1
+            outfit_data = json.loads(raw_response[start_idx:end_idx])
+        except (json.JSONDecodeError, ValueError):
+            return suggestion
+
+        detected_raw = outfit_data.get("detected_upload_category")
+        if detected_raw is None or not isinstance(detected_raw, str):
+            return suggestion
+
+        aliases = {
+            "shirt": "shirt",
+            "shirts": "shirt",
+            "trouser": "trouser",
+            "trousers": "trouser",
+            "pant": "trouser",
+            "pants": "trouser",
+            "blazer": "blazer",
+            "blazers": "blazer",
+            "shoe": "shoes",
+            "shoes": "shoes",
+            "belt": "belt",
+            "belts": "belt",
+            "outerwear": "outerwear",
+            "jacket": "outerwear",
+            "jackets": "outerwear",
+            "coat": "outerwear",
+            "coats": "outerwear",
+        }
+        detected = aliases.get(detected_raw.strip().lower())
+        if detected != "outerwear":
+            return suggestion
+
+        current = (suggestion.source_slot or "").strip().lower()
+        if current in {"outerwear", "jacket", "jackets", "coat", "coats"}:
+            return suggestion
+        if current not in {"shirt", "blazer", ""} and suggestion.source_slot is not None:
+            return suggestion
+
+        suggestion.source_slot = "outerwear"
+        suggestion.upload_matched_category = "outerwear"
+        if current == "shirt" and text_suggests_outerwear(suggestion.shirt):
+            suggestion.outerwear = (suggestion.shirt or "").strip() or suggestion.outerwear
+        return suggestion
+
+    def _correct_misclassified_upload_slot(self, suggestion: OutfitSuggestion) -> OutfitSuggestion:
+        """Promote shirt/blazer slot to outerwear when slot copy clearly describes a jacket."""
+        slot = (suggestion.source_slot or suggestion.upload_matched_category or "").strip().lower()
+        if slot == "shirt" and text_suggests_outerwear(suggestion.shirt):
+            suggestion.source_slot = "outerwear"
+            suggestion.upload_matched_category = "outerwear"
+            if not (suggestion.outerwear or "").strip():
+                suggestion.outerwear = (suggestion.shirt or "").strip() or None
+        elif slot == "blazer" and text_suggests_outerwear(suggestion.blazer):
+            suggestion.source_slot = "outerwear"
+            suggestion.upload_matched_category = "outerwear"
+            if not (suggestion.outerwear or "").strip():
+                suggestion.outerwear = (suggestion.blazer or "").strip() or None
+        return suggestion
+    
+    def _apply_source_wardrobe_constraints(
+        self,
+        suggestion: OutfitSuggestion,
+        source_wardrobe_category: Optional[str] = None,
+        source_wardrobe_item_id: Optional[int] = None,
+    ) -> OutfitSuggestion:
+        """When styling from a known wardrobe item, keep jacket/coat out of the blazer slot."""
+        normalized = (source_wardrobe_category or "").strip().lower()
+        if normalized in {"jacket", "jackets", "coat", "coats", "outerwear"}:
+            suggestion.source_slot = "outerwear"
+            suggestion.upload_matched_category = "outerwear"
+            if source_wardrobe_item_id is not None:
+                suggestion.outerwear_id = source_wardrobe_item_id
+            suggestion.blazer_id = None
+            suggestion.blazer = ""
+            suggestion.sweater = None
+            suggestion.sweater_id = None
+            if not (suggestion.outerwear or "").strip() or (suggestion.outerwear or "").strip().lower() in {"null", "none"}:
+                label = "coat" if normalized in {"coat", "coats"} else "jacket"
+                suggestion.outerwear = f"Your wardrobe {label} (uploaded item)"
+        elif normalized in {"blazer", "blazers", "suit", "sport_coat", "sport coat", "sportcoat"}:
+            suggestion.source_slot = "blazer"
+            suggestion.upload_matched_category = "blazer"
+            suggestion.outerwear = None
+            suggestion.outerwear_id = None
+            suggestion.sweater = None
+            suggestion.sweater_id = None
+            if source_wardrobe_item_id is not None:
+                suggestion.blazer_id = source_wardrobe_item_id
+        elif normalized in {"shirt", "shirts", "polo", "t_shirt", "t-shirt", "tshirt", "tee"}:
+            suggestion.source_slot = "shirt"
+            suggestion.upload_matched_category = "shirt"
+            if source_wardrobe_item_id is not None:
+                suggestion.shirt_id = source_wardrobe_item_id
+        elif normalized in {"trouser", "trousers", "pants", "pant", "jeans", "shorts"}:
+            suggestion.source_slot = "trouser"
+            suggestion.upload_matched_category = "trouser"
+            if source_wardrobe_item_id is not None:
+                suggestion.trouser_id = source_wardrobe_item_id
+        elif normalized in {"shoes", "shoe"}:
+            suggestion.source_slot = "shoes"
+            suggestion.upload_matched_category = "shoes"
+            if source_wardrobe_item_id is not None:
+                suggestion.shoes_id = source_wardrobe_item_id
+        elif normalized in {"belt", "belts"}:
+            suggestion.source_slot = "belt"
+            suggestion.upload_matched_category = "belt"
+            if source_wardrobe_item_id is not None:
+                suggestion.belt_id = source_wardrobe_item_id
+        return suggestion
+
     def _build_prompt(
         self,
         text_input: str = "",
@@ -538,6 +709,7 @@ Required JSON shape:
         wardrobe_only: bool = False,
         previous_outfit_text: Optional[str] = None,
         avoid_outfit_texts: Optional[List[str]] = None,
+        source_wardrobe_category: Optional[str] = None,
     ) -> str:
         """
         Build the prompt for OpenAI API
@@ -551,6 +723,9 @@ Required JSON shape:
         Returns:
             Formatted prompt string
         """
+        season = self._extract_season_from_text(text_input)
+        wardrobe_items = self._filter_wardrobe_items_for_season(wardrobe_items, season)
+
         wardrobe_context = ""
         if wardrobe_items:
             if wardrobe_only:
@@ -664,9 +839,48 @@ ALSO AVOID these recent outfit suggestions from this session (do NOT repeat or c
             context_parts.append(f"Additional context: {text_input}")
         context = ("\n\n".join(context_parts)) if context_parts else ""
 
+        summer_guidance = ""
+        if self._is_warm_season(season):
+            summer_guidance = """
+SUMMER / WARM-WEATHER RULES (strict):
+- Prioritize breathable fabrics: linen, cotton, lightweight wool blends only when office/formal requires it.
+- Do NOT recommend heavy outerwear (wool coats, parkas, insulated jackets, chunky sweaters, wool blazers).
+- Optional outerwear should be lightweight only (linen overshirt, denim jacket, harrington, unlined blazer) or null.
+- Casual jackets and coats belong in the optional outerwear slot — never substitute them for the structured blazer slot.
+- Favor open collars, lighter colors, and fewer layers unless occasion is formal/business.
+"""
+
+        normalized_source = (source_wardrobe_category or "").strip().lower()
+        source_guidance = ""
+        upload_intro = (
+            "Analyze the uploaded image of a clothing item and provide a complete outfit suggestion. "
+            "If the upload is a jacket, coat, overshirt, shacket, or corduroy outer layer (not a structured blazer "
+            "or dress shirt), set source_slot to \"outerwear\" — never \"shirt\"."
+        )
+        if normalized_source in {"jacket", "jackets", "coat", "coats", "outerwear"}:
+            label = "coat" if normalized_source in {"coat", "coats"} else "jacket"
+            upload_intro = f"Analyze the uploaded image of the user's wardrobe {label} (casual outerwear)."
+            source_guidance = f"""
+SOURCE ITEM CONTEXT (strict):
+- The uploaded image IS the user's wardrobe {label} — casual outerwear, NOT a structured blazer.
+- Put this piece in the "outerwear" slot and set source_slot to "outerwear".
+- Do NOT recommend an additional structured blazer on top unless occasion is business/formal AND their wardrobe lists a blazer.
+- For casual/smart-casual looks, set "blazer" to "No structured blazer — outfit built around your outerwear" (not a second layer to buy).
+- Build shirt, trouser, shoes, and belt around this outerwear piece.
+"""
+        elif normalized_source in {"blazer", "blazers", "suit", "sport_coat", "sport coat", "sportcoat"}:
+            upload_intro = "Analyze the uploaded image of the user's structured blazer or sport coat."
+            source_guidance = """
+SOURCE ITEM CONTEXT (strict):
+- The uploaded image IS the user's structured blazer layer.
+- Put this piece in the "blazer" slot and set source_slot to "blazer".
+- Do not treat it as casual outerwear.
+- Set "sweater" and "outerwear" to null — the blazer is the only upper layer; do not suggest a casual jacket or extra sweater.
+"""
+
         prompt = """
-You are a professional fashion stylist. Analyze the uploaded image of a shirt or blazer and provide a complete outfit suggestion.
-{wardrobe_context}
+You are a professional fashion stylist. {upload_intro}
+{source_guidance}{summer_guidance}{wardrobe_context}
 {context}
 
 Please provide a complete outfit recommendation including:
@@ -707,10 +921,14 @@ Respond in JSON format with the following structure:
     "sweater_id": integer or null,
     "outerwear_id": integer or null,
     "tie_id": integer or null,
-    "source_slot": "one of: shirt, trouser, blazer, shoes, belt, or null (which slot in this outfit corresponds to the uploaded item)",
+    "source_slot": "one of: shirt, trouser, blazer, shoes, belt, outerwear, or null (which slot corresponds to the uploaded item)",
+    "detected_upload_category": "visual garment type of the uploaded image — shirt, trouser, blazer, outerwear, shoes, belt, or null. Use outerwear for jackets, coats, shackets, corduroy outer layers, bombers, and parkas (not structured blazers or dress shirts).",
     "reasoning": "brief explanation of why this outfit works well together"
 }}
 """.format(
+            upload_intro=upload_intro,
+            source_guidance=source_guidance,
+            summer_guidance=summer_guidance,
             wardrobe_context=wardrobe_context,
             context=f"\n{context}" if context else ""
         )
@@ -761,12 +979,15 @@ Respond in JSON format with the following structure:
                     "pants": "trouser",
                     "blazer": "blazer",
                     "blazers": "blazer",
-                    "jacket": "blazer",
-                    "jackets": "blazer",
                     "shoe": "shoes",
                     "shoes": "shoes",
                     "belt": "belt",
                     "belts": "belt",
+                    "outerwear": "outerwear",
+                    "jacket": "outerwear",
+                    "jackets": "outerwear",
+                    "coat": "outerwear",
+                    "coats": "outerwear",
                 }
                 return aliases.get(normalized)
 

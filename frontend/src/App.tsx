@@ -618,6 +618,7 @@ function App() {
                 onClearSourceWardrobeItem={() => setSourceWardrobeItem(null)}
                 flowPreviewUrl={flowPreviewUrl}
                 flowPreviewCaption={flowPreviewCaption}
+                suggestionImageUrl={currentSuggestion?.imageUrl}
                 inputPanelSource={inputPanelSource}
                 summaryFilters={summaryFilters}
                 summaryPreferenceText={summaryPreferenceText}
@@ -685,6 +686,7 @@ function App() {
                 onChangeOccasion={handleChangeOccasion}
                 showWardrobeOnlyAction={isAuthenticated}
                 isAuthenticated={isAuthenticated}
+                sourceWardrobeItem={sourceWardrobeItem}
                 guestLimitReached={guestLimitReached}
               />
               </div>

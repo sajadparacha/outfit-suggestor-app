@@ -64,7 +64,7 @@ class WardrobeMatcher:
                 matches["trouser"].append(self._item_to_dict(item))
             elif item_category in {"blazer", "blazers"} and self._matches_suggestion(item, suggested_blazer):
                 matches["blazer"].append(self._item_to_dict(item))
-            elif item_category in {"jacket", "jackets", "coat", "coats"} and suggested_outerwear and self._matches_suggestion(item, suggested_outerwear):
+            elif item_category in {"jacket", "jackets", "coat", "coats", "outerwear"} and suggested_outerwear and self._matches_suggestion(item, suggested_outerwear):
                 matches["outerwear"].append(self._item_to_dict(item))
             elif item_category in {"sweater", "sweaters"} and suggested_sweater and self._matches_suggestion(item, suggested_sweater):
                 matches["sweater"].append(self._item_to_dict(item))

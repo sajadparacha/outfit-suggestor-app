@@ -71,4 +71,37 @@ final class OutfitSuggestionViewTests: XCTestCase {
         XCTAssertEqual(MainFlowUxCopy.outerwearLabel, "Outerwear")
         XCTAssertEqual(MainFlowUxCopy.tieLabel, "Tie")
     }
+
+    func testLayerExclusivityHidesBlazerWhenOuterwearAnchored() {
+        let suggestion = OutfitSuggestion(
+            shirt: "White dress shirt",
+            trouser: "Navy trousers",
+            blazer: "Royal blue blazer",
+            shoes: "Black oxfords",
+            belt: "Black belt",
+            reasoning: "Classic business look.",
+            upload_matched_category: "outerwear",
+            outerwear: "Tan corduroy jacket"
+        )
+        XCTAssertFalse(OutfitLayerExclusivity.shouldShowBlazerCard(suggestion: suggestion))
+        XCTAssertTrue(OutfitLayerExclusivity.shouldShowAnchoredOuterwearInCoreGrid(suggestion: suggestion))
+        XCTAssertEqual(OutfitLayerExclusivity.optionalLayerCategories(for: suggestion), ["tie"])
+    }
+
+    func testLayerExclusivityDropsSweaterAndOuterwearWhenBlazerAnchored() {
+        let suggestion = OutfitSuggestion(
+            shirt: "White dress shirt",
+            trouser: "Navy trousers",
+            blazer: "Charcoal blazer",
+            shoes: "Black oxfords",
+            belt: "Black belt",
+            reasoning: "Classic business look.",
+            upload_matched_category: "blazer",
+            sweater: "Merino",
+            outerwear: "Denim jacket"
+        )
+        XCTAssertTrue(OutfitLayerExclusivity.shouldShowBlazerCard(suggestion: suggestion))
+        XCTAssertEqual(OutfitLayerExclusivity.optionalLayerCategories(for: suggestion), ["tie"])
+        XCTAssertFalse(OutfitLayerExclusivity.hasVisibleOptionalLayers(suggestion))
+    }
 }

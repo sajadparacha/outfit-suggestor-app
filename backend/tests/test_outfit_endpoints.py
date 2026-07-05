@@ -505,7 +505,155 @@ class TestOutfitEndpoints:
         )
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "shirt, trouser, blazer, shoes, or belt" in response.json()["detail"]
+        assert "jacket/coat, or sweater" in response.json()["detail"]
+
+    def test_suggest_outfit_from_selected_wardrobe_items_accepts_jacket_as_outerwear(
+        self,
+        client,
+        auth_headers,
+        db,
+        test_user,
+    ):
+        jacket = _create_wardrobe_item(
+            db,
+            test_user.id,
+            "jacket",
+            "Navy",
+            "Navy bomber jacket",
+        )
+        payload = {
+            "occasion": "work",
+            "season": "all-season",
+            "style": "smart-casual",
+            "selected_wardrobe_item_ids": [jacket.id],
+        }
+
+        response = client.post(
+            "/api/suggest-outfit-from-wardrobe",
+            json=payload,
+            headers=auth_headers,
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        body = response.json()
+        assert body["outerwear_id"] == jacket.id
+        assert body["matching_wardrobe_items"]["outerwear"][0]["id"] == jacket.id
+
+    def test_suggest_outfit_from_selected_jacket_and_shoes_pins_outerwear(
+        self,
+        client,
+        auth_headers,
+        db,
+        test_user,
+    ):
+        """Jacket + shoes multi-select: outerwear text, thumbnail, and no upload metadata."""
+        jacket = _create_wardrobe_item(
+            db,
+            test_user.id,
+            "jacket",
+            "Tan",
+            "Tan wool overcoat",
+        )
+        shoes = _create_wardrobe_item(
+            db,
+            test_user.id,
+            "shoes",
+            "Brown",
+            "Brown monk strap shoes",
+        )
+        payload = {
+            "occasion": "everyday",
+            "season": "winter",
+            "style": "elegant",
+            "selected_wardrobe_item_ids": [jacket.id, shoes.id],
+        }
+
+        response = client.post(
+            "/api/suggest-outfit-from-wardrobe",
+            json=payload,
+            headers=auth_headers,
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        body = response.json()
+        assert body["outerwear_id"] == jacket.id
+        assert body["shoes_id"] == shoes.id
+        assert body["outerwear"] == "Tan wool overcoat"
+        assert "uploaded item" not in (body.get("outerwear") or "").lower()
+        assert body.get("upload_matched_category") is None
+        assert body.get("source_slot") is None
+        outerwear_matches = body["matching_wardrobe_items"]["outerwear"]
+        assert outerwear_matches[0]["id"] == jacket.id
+        assert outerwear_matches[0]["image_data"]
+
+    def test_suggest_outfit_from_selected_wardrobe_items_accepts_sweater(
+        self,
+        client,
+        auth_headers,
+        db,
+        test_user,
+    ):
+        sweater = _create_wardrobe_item(
+            db,
+            test_user.id,
+            "sweater",
+            "Grey",
+            "Grey merino crew neck",
+        )
+        payload = {
+            "occasion": "work",
+            "season": "all-season",
+            "style": "smart-casual",
+            "selected_wardrobe_item_ids": [sweater.id],
+        }
+
+        response = client.post(
+            "/api/suggest-outfit-from-wardrobe",
+            json=payload,
+            headers=auth_headers,
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        body = response.json()
+        assert body["sweater_id"] == sweater.id
+        assert body["matching_wardrobe_items"]["sweater"][0]["id"] == sweater.id
+
+    def test_suggest_outfit_from_selected_wardrobe_items_rejects_blazer_with_jacket(
+        self,
+        client,
+        auth_headers,
+        db,
+        test_user,
+    ):
+        blazer = _create_wardrobe_item(
+            db,
+            test_user.id,
+            "blazer",
+            "Navy",
+            "Navy structured blazer",
+        )
+        jacket = _create_wardrobe_item(
+            db,
+            test_user.id,
+            "coat",
+            "Camel",
+            "Camel wool overcoat",
+        )
+        payload = {
+            "occasion": "work",
+            "season": "all-season",
+            "style": "smart-casual",
+            "selected_wardrobe_item_ids": [blazer.id, jacket.id],
+        }
+
+        response = client.post(
+            "/api/suggest-outfit-from-wardrobe",
+            json=payload,
+            headers=auth_headers,
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "only one of blazer, outerwear, or sweater" in response.json()["detail"]
 
     def test_suggest_outfit_from_wardrobe_only_accepts_previous_outfit_text(
         self, client, auth_headers, wardrobe_item

@@ -23,8 +23,9 @@ struct AboutView: View {
                     Text(AboutCopy.wardrobeInsightsFeature)
                     Text(AboutCopy.outfitSuggestionsFeature)
                     Text(AboutCopy.wardrobeFilterFeature)
+                    Text("• Blazers, jackets, coats (outerwear), and sweaters can be selected for outfit completion—only one of blazer, outerwear, or sweater at a time.")
                     Text("• Outfit history when logged in")
-                    Text(AboutCopy.wardrobeCompletionFeature)
+                    Text("• Complete outfits from selected wardrobe pieces—pick up to 5 items (one per slot), set occasion, season, style, and notes inline on Wardrobe, then tap Complete outfit with AI.")
                 }
                 .font(.subheadline)
                 .foregroundColor(.secondary)

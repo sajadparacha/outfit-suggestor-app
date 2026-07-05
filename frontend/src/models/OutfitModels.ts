@@ -69,6 +69,8 @@ export interface OutfitSuggestion {
   raw?: unknown;
   meta?: {
     usedPrompt: string;
+    source?: 'wardrobe_multi_select';
+    selectedWardrobeItemIds?: number[];
   };
 }
 

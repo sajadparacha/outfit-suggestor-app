@@ -20,9 +20,9 @@ final class AppConfigTests: XCTestCase {
         XCTAssertEqual(AppConfig.apiBaseURL, "https://example.test")
     }
 
-    func testApiBaseURLFallsBackToDefaultWhenOverrideBlank() {
+    func testApiBaseURLFallsBackToLocalBackendInDebugWhenOverrideBlank() {
         UserDefaults.standard.set("   ", forKey: overrideKey)
 
-        XCTAssertEqual(AppConfig.apiBaseURL, "https://web-production-dfcf8.up.railway.app")
+        XCTAssertEqual(AppConfig.apiBaseURL, AppConfig.localAPIBaseURL)
     }
 }

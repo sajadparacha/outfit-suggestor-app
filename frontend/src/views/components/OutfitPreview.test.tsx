@@ -146,6 +146,69 @@ describe('OutfitPreview', () => {
       expect(shirtImg?.getAttribute('src')).toBe(uploadedImageUrl);
     });
 
+    it('places jacket upload on outerwear when API metadata mismatches shirt slot', () => {
+      const uploadedImageUrl = 'blob:http://localhost/fake-jacket-upload';
+      const suggestionWithJacket = {
+        ...baseSuggestion,
+        blazer: 'Royal blue slim fit blazer',
+        upload_matched_category: 'shirt',
+        shirt_id: 42,
+        source_wardrobe_item_id: 42,
+        shirt: 'Black shirt with white and red horizontal stripes',
+        imageUrl: uploadedImageUrl,
+        matching_wardrobe_items: {
+          shirt: [],
+          trouser: [
+            {
+              id: 11,
+              category: 'trouser',
+              color: 'black',
+              description: 'Black trousers',
+              image_data: 'trouser_base64',
+            },
+          ],
+          blazer: [
+            {
+              id: 99,
+              category: 'blazer',
+              color: 'royal blue',
+              description: 'Royal blue blazer',
+              image_data: 'blazer_base64',
+            },
+          ],
+          shoes: [],
+          belt: [],
+          outerwear: [
+            {
+              id: 42,
+              category: 'jacket',
+              color: 'tan',
+              description: 'Tan corduroy jacket',
+              image_data: 'jacket_base64',
+            },
+          ],
+        },
+      };
+      render(
+        <OutfitPreview
+          suggestion={suggestionWithJacket}
+          loading={false}
+          error={null}
+          {...actionProps}
+          hasImage={true}
+          sourceWardrobeItem={{ id: 42, category: 'jacket', color: 'tan' }}
+        />
+      );
+
+      const shirtImg = screen.getAllByRole('img').find((img) => img.getAttribute('alt') === 'Shirt');
+      const outerwearImg = screen.getAllByRole('img').find((img) => img.getAttribute('alt') === 'Outerwear');
+      expect(shirtImg).toBeUndefined();
+      expect(outerwearImg?.getAttribute('src')).toBe(uploadedImageUrl);
+      expect(screen.getByText(MAIN_FLOW_UX_COPY.tagFromUpload)).toBeInTheDocument();
+      expect(screen.getByText(/Black shirt with white and red horizontal/i)).toBeInTheDocument();
+      expect(screen.queryByText('Royal blue slim fit blazer')).not.toBeInTheDocument();
+    });
+
     it('uses wardrobe match thumbnail for shirt when no imageUrl', () => {
       const suggestionWithWardrobe = {
         ...baseSuggestion,

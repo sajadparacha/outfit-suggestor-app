@@ -34,6 +34,7 @@ enum WardrobeCategoryDisplay {
         WardrobeCategoryFilterChip(key: "shorts", label: "Shorts", kind: .extended),
         WardrobeCategoryFilterChip(key: "sweater", label: "Sweater", kind: .extended),
         WardrobeCategoryFilterChip(key: "jacket", label: "Jacket", kind: .extended),
+        WardrobeCategoryFilterChip(key: "coat", label: "Coat", kind: .extended),
         WardrobeCategoryFilterChip(key: "tie", label: "Tie", kind: .extended),
         WardrobeCategoryFilterChip(key: "other", label: "Other", kind: .extended),
     ]
@@ -41,7 +42,7 @@ enum WardrobeCategoryDisplay {
     private static let coreGroupMatchers: [String: [String]] = [
         "shirt": ["shirt", "t_shirt", "t-shirt", "polo", "tshirt", "tee"],
         "trouser": ["trouser", "trousers", "pants", "jeans", "shorts"],
-        "blazer": ["blazer", "blazers", "suit"],
+        "blazer": ["blazer", "blazers", "suit", "sport_coat", "sport coat", "sportcoat"],
         "shoes": ["shoe", "shoes"],
         "belt": ["belt", "belts"],
     ]
@@ -53,6 +54,7 @@ enum WardrobeCategoryDisplay {
         "shorts": ["shorts"],
         "sweater": ["sweater", "sweaters"],
         "jacket": ["jacket", "jackets"],
+        "coat": ["coat", "coats"],
         "tie": ["tie", "ties"],
     ]
 
@@ -70,6 +72,8 @@ enum WardrobeCategoryDisplay {
         "blazer": "Blazer",
         "jacket": "Jacket",
         "jackets": "Jacket",
+        "coat": "Coat",
+        "coats": "Coat",
         "shoes": "Shoes",
         "shoe": "Shoes",
         "belt": "Belt",
@@ -121,6 +125,13 @@ enum WardrobeCategoryDisplay {
             return isOtherCategory(itemCategory)
         }
 
+        let normalizedItem = normalizeCategory(itemCategory)
+        if (filterKey == "shirt" || filterKey == "blazer") {
+            if ["jacket", "jackets", "coat", "coats", "outerwear"].contains(normalizedItem) {
+                return false
+            }
+        }
+
         if let coreMatchers = coreGroupMatchers[filterKey] {
             return matchesAny(itemCategory, values: coreMatchers)
         }
@@ -163,6 +174,72 @@ enum WardrobeCategoryDisplay {
             keys.append(chip.key)
         }
         return keys
+    }
+
+    /// Chip counts from wardrobe summary API (parity with web `getFilterChipCount`).
+    static func filterChipCount(from summary: WardrobeSummary?, filterKey: String) -> Int {
+        let normalizedKey = normalizeCategory(filterKey)
+        if normalizedKey == "all" {
+            return summary?.total_items ?? 0
+        }
+
+        if coreFilterChips.contains(where: { $0.key == normalizedKey }) {
+            return coreFilterCount(from: summary, filterKey: normalizedKey)
+        }
+
+        if normalizedKey == "other" {
+            return otherFilterCount(from: summary)
+        }
+
+        return extendedFilterCount(from: summary, filterKey: normalizedKey)
+    }
+
+    static func visibleFilterChipKeys(from summary: WardrobeSummary?) -> [String] {
+        var keys = ["All"] + coreFilterChips.map(\.key)
+        for chip in extendedFilterChips where filterChipCount(from: summary, filterKey: chip.key) > 0 {
+            keys.append(chip.key)
+        }
+        return keys
+    }
+
+    static func rebuildCategoryCounts(from summary: WardrobeSummary) -> [String: Int] {
+        var counts: [String: Int] = [:]
+        for chip in coreFilterChips + extendedFilterChips {
+            counts[chip.key] = filterChipCount(from: summary, filterKey: chip.key)
+        }
+        return counts
+    }
+
+    private static func coreFilterCount(from summary: WardrobeSummary?, filterKey: String) -> Int {
+        guard let byCategory = summary?.by_category,
+              let matchers = coreGroupMatchers[filterKey] else {
+            return 0
+        }
+
+        return byCategory.reduce(0) { total, entry in
+            matchesAny(entry.key, values: matchers) ? total + entry.value : total
+        }
+    }
+
+    private static func extendedFilterCount(from summary: WardrobeSummary?, filterKey: String) -> Int {
+        guard let byCategory = summary?.by_category,
+              let matchers = extendedMatchers[filterKey] else {
+            return 0
+        }
+
+        return byCategory.reduce(0) { total, entry in
+            matchesAny(entry.key, values: matchers) ? total + entry.value : total
+        }
+    }
+
+    private static func otherFilterCount(from summary: WardrobeSummary?) -> Int {
+        guard let byCategory = summary?.by_category else {
+            return 0
+        }
+
+        return byCategory.reduce(0) { total, entry in
+            isOtherCategory(entry.key) ? total + entry.value : total
+        }
     }
 
     private static func isOtherCategory(_ category: String) -> Bool {

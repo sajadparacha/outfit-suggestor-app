@@ -29,9 +29,7 @@ struct MainFlowView: View {
     @AppStorage(FirstRunCoachCopy.storageKeyDismissed) private var firstRunCoachDismissed = false
     @AppStorage(FirstRunCoachCopy.storageKeyPrefsExpanded) private var firstRunPrefsExpanded = false
     @State private var showFirstOutfitBanner = false
-    @State private var showGuestAuthSheet = false
-    @State private var guestAuthContext: AuthPromptContext = .like
-    @State private var guestAuthDestination: GuestAuthSheetDestination = .login
+    @State private var guestAuthPresentation: GuestAuthSheetPresentation?
 
     private let resultScrollAnchor = "main.resultAnchor"
 
@@ -297,8 +295,8 @@ struct MainFlowView: View {
         } message: {
             Text("This image was already analyzed. Would you like to use the cached suggestion or get a new one?")
         }
-        .sheet(isPresented: $showGuestAuthSheet) {
-            GuestAuthSheetView(context: guestAuthContext, destination: guestAuthDestination)
+        .sheet(item: $guestAuthPresentation) { presentation in
+            GuestAuthSheetView(context: presentation.context, destination: presentation.destination)
         }
         .sheet(isPresented: $showOccasionPicker) {
             NavigationStack {
@@ -534,6 +532,9 @@ struct MainFlowView: View {
                     season: viewModel.filters.season,
                     style: viewModel.filters.style,
                     uploadImage: cardUploadImage,
+                    sourceWardrobeCategory: viewModel.inputPanelSource == .history
+                        ? nil
+                        : viewModel.sourceWardrobeItem?.category,
                     onNext: nil,
                     onLike: nil,
                     onDislike: nil,
@@ -998,9 +999,7 @@ struct MainFlowView: View {
     }
 
     private func openGuestAuthSheet(context: AuthPromptContext, destination: GuestAuthSheetDestination) {
-        guestAuthContext = context
-        guestAuthDestination = destination
-        showGuestAuthSheet = true
+        guestAuthPresentation = GuestAuthSheetPresentation(context: context, destination: destination)
     }
 
     private func showTransientMessage(_ message: String) {
@@ -1022,7 +1021,8 @@ struct MainFlowView: View {
         switch raw.lowercased() {
         case "shirt", "shirts": return "shirt"
         case "trouser", "trousers", "pant", "pants": return "trouser"
-        case "blazer", "blazers", "jacket", "jackets": return "blazer"
+        case "blazer", "blazers": return "blazer"
+        case "jacket", "jackets", "coat", "coats", "outerwear": return "outerwear"
         case "shoe", "shoes": return "shoes"
         case "belt", "belts": return "belt"
         default: return nil
@@ -1036,6 +1036,7 @@ struct MainFlowView: View {
         case "shirt": return suggestion.shirt
         case "trouser": return suggestion.trouser
         case "blazer": return suggestion.blazer
+        case "outerwear": return suggestion.outerwear
         case "shoes": return suggestion.shoes
         case "belt": return suggestion.belt
         default: return nil

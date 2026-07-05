@@ -14,49 +14,20 @@ import { MAIN_FLOW_UX_COPY } from '../../utils/mainFlowUxCopy';
 import {
   WARDROBE_FORM_CATEGORIES,
   apiCategoryParamForFilter,
+  CompleteOutfitSlot,
+  COMPLETE_OUTFIT_MAX_ITEMS,
+  formatCompleteOutfitSlotLabel,
   getFilterChipCount,
   getVisibleFilterChips,
+  hasCompleteOutfitUpperBodyConflict,
+  isUpperBodyExclusiveCompleteOutfitSlot,
   matchesWardrobeCategoryFilter,
+  normalizeCompleteOutfitSlot,
   usesClientSideCategoryFilter,
   wardrobeCategoryLabel,
 } from '../../utils/wardrobeCategory';
 
 const CLIENT_SIDE_FILTER_LOAD_LIMIT = 100;
-
-const COMPLETE_OUTFIT_SLOTS = ['shirt', 'trouser', 'blazer', 'shoes', 'belt'] as const;
-type CompleteOutfitSlot = typeof COMPLETE_OUTFIT_SLOTS[number];
-
-const COMPLETE_OUTFIT_SLOT_ALIASES: Record<string, CompleteOutfitSlot> = {
-  shirt: 'shirt',
-  shirts: 'shirt',
-  polo: 'shirt',
-  t_shirt: 'shirt',
-  't-shirt': 'shirt',
-  tshirt: 'shirt',
-  tee: 'shirt',
-  trouser: 'trouser',
-  trousers: 'trouser',
-  pant: 'trouser',
-  pants: 'trouser',
-  jeans: 'trouser',
-  shorts: 'trouser',
-  blazer: 'blazer',
-  blazers: 'blazer',
-  jacket: 'blazer',
-  jackets: 'blazer',
-  shoes: 'shoes',
-  shoe: 'shoes',
-  belt: 'belt',
-  belts: 'belt',
-};
-
-const normalizeCompleteOutfitSlot = (category: string): CompleteOutfitSlot | null => {
-  const normalized = category.trim().toLowerCase();
-  return COMPLETE_OUTFIT_SLOT_ALIASES[normalized] ?? null;
-};
-
-const formatCompleteOutfitSlot = (slot: CompleteOutfitSlot): string =>
-  slot === 'trouser' ? 'trousers' : slot;
 
 interface WardrobeProps {
   initialCategory?: string | null;
@@ -664,8 +635,18 @@ const Wardrobe: React.FC<WardrobeProps> = ({
         return current;
       }
 
-      if (current.length >= COMPLETE_OUTFIT_SLOTS.length) {
-        setSuggestionError('Choose up to 5 items');
+      if (isUpperBodyExclusiveCompleteOutfitSlot(slot)) {
+        const selectedSlots = current
+          .map((selected) => normalizeCompleteOutfitSlot(selected.category))
+          .filter((selectedSlot): selectedSlot is CompleteOutfitSlot => selectedSlot !== null);
+        if (hasCompleteOutfitUpperBodyConflict(selectedSlots, slot)) {
+          setSuggestionError('Choose only one of blazer, outerwear, or sweater');
+          return current;
+        }
+      }
+
+      if (current.length >= COMPLETE_OUTFIT_MAX_ITEMS) {
+        setSuggestionError('Select up to 5 items');
         return current;
       }
 
@@ -781,7 +762,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
   const selectedSlotSummary = selectedCompleteOutfitItems
     .map((item) => {
       const slot = normalizeCompleteOutfitSlot(item.category);
-      return slot ? formatCompleteOutfitSlot(slot) : item.category;
+      return slot ? formatCompleteOutfitSlotLabel(slot) : item.category;
     })
     .join(', ');
 
@@ -925,7 +906,8 @@ const Wardrobe: React.FC<WardrobeProps> = ({
             <div>
               <p className="text-base font-semibold text-white">Complete an outfit from selected wardrobe pieces</p>
               <p className="mt-1 text-sm text-slate-200">
-                Select 1 to 5 items across different slots: shirt, trousers, blazer, shoes, and belt.
+                Select 1 to 5 items across different slots: shirt, trousers, blazer, shoes, belt, jacket or coat
+                (outerwear), or sweater (layer). Choose only one of blazer, outerwear, or sweater.
               </p>
               <p
                 className="mt-2 text-xs font-medium text-slate-300"
@@ -974,7 +956,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                     .filter((item) => item.image_data)
                     .map((item) => {
                       const slot = normalizeCompleteOutfitSlot(item.category);
-                      const slotLabel = slot ? formatCompleteOutfitSlot(slot) : item.category;
+                      const slotLabel = slot ? formatCompleteOutfitSlotLabel(slot) : item.category;
                       return (
                         <button
                           key={item.id}
@@ -1066,6 +1048,14 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                 !!completeOutfitSlot &&
                 selectedCompleteOutfitSlots.has(completeOutfitSlot) &&
                 !isSelectedForCompleteOutfit;
+              const upperBodySlotTaken =
+                !!completeOutfitSlot &&
+                isUpperBodyExclusiveCompleteOutfitSlot(completeOutfitSlot) &&
+                selectedCompleteOutfitItems.some((selected) => {
+                  if (selected.id === item.id) return false;
+                  const selectedSlot = normalizeCompleteOutfitSlot(selected.category);
+                  return selectedSlot && isUpperBodyExclusiveCompleteOutfitSlot(selectedSlot);
+                });
               const completeOutfitSelectionAction = isSelectedForCompleteOutfit ? 'Remove' : 'Add';
               const completeOutfitSelectionAriaLabel = isSelectedForCompleteOutfit
                 ? `${completeOutfitSelectionAction} ${item.category} from outfit completion`
@@ -1142,9 +1132,11 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                         title={
                           !isCompleteOutfitEligible
                             ? 'Unsupported item category for outfit completion'
-                            : slotAlreadySelected
-                              ? 'Choose one item per outfit slot'
-                              : undefined
+                            : upperBodySlotTaken
+                              ? 'Choose only one of blazer, outerwear, or sweater'
+                              : slotAlreadySelected
+                                ? 'Choose one item per outfit slot'
+                                : undefined
                         }
                       >
                         {completeOutfitSelectionCopy}

@@ -667,7 +667,7 @@ class WardrobeService:
                 items.insert(0, items.pop(best_idx))
 
     def _normalize_category(self, category: str) -> str:
-        """Normalize wardrobe item category for gap analysis (jacket stays distinct from blazer)."""
+        """Normalize wardrobe item category for gap analysis (jacket/coat stay distinct from blazer)."""
         normalized = (category or "").strip().lower()
         aliases = {
             "pants": "trouser",
@@ -676,11 +676,14 @@ class WardrobeService:
             "jeans": "trouser",
             "blazers": "blazer",
             "jackets": "jacket",
+            "coats": "coat",
             "shoe": "shoes",
             "belts": "belt",
             "sweaters": "sweater",
             "ties": "tie",
             "outerwear": "jacket",
+            "parka": "coat",
+            "overcoat": "coat",
         }
         return aliases.get(normalized, normalized)
 

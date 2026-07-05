@@ -190,12 +190,14 @@ class WardrobeAIServiceHF:
         return result
     
     def _extract_category(self, text: str) -> str:
-        """Extract clothing category from text"""
+        """Extract clothing category from text (blazer, coat, and jacket are distinct)."""
+        # Order matters: structured blazer and coat terms before generic jacket.
         categories = {
-            "shirt": ["shirt", "top", "blouse", "t-shirt", "tshirt"],
+            "blazer": ["blazer", "sport coat", "sportcoat", "suit jacket", "structured blazer"],
+            "coat": ["overcoat", "pea coat", "peacoat", "parka", "wool coat", "trench coat", "duffle coat", "duffel coat", "down coat", "down jacket", "puffer"],
+            "jacket": ["bomber jacket", "bomber", "denim jacket", "field jacket", "harrington", "windbreaker", "rain jacket", "overshirt", "shacket", "corduroy jacket", "corduroy", "jacket"],
+            "shirt": ["shirt", "top", "blouse", "dress shirt", "button-down", "button down", "oxford shirt", "t-shirt", "tshirt", "tee"],
             "trouser": ["pants", "trousers", "jeans", "trouser", "pant"],
-            "blazer": ["blazer", "suit jacket", "sport coat", "jacket"],
-            "jacket": ["jacket", "coat"],
             "shoes": ["shoes", "sneakers", "boots", "footwear"],
             "belt": ["belt"],
             "tie": ["tie", "necktie"],

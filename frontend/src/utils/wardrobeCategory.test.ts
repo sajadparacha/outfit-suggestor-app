@@ -1,12 +1,19 @@
 import {
   apiCategoryParamForFilter,
+  COMPLETE_OUTFIT_MAX_ITEMS,
+  formatCompleteOutfitSlotLabel,
   getCoreFilterCount,
   getExtendedFilterCount,
   getFilterChipCount,
   getOtherFilterCount,
   getVisibleFilterChips,
+  hasCompleteOutfitUpperBodyConflict,
+  isCompleteOutfitEligibleCategory,
+  isUpperBodyExclusiveCompleteOutfitSlot,
   matchesWardrobeCategoryFilter,
+  normalizeCompleteOutfitSlot,
   usesClientSideCategoryFilter,
+  WARDROBE_FORM_CATEGORIES,
   wardrobeCategoryLabel,
 } from './wardrobeCategory';
 
@@ -20,6 +27,7 @@ const sampleSummary = {
     shorts: 1,
     blazer: 1,
     jacket: 1,
+    coat: 1,
     shoes: 1,
     belt: 1,
     sweater: 1,
@@ -37,6 +45,7 @@ describe('wardrobeCategory helpers', () => {
       expect(wardrobeCategoryLabel('jeans')).toBe('Jeans');
       expect(wardrobeCategoryLabel('trouser')).toBe('Trousers');
       expect(wardrobeCategoryLabel('jacket')).toBe('Jacket');
+      expect(wardrobeCategoryLabel('coat')).toBe('Coat');
     });
 
     it('returns Other for unrecognized categories', () => {
@@ -65,6 +74,26 @@ describe('wardrobeCategory helpers', () => {
       expect(matchesWardrobeCategoryFilter('shirt', 't_shirt')).toBe(false);
     });
 
+    it('keeps blazer filter separate from casual jackets and coats', () => {
+      expect(matchesWardrobeCategoryFilter('blazer', 'blazer')).toBe(true);
+      expect(matchesWardrobeCategoryFilter('sport_coat', 'blazer')).toBe(true);
+      expect(matchesWardrobeCategoryFilter('jacket', 'blazer')).toBe(false);
+      expect(matchesWardrobeCategoryFilter('jackets', 'blazer')).toBe(false);
+      expect(matchesWardrobeCategoryFilter('coat', 'blazer')).toBe(false);
+      expect(matchesWardrobeCategoryFilter('coats', 'blazer')).toBe(false);
+      expect(matchesWardrobeCategoryFilter('jacket', 'shirt')).toBe(false);
+      expect(matchesWardrobeCategoryFilter('coat', 'shirt')).toBe(false);
+      expect(matchesWardrobeCategoryFilter('bomber jacket', 'blazer')).toBe(false);
+    });
+
+    it('matches jacket and coat extended filters only', () => {
+      expect(matchesWardrobeCategoryFilter('jacket', 'jacket')).toBe(true);
+      expect(matchesWardrobeCategoryFilter('jackets', 'jacket')).toBe(true);
+      expect(matchesWardrobeCategoryFilter('coat', 'coat')).toBe(true);
+      expect(matchesWardrobeCategoryFilter('coats', 'coat')).toBe(true);
+      expect(matchesWardrobeCategoryFilter('jacket', 'coat')).toBe(false);
+      expect(matchesWardrobeCategoryFilter('blazer', 'jacket')).toBe(false);
+    });
     it('matches other bucket for unrecognized categories', () => {
       expect(matchesWardrobeCategoryFilter('watch', 'other')).toBe(true);
       expect(matchesWardrobeCategoryFilter('polo', 'other')).toBe(false);
@@ -77,7 +106,9 @@ describe('wardrobeCategory helpers', () => {
       expect(getCoreFilterCount(sampleSummary, 'trouser')).toBe(3);
       expect(getCoreFilterCount(sampleSummary, 'blazer')).toBe(1);
       expect(getExtendedFilterCount(sampleSummary, 'jacket')).toBe(1);
+      expect(getExtendedFilterCount(sampleSummary, 'coat')).toBe(1);
       expect(matchesWardrobeCategoryFilter('jacket', 'blazer')).toBe(false);
+      expect(matchesWardrobeCategoryFilter('coat', 'blazer')).toBe(false);
       expect(matchesWardrobeCategoryFilter('jacket', 'jacket')).toBe(true);
     });
 
@@ -109,6 +140,7 @@ describe('wardrobeCategory helpers', () => {
       expect(labels).toContain('Shorts');
       expect(labels).toContain('Sweater');
       expect(labels).toContain('Jacket');
+      expect(labels).toContain('Coat');
       expect(labels).toContain('Tie');
       expect(labels).toContain('Other');
     });
@@ -121,6 +153,65 @@ describe('wardrobeCategory helpers', () => {
       const labels = chips.map((chip) => chip.label);
 
       expect(labels).toEqual(['Shirt', 'Trousers', 'Blazer', 'Shoes', 'Belt']);
+    });
+  });
+
+  describe('form categories and complete-outfit slots', () => {
+    it('includes jacket and coat in add/edit form categories', () => {
+      expect(WARDROBE_FORM_CATEGORIES).toEqual(
+        expect.arrayContaining(['blazer', 'jacket', 'coat'])
+      );
+    });
+
+    it('maps jacket and coat to outerwear completion slot', () => {
+      expect(normalizeCompleteOutfitSlot('jacket')).toBe('outerwear');
+      expect(normalizeCompleteOutfitSlot('jackets')).toBe('outerwear');
+      expect(normalizeCompleteOutfitSlot('coat')).toBe('outerwear');
+      expect(normalizeCompleteOutfitSlot('coats')).toBe('outerwear');
+      expect(formatCompleteOutfitSlotLabel('outerwear')).toBe('outerwear');
+    });
+
+    it('maps sweater to sweater completion slot with layer label', () => {
+      expect(normalizeCompleteOutfitSlot('sweater')).toBe('sweater');
+      expect(normalizeCompleteOutfitSlot('sweaters')).toBe('sweater');
+      expect(formatCompleteOutfitSlotLabel('sweater')).toBe('layer');
+    });
+
+    it('maps core categories to their completion slots', () => {
+      expect(normalizeCompleteOutfitSlot('shirt')).toBe('shirt');
+      expect(normalizeCompleteOutfitSlot('polo')).toBe('shirt');
+      expect(normalizeCompleteOutfitSlot('jeans')).toBe('trouser');
+      expect(normalizeCompleteOutfitSlot('blazer')).toBe('blazer');
+      expect(normalizeCompleteOutfitSlot('shoes')).toBe('shoes');
+      expect(normalizeCompleteOutfitSlot('belt')).toBe('belt');
+    });
+
+    it('marks tie and unrecognized categories as ineligible', () => {
+      expect(normalizeCompleteOutfitSlot('tie')).toBeNull();
+      expect(normalizeCompleteOutfitSlot('watch')).toBeNull();
+      expect(isCompleteOutfitEligibleCategory('jacket')).toBe(true);
+      expect(isCompleteOutfitEligibleCategory('tie')).toBe(false);
+    });
+
+    it('identifies upper-body exclusive slots', () => {
+      expect(isUpperBodyExclusiveCompleteOutfitSlot('blazer')).toBe(true);
+      expect(isUpperBodyExclusiveCompleteOutfitSlot('outerwear')).toBe(true);
+      expect(isUpperBodyExclusiveCompleteOutfitSlot('sweater')).toBe(true);
+      expect(isUpperBodyExclusiveCompleteOutfitSlot('shirt')).toBe(false);
+      expect(isUpperBodyExclusiveCompleteOutfitSlot('trouser')).toBe(false);
+    });
+
+    it('detects upper-body exclusivity conflicts', () => {
+      expect(hasCompleteOutfitUpperBodyConflict(['blazer'], 'outerwear')).toBe(true);
+      expect(hasCompleteOutfitUpperBodyConflict(['outerwear'], 'sweater')).toBe(true);
+      expect(hasCompleteOutfitUpperBodyConflict(['sweater'], 'blazer')).toBe(true);
+      expect(hasCompleteOutfitUpperBodyConflict(['shirt', 'blazer'], 'outerwear')).toBe(true);
+      expect(hasCompleteOutfitUpperBodyConflict(['shirt', 'trouser'], 'blazer')).toBe(false);
+      expect(hasCompleteOutfitUpperBodyConflict(['blazer'], 'shirt')).toBe(false);
+    });
+
+    it('caps complete-outfit selection at five items', () => {
+      expect(COMPLETE_OUTFIT_MAX_ITEMS).toBe(5);
     });
   });
 

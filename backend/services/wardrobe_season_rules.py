@@ -16,6 +16,14 @@ SUMMER_BLOCKLIST_KEYWORDS: Tuple[str, ...] = (
     "heavy bomber",
     "parka",
     "overcoat",
+    "pea coat",
+    "peacoat",
+    "duffle coat",
+    "duffel coat",
+    "wool coat",
+    "wool jacket",
+    "quilted jacket",
+    "puffer",
     "down jacket",
     "down coat",
     "insulated",
@@ -25,6 +33,15 @@ SUMMER_BLOCKLIST_KEYWORDS: Tuple[str, ...] = (
     "chunky sweater",
     "wool sweater",
     "wool blazer",
+)
+
+# Wardrobe categories treated as heavy outerwear for summer outfit payloads.
+SUMMER_HEAVY_OUTERWEAR_CATEGORIES: Tuple[str, ...] = (
+    "coat",
+    "coats",
+    "parka",
+    "overcoat",
+    "outerwear",
 )
 
 SUMMER_SUMMER_STYLE_BLOCKLIST: Tuple[str, ...] = (
@@ -60,6 +77,22 @@ def _normalize_occasion(occasion: str) -> str:
 def text_has_summer_blocklist(text: str) -> bool:
     lowered = (text or "").lower()
     return any(keyword in lowered for keyword in SUMMER_BLOCKLIST_KEYWORDS)
+
+
+def is_heavy_outerwear_for_summer(
+    *,
+    category: str,
+    description: str = "",
+    color: str = "",
+) -> bool:
+    """Return True when a wardrobe item should be omitted from summer outfit AI payloads."""
+    normalized_category = (category or "").strip().lower()
+    if normalized_category in SUMMER_HEAVY_OUTERWEAR_CATEGORIES:
+        return True
+    combined = f"{normalized_category} {description} {color}".strip()
+    if normalized_category in {"jacket", "jackets", "blazer", "blazers", "sweater", "sweaters"}:
+        return text_has_summer_blocklist(combined)
+    return False
 
 
 def filter_summer_texts(texts: List[str]) -> List[str]:

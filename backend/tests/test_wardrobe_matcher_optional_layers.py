@@ -59,3 +59,24 @@ def test_matcher_maps_sweater_and_tie_when_present():
 
     assert matches["sweater"][0]["id"] == 3
     assert matches["tie"][0]["id"] == 4
+
+
+def test_matcher_maps_outerwear_category_like_jacket():
+    matcher = WardrobeMatcher()
+    suggestion = OutfitSuggestion(
+        shirt="White shirt",
+        trouser="Navy chinos",
+        blazer="Grey wool blazer",
+        shoes="Brown shoes",
+        belt="Brown belt",
+        reasoning="Test",
+        outerwear="Navy parka",
+    )
+    wardrobe = [
+        _item(5, "outerwear", "navy", "Navy parka"),
+    ]
+
+    matches = matcher.match_wardrobe_to_outfit(suggestion, wardrobe)
+
+    assert len(matches["outerwear"]) == 1
+    assert matches["outerwear"][0]["id"] == 5

@@ -219,8 +219,10 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               <span>
                 You will see <strong className="text-white">shirt, trousers, blazer, shoes, and belt</strong> with short
                 descriptions. Small images may show your upload, items from your wardrobe, or an AI-only suggestion. When
-                the occasion calls for it, the AI may also suggest a <strong className="text-white">sweater, coat or jacket, or tie</strong>{' '}
-                in an <strong className="text-white">Also wear</strong> section below the core five pieces.
+                the occasion calls for it, the AI may also suggest a <strong className="text-white">sweater, jacket or coat, or tie</strong>{' '}
+                in an <strong className="text-white">Also wear</strong> section below the core five pieces. Blazers are structured suit-style layers;
+                casual jackets and coats stay separate and appear as optional outerwear—not as the main blazer slot. In summer, heavy coats and
+                wool blazers are usually skipped.
               </span>
             </li>
             <li className="flex gap-3">
@@ -287,21 +289,23 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
         >
           <StepList
             items={[
-              'Open the Wardrobe tab to browse shirts, trousers, blazers, shoes, and belts. When you own specific types—polo, T-shirt, jeans, shorts, sweater, jacket, tie, and more—extra filter chips appear so you can narrow the list quickly.',
+              'Open the Wardrobe tab to browse shirts, trousers, blazers, shoes, and belts. When you own specific types—polo, T-shirt, jeans, shorts, sweater, jacket, coat, tie, and more—extra filter chips appear so you can narrow the list quickly. Blazers are structured layers; casual jackets and coats are tracked separately.',
               'Add items with the guided flow: we suggest category, color, and a description—edit anything before saving.',
               'Tap an item anytime to update details or swap the photo.',
               'For one saved piece, tap Style this item with AI to open Suggest with that item loaded—set preferences and tap Generate Outfit.',
-              'To combine multiple pieces, use Complete an outfit from selected wardrobe pieces: tap Add to outfit completion on item cards (1 to 5 items, one per slot: shirt, trousers, blazer, shoes, belt).',
+              'To combine multiple pieces, use Complete an outfit from selected wardrobe pieces: tap Add to outfit completion on item cards (1 to 5 items). Core slots are shirt, trousers, blazer, shoes, and belt; jackets and coats count as outerwear, sweaters as layer. Choose only one of blazer, outerwear, or sweater at a time—one item per other slot.',
               'Expand Preferences on Wardrobe to set occasion, season, style, and notes—the same pickers as Suggest. Logged in? Toggle Use my wardrobe only if you want recommendations limited to saved items.',
               'Preferences on Wardrobe stay in sync with Suggest and Insights—change them inline without switching tabs first.',
-              'Tap Complete outfit with AI when at least one item is selected. The AI keeps your picks and fills missing shirt, trousers, blazer, shoes, or belt slots.',
+              'Tap Complete outfit with AI when at least one item is selected. The AI keeps your picks and fills any missing slots.',
               'We warn you if a new photo looks like something you already saved—no accidental twins.',
             ]}
           />
           <TipBox>
-            <strong className="text-white">One item per slot:</strong> you cannot select two shirts (or two of any slot). If you try,
-            you will see <span className="text-white font-medium">Choose one item per outfit slot</span>—deselect first or pick a
-            different category. Your selection summary shows slots like <span className="text-white font-medium">2 selected: shirt, trousers</span>.
+            <strong className="text-white">Slot rules:</strong> pick one item per slot. You cannot select two shirts (or two of any slot). For upper body, choose only one of{' '}
+            <span className="text-white font-medium">blazer, outerwear, or sweater</span>—so a blazer and a jacket cannot both be selected. If you try, you will see{' '}
+            <span className="text-white font-medium">Choose only one of blazer, outerwear, or sweater</span> or{' '}
+            <span className="text-white font-medium">Choose one item per outfit slot</span>. Your selection summary shows slots like{' '}
+            <span className="text-white font-medium">2 selected: shirt, trousers</span>.
           </TipBox>
         </SectionCard>
 

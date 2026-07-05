@@ -8,6 +8,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { AiOperationType } from '../utils/aiProgressSteps';
 import {
   InputPanelSource,
+  MatchingWardrobeItem,
   OutfitHistoryEntry,
   OutfitResponse,
   OutfitSuggestion,
@@ -28,7 +29,8 @@ import {
   persistOutfitPreferences,
   resolveFilters,
 } from '../utils/outfitPreferences';
-import { firstWardrobePreviewUrl } from '../utils/outfitItemThumbnail';
+import type { OutfitCategoryKey } from '../utils/outfitItemThumbnail';
+import { firstWardrobePreviewUrl, inferOutfitSlotFromWardrobeCategory, previewUrlForSelectedWardrobeItems } from '../utils/outfitItemThumbnail';
 import {
   historyEntrySummaryFilters,
   historyEntryToSuggestion,
@@ -282,36 +284,84 @@ export const useOutfitController = (options?: {
       });
 
       // Create outfit suggestion object
-      const categoryAliases: Record<string, 'shirt' | 'trouser' | 'blazer' | 'shoes' | 'belt'> = {
-        shirt: 'shirt',
-        shirts: 'shirt',
-        trouser: 'trouser',
-        trousers: 'trouser',
-        pant: 'trouser',
-        pants: 'trouser',
-        blazer: 'blazer',
-        blazers: 'blazer',
-        jacket: 'blazer',
-        jackets: 'blazer',
-        shoe: 'shoes',
-        shoes: 'shoes',
-        belt: 'belt',
-        belts: 'belt',
-      };
-      const rawUploadCategory = data.source_slot || data.upload_matched_category;
-      const normalizedUploadCategory = rawUploadCategory
-        ? categoryAliases[String(rawUploadCategory).toLowerCase()] ?? null
-        : null;
+      const uploadCategoryCandidates: (string | null | undefined)[] = [
+        sourceWardrobeItem?.category,
+      ];
+      if (data.source_wardrobe_item_id != null && data.matching_wardrobe_items) {
+        for (const items of Object.values(data.matching_wardrobe_items)) {
+          const match = items?.find(
+            (item: MatchingWardrobeItem) => item.id === data.source_wardrobe_item_id
+          );
+          if (match?.category) {
+            uploadCategoryCandidates.push(match.category);
+            break;
+          }
+        }
+      }
+      uploadCategoryCandidates.push(data.upload_matched_category, data.source_slot);
+
+      let normalizedUploadCategory: OutfitCategoryKey | null = null;
+      for (const raw of uploadCategoryCandidates) {
+        if (!raw) continue;
+        normalizedUploadCategory = inferOutfitSlotFromWardrobeCategory(raw);
+        if (normalizedUploadCategory) break;
+      }
+
+      const resolvedSourceId = sourceWardrobeItemId ?? data.source_wardrobe_item_id ?? null;
+
+      const inputImageUrl =
+        flowPreviewUrl?.startsWith('data:') === true
+          ? flowPreviewUrl
+          : URL.createObjectURL(effectiveImage);
+
+      let shirt_id = data.shirt_id;
+      let trouser_id = data.trouser_id;
+      let blazer_id = data.blazer_id;
+      let shoes_id = data.shoes_id;
+      let belt_id = data.belt_id;
+      let outerwear = data.outerwear;
+      let outerwear_id = data.outerwear_id;
+
+      if (normalizedUploadCategory === 'outerwear' && resolvedSourceId != null) {
+        if (shirt_id === resolvedSourceId) shirt_id = null;
+        if (trouser_id === resolvedSourceId) trouser_id = null;
+        if (blazer_id === resolvedSourceId) blazer_id = null;
+        if (shoes_id === resolvedSourceId) shoes_id = null;
+        if (belt_id === resolvedSourceId) belt_id = null;
+        outerwear_id = resolvedSourceId;
+      }
+
+      if (normalizedUploadCategory === 'outerwear' && sourceWardrobeItem) {
+        if (
+          outerwear == null ||
+          String(outerwear).trim() === '' ||
+          ['null', 'none', 'n/a'].includes(String(outerwear).trim().toLowerCase())
+        ) {
+          const label = sourceWardrobeItem.category?.toLowerCase().includes('coat') ? 'coat' : 'jacket';
+          const colorSuffix = sourceWardrobeItem.color ? ` — ${sourceWardrobeItem.color}` : '';
+          outerwear = `Your wardrobe ${label}${colorSuffix} (uploaded item)`;
+        }
+        if (outerwear_id == null) {
+          outerwear_id = sourceWardrobeItem.id;
+        }
+      }
 
       const suggestion: OutfitSuggestion = {
         ...data,
         id: Date.now().toString(),
-        imageUrl: URL.createObjectURL(effectiveImage), // Use the effective image for display
+        imageUrl: inputImageUrl,
         model_image: data.model_image || null,
         raw: data,
         meta: { usedPrompt: data.ai_prompt || prompt },
-        source_wardrobe_item_id: data.source_wardrobe_item_id ?? sourceWardrobeItemId,
+        source_wardrobe_item_id: resolvedSourceId,
         upload_matched_category: normalizedUploadCategory,
+        shirt_id,
+        trouser_id,
+        blazer_id,
+        shoes_id,
+        belt_id,
+        outerwear,
+        outerwear_id,
       };
 
       console.log('Created suggestion:', {
@@ -320,9 +370,9 @@ export const useOutfitController = (options?: {
       });
 
       setCurrentSuggestion(suggestion);
-      setFlowPreviewUrl(null);
+      setFlowPreviewUrl(inputImageUrl);
       setFlowPreviewCaption(null);
-      setInputPanelSource('upload');
+      setInputPanelSource(sourceWardrobeItem ? 'wardrobe' : 'upload');
       setSummaryFilters(null);
       setSummaryPreferenceText(null);
       setLoading(false);
@@ -366,6 +416,8 @@ export const useOutfitController = (options?: {
     imageModel,
     useWardrobeOnly,
     sourceWardrobeItemId,
+    sourceWardrobeItem,
+    flowPreviewUrl,
     currentSuggestion,
     options,
   ]);
@@ -530,10 +582,12 @@ export const useOutfitController = (options?: {
         meta: {
           usedPrompt: data.ai_prompt || `Wardrobe selection: Occasion=${resolved.occasion}, Season=${resolved.season}, Style=${resolved.style}${
             trimmed ? `, Notes=${trimmed}` : ''
-          }`
+          }`,
+          source: 'wardrobe_multi_select',
+          selectedWardrobeItemIds,
         }
       };
-      const previewUrl = firstWardrobePreviewUrl(suggestion);
+      const previewUrl = previewUrlForSelectedWardrobeItems(suggestion, selectedWardrobeItemIds);
       setFlowPreviewUrl(previewUrl);
       setFlowPreviewCaption(previewUrl ? 'Selected wardrobe pieces' : null);
       setInputPanelSource('wardrobe');
@@ -671,14 +725,16 @@ export const useOutfitController = (options?: {
       throw new Error("This item doesn't have an image. Please add an image first.");
     }
 
-    const response = await fetch(`data:image/jpeg;base64,${item.image_data}`);
+    const wardrobePreviewUrl = `data:image/jpeg;base64,${item.image_data}`;
+    const response = await fetch(wardrobePreviewUrl);
     const blob = await response.blob();
     const file = new File([blob], `wardrobe-item-${item.id}.jpg`, { type: 'image/jpeg' });
 
     setCurrentSuggestion(null);
-    setFlowPreviewUrl(null);
+    setFlowPreviewUrl(wardrobePreviewUrl);
     setFlowPreviewCaption(null);
     clearInputPanelSummary();
+    setInputPanelSource('wardrobe');
     setSourceWardrobeItem({
       id: item.id,
       category: item.category,
@@ -727,6 +783,11 @@ export const useOutfitController = (options?: {
       if (!currentSuggestion) return;
 
       if (inputPanelSource === 'wardrobe' && !image) {
+        const selectedIds = currentSuggestion.meta?.selectedWardrobeItemIds;
+        if (selectedIds && selectedIds.length > 0) {
+          await completeOutfitFromWardrobeSelection(selectedIds);
+          return;
+        }
         await getRandomSuggestion();
         return;
       }
@@ -743,7 +804,7 @@ export const useOutfitController = (options?: {
         await getSuggestion(true, undefined, true, variationOptions);
       }
     },
-    [currentSuggestion, inputPanelSource, image, flowPreviewUrl, getRandomSuggestion, getSuggestion]
+    [currentSuggestion, inputPanelSource, image, flowPreviewUrl, getRandomSuggestion, getSuggestion, completeOutfitFromWardrobeSelection]
   );
 
   return {

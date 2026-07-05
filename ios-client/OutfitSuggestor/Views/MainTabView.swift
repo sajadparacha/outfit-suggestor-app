@@ -11,8 +11,7 @@ struct GuestTabPlaceholderView: View {
     let title: String
     let context: AuthPromptContext
 
-    @State private var showAuthSheet = false
-    @State private var authSheetDestination: GuestAuthSheetDestination = .register
+    @State private var authSheetPresentation: GuestAuthSheetPresentation?
 
     private var copy: AuthPromptContent {
         AuthPromptCopy.content(for: context)
@@ -47,8 +46,7 @@ struct GuestTabPlaceholderView: View {
                 }
 
                 Button {
-                    authSheetDestination = .register
-                    showAuthSheet = true
+                    authSheetPresentation = GuestAuthSheetPresentation(context: context, destination: .register)
                 } label: {
                     Text("Create account")
                         .font(.headline.weight(.semibold))
@@ -59,8 +57,7 @@ struct GuestTabPlaceholderView: View {
                 .padding(.horizontal, 32)
 
                 Button {
-                    authSheetDestination = .login
-                    showAuthSheet = true
+                    authSheetPresentation = GuestAuthSheetPresentation(context: context, destination: .login)
                 } label: {
                     Text("Sign in")
                         .font(.subheadline.weight(.semibold))
@@ -69,8 +66,8 @@ struct GuestTabPlaceholderView: View {
             }
         }
         .navigationTitle(title)
-        .sheet(isPresented: $showAuthSheet) {
-            GuestAuthSheetView(context: context, destination: authSheetDestination)
+        .sheet(item: $authSheetPresentation) { presentation in
+            GuestAuthSheetView(context: presentation.context, destination: presentation.destination)
         }
     }
 }

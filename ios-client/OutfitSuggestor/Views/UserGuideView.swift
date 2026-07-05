@@ -35,13 +35,13 @@ struct UserGuideView: View {
                     color: .teal,
                     steps: [
                         "Tap the photo area or the camera icon to upload a clothing image.",
-                        "Optionally set your occasion, season, and style preferences using the pickers.",
+                        "Optionally set your occasion, season, and style preferences using the pickers. In summer, suggestions lean lighter and skip heavy coats or wool blazers unless you ask for them.",
                         "Add any free-text notes about your preferences.",
                         "Tap \"Get Outfit Suggestion\" to receive AI-powered recommendations.",
-                        "View the five core pieces (shirt, trousers, blazer, shoes, belt). When relevant for the occasion, the AI may also suggest optional layering—a sweater, coat/jacket, or tie—in an Also wear section.",
+                        "View the five core pieces (shirt, trousers, blazer, shoes, belt). Blazer is your structured layer; jackets and coats are separate categories and may appear as optional outerwear in Also wear when the season fits.",
                         "Read the AI's reasoning in Why this works."
                     ],
-                    tip: "Upload any clothing item — shirts, blazers, shoes, or even partial outfits. The AI adapts to what you provide."
+                    tip: "Upload shirts, blazers, jackets, coats, or shoes—the AI adapts to what you provide. Blazers complete structured outfits; jackets and coats are optional layering."
                 )
                 
                 GuideSection(
@@ -61,14 +61,14 @@ struct UserGuideView: View {
                     title: "Managing Your Wardrobe",
                     color: .blue,
                     steps: [
-                        GuideCopy.wardrobeCategoryFiltersStep,
+                        "Filter chips group shirts and trousers; blazers are structured layers (not casual jackets). Jackets and coats have their own chips for outerwear.",
                         "Tap \"+\" to add a new item — upload a photo and the AI will analyze it.",
                         "Use search to find specific items by name, color, or description.",
                         "Swipe left on an item to delete, or tap to edit.",
                         GuideCopy.wardrobeSingleItemStep,
-                        GuideCopy.wardrobeMultiSelectStep
+                        "Tap Select items, choose 1 to 5 pieces with one item per slot (shirt, trousers, blazer, outerwear, sweater, shoes, belt). Jackets and coats count as outerwear; sweaters have their own slot. Only one of blazer, outerwear, or sweater at a time. Expand Preferences, then tap Complete outfit with AI."
                     ],
-                    tip: GuideCopy.wardrobeMultiSelectTip
+                    tip: "Preferences on Wardrobe stay in sync with Suggest and Insights. Picking a second item in the same slot shows Choose one item per outfit slot; blazer plus jacket or sweater shows Choose only one of blazer, outerwear, or sweater."
                 )
                 
                 GuideSection(
@@ -119,7 +119,7 @@ struct UserGuideView: View {
                         "Open Insights from Profile to get an AI-powered wardrobe analysis.",
                         "Set occasion, season, and style, then tap Analyze My Wardrobe.",
                         "Review your gap score, top priorities, and items to add next.",
-                        "Check the coverage dashboard for category health at a glance—including sweaters and jackets, plus ties for business, formal, or office.",
+                        "Check the coverage dashboard for category health—including blazers, jackets, coats, sweaters, and ties for business or formal occasions.",
                         "Tap a category in Detailed category analysis for recommendations.",
                         "Tap a best color to search Google Shopping for that category and color.",
                         "Tap Shop similar on any item to search Google Shopping.",

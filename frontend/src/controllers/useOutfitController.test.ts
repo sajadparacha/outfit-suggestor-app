@@ -103,6 +103,78 @@ describe('useOutfitController getSuggestion variations', () => {
     expect(onGuestLimitReached).toHaveBeenCalledTimes(1);
     expect(hook.result.current.error).toBeNull();
   });
+
+  it('prefers source wardrobe category over API blazer slot for jacket styling', async () => {
+    jest.spyOn(ApiService, 'getSuggestion').mockResolvedValue({
+      ...mockApiResponse,
+      source_slot: 'blazer',
+      upload_matched_category: 'blazer',
+      source_wardrobe_item_id: 12,
+    });
+
+    const hook = renderHook(() => useOutfitController());
+    const uploadFile = new File(['photo-bytes'], 'jacket.jpg', { type: 'image/jpeg' });
+
+    act(() => {
+      hook.result.current.setImage(uploadFile);
+      hook.result.current.setSourceWardrobeItem({ id: 12, category: 'jacket', color: 'Navy' });
+    });
+
+    await act(async () => {
+      await hook.result.current.getSuggestion(true);
+    });
+
+    expect(hook.result.current.currentSuggestion?.upload_matched_category).toBe('outerwear');
+    expect(hook.result.current.currentSuggestion?.outerwear).toContain('wardrobe jacket');
+    expect(hook.result.current.currentSuggestion?.outerwear_id).toBe(12);
+    expect(hook.result.current.currentSuggestion?.shirt_id).toBeFalsy();
+  });
+
+  it('clears wrong shirt_id when API pins jacket source to shirt slot', async () => {
+    jest.spyOn(ApiService, 'getSuggestion').mockResolvedValue({
+      ...mockApiResponse,
+      upload_matched_category: 'shirt',
+      source_slot: 'shirt',
+      shirt_id: 12,
+      source_wardrobe_item_id: 12,
+    });
+
+    const hook = renderHook(() => useOutfitController());
+    const uploadFile = new File(['photo-bytes'], 'jacket.jpg', { type: 'image/jpeg' });
+
+    act(() => {
+      hook.result.current.setImage(uploadFile);
+      hook.result.current.setSourceWardrobeItem({ id: 12, category: 'jacket', color: 'Tan' });
+    });
+
+    await act(async () => {
+      await hook.result.current.getSuggestion(true);
+    });
+
+    expect(hook.result.current.currentSuggestion?.upload_matched_category).toBe('outerwear');
+    expect(hook.result.current.currentSuggestion?.shirt_id).toBeFalsy();
+    expect(hook.result.current.currentSuggestion?.outerwear_id).toBe(12);
+  });
+
+  it('keeps wardrobe data-url preview after suggestion loads', async () => {
+    const hook = renderHook(() => useOutfitController());
+    const uploadFile = new File(['photo-bytes'], 'jacket.jpg', { type: 'image/jpeg' });
+    const wardrobePreview = 'data:image/jpeg;base64,wardrobe-jacket-thumb';
+
+    act(() => {
+      hook.result.current.setImage(uploadFile);
+      hook.result.current.setSourceWardrobeItem({ id: 12, category: 'jacket', color: 'Tan' });
+      hook.result.current.setFlowPreviewUrl(wardrobePreview);
+    });
+
+    await act(async () => {
+      await hook.result.current.getSuggestion(true, uploadFile);
+    });
+
+    expect(hook.result.current.flowPreviewUrl).toBe(wardrobePreview);
+    expect(hook.result.current.currentSuggestion?.imageUrl).toBe(wardrobePreview);
+    expect(hook.result.current.inputPanelSource).toBe('wardrobe');
+  });
 });
 
 describe('useOutfitController prepareStyleFromWardrobeItem', () => {
@@ -149,8 +221,9 @@ describe('useOutfitController prepareStyleFromWardrobeItem', () => {
     });
 
     expect(hook.result.current.currentSuggestion).toBeNull();
-    expect(hook.result.current.flowPreviewUrl).toBeNull();
+    expect(hook.result.current.flowPreviewUrl).toBe('data:image/jpeg;base64,base64-image-data');
     expect(hook.result.current.flowPreviewCaption).toBeNull();
+    expect(hook.result.current.inputPanelSource).toBe('wardrobe');
     expect(hook.result.current.sourceWardrobeItem).toEqual({
       id: 7,
       category: 'shirt',

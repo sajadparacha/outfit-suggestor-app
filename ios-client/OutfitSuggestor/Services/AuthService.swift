@@ -9,7 +9,7 @@ import Foundation
 
 class AuthService: ObservableObject {
     static let shared = AuthService()
-    private let baseURL: String
+    private var baseURL: String { AppConfig.apiBaseURL }
     private let session: URLSession
     
     @Published var currentUser: User?
@@ -18,7 +18,6 @@ class AuthService: ObservableObject {
     var isAuthenticated: Bool { authToken != nil && currentUser != nil }
     
     private init() {
-        self.baseURL = AppConfig.apiBaseURL
         self.session = URLSession.shared
         if AppConfig.isUITestMode {
             self.authToken = "ui-test-token"

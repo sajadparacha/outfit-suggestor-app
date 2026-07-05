@@ -8,7 +8,7 @@
 import SwiftUI
 import UIKit
 
-private let wardrobeCategories = ["shirt", "trouser", "blazer", "shoes", "belt", "other"]
+private let wardrobeCategories = ["shirt", "trouser", "blazer", "jacket", "coat", "shoes", "belt", "other"]
 
 struct WardrobeFormView: View {
     let item: WardrobeItem?
@@ -51,7 +51,9 @@ struct WardrobeFormView: View {
             Form {
                 Section("Details") {
                     Picker("Category", selection: $category) {
-                        ForEach(wardrobeCategories, id: \.self) { Text($0).tag($0) }
+                        ForEach(wardrobeCategories, id: \.self) { cat in
+                            Text(WardrobeCategoryDisplay.wardrobeCategoryLabel(cat)).tag(cat)
+                        }
                     }
                     TextField("Color", text: $color)
                         .textContentType(.none)

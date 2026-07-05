@@ -28,6 +28,7 @@ export const WARDROBE_EXTENDED_FILTER_CHIPS: WardrobeFilterChip[] = [
   { key: 'shorts', label: 'Shorts', kind: 'extended' },
   { key: 'sweater', label: 'Sweater', kind: 'extended' },
   { key: 'jacket', label: 'Jacket', kind: 'extended' },
+  { key: 'coat', label: 'Coat', kind: 'extended' },
   { key: 'tie', label: 'Tie', kind: 'extended' },
   { key: 'other', label: 'Other', kind: 'extended' },
 ];
@@ -35,7 +36,7 @@ export const WARDROBE_EXTENDED_FILTER_CHIPS: WardrobeFilterChip[] = [
 const CORE_GROUP_MATCHERS: Record<string, readonly string[]> = {
   shirt: ['shirt', 't_shirt', 't-shirt', 'polo', 'tshirt', 'tee'],
   trouser: ['trouser', 'trousers', 'pants', 'jeans', 'shorts'],
-  blazer: ['blazer', 'blazers', 'suit'],
+  blazer: ['blazer', 'blazers', 'suit', 'sport_coat', 'sportcoat'],
   shoes: ['shoe', 'shoes'],
   belt: ['belt', 'belts'],
 };
@@ -47,6 +48,7 @@ const EXTENDED_MATCHERS: Record<string, readonly string[]> = {
   shorts: ['shorts'],
   sweater: ['sweater', 'sweaters'],
   jacket: ['jacket', 'jackets'],
+  coat: ['coat', 'coats'],
   tie: ['tie', 'ties'],
 };
 
@@ -64,6 +66,8 @@ const CATEGORY_BADGE_LABELS: Record<string, string> = {
   blazer: 'Blazer',
   jacket: 'Jacket',
   jackets: 'Jacket',
+  coat: 'Coat',
+  coats: 'Coat',
   shoes: 'Shoes',
   shoe: 'Shoes',
   belt: 'Belt',
@@ -82,7 +86,85 @@ const ALL_EXTENDED_MATCH_VALUES = new Set(
   Object.values(EXTENDED_MATCHERS).flatMap((values) => values)
 );
 
-export const WARDROBE_FORM_CATEGORIES = ['shirt', 'trouser', 'blazer', 'shoes', 'belt', 'other'] as const;
+export const WARDROBE_FORM_CATEGORIES = [
+  'shirt',
+  'trouser',
+  'blazer',
+  'jacket',
+  'coat',
+  'shoes',
+  'belt',
+  'other',
+] as const;
+
+export const COMPLETE_OUTFIT_MAX_ITEMS = 5;
+
+export const COMPLETE_OUTFIT_UPPER_BODY_EXCLUSIVE_SLOTS = ['blazer', 'outerwear', 'sweater'] as const;
+
+export type CompleteOutfitSlot =
+  | 'shirt'
+  | 'trouser'
+  | 'blazer'
+  | 'shoes'
+  | 'belt'
+  | 'outerwear'
+  | 'sweater';
+
+const COMPLETE_OUTFIT_SLOT_ALIASES: Record<string, CompleteOutfitSlot> = {
+  shirt: 'shirt',
+  shirts: 'shirt',
+  polo: 'shirt',
+  t_shirt: 'shirt',
+  't-shirt': 'shirt',
+  tshirt: 'shirt',
+  tee: 'shirt',
+  trouser: 'trouser',
+  trousers: 'trouser',
+  pant: 'trouser',
+  pants: 'trouser',
+  jeans: 'trouser',
+  shorts: 'trouser',
+  blazer: 'blazer',
+  blazers: 'blazer',
+  shoes: 'shoes',
+  shoe: 'shoes',
+  belt: 'belt',
+  belts: 'belt',
+  jacket: 'outerwear',
+  jackets: 'outerwear',
+  coat: 'outerwear',
+  coats: 'outerwear',
+  outerwear: 'outerwear',
+  sweater: 'sweater',
+  sweaters: 'sweater',
+};
+
+export const normalizeCompleteOutfitSlot = (category: string): CompleteOutfitSlot | null => {
+  const normalized = category.trim().toLowerCase();
+  return COMPLETE_OUTFIT_SLOT_ALIASES[normalized] ?? null;
+};
+
+export const isCompleteOutfitEligibleCategory = (category: string): boolean =>
+  normalizeCompleteOutfitSlot(category) !== null;
+
+export const isUpperBodyExclusiveCompleteOutfitSlot = (slot: CompleteOutfitSlot): boolean =>
+  (COMPLETE_OUTFIT_UPPER_BODY_EXCLUSIVE_SLOTS as readonly string[]).includes(slot);
+
+export const hasCompleteOutfitUpperBodyConflict = (
+  selectedSlots: readonly CompleteOutfitSlot[],
+  candidateSlot: CompleteOutfitSlot
+): boolean => {
+  if (!isUpperBodyExclusiveCompleteOutfitSlot(candidateSlot)) {
+    return false;
+  }
+  return selectedSlots.some((slot) => isUpperBodyExclusiveCompleteOutfitSlot(slot));
+};
+
+export const formatCompleteOutfitSlotLabel = (slot: CompleteOutfitSlot): string => {
+  if (slot === 'trouser') return 'trousers';
+  if (slot === 'sweater') return 'layer';
+  return slot;
+};
 
 export const normalizeWardrobeCategory = (category: string): string =>
   category.trim().toLowerCase();
@@ -109,6 +191,12 @@ export const matchesWardrobeCategoryFilter = (
 ): boolean => {
   if (!filterKey) {
     return true;
+  }
+
+  const normalizedItem = normalizeWardrobeCategory(itemCategory);
+  const outerwearCategories = new Set(['jacket', 'jackets', 'coat', 'coats', 'outerwear']);
+  if ((filterKey === 'shirt' || filterKey === 'blazer') && outerwearCategories.has(normalizedItem)) {
+    return false;
   }
 
   if (filterKey === 'other') {
@@ -246,7 +334,7 @@ export const usesClientSideCategoryFilter = (filterKey: string | null): boolean 
     return true;
   }
 
-  return ['t_shirt', 'sweater', 'jacket', 'tie'].includes(filterKey);
+  return ['t_shirt', 'sweater', 'jacket', 'coat', 'tie'].includes(filterKey);
 };
 
 export const apiCategoryParamForFilter = (filterKey: string | null): string | undefined => {

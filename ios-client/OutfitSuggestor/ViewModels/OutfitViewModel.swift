@@ -408,7 +408,10 @@ class OutfitViewModel: ObservableObject {
                 season: filters.season.lowercased(),
                 style: filters.style.lowercased()
             )
-            currentSuggestion = suggestion
+            currentSuggestion = OutfitUploadCategory.normalizeSuggestion(
+                suggestion,
+                sourceWardrobeCategory: sourceWardrobeItem?.category
+            )
             highlightGenerateButton = false
             captureInputSnapshotForResult(source: sourceWardrobeItem != nil ? .wardrobe : .upload)
             // Suggestion flow may add new history entries server-side; mark cache stale.
@@ -506,7 +509,10 @@ class OutfitViewModel: ObservableObject {
                 season: filters.season.lowercased(),
                 style: filters.style.lowercased()
             )
-            currentSuggestion = suggestion
+            currentSuggestion = OutfitUploadCategory.normalizeSuggestion(
+                suggestion,
+                sourceWardrobeCategory: sourceWardrobeItem?.category
+            )
             captureInputSnapshotForResult(source: sourceWardrobeItem != nil ? .wardrobe : .upload)
             hasLoadedHistory = false
             if !isAuthenticated {
@@ -611,9 +617,23 @@ class OutfitViewModel: ObservableObject {
         return nil
     }
 
+    private static func previewImageFromSelectedWardrobeItems(
+        _ suggestion: OutfitSuggestion,
+        selectedIds: [Int]
+    ) -> UIImage? {
+        let allItems = allMatchingItems(from: suggestion)
+        for itemId in selectedIds {
+            if let item = allItems.first(where: { $0.id == itemId }),
+               let image = OutfitItemThumbnail.wardrobeUIImage(from: item) {
+                return image
+            }
+        }
+        return previewImageFromWardrobeMatches(suggestion)
+    }
+
     private static func allMatchingItems(from suggestion: OutfitSuggestion) -> [MatchingWardrobeItem] {
         guard let items = suggestion.matching_wardrobe_items else { return [] }
-        return [items.shirt, items.trouser, items.blazer, items.shoes, items.belt]
+        return [items.shirt, items.trouser, items.blazer, items.shoes, items.belt, items.sweater, items.outerwear, items.tie]
             .compactMap { $0 }
             .flatMap { $0 }
     }
@@ -636,6 +656,7 @@ class OutfitViewModel: ObservableObject {
         if entry.blazer_id == itemId { return "blazer" }
         if entry.shoes_id == itemId { return "shoes" }
         if entry.belt_id == itemId { return "belt" }
+        if entry.outerwear_id == itemId { return "jacket" }
         return nil
     }
 
@@ -817,7 +838,10 @@ class OutfitViewModel: ObservableObject {
                 style: filters.style.lowercased()
             )
             currentSuggestion = suggestion
-            flowPreviewImage = Self.previewImageFromWardrobeMatches(suggestion)
+            flowPreviewImage = Self.previewImageFromSelectedWardrobeItems(
+                suggestion,
+                selectedIds: selection.selectedItemIds
+            )
             captureInputSnapshotForResult(source: .wardrobe)
             hasLoadedHistory = false
         } catch is CancellationError {

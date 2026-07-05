@@ -25,16 +25,53 @@ enum OutfitItemThumbnail {
         case "tie": list = suggestion.matching_wardrobe_items?.tie
         default: list = nil
         }
-        guard let matches = list, !matches.isEmpty else { return nil }
-
         let selectedId = selectedWardrobeId(for: category, suggestion: suggestion)
-        if let selectedId {
-            if let byId = matches.first(where: { $0.id == selectedId }) {
-                return byId
+
+        if let matches = list, !matches.isEmpty {
+            if let selectedId {
+                if let byId = matches.first(where: { $0.id == selectedId }) {
+                    return byId
+                }
+                if category == "outerwear" {
+                    if let crossBucket = findMatchingWardrobeItemById(
+                        suggestion: suggestion,
+                        itemId: selectedId
+                    ) {
+                        return crossBucket
+                    }
+                }
             }
+            return matches.first
         }
 
-        return matches.first
+        if category == "outerwear", let selectedId {
+            return findMatchingWardrobeItemById(suggestion: suggestion, itemId: selectedId)
+        }
+
+        return nil
+    }
+
+    private static func findMatchingWardrobeItemById(
+        suggestion: OutfitSuggestion,
+        itemId: Int
+    ) -> MatchingWardrobeItem? {
+        guard let groups = suggestion.matching_wardrobe_items else { return nil }
+        let buckets: [[MatchingWardrobeItem]?] = [
+            groups.shirt,
+            groups.trouser,
+            groups.blazer,
+            groups.shoes,
+            groups.belt,
+            groups.sweater,
+            groups.outerwear,
+            groups.tie,
+        ]
+        for bucket in buckets {
+            if let match = bucket?.first(where: { $0.id == itemId }) {
+                return match
+            }
+        }
+        return nil
     }
 
     private static func selectedWardrobeId(
@@ -64,9 +101,13 @@ enum OutfitItemThumbnail {
     static func thumbnailImage(
         suggestion: OutfitSuggestion,
         category: String,
-        uploadImage: UIImage?
+        uploadImage: UIImage?,
+        sourceWardrobeCategory: String? = nil
     ) -> UIImage? {
-        let uploadCategory = OutfitItemCardSourceTag.resolvedUploadCategory(suggestion: suggestion)
+        let uploadCategory = OutfitUploadCategory.resolvedUploadCategory(
+            suggestion: suggestion,
+            sourceWardrobeCategory: sourceWardrobeCategory
+        )
         if uploadImage != nil, category == uploadCategory {
             return uploadImage
         }

@@ -157,3 +157,92 @@ def test_wardrobe_only_previous_outfit_includes_alternative_block():
     assert "ALTERNATIVE" in prompt or "ALTERNATIVE OUTFIT" in prompt
     assert "navy blazer look" in prompt
 
+
+def test_summer_prompt_excludes_heavy_outerwear_from_wardrobe_payload():
+    ai = AIService(api_key="test-key")
+    light_jacket = DummyWardrobeItem(
+        id=10,
+        category="jacket",
+        color="Olive",
+        description="Lightweight harrington jacket",
+    )
+    heavy_coat = DummyWardrobeItem(
+        id=11,
+        category="coat",
+        color="Charcoal",
+        description="Wool overcoat",
+    )
+    wool_blazer = DummyWardrobeItem(
+        id=12,
+        category="blazer",
+        color="Navy",
+        description="Wool blazer",
+    )
+    prompt = ai._build_prompt(  # type: ignore[attr-defined]
+        text_input="Occasion: casual, Season: summer, Style: modern",
+        wardrobe_items={
+            "jacket": [light_jacket, heavy_coat],
+            "blazer": [wool_blazer],
+        },
+        wardrobe_only=True,
+    )
+    assert "ID: 10" in prompt
+    assert "ID: 11" not in prompt
+    assert "ID: 12" not in prompt
+    assert "SUMMER / WARM-WEATHER RULES" in prompt
+
+
+def test_detected_upload_category_overrides_mis_slotted_shirt():
+    ai = AIService(api_key="test-key")
+    raw = (
+        '{"shirt":"Tan corduroy jacket","trouser":"Grey trousers","blazer":"Royal blue blazer",'
+        '"shoes":"Brown brogues","belt":"Charcoal belt","source_slot":"shirt",'
+        '"detected_upload_category":"outerwear","reasoning":"Elegant"}'
+    )
+    parsed = ai._parse_response(raw)  # type: ignore[attr-defined]
+    corrected = ai._apply_detected_upload_category(parsed, raw)  # type: ignore[attr-defined]
+    assert corrected.source_slot == "outerwear"
+    assert corrected.upload_matched_category == "outerwear"
+
+
+def test_jacket_source_slot_maps_to_outerwear_not_blazer():
+    ai = AIService(api_key="test-key")
+    raw = (
+        '{"shirt":"White shirt","trouser":"Navy chinos","blazer":"Charcoal blazer",'
+        '"shoes":"Loafers","belt":"Brown belt","source_slot":"jacket","reasoning":"Casual"}'
+    )
+    parsed = ai._parse_response(raw)  # type: ignore[attr-defined]
+    assert parsed.source_slot == "outerwear"
+
+    constrained = ai._apply_source_wardrobe_constraints(  # type: ignore[attr-defined]
+        parsed,
+        source_wardrobe_category="jacket",
+        source_wardrobe_item_id=42,
+    )
+    assert constrained.upload_matched_category == "outerwear"
+    assert constrained.outerwear_id == 42
+    assert constrained.blazer_id is None
+    assert constrained.blazer == ""
+    assert constrained.sweater is None
+
+
+def test_blazer_source_clears_outerwear_and_sweater():
+    ai = AIService(api_key="test-key")
+    raw = (
+        '{"shirt":"White shirt","trouser":"Navy chinos","blazer":"Navy blazer",'
+        '"shoes":"Loafers","belt":"Brown belt","sweater":"Merino crew","outerwear":"Denim jacket",'
+        '"reasoning":"Smart casual"}'
+    )
+    parsed = ai._parse_response(raw)  # type: ignore[attr-defined]
+    constrained = ai._apply_source_wardrobe_constraints(  # type: ignore[attr-defined]
+        parsed,
+        source_wardrobe_category="blazer",
+        source_wardrobe_item_id=11,
+    )
+    assert constrained.upload_matched_category == "blazer"
+    assert constrained.blazer_id == 11
+    assert constrained.outerwear is None
+    assert constrained.sweater is None
+    assert constrained.outerwear_id is None
+    assert constrained.sweater_id is None
+

@@ -438,6 +438,9 @@ class APIService {
     func getWardrobeSummary() async throws -> WardrobeSummary {
         await beginRequestActivity()
         defer { endRequestActivity() }
+        if AppConfig.isUITestMode {
+            return uiTestStore.wardrobeSummary()
+        }
         guard let url = URL(string: "\(baseURL)/api/wardrobe/summary") else { throw APIServiceError.invalidURL }
         var request = URLRequest(url: url)
         setAuthIfNeeded(&request)
@@ -1063,6 +1066,29 @@ final class UITestDataStore {
         let end = min(items.count, offset + limit)
         let paged = offset < end ? Array(items[offset..<end]) : []
         return WardrobeListResponse(items: paged, total: total, limit: limit, offset: offset)
+    }
+
+    func wardrobeSummary() -> WardrobeSummary {
+        lock.lock()
+        defer { lock.unlock() }
+        var byCategory: [String: Int] = [:]
+        var byColor: [String: Int] = [:]
+        for item in wardrobeItems {
+            let categoryKey = item.category.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            byCategory[categoryKey, default: 0] += 1
+            if let color = item.color?.trimmingCharacters(in: .whitespacesAndNewlines), !color.isEmpty {
+                byColor[color, default: 0] += 1
+            }
+        }
+        let categories = Array(Set(wardrobeItems.map {
+            $0.category.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        })).sorted()
+        return WardrobeSummary(
+            total_items: wardrobeItems.count,
+            by_category: byCategory,
+            by_color: byColor,
+            categories: categories
+        )
     }
 
     func history(limit: Int) -> [OutfitHistoryEntry] {

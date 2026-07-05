@@ -9,6 +9,7 @@ import UIKit
 struct WardrobeListView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var response: WardrobeListResponse?
+    @State private var wardrobeSummary: WardrobeSummary?
     @State private var allWardrobeItems: [WardrobeItem] = []
     @State private var categoryCounts: [String: Int] = [:]
     @State private var isLoading = true
@@ -39,6 +40,7 @@ struct WardrobeListView: View {
     @State private var completionSelection = WardrobeMultiSelectState()
     @State private var completionSelectionMessage: String?
     @State private var completionPreferencesExpanded = true
+    @State private var categoryFiltersExpanded = true
     
     private var categoryVisibleItems: [WardrobeItem] {
         if categoryFilter == "All" {
@@ -93,7 +95,10 @@ struct WardrobeListView: View {
     }
 
     private var visibleCategoryFilterChips: [String] {
-        WardrobeCategoryDisplay.visibleFilterChipKeys(from: categoryCounts)
+        if let wardrobeSummary {
+            return WardrobeCategoryDisplay.visibleFilterChipKeys(from: wardrobeSummary)
+        }
+        return WardrobeCategoryDisplay.visibleFilterChipKeys(from: categoryCounts)
     }
 
     private var completionSelectionSummary: String {
@@ -117,6 +122,11 @@ struct WardrobeListView: View {
 
     private var completionPreferencesGridColumns: Int {
         isRegularWidth ? 4 : 2
+    }
+
+    private var activeCategoryFilterSummary: String {
+        let label = WardrobeCategoryDisplay.filterChipLabel(for: categoryFilter)
+        return "\(label) (\(countForCategory(categoryFilter)))"
     }
 
     var body: some View {
@@ -342,7 +352,7 @@ struct WardrobeListView: View {
                         Text("Complete an outfit from your wardrobe")
                             .font(.subheadline.weight(.semibold))
                             .foregroundColor(AppTheme.textPrimary)
-                        Text("Select 1 to 5 shirts, trousers, blazers, shoes, or belts. Choose one item per outfit slot.")
+                        Text("Select 1 to 5 pieces—one item per slot (shirt, trousers, blazer, outerwear, sweater, shoes, or belt). Choose only one of blazer, outerwear, or sweater.")
                             .font(.caption)
                             .foregroundColor(AppTheme.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -416,44 +426,71 @@ struct WardrobeListView: View {
     }
 
     private var categoryFilterChips: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Filter by:")
-                .font(.subheadline.weight(.semibold))
-                .foregroundColor(AppTheme.textSecondary)
-            
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: isRegularWidth ? 130 : 106), spacing: 10)], alignment: .leading, spacing: 10) {
+        DisclosureGroup(isExpanded: $categoryFiltersExpanded) {
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: isRegularWidth ? 130 : 106), spacing: 10)],
+                alignment: .leading,
+                spacing: 10
+            ) {
                 ForEach(visibleCategoryFilterChips, id: \.self) { category in
-                    let isActive = categoryFilter == category
-                    Button {
-                        guard categoryFilter != category else { return }
-                        categoryInfoDismissTask?.cancel()
-                        categoryInfoDismissTask = nil
-                        categoryInfoMessage = nil
-                        if category != "All" && countForCategory(category) == 0 {
-                            categoryFilter = "All"
-                            showCategoryInfoToast("No items found in \(WardrobeCategoryDisplay.filterChipLabel(for: category)). Showing all wardrobe items.")
-                        } else {
-                            categoryFilter = category
-                        }
-                    } label: {
-                        Text("\(WardrobeCategoryDisplay.filterChipLabel(for: category)) (\(countForCategory(category)))")
-                            .font(.body.weight(.semibold))
-                            .foregroundColor(isActive ? .white : AppTheme.textPrimary)
-                            .lineLimit(1)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 11)
-                            .background(isActive ? AppTheme.accent : AppTheme.surface)
-                            .overlay(
-                                Capsule()
-                                    .stroke(isActive ? AppTheme.accent.opacity(0.35) : AppTheme.border, lineWidth: 1)
-                            )
-                            .clipShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("wardrobe.chip.\(category.lowercased())")
+                    categoryFilterChipButton(for: category)
                 }
             }
+            .padding(.top, 4)
+        } label: {
+            HStack(spacing: 8) {
+                Text("Filter by")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(AppTheme.textPrimary)
+                if !categoryFiltersExpanded {
+                    Text(activeCategoryFilterSummary)
+                        .font(.subheadline)
+                        .foregroundColor(AppTheme.textSecondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+            }
         }
+        .padding(14)
+        .background(AppTheme.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(AppTheme.border, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .accessibilityIdentifier("wardrobe.categoryFilters")
+    }
+
+    private func categoryFilterChipButton(for category: String) -> some View {
+        let isActive = categoryFilter == category
+        return Button {
+            guard categoryFilter != category else { return }
+            categoryInfoDismissTask?.cancel()
+            categoryInfoDismissTask = nil
+            categoryInfoMessage = nil
+            if category != "All" && countForCategory(category) == 0 {
+                categoryFilter = "All"
+                showCategoryInfoToast("No items found in \(WardrobeCategoryDisplay.filterChipLabel(for: category)). Showing all wardrobe items.")
+            } else {
+                categoryFilter = category
+            }
+        } label: {
+            Text("\(WardrobeCategoryDisplay.filterChipLabel(for: category)) (\(countForCategory(category)))")
+                .font(.body.weight(.semibold))
+                .foregroundColor(isActive ? .white : AppTheme.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 11)
+                .background(isActive ? AppTheme.accent : AppTheme.surface)
+                .overlay(
+                    Capsule()
+                        .stroke(isActive ? AppTheme.accent.opacity(0.35) : AppTheme.border, lineWidth: 1)
+                )
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("wardrobe.chip.\(category.lowercased())")
     }
 
     @ViewBuilder
@@ -551,6 +588,9 @@ struct WardrobeListView: View {
     }
 
     private func countForCategory(_ category: String) -> Int {
+        if let wardrobeSummary {
+            return WardrobeCategoryDisplay.filterChipCount(from: wardrobeSummary, filterKey: category)
+        }
         if category == "All" {
             return response?.total ?? 0
         }
@@ -570,11 +610,16 @@ struct WardrobeListView: View {
         } else {
             categoryFilter = seed
         }
+        categoryFiltersExpanded = true
         onConsumeCategoryFilter?()
     }
 
     private func rebuildCategoryCounts(from items: [WardrobeItem]) {
         categoryCounts = WardrobeCategoryDisplay.rebuildCategoryCounts(from: items)
+    }
+
+    private func rebuildCategoryCounts(from summary: WardrobeSummary) {
+        categoryCounts = WardrobeCategoryDisplay.rebuildCategoryCounts(from: summary)
     }
 
     private func scheduleDelete(item: WardrobeItem) {
@@ -622,10 +667,14 @@ struct WardrobeListView: View {
         errorMessage = nil
         defer { isRequestInFlight = false }
         do {
-            let allResponse = try await APIService.shared.getWardrobe(category: nil, limit: 100)
-            allWardrobeItems = allResponse.items
-            response = allResponse
-            rebuildCategoryCounts(from: allResponse.items)
+            async let summaryTask = APIService.shared.getWardrobeSummary()
+            let loaded = try await loadAllWardrobeItems()
+            let summary = try await summaryTask
+
+            allWardrobeItems = loaded.items
+            response = loaded.response
+            wardrobeSummary = summary
+            rebuildCategoryCounts(from: summary)
             if categoryFilter != "All" && countForCategory(categoryFilter) == 0 {
                 categoryFilter = "All"
             }
@@ -634,11 +683,41 @@ struct WardrobeListView: View {
             errorMessage = error.localizedDescription
             isLoading = false
             allWardrobeItems = []
+            response = nil
+            wardrobeSummary = nil
             categoryCounts = [:]
             categoryInfoDismissTask?.cancel()
             categoryInfoDismissTask = nil
             categoryInfoMessage = nil
         }
+    }
+
+    private func loadAllWardrobeItems() async throws -> (items: [WardrobeItem], response: WardrobeListResponse) {
+        let pageSize = 100
+        var offset = 0
+        var allItems: [WardrobeItem] = []
+        var lastResponse: WardrobeListResponse?
+
+        while true {
+            let page = try await APIService.shared.getWardrobe(category: nil, limit: pageSize, offset: offset)
+            lastResponse = page
+            allItems.append(contentsOf: page.items)
+            if page.items.isEmpty || allItems.count >= page.total {
+                break
+            }
+            offset += page.items.count
+        }
+
+        guard let lastResponse else {
+            throw APIServiceError.invalidResponse
+        }
+
+        return (allItems, WardrobeListResponse(
+            items: allItems,
+            total: lastResponse.total,
+            limit: lastResponse.total,
+            offset: 0
+        ))
     }
 
     private func showCategoryInfoToast(_ message: String) {

@@ -90,14 +90,20 @@ enum WardrobeCompletionSlot: String, CaseIterable {
     case shirt
     case trouser
     case blazer
+    case outerwear
+    case sweater
     case shoes
     case belt
+
+    static let upperBodyExclusiveSlots: Set<WardrobeCompletionSlot> = [.blazer, .outerwear, .sweater]
 
     var displayName: String {
         switch self {
         case .shirt: return "Shirt"
         case .trouser: return "Trousers"
         case .blazer: return "Blazer"
+        case .outerwear: return "Outerwear"
+        case .sweater: return "Sweater"
         case .shoes: return "Shoes"
         case .belt: return "Belt"
         }
@@ -118,8 +124,12 @@ enum WardrobeCompletionSlot: String, CaseIterable {
             return .shirt
         case "trouser", "trousers", "pants", "jeans", "shorts":
             return .trouser
-        case "blazer", "jacket", "suit":
+        case "blazer", "suit", "sport_coat", "sport coat":
             return .blazer
+        case "jacket", "jackets", "coat", "coats", "outerwear":
+            return .outerwear
+        case "sweater", "sweaters":
+            return .sweater
         case "shoe", "shoes":
             return .shoes
         case "belt", "belts":
@@ -135,6 +145,7 @@ enum WardrobeMultiSelectToggleResult: Equatable {
     case deselected
     case unsupportedCategory
     case duplicateSlot
+    case upperBodySlotConflict
     case maximumReached
 
     var message: String? {
@@ -145,6 +156,8 @@ enum WardrobeMultiSelectToggleResult: Equatable {
             return "This item cannot be used to complete an outfit."
         case .duplicateSlot:
             return "Choose one item per outfit slot"
+        case .upperBodySlotConflict:
+            return "Choose only one of blazer, outerwear, or sweater"
         case .maximumReached:
             return "Select up to 5 items"
         }
@@ -189,6 +202,14 @@ struct WardrobeMultiSelectState: Equatable {
 
         if let selectedId = selectedSlots[slot], selectedId != item.id {
             return .duplicateSlot
+        }
+
+        if WardrobeCompletionSlot.upperBodyExclusiveSlots.contains(slot) {
+            for otherSlot in WardrobeCompletionSlot.upperBodyExclusiveSlots where otherSlot != slot {
+                if selectedSlots[otherSlot] != nil {
+                    return .upperBodySlotConflict
+                }
+            }
         }
 
         guard selectedItemIds.count < Self.maximumSelectedItems else {

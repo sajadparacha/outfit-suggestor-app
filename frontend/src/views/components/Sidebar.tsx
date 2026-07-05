@@ -138,6 +138,7 @@ interface SidebarProps {
   flowPreviewUrl?: string | null;
   flowPreviewCaption?: string | null;
   inputPanelSource?: InputPanelSource;
+  suggestionImageUrl?: string | null;
   summaryFilters?: Filters | null;
   summaryPreferenceText?: string | null;
   guestRemaining?: number | null;
@@ -184,6 +185,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   flowPreviewUrl = null,
   flowPreviewCaption = null,
   inputPanelSource = null,
+  suggestionImageUrl = null,
   summaryFilters = null,
   summaryPreferenceText = null,
   guestRemaining = null,
@@ -217,7 +219,18 @@ const Sidebar: React.FC<SidebarProps> = ({
   }, [hasSuggestion, coachDismissed]);
 
   const imagePreviewUrl = useMemo(() => (image ? createImagePreviewUrl(image) : null), [image]);
-  const effectivePreviewUrl = imagePreviewUrl ?? flowPreviewUrl ?? null;
+  const effectivePreviewUrl = useMemo(() => {
+    const stableWardrobePreview =
+      flowPreviewUrl?.startsWith('data:') === true
+        ? flowPreviewUrl
+        : suggestionImageUrl?.startsWith('data:') === true
+          ? suggestionImageUrl
+          : null;
+    if (sourceWardrobeItem && stableWardrobePreview) {
+      return stableWardrobePreview;
+    }
+    return imagePreviewUrl ?? flowPreviewUrl ?? suggestionImageUrl ?? null;
+  }, [sourceWardrobeItem, imagePreviewUrl, flowPreviewUrl, suggestionImageUrl]);
   const previewCaption = useMemo(() => {
     if (inputPanelSource === 'history') {
       return flowPreviewCaption ?? MAIN_FLOW_UX_COPY.fromHistory;
@@ -740,7 +753,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </p>
       )}
 
-      {(!compactMode || (sourceWardrobeItem && image)) && (
+      {!compactMode && (
         <button
           ref={generateButtonRef}
           onClick={onGetSuggestion}

@@ -87,7 +87,7 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
                   <span className="text-2xl">👔</span>
                   <div>
                     <h4 className="font-semibold text-white">Smart Wardrobe Management</h4>
-                    <p className="text-sm text-slate-300">Build and manage your digital wardrobe with AI-powered item recognition. Automatically categorize items, filter by core slots (shirts, trousers, blazers, shoes, belts) plus specific types when you own them (polo, T-shirt, jeans, shorts, sweater, jacket, tie, and more), and get outfit suggestions that prioritize your existing clothing. Outfit completion still uses the same five core slots.</p>
+                    <p className="text-sm text-slate-300">Build and manage your digital wardrobe with AI-powered item recognition. Automatically categorize items, filter by core slots (shirts, trousers, blazers, shoes, belts) plus specific types when you own them (polo, T-shirt, jeans, shorts, sweater, jacket, coat, tie, and more). Blazers are structured suit-style layers; jackets and coats are casual outerwear tracked separately. Outfit completion accepts up to five items across shirt, trousers, blazer, shoes, belt, outerwear (jacket/coat), or layer (sweater)—with only one of blazer, outerwear, or sweater at a time.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
@@ -108,7 +108,7 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
                   <span className="text-2xl">✨</span>
                   <div>
                     <h4 className="font-semibold text-white">Get Suggestions from Wardrobe</h4>
-                    <p className="text-sm text-slate-300">Tap "Style this item" on one wardrobe piece to load it on Suggest, or select one or more saved pieces across different slots (one per slot), set occasion, season, style, and notes inline on Wardrobe, then tap "Complete outfit with AI" so AI keeps those pieces and fills the missing slots.</p>
+                    <p className="text-sm text-slate-300">Tap "Style this item" on one wardrobe piece to load it on Suggest, or select one or more saved pieces across different slots (up to five total; one per slot; only one of blazer, outerwear, or sweater), set occasion, season, style, and notes inline on Wardrobe, then tap "Complete outfit with AI" so AI keeps those pieces and fills the missing slots.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
@@ -157,7 +157,7 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
                   <span className="text-2xl">🧥</span>
                   <div>
                     <h4 className="font-semibold text-white">Optional Layering Suggestions</h4>
-                    <p className="text-sm text-slate-300">Main results always show five core pieces (shirt, trousers, blazer, shoes, belt). When relevant for the occasion and season, the AI may also suggest a sweater, outerwear, or tie in a collapsible <strong className="text-white">Also wear</strong> section.</p>
+                    <p className="text-sm text-slate-300">Main results always show five core pieces (shirt, trousers, blazer, shoes, belt). When relevant for the occasion and season, the AI may also suggest a sweater, jacket, coat, or tie in a collapsible <strong className="text-white">Also wear</strong> section. Blazers are structured layers; jackets and coats are optional outerwear. Summer suggestions typically skip heavy coats and wool blazers.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">

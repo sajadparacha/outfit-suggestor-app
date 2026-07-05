@@ -206,4 +206,42 @@ final class MainFlowUxContractTests: XCTestCase {
             "trouser"
         )
     }
+
+    func testResolvedUploadCategoryPrefersMetadataOverBlazerUploadText() {
+        let suggestion = OutfitSuggestion(
+            shirt: "White shirt",
+            trouser: "Navy trousers",
+            blazer: "From your upload — navy bomber jacket",
+            shoes: "Black shoes",
+            belt: "Brown belt",
+            reasoning: "Test",
+            model_image: nil,
+            matching_wardrobe_items: nil,
+            upload_matched_category: "outerwear"
+        )
+        XCTAssertEqual(
+            OutfitItemCardSourceTag.resolvedUploadCategory(suggestion: suggestion),
+            "outerwear"
+        )
+    }
+
+    func testJacketSourceWardrobeNormalizesUploadCategoryToOuterwear() {
+        let suggestion = OutfitSuggestion(
+            shirt: "White shirt",
+            trouser: "Navy trousers",
+            blazer: "Navy blazer",
+            shoes: "Black shoes",
+            belt: "Brown belt",
+            reasoning: "Test",
+            model_image: nil,
+            matching_wardrobe_items: nil,
+            upload_matched_category: "blazer",
+            source_slot: "blazer"
+        )
+        let normalized = OutfitItemCardSourceTag.applyingSourceWardrobeUploadCategory(
+            to: suggestion,
+            sourceCategory: "jacket"
+        )
+        XCTAssertEqual(normalized.upload_matched_category, "outerwear")
+    }
 }

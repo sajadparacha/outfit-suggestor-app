@@ -70,6 +70,9 @@ class TestWardrobeGapAnalysisCategories:
         assert ws._normalize_category("jacket") == "jacket"
         assert ws._normalize_category("jackets") == "jacket"
         assert ws._normalize_category("blazer") == "blazer"
+        assert ws._normalize_category("coat") == "coat"
+        assert ws._normalize_category("coats") == "coat"
+        assert ws._normalize_category("parka") == "coat"
 
     def test_sweater_and_jacket_have_style_library_entries(self):
         ws = WardrobeService()
@@ -123,6 +126,29 @@ class TestWardrobeGapAnalysisCategories:
         assert "sweater" not in top_categories
         assert "jacket" not in top_categories
         assert top_categories[0] in {"shirt", "trouser", "shoes"}
+
+
+class TestWardrobeHFCategoryExtraction:
+  """HF fallback classifies structured blazers vs casual jackets vs coats."""
+
+  def test_bomber_jacket_maps_to_jacket_not_blazer(self):
+      from services.wardrobe_ai_service_hf import WardrobeAIServiceHF
+
+      service = WardrobeAIServiceHF.__new__(WardrobeAIServiceHF)
+      assert service._extract_category("a navy bomber jacket on a hanger") == "jacket"
+
+  def test_sport_coat_maps_to_blazer(self):
+      from services.wardrobe_ai_service_hf import WardrobeAIServiceHF
+
+      service = WardrobeAIServiceHF.__new__(WardrobeAIServiceHF)
+      assert service._extract_category("charcoal sport coat") == "blazer"
+      assert service._extract_category("structured navy blazer") == "blazer"
+
+  def test_parka_maps_to_coat(self):
+      from services.wardrobe_ai_service_hf import WardrobeAIServiceHF
+
+      service = WardrobeAIServiceHF.__new__(WardrobeAIServiceHF)
+      assert service._extract_category("insulated parka with hood") == "coat"
 
 
 class TestWardrobeServiceSimilarity:

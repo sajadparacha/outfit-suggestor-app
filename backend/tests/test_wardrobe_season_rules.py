@@ -2,6 +2,7 @@
 from services.wardrobe_season_rules import (
     apply_wardrobe_gap_season_filters,
     filter_summer_texts,
+    is_heavy_outerwear_for_summer,
     text_has_summer_blocklist,
 )
 
@@ -9,7 +10,16 @@ from services.wardrobe_season_rules import (
 def test_text_has_summer_blocklist_detects_heavy_items():
     assert text_has_summer_blocklist("Gray merino sweater")
     assert text_has_summer_blocklist("Insulated parka for layering")
+    assert text_has_summer_blocklist("Wool coat for winter commutes")
     assert not text_has_summer_blocklist("White linen shirt")
+
+
+def test_is_heavy_outerwear_for_summer():
+    assert is_heavy_outerwear_for_summer(category="coat", description="Wool overcoat")
+    assert is_heavy_outerwear_for_summer(category="jacket", description="Insulated parka")
+    assert is_heavy_outerwear_for_summer(category="blazer", description="Wool blazer")
+    assert not is_heavy_outerwear_for_summer(category="jacket", description="Lightweight harrington")
+    assert not is_heavy_outerwear_for_summer(category="shirt", description="White linen")
 
 
 def test_filter_summer_texts_removes_blocklisted_lines():

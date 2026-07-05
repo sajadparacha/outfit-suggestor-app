@@ -15,6 +15,7 @@ struct OutfitSuggestionView: View {
     var season: String = OutfitFilters().season
     var style: String = OutfitFilters().style
     var uploadImage: UIImage?
+    var sourceWardrobeCategory: String? = nil
     var onNext: (() -> Void)?
     var onLike: (() -> Void)?
     var onDislike: (() -> Void)?
@@ -60,7 +61,7 @@ struct OutfitSuggestionView: View {
 
             itemCardsGrid
 
-            if OutfitOptionalLayers.hasOptionalLayers(suggestion) {
+            if OutfitLayerExclusivity.hasVisibleOptionalLayers(displaySuggestion) {
                 alsoWearSection
             }
 
@@ -133,18 +134,32 @@ struct OutfitSuggestionView: View {
         )
     }
 
+    private var displaySuggestion: OutfitSuggestion {
+        OutfitUploadCategory.normalizeSuggestion(
+            suggestion,
+            sourceWardrobeCategory: sourceWardrobeCategory
+        )
+    }
+
     private var itemCardsGrid: some View {
         let columns = [
             GridItem(.flexible(), spacing: 12),
             GridItem(.flexible(), spacing: 12),
         ]
+        let resolved = displaySuggestion
 
         return LazyVGrid(columns: columns, spacing: 12) {
-            itemCard(category: "shirt", label: "Shirt", description: suggestion.shirt)
-            itemCard(category: "trouser", label: "Trousers", description: suggestion.trouser)
-            itemCard(category: "blazer", label: "Blazer", description: suggestion.blazer)
-            itemCard(category: "shoes", label: "Shoes", description: suggestion.shoes)
-            itemCard(category: "belt", label: "Belt", description: suggestion.belt)
+            itemCard(category: "shirt", label: "Shirt", description: resolved.shirt)
+            itemCard(category: "trouser", label: "Trousers", description: resolved.trouser)
+            if OutfitLayerExclusivity.shouldShowAnchoredOuterwearInCoreGrid(suggestion: resolved),
+               let outerwear = OutfitLayerExclusivity.resolveOuterwearDisplayText(suggestion: resolved) {
+                itemCard(category: "outerwear", label: MainFlowUxCopy.outerwearLabel, description: outerwear)
+            }
+            if OutfitLayerExclusivity.shouldShowBlazerCard(suggestion: resolved) {
+                itemCard(category: "blazer", label: "Blazer", description: resolved.blazer)
+            }
+            itemCard(category: "shoes", label: "Shoes", description: resolved.shoes)
+            itemCard(category: "belt", label: "Belt", description: resolved.belt)
         }
     }
 
@@ -166,7 +181,13 @@ struct OutfitSuggestionView: View {
         ]
 
         return LazyVGrid(columns: columns, spacing: 12) {
-            ForEach(OutfitOptionalLayers.items(for: suggestion), id: \.category) { item in
+            ForEach(
+                OutfitOptionalLayers.items(
+                    for: displaySuggestion,
+                    allowedCategories: OutfitLayerExclusivity.optionalLayerCategories(for: displaySuggestion)
+                ),
+                id: \.category
+            ) { item in
                 itemCard(category: item.category, label: item.label, description: item.description)
             }
         }
@@ -175,15 +196,18 @@ struct OutfitSuggestionView: View {
 
     @ViewBuilder
     private func itemCard(category: String, label: String, description: String) -> some View {
+        let resolved = displaySuggestion
         let thumb = OutfitItemThumbnail.thumbnailImage(
-            suggestion: suggestion,
+            suggestion: resolved,
             category: category,
-            uploadImage: uploadImage
+            uploadImage: uploadImage,
+            sourceWardrobeCategory: sourceWardrobeCategory
         )
         let tag = OutfitItemCardSourceTag.resolve(
             category: category,
-            suggestion: suggestion,
-            uploadImage: uploadImage
+            suggestion: resolved,
+            uploadImage: uploadImage,
+            sourceWardrobeCategory: sourceWardrobeCategory
         )
 
         OutfitItemCardView(

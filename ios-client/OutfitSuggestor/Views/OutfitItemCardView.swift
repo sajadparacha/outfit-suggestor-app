@@ -93,9 +93,13 @@ enum OutfitItemCardSourceTag {
     static func resolve(
         category: String,
         suggestion: OutfitSuggestion,
-        uploadImage: UIImage?
+        uploadImage: UIImage?,
+        sourceWardrobeCategory: String? = nil
     ) -> String {
-        let uploadCategory = resolvedUploadCategory(suggestion: suggestion)
+        let uploadCategory = resolvedUploadCategory(
+            suggestion: suggestion,
+            sourceWardrobeCategory: sourceWardrobeCategory
+        )
         let hasWardrobeThumb = OutfitItemThumbnail.thumbnailImage(
             suggestion: suggestion,
             category: category,
@@ -112,34 +116,69 @@ enum OutfitItemCardSourceTag {
         return MainFlowUxCopy.tagAiSuggested
     }
 
-    static func resolvedUploadCategory(suggestion: OutfitSuggestion) -> String? {
-        let categories: [(String, String)] = [
-            ("shirt", suggestion.shirt),
-            ("trouser", suggestion.trouser),
-            ("blazer", suggestion.blazer),
-            ("shoes", suggestion.shoes),
-            ("belt", suggestion.belt),
-        ]
-
-        if let textMatch = categories.first(where: { _, value in
-            let lower = value.lowercased()
-            return lower.contains("uploaded image")
-                || lower.contains("from your upload")
-                || lower.contains("your upload")
-        })?.0 {
-            return textMatch
-        }
-
-        guard let raw = suggestion.upload_matched_category?.lowercased(), !raw.isEmpty else {
+    static func normalizedUploadCategory(from raw: String?) -> String? {
+        guard let raw = raw?.lowercased(), !raw.isEmpty else {
             return nil
         }
         switch raw {
         case "shirt", "shirts": return "shirt"
         case "trouser", "trousers", "pant", "pants": return "trouser"
-        case "blazer", "blazers", "jacket", "jackets": return "blazer"
+        case "blazer", "blazers": return "blazer"
+        case "jacket", "jackets", "coat", "coats", "outerwear": return "outerwear"
         case "shoe", "shoes": return "shoes"
         case "belt", "belts": return "belt"
         default: return nil
         }
+    }
+
+    static func resolvedUploadCategory(
+        suggestion: OutfitSuggestion,
+        sourceWardrobeCategory: String? = nil
+    ) -> String? {
+        OutfitUploadCategory.resolvedUploadCategory(
+            suggestion: suggestion,
+            sourceWardrobeCategory: sourceWardrobeCategory
+        )
+    }
+
+    static func resolvedUploadCategory(suggestion: OutfitSuggestion) -> String? {
+        resolvedUploadCategory(suggestion: suggestion, sourceWardrobeCategory: nil)
+    }
+
+    /// When styling from a wardrobe item, prefer its category over API blazer/slot mismatches (jacket/coat → outerwear).
+    static func applyingSourceWardrobeUploadCategory(
+        to suggestion: OutfitSuggestion,
+        sourceCategory: String?
+    ) -> OutfitSuggestion {
+        guard let sourceCategory, !sourceCategory.isEmpty else { return suggestion }
+        guard let normalized = normalizedUploadCategory(from: sourceCategory) else {
+            return suggestion
+        }
+        guard suggestion.upload_matched_category != normalized else {
+            return ensureOuterwearForJacketSource(suggestion, sourceCategory: sourceCategory)
+        }
+        var updated = suggestion
+        updated.upload_matched_category = normalized
+        return ensureOuterwearForJacketSource(updated, sourceCategory: sourceCategory)
+    }
+
+    private static func ensureOuterwearForJacketSource(
+        _ suggestion: OutfitSuggestion,
+        sourceCategory: String
+    ) -> OutfitSuggestion {
+        let normalizedSource = sourceCategory.lowercased()
+        guard ["jacket", "jackets", "coat", "coats", "outerwear"].contains(normalizedSource) else {
+            return suggestion
+        }
+        guard OutfitItemCardSourceTag.resolvedUploadCategory(suggestion: suggestion) == "outerwear" else {
+            return suggestion
+        }
+        var updated = suggestion
+        let existing = updated.outerwear?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if existing.isEmpty || ["null", "none", "n/a"].contains(existing.lowercased()) {
+            let label = normalizedSource.contains("coat") ? "coat" : "jacket"
+            updated.outerwear = "Your wardrobe \(label) (uploaded item)"
+        }
+        return updated
     }
 }
