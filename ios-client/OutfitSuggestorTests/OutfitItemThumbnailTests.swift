@@ -301,8 +301,8 @@ final class OutfitItemThumbnailTests: XCTestCase {
                 tie: nil
             ),
             outerwear: "Tan wool overcoat",
-            outerwear_id: 55,
             shoes_id: 66,
+            outerwear_id: 55,
             source_wardrobe_item_id: 55
         )
 
