@@ -318,7 +318,7 @@ cd backend
 python -m pytest
 ```
 
-**Test Coverage**: 35% (see [TEST_COVERAGE_REPORT.md](./TEST_COVERAGE_REPORT.md))
+**Test Coverage**: ~64% line coverage on backend money-path packages (auth / outfit / wardrobe controllers+services); see [TEST_COVERAGE_REPORT.md](./TEST_COVERAGE_REPORT.md) (measured 2026-07-11). Core auth, suggest-outfit, and outfit-history APIs have automated tests. CI enforces `--cov-fail-under=60` via [backend-coverage.yml](./.github/workflows/backend-coverage.yml).
 
 ### Frontend
 ```bash
@@ -485,7 +485,7 @@ For questions or support:
 - ✅ **Frontend**: Fully functional
 - ✅ **iOS Client**: Available
 - ✅ **Deployment**: GitHub Pages (frontend), Railway (backend)
-- ⚠️ **Test Coverage**: 35% (documented in TEST_COVERAGE_REPORT.md)
+- ✅ **Test Coverage**: ~64% on backend money-path packages; auth / suggest / history APIs covered (see TEST_COVERAGE_REPORT.md)
 
 ---
 

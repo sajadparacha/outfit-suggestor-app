@@ -27,7 +27,8 @@ def test_parse_response_accepts_source_slot_and_normalizes_aliases():
     )
 
     parsed = ai._parse_response(raw)  # type: ignore[attr-defined]
-    assert parsed.source_slot is None
+    # jacket/coat aliases normalize to the outerwear slot
+    assert parsed.source_slot == "outerwear"
 
 
 def test_parse_response_rejects_invalid_source_slot():

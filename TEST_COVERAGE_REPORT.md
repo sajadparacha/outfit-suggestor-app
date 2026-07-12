@@ -1,113 +1,127 @@
 # API Test Coverage Report
 
-## Summary
-This document lists all REST API endpoints and their current test coverage status.
+**Last verified:** 2026-07-11  
+**Method:** `pytest` endpoint inventory + `pytest-cov` line coverage on money-path packages  
+**Command:**
 
----
-
-## Health & Root Endpoints
-
-| Method | Endpoint | Status | Test File |
-|--------|----------|--------|-----------|
-| GET | `/` | ✅ Covered | `test_backend.py` |
-| GET | `/health` | ❌ **NOT COVERED** | - |
-
----
-
-## Authentication Endpoints (`/api/auth`)
-
-| Method | Endpoint | Status | Test File |
-|--------|----------|--------|-----------|
-| POST | `/api/auth/register` | ❌ **NOT COVERED** | - |
-| POST | `/api/auth/login` | ❌ **NOT COVERED** | - |
-| GET | `/api/auth/activate/{token}` | ❌ **NOT COVERED** | - |
-| GET | `/api/auth/me` | ❌ **NOT COVERED** | - |
-| POST | `/api/auth/change-password` | ❌ **NOT COVERED** | - |
-
----
-
-## Outfit Suggestion Endpoints (`/api`)
-
-| Method | Endpoint | Status | Test File |
-|--------|----------|--------|-----------|
-| POST | `/api/suggest-outfit` | ❌ **NOT COVERED** | - |
-| POST | `/api/check-duplicate` | ❌ **NOT COVERED** | - |
-| GET | `/api/outfit-history` | ❌ **NOT COVERED** | - |
-
----
-
-## Wardrobe Endpoints (`/api/wardrobe`)
-
-| Method | Endpoint | Status | Test File |
-|--------|----------|--------|-----------|
-| POST | `/api/wardrobe/check-duplicate` | ❌ **NOT COVERED** | - |
-| POST | `/api/wardrobe/analyze-image` | ❌ **NOT COVERED** | - |
-| POST | `/api/wardrobe` | ⚠️ **PARTIAL** | `test_wardrobe_api.py` (basic test, no image) |
-| GET | `/api/wardrobe` | ✅ Covered | `test_wardrobe_api.py` |
-| GET | `/api/wardrobe/summary` | ✅ Covered | `test_wardrobe_api.py` |
-| GET | `/api/wardrobe/{item_id}` | ✅ Covered | `test_wardrobe_api.py` |
-| PUT | `/api/wardrobe/{item_id}` | ✅ Covered | `test_wardrobe_api.py` |
-| DELETE | `/api/wardrobe/{item_id}` | ✅ Covered | `test_wardrobe_api.py` |
-
----
-
-## Coverage Statistics
-
-- **Total Endpoints**: 17
-- **Fully Tested**: 6 (35%)
-- **Partially Tested**: 1 (6%)
-- **Not Tested**: 10 (59%)
-
----
-
-## Missing Test Coverage
-
-### Critical Missing Tests:
-
-1. **Authentication Flow** (0% coverage)
-   - User registration
-   - User login
-   - Account activation
-   - Get current user
-   - Change password
-
-2. **Outfit Suggestions** (0% coverage)
-   - Main outfit suggestion endpoint
-   - Duplicate checking for outfit history
-   - Outfit history retrieval
-
-3. **Wardrobe Advanced Features** (0% coverage)
-   - Duplicate checking for wardrobe items
-   - AI image analysis for wardrobe items
-
-4. **Health Check** (0% coverage)
-   - Detailed health endpoint
-
----
-
-## Recommendations
-
-1. **Create comprehensive test suite** using `pytest` and `FastAPI TestClient`
-2. **Add authentication tests** covering all auth endpoints
-3. **Add outfit suggestion tests** with mock images and AI responses
-4. **Enhance wardrobe tests** to include image uploads and duplicate detection
-5. **Add integration tests** that test full user workflows
-6. **Set up CI/CD** to run tests automatically on commits
-
----
-
-## Test File Structure Recommendation
-
-```
-backend/
-├── tests/
-│   ├── __init__.py
-│   ├── conftest.py           # Test fixtures and setup
-│   ├── test_auth.py          # Authentication endpoints
-│   ├── test_outfit.py        # Outfit suggestion endpoints
-│   ├── test_wardrobe.py      # Wardrobe endpoints (enhanced)
-│   ├── test_health.py        # Health check endpoints
-│   └── fixtures/
-│       └── test_images/      # Test image files
+```bash
+cd backend && . venv/bin/activate
+DATABASE_URL='sqlite:///:memory:' pytest tests/ \
+  --cov=routes --cov=services --cov=controllers --cov=dependencies --cov=utils.auth \
+  --cov-report=term-missing -q
 ```
 
+---
+
+## Measured line coverage (baseline)
+
+| Scope | Cover |
+|-------|-------|
+| **TOTAL (routes + services + controllers + dependencies + utils.auth)** | **64%** |
+| `controllers/auth_controller.py` | 85% |
+| `services/auth_service.py` | 76% |
+| `utils/auth.py` | 71% |
+| `controllers/outfit_controller.py` | 63% |
+| `services/outfit_service.py` | 68% |
+| `services/guest_usage_service.py` | 98% |
+| `controllers/wardrobe_controller.py` | 74% |
+| `services/wardrobe_service.py` | 78% |
+| `services/ai_service.py` | 48% (prompt/vision branches; mocked in API tests) |
+
+> Older copies of this file claimed **35%** endpoints covered and **0%** on auth / suggest / history. That inventory was stale. Those money paths have automated tests (see below).
+
+---
+
+## Health & Root
+
+| Method | Endpoint | Status | Test file(s) |
+|--------|----------|--------|--------------|
+| GET | `/` | ✅ Covered | `test_outfit_endpoints.py` |
+| GET | `/health` | ✅ Covered | `test_outfit_endpoints.py` |
+
+---
+
+## Authentication (`/api/auth`)
+
+| Method | Endpoint | Status | Test file(s) |
+|--------|----------|--------|--------------|
+| POST | `/api/auth/register` | ✅ Covered | `test_auth_endpoints.py`, `test_integration_auth_flow.py` |
+| POST | `/api/auth/login` | ✅ Covered | `test_auth_endpoints.py`, `test_integration_auth_flow.py` |
+| GET | `/api/auth/activate/{token}` | ⚠️ Partial | `test_auth_endpoints.py` (invalid token); happy path if email activation enabled still thin |
+| GET | `/api/auth/me` | ✅ Covered | `test_auth_endpoints.py` |
+| POST | `/api/auth/change-password` | ✅ Covered | `test_auth_endpoints.py` |
+
+---
+
+## Outfit suggestion & history (`/api`)
+
+| Method | Endpoint | Status | Test file(s) |
+|--------|----------|--------|--------------|
+| GET | `/api/guest-usage` | ✅ Covered | `test_guest_usage.py` |
+| POST | `/api/suggest-outfit` | ✅ Covered | `test_outfit_endpoints.py`, `test_integration_outfit_flow.py`, `test_reports_searches.py`, wardrobe integration tests |
+| POST | `/api/check-duplicate` | ✅ Covered | `test_outfit_endpoints.py`, `test_integration_outfit_flow.py` |
+| GET | `/api/outfit-history` | ✅ Covered | `test_outfit_endpoints.py`, journey/integration tests |
+| DELETE | `/api/outfit-history/{entry_id}` | ✅ Covered | `test_outfit_endpoints.py` |
+| POST | `/api/suggest-outfit-from-wardrobe` | ✅ Covered | `test_outfit_endpoints.py`, `test_integration_outfit_flow.py` |
+| POST | `/api/suggest-outfit-from-wardrobe-item/{id}` | ✅ Covered | `test_outfit_endpoints.py`, `test_integration_outfit_flow.py` |
+
+---
+
+## Wardrobe (`/api/wardrobe`)
+
+| Method | Endpoint | Status | Test file(s) |
+|--------|----------|--------|--------------|
+| POST | `/api/wardrobe/check-duplicate` | ✅ Covered | `test_integration_wardrobe_flow.py` |
+| POST | `/api/wardrobe/analyze-image` | ⚠️ Partial | mocked wardrobe AI in conftest; endpoint exercised in wardrobe flows |
+| POST | `/api/wardrobe` | ✅ Covered | `test_wardrobe_endpoints.py`, integration flows |
+| GET | `/api/wardrobe` | ✅ Covered | `test_wardrobe_endpoints.py`, `test_wardrobe_pagination_search.py` |
+| GET | `/api/wardrobe/summary` | ✅ Covered | `test_wardrobe_endpoints.py` |
+| GET | `/api/wardrobe/random-outfit` | ⚠️ Partial / legacy | limited; non-user-facing path |
+| POST | `/api/wardrobe/analyze-gaps` | ⚠️ Partial | AI gap analysis unit coverage in `test_ai_service_premium_wardrobe_gaps.py`; full HTTP contract still thin |
+| GET | `/api/wardrobe/{item_id}` | ✅ Covered | `test_wardrobe_endpoints.py` |
+| PUT | `/api/wardrobe/{item_id}` | ✅ Covered | `test_wardrobe_endpoints.py` |
+| DELETE | `/api/wardrobe/{item_id}` | ✅ Covered | `test_wardrobe_endpoints.py` |
+
+---
+
+## Admin / ops (lower commercial priority)
+
+| Area | Status | Notes |
+|------|--------|-------|
+| Access logs / usage / timeline | ✅ Mostly covered | `test_access_log_endpoints.py` |
+| Reports searches | ✅ Covered | `test_reports_searches.py` |
+| Integration test runner routes | ⚠️ Low line cov (~26%) | Admin-only; `test_integration_test_runner_access.py` |
+
+---
+
+## Coverage statistics (endpoint checklist)
+
+Approximate money-path API inventory (health + auth + outfit + wardrobe core):
+
+- **Fully tested:** majority of auth, suggest, history, wardrobe CRUD  
+- **Partial:** activate happy path, analyze-image/gaps HTTP depth, legacy random-outfit  
+- **Do not cite “35% / 0% money paths”** — that claim is obsolete
+
+---
+
+## Remaining gaps (prioritized)
+
+1. **Deterministic suggest contract** — keep AI mocked (done in conftest); expand assertions on response shape / guest limits / error codes  
+2. **Auth activation happy path** when email verification is enabled  
+3. **Wardrobe Insights HTTP** — deepen `/analyze-gaps` API tests beyond unit parsing  
+4. **CI gate** — ✅ `.github/workflows/backend-coverage.yml` runs money-path `pytest --cov-fail-under=60` on PRs/pushes that touch `backend/`  
+5. **Refresh this report** when endpoints change (same PR)
+
+---
+
+## How to re-measure
+
+```bash
+cd backend && . venv/bin/activate
+pip install 'pytest-cov>=4.1.0'   # if needed
+DATABASE_URL='sqlite:///:memory:' pytest tests/ \
+  --cov=routes --cov=services --cov=controllers --cov=dependencies --cov=utils.auth \
+  --cov-report=term-missing --cov-report=html -q
+```
+
+Open `backend/htmlcov/index.html` for line-level detail.

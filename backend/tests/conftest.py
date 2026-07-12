@@ -48,6 +48,8 @@ from models.user import User
 from models.wardrobe import WardrobeItem
 from models.outfit_history import OutfitHistory
 from models.outfit import OutfitSuggestion
+from models.access_log import AccessLog  # noqa: F401 — register metadata for create_all
+from models.guest_usage import GuestUsage  # noqa: F401 — register metadata for create_all
 from utils.auth import get_password_hash
 from dependencies import get_current_user, get_current_active_user, get_optional_user
 from config import get_outfit_controller, get_wardrobe_controller
@@ -61,7 +63,14 @@ class _MockAIService:
     """Mock AI service for tests. No OpenAI/Replicate calls."""
 
     def get_outfit_suggestion(
-        self, image_base64, text_input="", wardrobe_items=None, wardrobe_only=False, previous_outfit_text=None
+        self,
+        image_base64,
+        text_input="",
+        wardrobe_items=None,
+        wardrobe_only=False,
+        previous_outfit_text=None,
+        source_wardrobe_category=None,
+        source_wardrobe_item_id=None,
     ):
         return (
             OutfitSuggestion(
@@ -71,6 +80,7 @@ class _MockAIService:
                 shoes="Test shoes",
                 belt="Test belt",
                 reasoning="Test reasoning",
+                source_wardrobe_item_id=source_wardrobe_item_id,
             ),
             {"gpt4_cost": 0.0, "model_image_cost": 0.0, "total_cost": 0.0},
         )

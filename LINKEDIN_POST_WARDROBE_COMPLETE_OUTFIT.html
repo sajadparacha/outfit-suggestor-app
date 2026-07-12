@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>LinkedIn Post — Wardrobe Complete Outfit</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-width: 680px;
+      margin: 48px auto;
+      padding: 0 24px;
+      line-height: 1.5;
+      font-size: 16px;
+      color: #1a1a1a;
+    }
+    .hint {
+      background: #f3f6f8;
+      border-left: 4px solid #0a66c2;
+      padding: 12px 16px;
+      margin-bottom: 32px;
+      font-size: 14px;
+      color: #444;
+    }
+    .post {
+      border: 1px dashed #ccc;
+      padding: 24px;
+      border-radius: 8px;
+    }
+    p { margin: 0 0 1em 0; }
+    p:last-child { margin-bottom: 0; }
+    strong { font-weight: 700; }
+    a { color: #0a66c2; }
+    .count { font-size: 13px; color: #666; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <div class="hint">
+    <strong>How to paste with formatting on LinkedIn</strong><br />
+    1. Click inside the post box below.<br />
+    2. Select all post text (Cmd+A inside the dashed box).<br />
+    3. Copy (Cmd+C) → paste into LinkedIn (Cmd+V).<br />
+    4. Attach your wardrobe screenshot before publishing.<br />
+    <em>Trimmed to fit LinkedIn’s 3,000-character limit.</em>
+  </div>
+
+  <div class="post" id="linkedin-post">
+    <p>This is my favourite feature in <strong>wardrob</strong> — and it didn’t arrive fully formed.</p>
+
+    <p>It started with a simple question: <em>“What if I already know part of what I want to wear — can AI finish the look using what I actually own?”</em></p>
+
+    <p>Most outfit apps start from zero: upload a photo, get a full recommendation. But getting dressed often starts differently. You’ve already picked your jeans, your shoes, or a blazer for dinner. You don’t need AI to reinvent those pieces — you need it to <strong>respect your choices</strong> and fill in the gaps.</p>
+
+    <p>So we built <strong>“Complete an outfit from selected wardrobe pieces.”</strong></p>
+
+    <p><strong>The idea:</strong> select 1–5 items (shirt, trousers, blazer, shoes, belt), set occasion, season, style, and notes, then tap <strong>Complete outfit with AI</strong>. Your picks stay locked in; the AI suggests only what’s missing.</p>
+
+    <p><strong>How we refined it</strong> (from real screenshots and feedback):</p>
+
+    <p>→ <strong>One item per slot</strong> — no double shirts<br />
+    → <strong>Preferences inline on Wardrobe</strong> — no tab-hopping to set occasion or style<br />
+    → <strong>Selection thumbnails</strong> — confirm your picks before you generate</p>
+
+    <p><strong>Under the hood:</strong> the backend <strong>pins</strong> your selected items to the right outfit slots and tells the model: <em>keep these pieces, complete the rest.</em> One item per slot, 1–5 items max, category aliases (polo → shirt, jeans → trousers), ownership checks — then AI fills only the empty slots.</p>
+
+    <p><strong>Why I love it:</strong> it mirrors how I actually get dressed. I start with an anchor piece — “these shoes for this dinner” — and build outward. Same flow on <strong>web and iOS</strong>.</p>
+
+    <p><strong>Try it:</strong> <a href="https://sajadparacha.github.io/outfit-suggestor-app/">https://sajadparacha.github.io/outfit-suggestor-app/</a></p>
+
+    <p>Sign in, add wardrobe items, select a couple, set <em>Dinner / Night Out</em> + <em>Winter</em> + <em>Classic</em>, and hit <strong>Complete outfit with AI</strong>.</p>
+
+    <p>The best AI features aren’t always the flashiest models — they’re the ones that <strong>fit how people already behave</strong>.</p>
+
+    <p>What’s the one feature in your product that started small and became indispensable?</p>
+
+    <p>#FashionTech #AI #ProductDevelopment #BuildInPublic #FullStack #PersonalStyling</p>
+  </div>
+
+  <p class="count" id="char-count"></p>
+  <script>
+    const post = document.getElementById('linkedin-post');
+    const text = post.innerText.replace(/\n{3,}/g, '\n\n').trim();
+    document.getElementById('char-count').textContent =
+      'Character count: ' + text.length + ' / 3000 (LinkedIn limit)';
+  </script>
+</body>
+</html>
