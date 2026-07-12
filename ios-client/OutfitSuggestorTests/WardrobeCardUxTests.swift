@@ -190,6 +190,39 @@ final class WardrobeCardUxTests: XCTestCase {
         XCTAssertEqual(state.selectionSummary(for: items), "2 selected: shirt, trousers")
     }
 
+    func testMultiSelectRemoveOneItemLeavesRemainingSelectionAndPreviewThumbnail() {
+        let validImage = makeBase64TestImage()
+        let shirt = wardrobeItem(id: 1, category: "shirt", imageData: validImage)
+        let trouser = wardrobeItem(id: 3, category: "trouser", imageData: validImage)
+        let items = [shirt, trouser]
+
+        var state = WardrobeMultiSelectState()
+        XCTAssertEqual(state.toggle(shirt), .selected)
+        XCTAssertEqual(state.toggle(trouser), .selected)
+        XCTAssertEqual(state.selectedItemIds, [1, 3])
+        XCTAssertEqual(state.selectionSummary(for: items), "2 selected: shirt, trousers")
+
+        state.remove(shirt)
+
+        XCTAssertEqual(state.selectedItemIds, [3])
+        XCTAssertTrue(state.canCompleteOutfit)
+        XCTAssertEqual(state.selectionSummary(for: items), "1 selected: trousers")
+
+        let thumbnails = WardrobeCompletionThumbnails.thumbnailItemsInOrder(
+            selectedItemIds: state.selectedItemIds,
+            allItems: items
+        )
+        XCTAssertEqual(thumbnails.map(\.id), [3])
+        XCTAssertEqual(
+            WardrobeCompletionThumbnails.thumbnailAccessibilityId(itemId: 3),
+            "wardrobe.multiSelect.thumb.3"
+        )
+        XCTAssertEqual(
+            WardrobeCompletionThumbnails.viewImageAccessibilityLabel(for: trouser),
+            "View trousers"
+        )
+    }
+
     func testWardrobeCompletionPreferencesCopyContract() {
         XCTAssertEqual(WardrobeCompletionCopy.noItemsSelected, "No items selected")
         XCTAssertEqual(WardrobeCompletionCopy.sharedPreferencesHint, InsightsCopy.sharedPreferencesNote)

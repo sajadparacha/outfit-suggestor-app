@@ -501,24 +501,43 @@ struct WardrobeListView: View {
                 HStack(spacing: isRegularWidth ? 10 : 8) {
                     ForEach(items) { item in
                         if let image = WardrobeImageData.decodeUIImage(from: item.image_data) {
-                            Button {
-                                fullScreenImage = image
-                            } label: {
-                                Image(uiImage: image)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: completionThumbnailSize, height: completionThumbnailSize)
-                                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                            .stroke(AppTheme.border, lineWidth: 1)
-                                    )
+                            ZStack(alignment: .topTrailing) {
+                                Button {
+                                    fullScreenImage = image
+                                } label: {
+                                    Image(uiImage: image)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: completionThumbnailSize, height: completionThumbnailSize)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                                .stroke(AppTheme.border, lineWidth: 1)
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel(
+                                    WardrobeCompletionThumbnails.viewImageAccessibilityLabel(for: item)
+                                )
+                                .accessibilityIdentifier(
+                                    WardrobeCompletionThumbnails.thumbnailAccessibilityId(itemId: item.id)
+                                )
+
+                                Button {
+                                    removeFromCompletionSelection(item)
+                                } label: {
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundStyle(.white)
+                                        .frame(width: 20, height: 20)
+                                        .background(Circle().fill(Color.black.opacity(0.72)))
+                                }
+                                .buttonStyle(.plain)
+                                .padding(2)
+                                .accessibilityLabel(completionThumbnailRemoveAccessibilityLabel(for: item))
+                                .accessibilityIdentifier(completionThumbnailRemoveAccessibilityId(itemId: item.id))
                             }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel(WardrobeCompletionThumbnails.viewImageAccessibilityLabel(for: item))
-                            .accessibilityIdentifier(
-                                WardrobeCompletionThumbnails.thumbnailAccessibilityId(itemId: item.id)
-                            )
+                            .frame(width: completionThumbnailSize, height: completionThumbnailSize)
                         }
                     }
                 }
@@ -549,6 +568,23 @@ struct WardrobeListView: View {
                 completionSelectionMessage = nil
             }
         }
+    }
+
+    private func removeFromCompletionSelection(_ item: WardrobeItem) {
+        withAnimation {
+            completionSelection.remove(item)
+            completionSelectionMessage = nil
+        }
+    }
+
+    private func completionThumbnailRemoveAccessibilityId(itemId: Int) -> String {
+        "wardrobe.multiSelect.remove.\(itemId)"
+    }
+
+    private func completionThumbnailRemoveAccessibilityLabel(for item: WardrobeItem) -> String {
+        let slot = WardrobeCompletionSlot.normalized(from: item.category)
+        let name = slot?.summaryLabel ?? item.category
+        return "Remove \(name)"
     }
 
     @ViewBuilder

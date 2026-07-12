@@ -949,7 +949,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
             <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
               {selectedCompleteOutfitItems.some((item) => item.image_data) && (
                 <div
-                  className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-1 sm:order-first sm:mr-auto"
+                  className="scrollbar-none flex min-w-0 flex-1 items-center gap-2 overflow-x-auto overflow-y-hidden pt-1 pb-1 sm:order-first sm:mr-auto"
                   data-testid="wardrobe-selection-thumbnails"
                 >
                   {selectedCompleteOutfitItems
@@ -958,20 +958,36 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                       const slot = normalizeCompleteOutfitSlot(item.category);
                       const slotLabel = slot ? formatCompleteOutfitSlotLabel(slot) : item.category;
                       return (
-                        <button
+                        <div
                           key={item.id}
-                          type="button"
-                          onClick={() => handleViewImage(item.image_data!)}
-                          className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg border border-white/10 bg-slate-800/80 transition hover:border-brand-blue/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/50"
-                          aria-label={`View ${slotLabel}`}
-                          data-testid={`wardrobe-selection-thumb-${item.id}`}
+                          className="relative h-12 w-12 flex-shrink-0"
                         >
-                          <img
-                            src={`data:image/jpeg;base64,${item.image_data}`}
-                            alt=""
-                            className="h-full w-full object-cover"
-                          />
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => handleViewImage(item.image_data!)}
+                            className="h-full w-full overflow-hidden rounded-lg border border-white/10 bg-slate-800/80 transition hover:border-brand-blue/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/50"
+                            aria-label={`View ${slotLabel}`}
+                            data-testid={`wardrobe-selection-thumb-${item.id}`}
+                          >
+                            <img
+                              src={`data:image/jpeg;base64,${item.image_data}`}
+                              alt=""
+                              className="h-full w-full object-cover"
+                            />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleCompleteOutfitItem(item);
+                            }}
+                            className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-xs text-slate-200 shadow-md transition hover:bg-red-500/80 hover:text-white focus:outline-none focus:ring-2 focus:ring-brand-blue/50"
+                            aria-label={`Remove ${item.category} from outfit completion`}
+                            data-testid={`wardrobe-selection-remove-${item.id}`}
+                          >
+                            ✕
+                          </button>
+                        </div>
                       );
                     })}
                 </div>
