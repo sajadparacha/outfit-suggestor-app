@@ -982,7 +982,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                               handleToggleCompleteOutfitItem(item);
                             }}
                             className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-xs text-slate-200 shadow-md transition hover:bg-red-500/80 hover:text-white focus:outline-none focus:ring-2 focus:ring-brand-blue/50"
-                            aria-label={`Remove ${item.category} from outfit completion`}
+                            aria-label={`Remove ${slotLabel}`}
                             data-testid={`wardrobe-selection-remove-${item.id}`}
                           >
                             ✕

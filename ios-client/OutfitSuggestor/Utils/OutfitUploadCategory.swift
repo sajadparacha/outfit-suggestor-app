@@ -84,6 +84,16 @@ enum OutfitUploadCategory {
         }
 
         if let fromText = findUploadAnchoredCategory(suggestion: suggestion) {
+            // Jacket uploads are often parked in the blazer slot with upload markers;
+            // prefer explicit outerwear metadata (or outerwear keywords) over that slot.
+            if fromText == "blazer", textSuggestsOuterwear(suggestion.blazer) {
+                let meta = OutfitItemCardSourceTag.normalizedUploadCategory(
+                    from: suggestion.upload_matched_category
+                )
+                if meta == "outerwear" || meta == nil {
+                    return "outerwear"
+                }
+            }
             return fromText
         }
 
@@ -97,7 +107,13 @@ enum OutfitUploadCategory {
             return fromMisSlottedText
         }
 
-        return nil
+        if let fromMetadata = OutfitItemCardSourceTag.normalizedUploadCategory(
+            from: suggestion.upload_matched_category
+        ) {
+            return fromMetadata
+        }
+
+        return OutfitItemCardSourceTag.normalizedUploadCategory(from: suggestion.source_slot)
     }
 
     /// Normalize API response when wardrobe evidence says jacket but metadata pins shirt/blazer.

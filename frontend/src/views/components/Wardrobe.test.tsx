@@ -799,6 +799,11 @@ describe('Wardrobe page', () => {
       fireEvent.click(screen.getByRole('button', { name: /Add trouser to outfit completion/i }));
       expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('2 selected: shirt, trousers');
 
+      expect(screen.getByRole('button', { name: 'Remove shirt' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Remove trousers' })).toBeInTheDocument();
+      // Card toggle keeps a distinct accessible name from the thumbnail ✕.
+      expect(screen.getByRole('button', { name: /Remove shirt from outfit completion/i })).toBeInTheDocument();
+
       fireEvent.click(screen.getByTestId('wardrobe-selection-remove-1'));
 
       expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('1 selected: trousers');
