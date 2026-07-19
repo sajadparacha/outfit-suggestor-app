@@ -53,18 +53,26 @@ class Config:
     else:
         print(f"✅ Using database: {DATABASE_URL[:30]}...")  # Log first 30 chars for debugging
 
-    # CORS settings (comma-separated list in env, fallback to sensible defaults)
+    # CORS settings (comma-separated list in env, merged with required production origins)
+    # Local .env often lists only localhost — always keep production web origins allowed.
+    _DEFAULT_ALLOWED_ORIGINS = [
+        "http://localhost:3000",  # React dev server
+        "http://127.0.0.1:3000",  # React dev server (IP alias — must match for CORS)
+        "https://sajadparacha.github.io",  # Legacy GitHub Pages URL
+        "https://closiq.me",  # Production custom domain
+        "https://www.closiq.me",  # Production www subdomain
+    ]
     _allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "").strip()
     if _allowed_origins_env:
-        ALLOWED_ORIGINS = [origin.strip() for origin in _allowed_origins_env.split(",") if origin.strip()]
+        _from_env = [origin.strip() for origin in _allowed_origins_env.split(",") if origin.strip()]
+        # Env first (dev ports), then defaults — dedupe while preserving order
+        _merged: list[str] = []
+        for origin in _from_env + _DEFAULT_ALLOWED_ORIGINS:
+            if origin not in _merged:
+                _merged.append(origin)
+        ALLOWED_ORIGINS = _merged
     else:
-        ALLOWED_ORIGINS = [
-            "http://localhost:3000",  # React dev server
-            "http://127.0.0.1:3000",  # React dev server (IP alias — must match for CORS)
-            "https://sajadparacha.github.io",  # Legacy GitHub Pages URL
-            "https://closiq.me",  # Production custom domain
-            "https://www.closiq.me",  # Production www subdomain
-        ]
+        ALLOWED_ORIGINS = list(_DEFAULT_ALLOWED_ORIGINS)
     
     # Image similarity threshold for duplicate detection
     # Lower values = stricter matching (0 = identical, 5 = very similar, 10 = similar)

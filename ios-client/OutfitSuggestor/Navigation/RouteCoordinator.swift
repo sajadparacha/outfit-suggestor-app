@@ -56,7 +56,7 @@ final class RouteCoordinator: ObservableObject {
 
     private func resolvedPath(_ path: String, auth: AuthService) -> String {
         switch path {
-        case AppRoute.wardrobe, AppRoute.history, AppRoute.insights:
+        case AppRoute.wardrobe, AppRoute.history, AppRoute.insights, AppRoute.week:
             if !auth.isAuthenticated {
                 return AppRoute.home
             }
@@ -73,7 +73,7 @@ final class RouteCoordinator: ObservableObject {
 
     private func canShowProfileDestination(_ destination: AppRoute.ProfileDestination, auth: AuthService) -> Bool {
         switch destination {
-        case .insights:
+        case .insights, .week:
             return auth.isAuthenticated
         case .adminReports:
             return auth.currentUser?.is_admin == true
@@ -94,6 +94,8 @@ final class RouteCoordinator: ObservableObject {
         switch destination {
         case .insights:
             InsightsView()
+        case .week:
+            WeekPlannerView()
         case .guide:
             UserGuideView(isAdmin: AdminVisibility.isAdmin(user: AuthService.shared.currentUser))
         case .about:

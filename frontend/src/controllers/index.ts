@@ -8,4 +8,5 @@ export { useHistoryController } from './useHistoryController';
 export { useHistorySearchController } from './useHistorySearchController';
 export { useToastController } from './useToastController';
 export { useAuthController } from './useAuthController';
+export { useWeekPlanController } from './useWeekPlanController';
 

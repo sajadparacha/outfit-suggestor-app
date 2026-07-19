@@ -35,6 +35,7 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 | **Guest limit auth UX** | ✅ | ✅ | At 3/3 free tries: single auth surface on Suggest; nav Sign Up/Login hidden; no duplicate CTAs |
 | **Logout clears main flow** | ✅ | ✅ | Logout resets image, result, prefs on Suggest |
 | **Admin Reports** | ✅ | ✅ | Four tabs (Overview, Utilization, Users, Searches); timeline + search APIs; Recharts (web) / Swift Charts (iOS); city filter web-only |
+| **Week Outfit Planner** | ✅ | ✅ | Route `/week`; Mon–Sun day toggles + occasions; shared style; reminder time + timezone; generate week / regenerate day (wardrobe-aware, persisted); Today surface; login required; **daily wake-up reminders iOS-first** (local notifications); web shows Today in-app (no OS push required for v1) |
 
 ---
 

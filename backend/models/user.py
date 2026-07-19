@@ -41,4 +41,9 @@ class User(Base):
         "WardrobeItem", back_populates="user", cascade="all, delete-orphan"
     )
 
+    # One recurring weekly outfit plan per user
+    weekly_plan: Mapped["WeeklyPlan | None"] = relationship(
+        "WeeklyPlan", back_populates="user", cascade="all, delete-orphan", uselist=False
+    )
+
 

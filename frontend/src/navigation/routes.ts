@@ -2,6 +2,7 @@ export type AppView =
   | 'main'
   | 'history'
   | 'wardrobe'
+  | 'week'
   | 'insights'
   | 'reports'
   | 'integration-tests'
@@ -12,6 +13,7 @@ export type AppView =
 export const ROUTES = {
   MAIN: '/',
   WARDROBE: '/wardrobe',
+  WEEK: '/week',
   HISTORY: '/history',
   INSIGHTS: '/insights',
   GUIDE: '/guide',
@@ -24,6 +26,7 @@ export const ROUTES = {
 const VIEW_PATH_MAP: Record<AppView, string> = {
   main: ROUTES.MAIN,
   wardrobe: ROUTES.WARDROBE,
+  week: ROUTES.WEEK,
   history: ROUTES.HISTORY,
   insights: ROUTES.INSIGHTS,
   guide: ROUTES.GUIDE,
@@ -36,6 +39,7 @@ const VIEW_PATH_MAP: Record<AppView, string> = {
 const PATH_VIEW_ENTRIES: [string, AppView][] = [
   [ROUTES.MAIN, 'main'],
   [ROUTES.WARDROBE, 'wardrobe'],
+  [ROUTES.WEEK, 'week'],
   [ROUTES.HISTORY, 'history'],
   [ROUTES.INSIGHTS, 'insights'],
   [ROUTES.GUIDE, 'guide'],

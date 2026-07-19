@@ -93,5 +93,113 @@ export const handlers = [
       })
     );
   }),
+
+  // Week Outfit Planner defaults (tests override with server.use as needed)
+  rest.get(`${API_BASE}/api/week-plan`, (_req, res, ctx) => {
+    return res(
+      ctx.json({
+        reminder_time: '07:30',
+        timezone: 'UTC',
+        shared_style: 'classic',
+        shared_season: 'all-season',
+        days: Array.from({ length: 7 }, (_, i) => ({
+          day_of_week: i,
+          enabled: false,
+          occasion: 'everyday',
+          style: 'classic',
+          use_wardrobe_only: true,
+          outfit: null,
+        })),
+        wardrobe_empty: false,
+        message: null,
+      })
+    );
+  }),
+
+  rest.put(`${API_BASE}/api/week-plan`, async (req, res, ctx) => {
+    const body = await req.json();
+    return res(
+      ctx.json({
+        reminder_time: body.reminder_time ?? '07:30',
+        timezone: body.timezone ?? 'UTC',
+        shared_style: body.shared_style ?? 'classic',
+        shared_season: body.shared_season ?? 'all-season',
+        days: (body.days ?? []).map(
+          (d: {
+            day_of_week: number;
+            enabled: boolean;
+            occasion: string;
+            style?: string;
+            use_wardrobe_only?: boolean;
+          }) => ({
+            day_of_week: d.day_of_week,
+            enabled: d.enabled,
+            occasion: d.occasion,
+            style: d.style ?? 'classic',
+            use_wardrobe_only: d.use_wardrobe_only ?? true,
+            outfit: null,
+          })
+        ),
+        wardrobe_empty: false,
+        message: null,
+      })
+    );
+  }),
+
+  rest.post(`${API_BASE}/api/week-plan/generate`, async (req, res, ctx) => {
+    const body = (await req.json().catch(() => ({}))) as { day_of_week?: number };
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const enabled = body.day_of_week !== undefined ? i === body.day_of_week : i < 5;
+      return {
+        day_of_week: i,
+        enabled,
+        occasion: i === 0 ? 'work' : 'everyday',
+        style: 'classic',
+        use_wardrobe_only: true,
+        outfit: enabled
+          ? {
+              summary: `Outfit for day ${i}`,
+              shirt: 'White shirt',
+              trouser: 'Navy trousers',
+              blazer: 'Gray blazer',
+              shoes: 'Brown shoes',
+              belt: 'Brown belt',
+              reasoning: 'Mock week plan outfit',
+            }
+          : null,
+      };
+    });
+    return res(
+      ctx.json({
+        reminder_time: '07:30',
+        timezone: 'UTC',
+        shared_style: 'classic',
+        shared_season: 'all-season',
+        days,
+        wardrobe_empty: false,
+        message: null,
+      })
+    );
+  }),
+
+  rest.get(`${API_BASE}/api/week-plan/today`, (_req, res, ctx) => {
+    return res(
+      ctx.json({
+        day_of_week: 0,
+        enabled: false,
+        occasion: null,
+        use_wardrobe_only: true,
+        outfit: null,
+        reminder_time: '07:30',
+        timezone: 'UTC',
+        has_plan: true,
+        message: null,
+      })
+    );
+  }),
+
+  rest.delete(`${API_BASE}/api/week-plan`, (_req, res, ctx) => {
+    return res(ctx.status(204));
+  }),
 ];
 

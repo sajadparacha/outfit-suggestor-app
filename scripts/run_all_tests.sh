@@ -23,6 +23,7 @@ declare -a SUMMARY_PASSED=()
 declare -a SUMMARY_FAILED=()
 declare -a SUMMARY_TOTAL=()
 declare -a SUMMARY_STATUS=()
+declare -a SUMMARY_LOGS=()
 
 cleanup() {
   if [[ -n "$TMP_DIR" && -d "$TMP_DIR" ]]; then
@@ -39,6 +40,7 @@ Runs all test suites: web (Jest), backend (pytest), iOS unit/integration
 (OutfitSuggestorTests), and iOS UITests (OutfitSuggestorUITests).
 
 Prints a summary table (passed / failed / total per category) when finished.
+When suites fail, also lists the failing test names extracted from each log.
 
 Options:
   --web-only          Frontend Jest only
@@ -88,12 +90,13 @@ while [[ $# -gt 0 ]]; do
 done
 
 record_summary() {
-  local name="$1" passed="$2" failed="$3" total="$4" status="$5"
+  local name="$1" passed="$2" failed="$3" total="$4" status="$5" log_file="${6:-}"
   SUMMARY_NAMES+=("$name")
   SUMMARY_PASSED+=("$passed")
   SUMMARY_FAILED+=("$failed")
   SUMMARY_TOTAL+=("$total")
   SUMMARY_STATUS+=("$status")
+  SUMMARY_LOGS+=("$log_file")
   if [[ "$status" != "PASS" ]]; then
     OVERALL_EXIT=1
   fi
@@ -177,6 +180,53 @@ status_from_counts() {
   fi
 }
 
+# Extract failing test names from a suite log for the end summary.
+list_failing_tests() {
+  local kind="$1" log_file="$2"
+
+  if [[ -z "$log_file" || ! -f "$log_file" ]]; then
+    return
+  fi
+
+  case "$kind" in
+    jest)
+      # Prefer individual test titles ("● Suite › name"); fall back to FAIL file lines.
+      if grep -E '^\s*● ' "$log_file" >/dev/null 2>&1; then
+        grep -E '^\s*● ' "$log_file" | sed -E 's/^[[:space:]]*●[[:space:]]+//' | sed '/^$/d' | awk '!seen[$0]++'
+      else
+        grep -E '^[[:space:]]*FAIL[[:space:]]+' "$log_file" | sed -E 's/^[[:space:]]*FAIL[[:space:]]+//' | awk '!seen[$0]++'
+      fi
+      ;;
+    pytest)
+      # short test summary: FAILED path::test - reason
+      grep -E '^FAILED[[:space:]]+' "$log_file" | sed -E 's/^FAILED[[:space:]]+//; s/[[:space:]]+-[[:space:]].*$//' | awk '!seen[$0]++'
+      # ERROR path::test (collection / setup errors)
+      grep -E '^ERROR[[:space:]]+' "$log_file" | sed -E 's/^ERROR[[:space:]]+//; s/[[:space:]]+-[[:space:]].*$//' | awk '!seen[$0]++'
+      ;;
+    xcode)
+      # Test Case '-[ClassName testMethod]' failed (...)
+      grep -E "Test Case '-\\[[^]]+\\]' failed" "$log_file" \
+        | sed -E "s/.*Test Case '-\\[([^]]+)\\]' failed.*/\1/" \
+        | awk '!seen[$0]++'
+      # Also surface XCTFail / assertion lines that name the test when the above is missing
+      if ! grep -E "Test Case '-\\[[^]]+\\]' failed" "$log_file" >/dev/null 2>&1; then
+        grep -E 'error: -?\[[^]]+\]' "$log_file" \
+          | sed -E 's/.*error:[[:space:]]*-?\[([^]]+)\].*/\1/' \
+          | awk '!seen[$0]++'
+      fi
+      ;;
+  esac
+}
+
+kind_for_summary_name() {
+  case "$1" in
+    "Web (Jest)") echo "jest" ;;
+    "Backend (pytest)") echo "pytest" ;;
+    "iOS unit/integration"|"iOS UITests") echo "xcode" ;;
+    *) echo "" ;;
+  esac
+}
+
 run_web_tests() {
   local log_file="$1"
   echo ">>> Web (Jest — unit + integration)"
@@ -185,7 +235,7 @@ run_web_tests() {
   run_logged "$log_file" npm test -- --watchAll=false --passWithNoTests || exit_code=$?
 
   read -r passed failed total <<<"$(parse_jest_counts "$log_file")"
-  record_summary "Web (Jest)" "$passed" "$failed" "$total" "$(status_from_counts "$exit_code" "$passed" "$failed" "$total")"
+  record_summary "Web (Jest)" "$passed" "$failed" "$total" "$(status_from_counts "$exit_code" "$passed" "$failed" "$total")" "$log_file"
   echo
 }
 
@@ -196,7 +246,7 @@ run_backend_tests() {
 
   if [[ ! -f venv/bin/activate ]]; then
     echo "ERROR: backend/venv not found. Create the venv before running backend tests." >&2
-    record_summary "Backend (pytest)" 0 0 0 "ERROR"
+    record_summary "Backend (pytest)" 0 0 0 "ERROR" ""
     echo
     return
   fi
@@ -207,7 +257,7 @@ run_backend_tests() {
   run_logged "$log_file" pytest -q || exit_code=$?
 
   read -r passed failed total <<<"$(parse_pytest_counts "$log_file")"
-  record_summary "Backend (pytest)" "$passed" "$failed" "$total" "$(status_from_counts "$exit_code" "$passed" "$failed" "$total")"
+  record_summary "Backend (pytest)" "$passed" "$failed" "$total" "$(status_from_counts "$exit_code" "$passed" "$failed" "$total")" "$log_file"
   echo
 }
 
@@ -227,8 +277,49 @@ run_ios_tests() {
     -only-testing:"$only_testing" || exit_code=$?
 
   read -r passed failed total <<<"$(parse_xcodebuild_counts "$log_file")"
-  record_summary "$target_label" "$passed" "$failed" "$total" "$(status_from_counts "$exit_code" "$passed" "$failed" "$total")"
+  record_summary "$target_label" "$passed" "$failed" "$total" "$(status_from_counts "$exit_code" "$passed" "$failed" "$total")" "$log_file"
   echo
+}
+
+print_failing_test_names() {
+  local i name status log_file kind failures any_listed=0
+
+  for i in "${!SUMMARY_NAMES[@]}"; do
+    name="${SUMMARY_NAMES[$i]}"
+    status="${SUMMARY_STATUS[$i]}"
+    log_file="${SUMMARY_LOGS[$i]:-}"
+
+    if [[ "$status" == "PASS" ]]; then
+      continue
+    fi
+
+    kind="$(kind_for_summary_name "$name")"
+    failures="$(list_failing_tests "$kind" "$log_file" || true)"
+
+    if [[ -z "$failures" ]]; then
+      continue
+    fi
+
+    if [[ "$any_listed" -eq 0 ]]; then
+      echo "=== Failing tests ==="
+      echo ""
+      any_listed=1
+    fi
+
+    echo "$name:"
+    while IFS= read -r line; do
+      [[ -z "$line" ]] && continue
+      echo "  - $line"
+    done <<<"$failures"
+    echo ""
+  done
+
+  if [[ "$any_listed" -eq 0 && "$OVERALL_EXIT" -ne 0 ]]; then
+    echo "=== Failing tests ==="
+    echo ""
+    echo "Could not extract individual failing test names from logs; see suite output above."
+    echo ""
+  fi
 }
 
 print_summary_table() {
@@ -261,7 +352,9 @@ print_summary_table() {
   else
     printf "%-28s %7s %7s %7s  %s\n" "Overall" "$total_passed" "$total_failed" "$total_tests" "FAIL"
     echo ""
-    echo "One or more test suites failed. See output above for details."
+    echo "One or more test suites failed."
+    echo ""
+    print_failing_test_names
   fi
   echo ""
 }

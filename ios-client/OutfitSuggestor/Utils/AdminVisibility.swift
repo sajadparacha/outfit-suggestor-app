@@ -63,6 +63,8 @@ enum AboutCopy {
         "• Wardrobe Insights — AI-powered gap analysis with a summary score, top priorities, coverage dashboard (including sweaters, jackets, and ties for formal occasions), and a market-ready shopping list with Buy, Look for, and Search online columns, per style/color Google Shopping searches, Copy list, and WhatsApp or PDF export. Outfit suggestions still use the same five core slots."
     static let outfitSuggestionsFeature =
         "• Outfit suggestions with occasion, season, and style filters. Results show five core pieces; the AI may also suggest optional layering (sweater, coat/jacket, or tie) when relevant."
+    static let weekPlannerFeature =
+        "• Week Outfit Planner — enable days, set occasion and style per day (season is shared), toggle Use wardrobe, generate outfits, and expand a day for slot details and Why this works. On iOS, daily wake-up reminders use local notifications; on web, Today is shown in-app only."
     static let adminDiagnosticsSuffix = " Includes transparent admin diagnostics for administrators."
 
     static func techStackDescription(isAdmin: Bool) -> String {

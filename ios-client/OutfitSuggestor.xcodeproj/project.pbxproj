@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		WP01BF0000000000000001 /* WeekPlanModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = WP01FR0000000000000001 /* WeekPlanModels.swift */; };
+		WP01BF0000000000000002 /* WeekPlanNotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = WP01FR0000000000000002 /* WeekPlanNotificationScheduler.swift */; };
+		WP01BF0000000000000003 /* WeekPlannerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = WP01FR0000000000000003 /* WeekPlannerViewModel.swift */; };
+		WP01BF0000000000000004 /* WeekPlannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WP01FR0000000000000004 /* WeekPlannerView.swift */; };
+		WP01BF0000000000000005 /* WeekPlannerViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WP01FR0000000000000005 /* WeekPlannerViewModelTests.swift */; };
+		WP01BF0000000000000006 /* WeekPlanNotificationSchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WP01FR0000000000000006 /* WeekPlanNotificationSchedulerTests.swift */; };
 		07A2F4C13B6A4D91A32E7801 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 07A2F4C13B6A4D91A32E7800 /* Assets.xcassets */; };
 		0D0FFD43456FF9B083A5AE92 /* APIServiceIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4ED51E6300690222125BE0F /* APIServiceIntegrationTests.swift */; };
 		15AD31D0C4E3492E8A55B102 /* OutfitAppE2ETests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45B16CF6F3594C0FA64DDF44 /* OutfitAppE2ETests.swift */; };
@@ -139,6 +145,12 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		WP01FR0000000000000001 /* WeekPlanModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekPlanModels.swift; sourceTree = "<group>"; };
+		WP01FR0000000000000002 /* WeekPlanNotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekPlanNotificationScheduler.swift; sourceTree = "<group>"; };
+		WP01FR0000000000000003 /* WeekPlannerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekPlannerViewModel.swift; sourceTree = "<group>"; };
+		WP01FR0000000000000004 /* WeekPlannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekPlannerView.swift; sourceTree = "<group>"; };
+		WP01FR0000000000000005 /* WeekPlannerViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekPlannerViewModelTests.swift; sourceTree = "<group>"; };
+		WP01FR0000000000000006 /* WeekPlanNotificationSchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekPlanNotificationSchedulerTests.swift; sourceTree = "<group>"; };
 		09D6378272AE2D99A215788C /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		106F6C638D7D7BC45FC53DE7 /* MainFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlowView.swift; sourceTree = "<group>"; };
 		14E774459799783475D23A6C /* OutfitViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitViewModel.swift; sourceTree = "<group>"; };
@@ -261,6 +273,8 @@
 		384222D780F1291F491220F0 /* OutfitSuggestorTests */ = {
 			isa = PBXGroup;
 			children = (
+				WP01FR0000000000000005 /* WeekPlannerViewModelTests.swift */,
+				WP01FR0000000000000006 /* WeekPlanNotificationSchedulerTests.swift */,
 				A4ED51E6300690222125BE0F /* APIServiceIntegrationTests.swift */,
 				A1V2I3S4B5I6L7I8T9Y0A04 /* AdminVisibilityTests.swift */,
 				969C61A8446536869AAFE1CD /* AppConfigTests.swift */,
@@ -330,6 +344,7 @@
 		48DB226138D7502CAC1BBDC4 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				WP01FR0000000000000004 /* WeekPlannerView.swift */,
 				INS01GRP0000000000000001 /* Insights */,
 				E3A4B5C6D7E8F90A394A5B6E /* AdminIntegrationTestRunnerView.swift */,
 				60FB09DAD00AB05C5F220D23 /* AboutView.swift */,
@@ -375,6 +390,7 @@
 		66285900FE692F74CCF8A1C2 /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
+				WP01FR0000000000000003 /* WeekPlannerViewModel.swift */,
 				14E774459799783475D23A6C /* OutfitViewModel.swift */,
 				A1R2E3P4O5R6T7M8O9D0E03 /* ReportsViewModel.swift */,
 			);
@@ -394,6 +410,7 @@
 		B03A5A91EAFDED2AFA475892 /* Utils */ = {
 			isa = PBXGroup;
 			children = (
+				WP01FR0000000000000002 /* WeekPlanNotificationScheduler.swift */,
 				A1B2C3D4E5F60718293A4B5C /* AiProgressSteps.swift */,
 				A1V2I3S4B5I6L7I8T9Y0A02 /* AdminVisibility.swift */,
 				D4E5F60718293A4B5C6D8E1 /* AuthPromptCopy.swift */,
@@ -466,6 +483,7 @@
 		C70E62A8CE7289CD4E56579C /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				WP01FR0000000000000001 /* WeekPlanModels.swift */,
 				E7F8B084F37279B1A44C15F4 /* AuthModels.swift */,
 				EF7CFFE9C12AF6FE014BD2FD /* HistoryModels.swift */,
 				4BC8F20C54523955442C7FFF /* OutfitModels.swift */,
@@ -601,6 +619,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				WP01BF0000000000000001 /* WeekPlanModels.swift in Sources */,
+				WP01BF0000000000000002 /* WeekPlanNotificationScheduler.swift in Sources */,
+				WP01BF0000000000000003 /* WeekPlannerViewModel.swift in Sources */,
+				WP01BF0000000000000004 /* WeekPlannerView.swift in Sources */,
 				D49CCC05C1C483C20F5B066E /* APIService.swift in Sources */,
 				F3A4B5C6D7E8F90A394A5B6F /* AdminIntegrationTestRunnerView.swift in Sources */,
 				C7F027A59B48C9E0730C18C5 /* AboutView.swift in Sources */,
@@ -696,6 +718,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				WP01BF0000000000000005 /* WeekPlannerViewModelTests.swift in Sources */,
+				WP01BF0000000000000006 /* WeekPlanNotificationSchedulerTests.swift in Sources */,
 				0D0FFD43456FF9B083A5AE92 /* APIServiceIntegrationTests.swift in Sources */,
 				A1V2I3S4B5I6L7I8T9Y0A03 /* AdminVisibilityTests.swift in Sources */,
 				C3D4E5F60718293A4B5C6D7E /* AiProgressStepsTests.swift in Sources */,

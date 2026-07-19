@@ -3,6 +3,7 @@ export type AuthPromptContextKey =
   | 'like'
   | 'history'
   | 'wardrobe'
+  | 'week'
   | 'insights'
   | 'settings'
   | 'guest-limit';
@@ -35,6 +36,11 @@ export const AUTH_PROMPT_COPY: Record<AuthPromptContextKey, AuthPromptCopy> = {
     headline: 'Upload your clothes once and get unlimited combinations.',
     subheadline: 'Build a digital closet and get wardrobe-aware suggestions.',
     primaryCta: 'Create account',
+  },
+  week: {
+    headline: 'Plan your week’s outfits in one place.',
+    subheadline: 'Sign in to save day plans, generate looks, and see Today’s outfit.',
+    primaryCta: 'Sign in',
   },
   insights: {
     headline: 'See what your wardrobe is missing.',

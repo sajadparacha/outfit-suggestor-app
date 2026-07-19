@@ -16,6 +16,7 @@ import OutfitHistory from './views/components/OutfitHistory';
 import About from './views/components/About';
 import UserGuide from './views/components/UserGuide';
 import Wardrobe from './views/components/Wardrobe';
+import WeekPlanner from './views/WeekPlanner';
 import AdminReports from './views/components/AdminReports';
 import AdminIntegrationTestRunner from './views/components/AdminIntegrationTestRunner';
 import Toast from './views/components/Toast';
@@ -34,6 +35,7 @@ import { useHistorySearchController } from './controllers/useHistorySearchContro
 import { useToastController } from './controllers/useToastController';
 import { useAuthController } from './controllers/useAuthController';
 import { useWardrobeController } from './controllers/useWardrobeController';
+import { useWeekPlanController } from './controllers/useWeekPlanController';
 import ApiService from './services/ApiService';
 import WardrobeInsightsPage from './views/components/insights/WardrobeInsightsPage';
 import { WardrobeGapAnalysisResponse } from './models/WardrobeModels';
@@ -206,6 +208,12 @@ function App() {
 
   // Wardrobe controller for auto-add functionality
   const { analyzeImage, addItem, loading: wardrobeLoading } = useWardrobeController();
+
+  const weekPlan = useWeekPlanController({
+    userId: user?.id ?? null,
+    isAuthenticated: isAuthenticated,
+  });
+
   const [addingToWardrobe, setAddingToWardrobe] = useState(false);
   const wardrobeAnalysisAbortRef = useRef<AbortController | null>(null);
   const wasAuthenticatedRef = useRef<boolean | null>(null);
@@ -824,6 +832,48 @@ function App() {
             )
           ) : (
             <Navigate to={ROUTES.MAIN} replace />
+          )
+            }
+          />
+
+          <Route
+            path={ROUTES.WEEK}
+            element={
+          isAuthenticated ? (
+            <ErrorBoundary label="Week Planner" resetKey={location.pathname}>
+              <WeekPlanner
+                plan={weekPlan.plan}
+                today={weekPlan.today}
+                loading={weekPlan.loading}
+                generating={weekPlan.generating}
+                saving={weekPlan.saving}
+                error={weekPlan.error}
+                message={weekPlan.message}
+                enabledDayCount={weekPlan.enabledDayCount}
+                onUpdateDay={weekPlan.updateDay}
+                onSetReminderTime={weekPlan.setReminderTime}
+                onSetSharedStyle={weekPlan.setSharedStyle}
+                onSetSharedSeason={weekPlan.setSharedSeason}
+                onSave={() => {
+                  weekPlan.savePlan().catch(() => undefined);
+                }}
+                onGenerateWeek={() => {
+                  weekPlan.generateWeek().catch(() => undefined);
+                }}
+                onRegenerateDay={(day) => {
+                  weekPlan.regenerateDay(day).catch(() => undefined);
+                }}
+                onClearPlan={() => {
+                  weekPlan.clearPlan().catch(() => undefined);
+                }}
+              />
+            </ErrorBoundary>
+          ) : (
+            <AuthGateCard
+              contextKey="week"
+              onCreateAccount={() => openAuthPromptRegister('week')}
+              onSignIn={() => openAuthPromptSignIn('week')}
+            />
           )
             }
           />

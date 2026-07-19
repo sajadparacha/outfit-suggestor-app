@@ -14,6 +14,7 @@ enum AuthPromptContext: String, CaseIterable {
     case history
     case wardrobe
     case insights
+    case week
     case settings
     case guestLimit = "guest-limit"
 }
@@ -59,6 +60,12 @@ enum AuthPromptCopy {
                 subheadline: "Sign in to run gap analysis on your saved items.",
                 primaryCTA: "Sign in"
             )
+        case .week:
+            return AuthPromptContent(
+                headline: "Plan outfits for your whole week.",
+                subheadline: "Sign in to enable days, generate looks, and get morning reminders.",
+                primaryCTA: "Sign in"
+            )
         case .settings:
             return AuthPromptContent(
                 headline: "Manage your account and preferences.",
@@ -78,7 +85,7 @@ enum AuthPromptCopy {
         switch context {
         case .firstOutfit, .history, .wardrobe, .guestLimit:
             return true
-        case .like, .insights, .settings:
+        case .like, .insights, .week, .settings:
             return false
         }
     }

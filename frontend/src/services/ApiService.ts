@@ -15,6 +15,12 @@ import {
   WardrobeGapAnalysisRequest,
   WardrobeGapAnalysisResponse,
 } from '../models/WardrobeModels';
+import {
+  WeekPlan,
+  WeekPlanGenerateRequest,
+  WeekPlanToday,
+  WeekPlanUpsertRequest,
+} from '../models/WeekPlanModels';
 import { getGuestSessionId } from '../utils/guestSession';
 
 class ApiService {
@@ -1292,6 +1298,75 @@ class ApiService {
       throw new Error(errorMessage);
     }
     return await response.json();
+  }
+
+  /** GET /api/week-plan — load current user's weekly outfit plan */
+  async getWeekPlan(): Promise<WeekPlan> {
+    const url = `${this.baseUrl}/api/week-plan`;
+    const response = await this.fetchWithLogging(url, {
+      headers: this.getHeaders(),
+    });
+    if (!response.ok) {
+      const error: ApiError = await response.json().catch(() => ({ detail: 'Failed to load week plan' }));
+      throw new Error(error.detail || 'Failed to load week plan');
+    }
+    return await response.json();
+  }
+
+  /** PUT /api/week-plan — upsert plan (days, style, reminder, timezone) */
+  async putWeekPlan(body: WeekPlanUpsertRequest): Promise<WeekPlan> {
+    const url = `${this.baseUrl}/api/week-plan`;
+    const response = await this.fetchWithLogging(url, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const error: ApiError = await response.json().catch(() => ({ detail: 'Failed to save week plan' }));
+      throw new Error(error.detail || 'Failed to save week plan');
+    }
+    return await response.json();
+  }
+
+  /** POST /api/week-plan/generate — generate outfits for enabled days or one day */
+  async generateWeekPlan(body?: WeekPlanGenerateRequest): Promise<WeekPlan> {
+    const url = `${this.baseUrl}/api/week-plan/generate`;
+    const response = await this.fetchWithLogging(url, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(body ?? {}),
+    });
+    if (!response.ok) {
+      const error: ApiError = await response.json().catch(() => ({ detail: 'Failed to generate week plan' }));
+      throw new Error(error.detail || 'Failed to generate week plan');
+    }
+    return await response.json();
+  }
+
+  /** GET /api/week-plan/today — today's planned day + outfit */
+  async getWeekPlanToday(): Promise<WeekPlanToday> {
+    const url = `${this.baseUrl}/api/week-plan/today`;
+    const response = await this.fetchWithLogging(url, {
+      headers: this.getHeaders(),
+    });
+    if (!response.ok) {
+      const error: ApiError = await response.json().catch(() => ({ detail: 'Failed to load today\'s plan' }));
+      throw new Error(error.detail || "Failed to load today's plan");
+    }
+    return await response.json();
+  }
+
+  /** DELETE /api/week-plan — clear plan and stored outfits */
+  async deleteWeekPlan(): Promise<void> {
+    const url = `${this.baseUrl}/api/week-plan`;
+    const response = await this.fetchWithLogging(url, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+    if (!response.ok) {
+      const error: ApiError = await response.json().catch(() => ({ detail: 'Failed to clear week plan' }));
+      throw new Error(error.detail || 'Failed to clear week plan');
+    }
   }
 }
 

@@ -22,6 +22,7 @@ struct AboutView: View {
                         .font(.headline)
                     Text(AboutCopy.wardrobeInsightsFeature)
                     Text(AboutCopy.outfitSuggestionsFeature)
+                    Text(AboutCopy.weekPlannerFeature)
                     Text(AboutCopy.wardrobeFilterFeature)
                     Text("• Blazers, jackets, coats (outerwear), and sweaters can be selected for outfit completion—only one of blazer, outerwear, or sweater at a time.")
                     Text("• Outfit history when logged in")

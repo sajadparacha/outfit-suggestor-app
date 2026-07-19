@@ -103,6 +103,7 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
     { id: 'results', label: 'Your results', icon: '✨' },
     { id: 'wardrobe-analysis', label: 'Insights & wardrobe analysis', icon: '🧠' },
     { id: 'wardrobe', label: 'Wardrobe', icon: '👔' },
+    { id: 'week-planner', label: 'Week planner', icon: '📅' },
     { id: 'random-history', label: 'Random & history', icon: '🎲' },
     { id: 'account', label: 'Account', icon: '⚙️' },
     { id: 'pwa', label: 'Install app', icon: '📲' },
@@ -310,6 +311,31 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
         </SectionCard>
 
         <SectionCard
+          id="week-planner"
+          icon="📅"
+          title="Week Outfit Planner"
+          subtitle="Plan looks for the days you need them—wake up knowing what to wear."
+          accent="blue"
+        >
+          <StepList
+            items={[
+              'Open the Week tab (sign in required). Turn on the days you want to plan and pick an occasion and style for each.',
+              'Set a shared season for the week, plus a reminder time. Your device timezone is saved with the plan.',
+              'Tap Save plan to persist, or Generate week to create wardrobe-based outfits for every enabled day. Use Regenerate on a single day anytime.',
+              'Clear plan asks for confirmation, then permanently deletes the saved week (no undo).',
+              'Today at the top shows today’s occasion and outfit summary (with wardrobe preview thumbnails when available).',
+              'Per day: toggle Use wardrobe (default on), then expand a day’s look for item details.',
+            ]}
+          />
+          <TipBox>
+            <strong className="text-white">Reminders:</strong> daily wake-up notifications are{' '}
+            <span className="text-white font-medium">iOS-first</span> (local notifications on your phone). On the web,
+            use the <span className="text-white font-medium">Today</span> section in the app—no OS push required for v1.
+            Add items to your wardrobe first so Generate week can fill looks without calling open-ended AI.
+          </TipBox>
+        </SectionCard>
+
+        <SectionCard
           id="random-history"
           icon="🎲"
           title="Random picks & history"
@@ -354,6 +380,7 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
           <div className="grid gap-3 sm:grid-cols-2">
             {[
               { k: 'Settings', d: 'Email, name, password, and a shortcut to your wardrobe.' },
+              { k: 'Week', d: 'Week Outfit Planner—enable days, occasions, generate looks, and see Today in-app.' },
               { k: 'Insights', d: 'Wardrobe Insights—gap score, priorities, coverage dashboard, and actionable buy-next cards.' },
               { k: 'Guide', d: 'Step-by-step help and tips (this page).' },
               { k: 'About', d: 'Product story, features, and creator links—open from the page footer.' },

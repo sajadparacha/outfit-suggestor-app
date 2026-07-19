@@ -9,13 +9,14 @@
 //  |---------------------------|-------------|-------------------------|
 //  | /                         | Suggest (0) | —                       |
 //  | /wardrobe                 | Wardrobe (1)| —                       |
-//  | /history                  | Looks (2)   | —                       |
-//  | /insights                 | Profile (3) | InsightsView            |
-//  | /guide                    | Profile (3) | UserGuideView           |
-//  | /about                    | Profile (3) | AboutView               |
-//  | /settings                 | Profile (3) | — (root SettingsView)   |
-//  | /admin/reports            | Profile (3) | ReportsView             |
-//  | /admin/integration-tests  | Profile (3) | AdminIntegrationTest…   |
+//  | /week                     | Week (2)    | —                       |
+//  | /history                  | Looks (3)   | —                       |
+//  | /insights                 | Profile (4) | InsightsView            |
+//  | /guide                    | Profile (4) | UserGuideView           |
+//  | /about                    | Profile (4) | AboutView               |
+//  | /settings                 | Profile (4) | — (root SettingsView)   |
+//  | /admin/reports            | Profile (4) | ReportsView             |
+//  | /admin/integration-tests  | Profile (4) | AdminIntegrationTest…   |
 //
 //  Unknown paths redirect to `/`.
 //  Query: `/wardrobe?category=shirt` seeds wardrobe category filter.
@@ -30,6 +31,7 @@ enum AppRoute {
     static let wardrobe = "/wardrobe"
     static let history = "/history"
     static let insights = "/insights"
+    static let week = "/week"
     static let guide = "/guide"
     static let about = "/about"
     static let settings = "/settings"
@@ -41,6 +43,7 @@ enum AppRoute {
         wardrobe,
         history,
         insights,
+        week,
         guide,
         about,
         settings,
@@ -51,12 +54,14 @@ enum AppRoute {
     enum TabIndex: Int, CaseIterable {
         case suggest = 0
         case wardrobe = 1
-        case history = 2
-        case profile = 3
+        case week = 2
+        case history = 3
+        case profile = 4
     }
 
     enum ProfileDestination: String, Hashable {
         case insights
+        case week // kept for Settings NavigationLink / legacy deep-link stack; primary entry is Week tab
         case guide
         case about
         case adminReports
@@ -97,6 +102,7 @@ enum AppRoute {
         switch path {
         case home: return .suggest
         case wardrobe: return .wardrobe
+        case week: return .week
         case history: return .history
         case insights, guide, about, settings, adminReports, adminIntegrationTests: return .profile
         default: return nil
@@ -106,6 +112,7 @@ enum AppRoute {
     static func profileDestination(for path: String) -> ProfileDestination? {
         switch path {
         case insights: return .insights
+        case week: return nil // Week is its own tab; do not push Profile stack
         case guide: return .guide
         case about: return .about
         case adminReports: return .adminReports

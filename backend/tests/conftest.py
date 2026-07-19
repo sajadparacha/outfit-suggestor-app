@@ -50,6 +50,11 @@ from models.outfit_history import OutfitHistory
 from models.outfit import OutfitSuggestion
 from models.access_log import AccessLog  # noqa: F401 — register metadata for create_all
 from models.guest_usage import GuestUsage  # noqa: F401 — register metadata for create_all
+from models.week_plan import (  # noqa: F401 — register metadata for create_all
+    WeeklyPlan,
+    WeeklyPlanDay,
+    WeeklyPlanOutfit,
+)
 from utils.auth import get_password_hash
 from dependencies import get_current_user, get_current_active_user, get_optional_user
 from config import get_outfit_controller, get_wardrobe_controller

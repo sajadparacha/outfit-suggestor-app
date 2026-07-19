@@ -14,6 +14,7 @@ except ImportError:  # When imported as backend.main
 from routes.outfit_routes import router as outfit_router
 from routes.auth_routes import router as auth_router
 from routes.wardrobe_routes import router as wardrobe_router
+from routes.week_plan_routes import router as week_plan_router
 from routes.access_log_routes import router as access_log_router
 from routes.reports_routes import router as reports_router
 from routes.integration_test_routes import router as integration_test_router
@@ -22,6 +23,7 @@ from models.database import Base, engine
 from models.user import User  # noqa: F401
 from models.outfit_history import OutfitHistory  # noqa: F401
 from models.wardrobe import WardrobeItem  # noqa: F401
+from models.week_plan import WeeklyPlan, WeeklyPlanDay, WeeklyPlanOutfit  # noqa: F401
 from models.access_log import AccessLog  # noqa: F401
 from models.guest_usage import GuestUsage  # noqa: F401
 from exceptions import GuestLimitReachedException
@@ -85,6 +87,7 @@ async def guest_limit_reached_handler(_request: Request, _exc: GuestLimitReached
 app.include_router(auth_router)
 app.include_router(outfit_router)
 app.include_router(wardrobe_router)
+app.include_router(week_plan_router)
 app.include_router(access_log_router)
 app.include_router(reports_router)
 app.include_router(integration_test_router)

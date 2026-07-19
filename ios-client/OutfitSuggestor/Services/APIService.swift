@@ -894,6 +894,90 @@ class APIService {
         }
         return try JSONDecoder().decode(WardrobeGapAnalysisResponse.self, from: data)
     }
+
+    // MARK: - Week Plan
+
+    func getWeekPlan() async throws -> WeekPlanResponse {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
+        guard let url = URL(string: "\(baseURL)/api/week-plan") else { throw APIServiceError.invalidURL }
+        var request = URLRequest(url: url)
+        setAuthIfNeeded(&request)
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
+            throw APIServiceError.invalidResponse
+        }
+        return try JSONDecoder().decode(WeekPlanResponse.self, from: data)
+    }
+
+    func putWeekPlan(_ body: WeekPlanUpsertRequest) async throws -> WeekPlanResponse {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
+        guard let url = URL(string: "\(baseURL)/api/week-plan") else { throw APIServiceError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        setAuthIfNeeded(&request)
+        request.httpBody = try JSONEncoder().encode(body)
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
+            throw APIServiceError.invalidResponse
+        }
+        return try JSONDecoder().decode(WeekPlanResponse.self, from: data)
+    }
+
+    func generateWeekPlan(dayOfWeek: Int? = nil) async throws -> WeekPlanResponse {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
+        guard let url = URL(string: "\(baseURL)/api/week-plan/generate") else { throw APIServiceError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        setAuthIfNeeded(&request)
+        request.timeoutInterval = 120
+        let body = WeekPlanGenerateRequest(day_of_week: dayOfWeek)
+        request.httpBody = try JSONEncoder().encode(body)
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
+            throw APIServiceError.invalidResponse
+        }
+        return try JSONDecoder().decode(WeekPlanResponse.self, from: data)
+    }
+
+    func getWeekPlanToday() async throws -> WeekPlanTodayResponse {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
+        guard let url = URL(string: "\(baseURL)/api/week-plan/today") else { throw APIServiceError.invalidURL }
+        var request = URLRequest(url: url)
+        setAuthIfNeeded(&request)
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
+            throw APIServiceError.invalidResponse
+        }
+        return try JSONDecoder().decode(WeekPlanTodayResponse.self, from: data)
+    }
+
+    func deleteWeekPlan() async throws -> WeekPlanDeleteResponse {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
+        guard let url = URL(string: "\(baseURL)/api/week-plan") else { throw APIServiceError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        setAuthIfNeeded(&request)
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
+            throw APIServiceError.invalidResponse
+        }
+        if let decoded = try? JSONDecoder().decode(WeekPlanDeleteResponse.self, from: data) {
+            return decoded
+        }
+        return WeekPlanDeleteResponse(deleted: true)
+    }
     
 }
 

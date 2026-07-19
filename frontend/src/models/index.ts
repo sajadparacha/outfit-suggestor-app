@@ -5,4 +5,5 @@
 
 export * from './OutfitModels';
 export * from './GuestModels';
+export * from './WeekPlanModels';
 

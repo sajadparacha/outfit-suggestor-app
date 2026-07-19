@@ -62,6 +62,7 @@ const NavBar: React.FC<NavBarProps> = ({
   const mainLinks: { view: AppView; label: string }[] = [
     { view: 'main', label: 'Suggest' },
     { view: 'wardrobe', label: 'Wardrobe' },
+    { view: 'week', label: 'Week' },
     { view: 'history', label: 'History' },
     { view: 'insights', label: 'Insights' },
     { view: 'guide', label: 'Guide' },

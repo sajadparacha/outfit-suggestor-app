@@ -51,7 +51,7 @@ struct SettingsView: View {
                 }
             } else {
                 Section("Guest mode") {
-                    Text("You can still get outfit suggestions as a guest. Log in to use Looks, Wardrobe, Random picks, and Insights.")
+                    Text("You can still get outfit suggestions as a guest. Log in to use Looks, Wardrobe, Week Planner, Random picks, and Insights.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -67,6 +67,17 @@ struct SettingsView: View {
 
             Section("Discover") {
                 if auth.isAuthenticated {
+                    Button {
+                        RouteCoordinator.shared.selectedTab = .week
+                    } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Label("Week Planner", systemImage: "calendar")
+                            Text(MicroHelpCopy.weekPlanner)
+                                .font(.caption)
+                                .foregroundColor(AppTheme.textSecondary)
+                        }
+                    }
+                    .accessibilityIdentifier("profile.weekPlannerLink")
                     NavigationLink(destination: InsightsView()) {
                         VStack(alignment: .leading, spacing: 2) {
                             Label("Insights", systemImage: "chart.bar.xaxis")
