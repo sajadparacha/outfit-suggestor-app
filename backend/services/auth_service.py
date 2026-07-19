@@ -1,5 +1,5 @@
 """Auth Service - Business logic for authentication operations"""
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict
 from sqlalchemy.orm import Session
 
@@ -162,7 +162,7 @@ class AuthService:
             return {"status": "error", "error": "Invalid activation token"}
         
         # Check if token is expired
-        if user.activation_token_expires and user.activation_token_expires < datetime.utcnow():
+        if user.activation_token_expires and user.activation_token_expires < datetime.now(timezone.utc):
             return {
                 "status": "error",
                 "error": "Activation token has expired. Please register again or request a new activation email."
