@@ -177,7 +177,7 @@ final class WeekPlannerViewModelTests: XCTestCase {
         XCTAssertEqual(body.days.first(where: { $0.day_of_week == 1 })?.enabled, true)
         XCTAssertEqual(body.days.first(where: { $0.day_of_week == 1 })?.occasion, "date-night")
         XCTAssertEqual(body.days.first(where: { $0.day_of_week == 1 })?.style, "minimal")
-        XCTAssertEqual(vm.infoMessage, "Plan saved.")
+        XCTAssertEqual(vm.infoMessage, WeekPlanCopy.planSaved)
     }
 
     func testGenerateWeekSavesThenGeneratesAndReschedulesNotifications() async {
@@ -402,5 +402,152 @@ final class WeekPlannerViewModelTests: XCTestCase {
         XCTAssertEqual(api.deleteCount, 1)
         XCTAssertEqual(api.historyGetCount, before + 1)
         XCTAssertEqual(vm.history.first?.id, 3)
+    }
+
+    // MARK: - Responsive redesign: selection / missing / save / actions
+
+    func testSelectDayUpdatesSelectedDayWithoutReload() async {
+        let api = MockAPI()
+        api.plan.days[0].enabled = true
+        api.plan.days[0].outfit = WeekPlanOutfitResponse(
+            summary: "Mon look",
+            shirt: "Shirt",
+            trouser: "Trouser",
+            shoes: "Shoes",
+            belt: "Belt"
+        )
+        api.plan.days[2].enabled = true
+        api.plan.days[2].outfit = WeekPlanOutfitResponse(
+            summary: "Wed look",
+            shirt: "W Shirt",
+            trouser: "W Trouser",
+            shoes: "W Shoes",
+            belt: "W Belt"
+        )
+        api.today = WeekPlanTodayResponse(
+            day_of_week: 0,
+            enabled: true,
+            occasion: "work",
+            outfit: api.plan.days[0].outfit,
+            reminder_time: "07:30",
+            timezone: "UTC",
+            has_plan: true
+        )
+        let vm = WeekPlannerViewModel(api: api, notifier: MockNotifier(), timezoneProvider: { "UTC" })
+        await vm.load()
+        let getsBefore = api.getCount
+
+        XCTAssertEqual(vm.selectedDayOfWeek, 0)
+        XCTAssertEqual(vm.selectedDay?.outfit?.summary, "Mon look")
+
+        vm.selectDay(2)
+
+        XCTAssertEqual(vm.selectedDayOfWeek, 2)
+        XCTAssertEqual(vm.selectedDay?.outfit?.summary, "Wed look")
+        XCTAssertEqual(api.getCount, getsBefore, "Day selection must not reload the plan")
+    }
+
+    func testMissingSlotsDetectedFromEmptyOutfitStrings() async throws {
+        let api = MockAPI()
+        api.plan.days[0].enabled = true
+        api.plan.days[0].outfit = WeekPlanOutfitResponse(
+            summary: "Incomplete",
+            shirt: "White oxford",
+            trouser: "",
+            shoes: "Loafers",
+            belt: ""
+        )
+        let vm = WeekPlannerViewModel(api: api, notifier: MockNotifier(), timezoneProvider: { "UTC" })
+        await vm.load()
+
+        let day = try XCTUnwrap(vm.plan.days.first)
+        XCTAssertEqual(vm.dayStatus(for: day), .missing)
+        let missing = vm.missingSlots(for: day)
+        XCTAssertEqual(missing.map(\.category), ["trouser", "belt"])
+        XCTAssertTrue(vm.showsMissingActions(for: day))
+    }
+
+    func testDayStatusReadyRestAndNotGenerated() {
+        let rest = WeekPlanDayResponse(
+            day_of_week: 0,
+            enabled: false,
+            occasion: "everyday"
+        )
+        XCTAssertEqual(WeekPlanMissingSlots.status(for: rest), .restDay)
+
+        let notGen = WeekPlanDayResponse(
+            day_of_week: 1,
+            enabled: true,
+            occasion: "work"
+        )
+        XCTAssertEqual(WeekPlanMissingSlots.status(for: notGen), .notGenerated)
+
+        let ready = WeekPlanDayResponse(
+            day_of_week: 2,
+            enabled: true,
+            occasion: "work",
+            outfit: WeekPlanOutfitResponse(
+                summary: "Ready look",
+                shirt: "Shirt",
+                trouser: "Trouser",
+                shoes: "Shoes",
+                belt: "Belt"
+            )
+        )
+        XCTAssertEqual(WeekPlanMissingSlots.status(for: ready), .ready)
+    }
+
+    func testSaveDisabledWhileSavingOrGenerating() async {
+        let api = MockAPI()
+        let vm = WeekPlannerViewModel(api: api, notifier: MockNotifier(), timezoneProvider: { "UTC" })
+        await vm.load()
+
+        XCTAssertFalse(vm.isSaveDisabled)
+
+        vm.isSaving = true
+        XCTAssertTrue(vm.isSaveDisabled)
+        vm.isSaving = false
+
+        vm.isGenerating = true
+        XCTAssertTrue(vm.isSaveDisabled)
+        vm.isGenerating = false
+
+        vm.isRestoring = true
+        XCTAssertTrue(vm.isSaveDisabled)
+        vm.isRestoring = false
+
+        XCTAssertFalse(vm.isSaveDisabled)
+    }
+
+    func testMissingActionsChooseFindContinue() async throws {
+        let api = MockAPI()
+        api.plan.days[1].enabled = true
+        api.plan.days[1].outfit = WeekPlanOutfitResponse(
+            summary: "Gap look",
+            shirt: "Shirt",
+            trouser: "",
+            shoes: "Shoes",
+            belt: "Belt"
+        )
+        let vm = WeekPlannerViewModel(api: api, notifier: MockNotifier(), timezoneProvider: { "UTC" })
+        await vm.load()
+        vm.selectDay(1)
+
+        let day = try XCTUnwrap(vm.selectedDay)
+        XCTAssertTrue(vm.showsMissingActions(for: day))
+
+        vm.chooseFromWardrobe(dayOfWeek: 1)
+        XCTAssertEqual(vm.lastMissingAction, .chooseFromWardrobe(dayOfWeek: 1))
+
+        vm.continueWithoutMissing(dayOfWeek: 1)
+        XCTAssertEqual(vm.lastMissingAction, .continueWithout(dayOfWeek: 1))
+        XCTAssertTrue(vm.dismissedMissingDays.contains(1))
+        XCTAssertFalse(vm.showsMissingActions(for: day))
+
+        await vm.findAlternative(dayOfWeek: 1)
+        XCTAssertEqual(vm.lastMissingAction, .findAlternative(dayOfWeek: 1))
+        XCTAssertEqual(api.generateCalls, [1])
+        // After regenerate, dismissal cleared so missing UI can reappear if still incomplete.
+        XCTAssertFalse(vm.dismissedMissingDays.contains(1))
     }
 }

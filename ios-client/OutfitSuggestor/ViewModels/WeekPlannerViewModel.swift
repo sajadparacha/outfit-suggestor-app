@@ -37,12 +37,17 @@ final class WeekPlannerViewModel: ObservableObject {
     @Published var plan: WeekPlanResponse = .empty()
     @Published var today: WeekPlanTodayResponse?
     @Published var history: [WeekPlanHistoryItem] = []
+    @Published var selectedDayOfWeek: Int = 0
     @Published var isLoading = false
     @Published var isSaving = false
     @Published var isGenerating = false
     @Published var isRestoring = false
     @Published var errorMessage: String?
     @Published var infoMessage: String?
+    /// Days where the user dismissed the missing-item prompt (local only).
+    @Published private(set) var dismissedMissingDays: Set<Int> = []
+    /// Last missing-item action taken (for tests / navigation hooks).
+    @Published private(set) var lastMissingAction: WeekPlanMissingAction?
 
     private let api: WeekPlanAPIClient
     private let notifier: WeekPlanNotificationScheduling
@@ -68,6 +73,55 @@ final class WeekPlannerViewModel: ObservableObject {
         return nil
     }
 
+    var isBusy: Bool {
+        isGenerating || isSaving || isRestoring || isLoading
+    }
+
+    var isSaveDisabled: Bool {
+        isGenerating || isSaving || isRestoring
+    }
+
+    var selectedDay: WeekPlanDayResponse? {
+        plan.days.first { $0.day_of_week == selectedDayOfWeek }
+    }
+
+    func selectDay(_ dayOfWeek: Int) {
+        guard plan.days.contains(where: { $0.day_of_week == dayOfWeek }) else { return }
+        selectedDayOfWeek = dayOfWeek
+    }
+
+    func dayStatus(for day: WeekPlanDayResponse) -> WeekPlanDayStatus {
+        WeekPlanMissingSlots.status(for: day)
+    }
+
+    func missingSlots(for day: WeekPlanDayResponse) -> [WeekPlanOutfitDisplay.SlotRow] {
+        guard let outfit = day.outfit else { return [] }
+        return WeekPlanMissingSlots.missing(for: outfit)
+    }
+
+    func showsMissingActions(for day: WeekPlanDayResponse) -> Bool {
+        guard dayStatus(for: day) == .missing else { return false }
+        return !dismissedMissingDays.contains(day.day_of_week)
+    }
+
+    /// Choose from wardrobe — typed stub; view navigates to Wardrobe tab. No invent PUT.
+    func chooseFromWardrobe(dayOfWeek: Int) {
+        lastMissingAction = .chooseFromWardrobe(dayOfWeek: dayOfWeek)
+    }
+
+    /// Find alternative → existing regenerate-day API.
+    func findAlternative(dayOfWeek: Int) async {
+        lastMissingAction = .findAlternative(dayOfWeek: dayOfWeek)
+        dismissedMissingDays.remove(dayOfWeek)
+        await regenerateDay(dayOfWeek)
+    }
+
+    /// Continue without — local dismiss of missing prompt for that day.
+    func continueWithoutMissing(dayOfWeek: Int) {
+        dismissedMissingDays.insert(dayOfWeek)
+        lastMissingAction = .continueWithout(dayOfWeek: dayOfWeek)
+    }
+
     func load() async {
         isLoading = true
         errorMessage = nil
@@ -83,10 +137,12 @@ final class WeekPlannerViewModel: ObservableObject {
             if let message = plan.message, !message.isEmpty {
                 infoMessage = message
             }
+            syncSelectedDayAfterLoad()
             await syncNotifications()
         } catch {
             errorMessage = error.localizedDescription
             plan = .empty(timezone: timezoneProvider())
+            syncSelectedDayAfterLoad()
         }
     }
 
@@ -111,6 +167,8 @@ final class WeekPlannerViewModel: ObservableObject {
             plan = normalize(restored)
             today = try? await api.getWeekPlanToday()
             infoMessage = WeekPlanCopy.planRestored
+            dismissedMissingDays.removeAll()
+            syncSelectedDayAfterLoad()
             await refreshHistory()
             await syncNotifications()
         } catch {
@@ -123,6 +181,7 @@ final class WeekPlannerViewModel: ObservableObject {
         plan.days[idx].enabled = enabled
         if !enabled {
             plan.days[idx].outfit = nil
+            dismissedMissingDays.remove(dayOfWeek)
         }
         Task { await syncNotifications() }
     }
@@ -165,7 +224,7 @@ final class WeekPlannerViewModel: ObservableObject {
             let saved = try await api.putWeekPlan(body)
             plan = normalize(saved)
             today = try? await api.getWeekPlanToday()
-            infoMessage = "Plan saved to your account."
+            infoMessage = WeekPlanCopy.planSaved
             await syncNotifications()
         } catch {
             errorMessage = error.localizedDescription
@@ -189,6 +248,8 @@ final class WeekPlannerViewModel: ObservableObject {
             plan = .empty(timezone: timezoneProvider())
             today = nil
             infoMessage = "Plan cleared."
+            dismissedMissingDays.removeAll()
+            syncSelectedDayAfterLoad()
             await refreshHistory()
             await notifier.cancelAll()
         } catch {
@@ -197,6 +258,19 @@ final class WeekPlannerViewModel: ObservableObject {
     }
 
     // MARK: - Private
+
+    private func syncSelectedDayAfterLoad() {
+        if let todayDow = today?.day_of_week,
+           plan.days.contains(where: { $0.day_of_week == todayDow }) {
+            selectedDayOfWeek = todayDow
+            return
+        }
+        if let firstEnabled = plan.days.first(where: \.enabled)?.day_of_week {
+            selectedDayOfWeek = firstEnabled
+            return
+        }
+        selectedDayOfWeek = plan.days.first?.day_of_week ?? 0
+    }
 
     private func generate(dayOfWeek: Int?) async {
         isGenerating = true
@@ -218,6 +292,12 @@ final class WeekPlannerViewModel: ObservableObject {
             let generated = try await api.generateWeekPlan(dayOfWeek: dayOfWeek)
             plan = normalize(generated)
             today = try? await api.getWeekPlanToday()
+            if let dayOfWeek {
+                dismissedMissingDays.remove(dayOfWeek)
+                selectedDayOfWeek = dayOfWeek
+            } else {
+                dismissedMissingDays.removeAll()
+            }
             if plan.wardrobe_empty {
                 infoMessage = plan.message ?? WeekPlanCopy.emptyWardrobe
             } else if let message = plan.message, !message.isEmpty {
@@ -257,7 +337,7 @@ final class WeekPlannerViewModel: ObservableObject {
     private func normalize(_ response: WeekPlanResponse) -> WeekPlanResponse {
         var plan = response
         if plan.days.count < 7 {
-            var byDow = Dictionary(uniqueKeysWithValues: plan.days.map { ($0.day_of_week, $0) })
+            let byDow = Dictionary(uniqueKeysWithValues: plan.days.map { ($0.day_of_week, $0) })
             plan.days = (0..<7).map { dow in
                 byDow[dow] ?? WeekPlanDayResponse(
                     day_of_week: dow,

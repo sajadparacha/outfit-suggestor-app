@@ -101,7 +101,8 @@ describe('Admin visibility gating', () => {
     it('shows admin how-to content for admins', () => {
       renderComponent(<UserGuide isAdmin={true} />);
 
-      expect(screen.getByText(/Show AI Prompt & Response/i)).toBeInTheDocument();
+      // Guide mentions this toggle in more than one admin tip (Suggest + Week Planner).
+      expect(screen.getAllByText(/Show AI Prompt & Response/i).length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText(/Admin users:/i)).toBeInTheDocument();
       expect(screen.getByText(/^Reports$/)).toBeInTheDocument();
     });

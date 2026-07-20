@@ -312,21 +312,46 @@ struct WeekPlanHistoryListResponse: Codable, Equatable {
     var items: [WeekPlanHistoryItem]
 }
 
+enum WeekPlanDayStatus: String, Equatable {
+    case ready
+    case missing
+    case restDay
+    case notGenerated
+
+    var label: String {
+        switch self {
+        case .ready: return WeekPlanCopy.statusReady
+        case .missing: return WeekPlanCopy.statusMissing
+        case .restDay: return WeekPlanCopy.statusRestDay
+        case .notGenerated: return WeekPlanCopy.statusNotGenerated
+        }
+    }
+}
+
+enum WeekPlanMissingAction: Equatable {
+    case chooseFromWardrobe(dayOfWeek: Int)
+    case findAlternative(dayOfWeek: Int)
+    case continueWithout(dayOfWeek: Int)
+}
+
 enum WeekPlanCopy {
     static let loading = "Loading your week…"
     static let generating = "Generating outfits…"
     static let emptyDays = "Turn on the days you want to plan."
     static let emptyWardrobe = "Add items to your wardrobe to generate outfits."
-    static let savePlan = "Save plan"
+    static let savePlan = "Save weekly plan"
     static let generateWeek = "Generate week"
     static let regenerate = "Regenerate"
     static let todayTitle = "Today"
     static let reminderLabel = "Daily reminder"
     static let sharedStyleLabel = "Style for the week"
-    static let sharedSeasonLabel = "Shared season"
+    static let sharedSeasonLabel = "Season"
     static let navTitle = "Week Planner"
-    static let useWardrobe = "Use wardrobe"
+    static let pageTitle = "Week Outfit Planner"
+    static let pageSubtitle = "Plan outfits for the week and get a daily reminder."
+    static let useWardrobe = "From your wardrobe"
     static let outfitDetails = "Outfit details"
+    static let whyThisOutfitWorks = "Why this outfit works"
     static let clearPlan = "Clear plan"
     static let clearConfirmTitle = "Clear this week’s plan?"
     static let clearConfirmMessage = "A copy is saved under Previous plans. You can Load it later, or set days and generate again."
@@ -338,6 +363,52 @@ enum WeekPlanCopy {
     static let emptyHistory =
         "No previous plans yet. Clear plan or regenerate after outfits exist to keep a copy here."
     static let planRestored = "Previous plan loaded."
+    static let planSaved = "Plan saved."
+    static let statusReady = "Ready"
+    static let statusMissing = "Missing"
+    static let statusRestDay = "Rest day"
+    static let statusNotGenerated = "Not generated"
+    static let chooseFromWardrobe = "Choose from wardrobe"
+    static let findAlternative = "Find an alternative"
+    static let continueWithout = "Continue without"
+    static let missingItemsTitle = "Missing items"
+    static let missingItemsHint = "Some outfit slots are empty for this day."
+    static let weekOverview = "Week overview"
+    static let dayDetail = "Day detail"
+}
+
+/// Core outfit slots used for missing-item detection (empty strings).
+enum WeekPlanMissingSlots {
+    static let core: [(category: String, label: String, keyPath: KeyPath<WeekPlanOutfitResponse, String>)] = [
+        ("shirt", "Shirt", \.shirt),
+        ("trouser", "Trousers", \.trouser),
+        ("shoes", "Shoes", \.shoes),
+        ("belt", "Belt", \.belt),
+    ]
+
+    static func missing(for outfit: WeekPlanOutfitResponse) -> [WeekPlanOutfitDisplay.SlotRow] {
+        core.compactMap { entry in
+            let text = outfit[keyPath: entry.keyPath].trimmingCharacters(in: .whitespacesAndNewlines)
+            guard text.isEmpty else { return nil }
+            return WeekPlanOutfitDisplay.SlotRow(
+                category: entry.category,
+                label: entry.label,
+                description: ""
+            )
+        }
+    }
+
+    static func status(for day: WeekPlanDayResponse) -> WeekPlanDayStatus {
+        guard day.enabled else { return .restDay }
+        guard let outfit = day.outfit else { return .notGenerated }
+        let hasSummary = !outfit.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let hasAnySlot = core.contains {
+            !outfit[keyPath: $0.keyPath].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        if !hasSummary && !hasAnySlot { return .notGenerated }
+        if !missing(for: outfit).isEmpty { return .missing }
+        return .ready
+    }
 }
 
 /// Presentation helpers for collapsible week-plan outfit UI (summary vs expanded slots).

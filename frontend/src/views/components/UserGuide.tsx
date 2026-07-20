@@ -321,11 +321,11 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
             items={[
               'Open the Week tab (sign in required). Turn on the days you want to plan and pick an occasion and style for each.',
               'Set a shared season for the week, plus a reminder time. Your device timezone is saved with the plan.',
-              'Tap Save plan to persist, or Generate week to create wardrobe-based outfits for every enabled day. Use Regenerate on a single day anytime.',
+              'Tap Save weekly plan to persist, or Generate week to create wardrobe-based outfits for every enabled day. Use Regenerate on a single day anytime.',
               'Clear plan asks for confirmation, then clears the current week (a snapshot is kept under Previous plans).',
               'Under Previous plans, tap Load to restore an earlier week as your current plan.',
               'Today at the top shows today’s occasion and outfit summary (with wardrobe preview thumbnails when available).',
-              'Per day: toggle Use wardrobe (default on), then expand a day’s look for item details.',
+              'Per day: toggle Use wardrobe (default on), then open the day detail for item images, a collapsed Why this outfit works section, and missing-item actions (Choose from wardrobe / Find an alternative / Continue without).',
             ]}
           />
           <TipBox>

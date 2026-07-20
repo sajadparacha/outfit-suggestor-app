@@ -1,5 +1,5 @@
 /**
- * Week Outfit Planner — guest gate + generate flow integration
+ * Week Outfit Planner — guest gate + generate flow + responsive redesign integration
  */
 import { screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { rest } from 'msw';
@@ -21,6 +21,19 @@ function emptyDays() {
     use_wardrobe_only: true,
     outfit: null as null | Record<string, unknown>,
   }));
+}
+
+function authMe(isAdmin = false) {
+  return rest.get(`${API_BASE}/api/auth/me`, (_req, res, ctx) =>
+    res(
+      ctx.json({
+        id: 1,
+        email: isAdmin ? 'admin@example.com' : 'tester@example.com',
+        full_name: isAdmin ? 'Admin' : 'Test User',
+        is_admin: isAdmin,
+      })
+    )
+  );
 }
 
 describe('Week Outfit Planner', () => {
@@ -52,16 +65,7 @@ describe('Week Outfit Planner', () => {
     const putCapture: { body: WeekPlanUpsertRequest | null } = { body: null };
 
     server.use(
-      rest.get(`${API_BASE}/api/auth/me`, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            id: 1,
-            email: 'tester@example.com',
-            full_name: 'Test User',
-            is_admin: false,
-          })
-        )
-      ),
+      authMe(),
       rest.get(`${API_BASE}/api/week-plan`, (_req, res, ctx) =>
         res(
           ctx.json({
@@ -158,18 +162,25 @@ describe('Week Outfit Planner', () => {
 
     const monday = screen.getByTestId('week-day-0');
     fireEvent.click(within(monday).getByLabelText(/Enable Monday/i));
-    fireEvent.change(within(monday).getByLabelText(/Monday occasion/i), {
+
+    await waitFor(() => {
+      expect(screen.getByTestId('week-day-detail')).toHaveAttribute('data-day', '0');
+    });
+    fireEvent.change(screen.getByLabelText(/Monday occasion/i), {
       target: { value: 'work' },
     });
 
-    const wardrobeToggle = within(monday).getByLabelText(/Monday use wardrobe/i);
+    const wardrobeToggle = screen.getByLabelText(/Monday use wardrobe/i);
     expect(wardrobeToggle).toBeChecked();
     fireEvent.click(wardrobeToggle);
     expect(wardrobeToggle).not.toBeChecked();
 
     const tuesday = screen.getByTestId('week-day-1');
     fireEvent.click(within(tuesday).getByLabelText(/Enable Tuesday/i));
-    fireEvent.change(within(tuesday).getByLabelText(/Tuesday occasion/i), {
+    await waitFor(() => {
+      expect(screen.getByTestId('week-day-detail')).toHaveAttribute('data-day', '1');
+    });
+    fireEvent.change(screen.getByLabelText(/Tuesday occasion/i), {
       target: { value: 'date-night' },
     });
 
@@ -177,10 +188,15 @@ describe('Week Outfit Planner', () => {
     await waitFor(() => expect(generateBtn).not.toBeDisabled());
     fireEvent.click(generateBtn);
 
+    fireEvent.click(screen.getByTestId('week-day-select-0'));
     await waitFor(() => {
       expect(screen.getByTestId('week-day-summary-0')).toHaveTextContent(
         /work look for day 0/i
       );
+    });
+
+    fireEvent.click(screen.getByTestId('week-day-select-1'));
+    await waitFor(() => {
       expect(screen.getByTestId('week-day-summary-1')).toHaveTextContent(
         /date-night look for day 1/i
       );
@@ -189,11 +205,11 @@ describe('Week Outfit Planner', () => {
     expect(putCapture.body?.days?.[0]?.use_wardrobe_only).toBe(false);
     expect(putCapture.body?.days?.[1]?.use_wardrobe_only).toBe(true);
 
-    const mondayDetails = screen.getByTestId('week-day-summary-0-details');
+    fireEvent.click(screen.getByTestId('week-day-select-0'));
+    const mondayDetails = await screen.findByTestId('week-day-summary-0-details');
     expect(mondayDetails).not.toHaveAttribute('open');
 
-    fireEvent.click(screen.getByTestId('week-day-summary-0'));
-    // jsdom may not toggle <details>; ensure expanded content is reachable
+    fireEvent.click(screen.getByTestId('week-day-summary-0-why-toggle'));
     if (!mondayDetails.hasAttribute('open')) {
       mondayDetails.setAttribute('open', '');
     }
@@ -201,15 +217,280 @@ describe('Week Outfit Planner', () => {
     await waitFor(() => {
       const expanded = screen.getByTestId('week-day-summary-0-expanded');
       expect(expanded).toBeInTheDocument();
-      expect(within(expanded).getByText(/White oxford shirt/i)).toBeInTheDocument();
       expect(within(expanded).getByRole('heading', { name: /Why this works/i })).toBeInTheDocument();
-      expect(within(expanded).getAllByText(/AI Suggested/i).length).toBeGreaterThan(0);
     });
+    expect(screen.getByText(/White oxford shirt/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/AI Suggested/i).length).toBeGreaterThan(0);
 
     await waitFor(() => {
       expect(screen.getByTestId('week-today-summary')).toHaveTextContent(
         /work look for day 0/i
       );
+    });
+  });
+
+  it('updates detail panel when selecting a different day without reload', async () => {
+    localStorage.setItem('auth_token', 'test-token');
+
+    const days = emptyDays().map((d, i) =>
+      i === 0
+        ? {
+            ...d,
+            enabled: true,
+            occasion: 'work',
+            outfit: {
+              summary: 'Monday work look',
+              shirt: 'Blue shirt',
+              trouser: 'Gray trousers',
+              blazer: 'Navy blazer',
+              shoes: 'Black shoes',
+              belt: 'Black belt',
+              reasoning: 'Sharp for work.',
+            },
+          }
+        : i === 1
+          ? {
+              ...d,
+              enabled: true,
+              occasion: 'date-night',
+              outfit: {
+                summary: 'Tuesday date look',
+                shirt: 'Silk shirt',
+                trouser: 'Dark trousers',
+                blazer: 'Velvet blazer',
+                shoes: 'Loafers',
+                belt: 'Thin belt',
+                reasoning: 'Evening ready.',
+              },
+            }
+          : d
+    );
+
+    server.use(
+      authMe(),
+      rest.get(`${API_BASE}/api/week-plan`, (_req, res, ctx) =>
+        res(
+          ctx.json({
+            reminder_time: '07:30',
+            timezone: 'UTC',
+            shared_style: 'classic',
+            shared_season: 'all-season',
+            days,
+            wardrobe_empty: false,
+            message: null,
+          })
+        )
+      ),
+      rest.get(`${API_BASE}/api/week-plan/today`, (_req, res, ctx) =>
+        res(
+          ctx.json({
+            day_of_week: 0,
+            enabled: true,
+            occasion: 'work',
+            use_wardrobe_only: true,
+            outfit: days[0].outfit,
+            reminder_time: '07:30',
+            timezone: 'UTC',
+            has_plan: true,
+            message: null,
+          })
+        )
+      )
+    );
+
+    renderApp({ routerProps: { initialEntries: [ROUTES.WEEK] } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('week-day-detail')).toHaveAttribute('data-day', '0');
+    });
+    expect(screen.getByTestId('week-day-summary-0')).toHaveTextContent(/Monday work look/i);
+
+    fireEvent.click(screen.getByTestId('week-day-select-1'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('week-day-detail')).toHaveAttribute('data-day', '1');
+    });
+    expect(screen.getByTestId('week-day-summary-1')).toHaveTextContent(/Tuesday date look/i);
+    expect(screen.queryByTestId('week-day-summary-0')).not.toBeInTheDocument();
+  });
+
+  it('shows missing-item actions when a core outfit slot is empty', async () => {
+    localStorage.setItem('auth_token', 'test-token');
+
+    const days = emptyDays().map((d, i) =>
+      i === 0
+        ? {
+            ...d,
+            enabled: true,
+            occasion: 'work',
+            outfit: {
+              summary: 'Almost ready',
+              shirt: 'White shirt',
+              trouser: 'Navy trousers',
+              blazer: '',
+              shoes: 'Brown shoes',
+              belt: 'Brown belt',
+              reasoning: 'Needs a blazer.',
+            },
+          }
+        : d
+    );
+
+    let regenerated = false;
+
+    server.use(
+      authMe(),
+      rest.get(`${API_BASE}/api/week-plan`, (_req, res, ctx) =>
+        res(
+          ctx.json({
+            reminder_time: '07:30',
+            timezone: 'UTC',
+            shared_style: 'classic',
+            shared_season: 'all-season',
+            days,
+            wardrobe_empty: false,
+            message: null,
+          })
+        )
+      ),
+      rest.get(`${API_BASE}/api/week-plan/today`, (_req, res, ctx) =>
+        res(
+          ctx.json({
+            day_of_week: 0,
+            enabled: true,
+            occasion: 'work',
+            use_wardrobe_only: true,
+            outfit: days[0].outfit,
+            reminder_time: '07:30',
+            timezone: 'UTC',
+            has_plan: true,
+            message: null,
+          })
+        )
+      ),
+      rest.put(`${API_BASE}/api/week-plan`, async (req, res, ctx) => {
+        const body = (await req.json()) as WeekPlanUpsertRequest;
+        return res(
+          ctx.json({
+            reminder_time: body.reminder_time,
+            timezone: body.timezone,
+            shared_style: body.shared_style,
+            shared_season: body.shared_season,
+            days,
+            wardrobe_empty: false,
+            message: null,
+          })
+        );
+      }),
+      rest.post(`${API_BASE}/api/week-plan/generate`, async (_req, res, ctx) => {
+        regenerated = true;
+        return res(
+          ctx.json({
+            reminder_time: '07:30',
+            timezone: 'UTC',
+            shared_style: 'classic',
+            shared_season: 'all-season',
+            days,
+            wardrobe_empty: false,
+            message: null,
+          })
+        );
+      })
+    );
+
+    renderApp({ routerProps: { initialEntries: [ROUTES.WEEK] } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('week-missing-item-card')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('week-outfit-missing-slot-blazer')).toBeInTheDocument();
+    expect(screen.getByTestId('week-missing-choose-wardrobe')).toBeInTheDocument();
+    expect(screen.getByTestId('week-missing-find-alternative')).toBeInTheDocument();
+    expect(screen.getByTestId('week-missing-continue')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('week-missing-find-alternative'));
+    await waitFor(() => expect(regenerated).toBe(true));
+
+    fireEvent.click(screen.getByTestId('week-missing-continue'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('week-missing-item-card')).not.toBeInTheDocument();
+    });
+  });
+
+  it('disables Save weekly plan while saving', async () => {
+    localStorage.setItem('auth_token', 'test-token');
+
+    let resolvePut: ((value: unknown) => void) | null = null;
+
+    server.use(
+      authMe(),
+      rest.get(`${API_BASE}/api/week-plan`, (_req, res, ctx) =>
+        res(
+          ctx.json({
+            reminder_time: '07:30',
+            timezone: 'UTC',
+            shared_style: 'classic',
+            shared_season: 'all-season',
+            days: emptyDays().map((d, i) =>
+              i === 0 ? { ...d, enabled: true, occasion: 'work' } : d
+            ),
+            wardrobe_empty: false,
+            message: null,
+          })
+        )
+      ),
+      rest.get(`${API_BASE}/api/week-plan/today`, (_req, res, ctx) =>
+        res(
+          ctx.json({
+            day_of_week: 0,
+            enabled: true,
+            occasion: 'work',
+            use_wardrobe_only: true,
+            outfit: null,
+            reminder_time: '07:30',
+            timezone: 'UTC',
+            has_plan: true,
+            message: null,
+          })
+        )
+      ),
+      rest.put(`${API_BASE}/api/week-plan`, async (_req, res, ctx) => {
+        await new Promise((resolve) => {
+          resolvePut = resolve;
+        });
+        return res(
+          ctx.json({
+            reminder_time: '07:30',
+            timezone: 'UTC',
+            shared_style: 'classic',
+            shared_season: 'all-season',
+            days: emptyDays().map((d, i) =>
+              i === 0 ? { ...d, enabled: true, occasion: 'work' } : d
+            ),
+            wardrobe_empty: false,
+            message: null,
+          })
+        );
+      })
+    );
+
+    renderApp({ routerProps: { initialEntries: [ROUTES.WEEK] } });
+
+    const saveBtn = await screen.findByTestId('week-save-plan');
+    await waitFor(() => expect(saveBtn).not.toBeDisabled());
+
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('week-save-plan')).toBeDisabled();
+      expect(screen.getByTestId('week-save-plan')).toHaveAttribute('aria-busy', 'true');
+    });
+
+    expect(resolvePut).not.toBeNull();
+    resolvePut!(undefined);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('week-save-plan')).not.toBeDisabled();
     });
   });
 
@@ -219,16 +500,7 @@ describe('Week Outfit Planner', () => {
     const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(false);
 
     server.use(
-      rest.get(`${API_BASE}/api/auth/me`, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            id: 1,
-            email: 'tester@example.com',
-            full_name: 'Test User',
-            is_admin: false,
-          })
-        )
-      ),
+      authMe(),
       rest.get(`${API_BASE}/api/week-plan`, (_req, res, ctx) =>
         res(
           ctx.json({
@@ -297,16 +569,7 @@ describe('Week Outfit Planner', () => {
     ];
 
     server.use(
-      rest.get(`${API_BASE}/api/auth/me`, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            id: 1,
-            email: 'tester@example.com',
-            full_name: 'Test User',
-            is_admin: false,
-          })
-        )
-      ),
+      authMe(),
       rest.get(`${API_BASE}/api/week-plan`, (_req, res, ctx) =>
         res(
           ctx.json({
@@ -409,16 +672,7 @@ describe('Week Outfit Planner', () => {
     storedDays[0].enabled = true;
 
     server.use(
-      rest.get(`${API_BASE}/api/auth/me`, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            id: 1,
-            email: 'admin@example.com',
-            full_name: 'Admin',
-            is_admin: true,
-          })
-        )
-      ),
+      authMe(true),
       rest.get(`${API_BASE}/api/week-plan`, (_req, res, ctx) =>
         res(
           ctx.json({
@@ -490,16 +744,7 @@ describe('Week Outfit Planner', () => {
     localStorage.setItem('auth_token', 'test-token');
 
     server.use(
-      rest.get(`${API_BASE}/api/auth/me`, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            id: 1,
-            email: 'tester@example.com',
-            full_name: 'Test User',
-            is_admin: false,
-          })
-        )
-      ),
+      authMe(),
       rest.get(`${API_BASE}/api/week-plan/history`, (_req, res, ctx) =>
         res(ctx.json({ items: [] }))
       )

@@ -17,6 +17,57 @@ export const WEEK_DAY_LABELS: Record<DayOfWeek, string> = {
   6: 'Sunday',
 };
 
+export const WEEK_DAY_SHORT_LABELS: Record<DayOfWeek, string> = {
+  0: 'Mon',
+  1: 'Tue',
+  2: 'Wed',
+  3: 'Thu',
+  4: 'Fri',
+  5: 'Sat',
+  6: 'Sun',
+};
+
+/** Client-side day status for week overview pills. */
+export type WeekDayStatus = 'ready' | 'missing' | 'rest' | 'not_generated';
+
+export const WEEK_PLAN_CORE_SLOTS = [
+  { key: 'shirt', label: 'Shirt', field: 'shirt' as const },
+  { key: 'trouser', label: 'Trousers', field: 'trouser' as const },
+  { key: 'blazer', label: 'Blazer', field: 'blazer' as const },
+  { key: 'shoes', label: 'Shoes', field: 'shoes' as const },
+  { key: 'belt', label: 'Belt', field: 'belt' as const },
+] as const;
+
+export type WeekPlanCoreSlotKey = (typeof WEEK_PLAN_CORE_SLOTS)[number]['key'];
+
+export interface MissingOutfitSlot {
+  key: WeekPlanCoreSlotKey;
+  label: string;
+}
+
+/** Empty core outfit slot strings = missing (client-side; no backend invent). */
+export function getMissingOutfitSlots(
+  outfit: WeekPlanOutfit | null | undefined
+): MissingOutfitSlot[] {
+  if (!outfit) return [];
+  return WEEK_PLAN_CORE_SLOTS.filter(({ field }) => {
+    const value = outfit[field];
+    return typeof value !== 'string' || !value.trim();
+  }).map(({ key, label }) => ({ key, label }));
+}
+
+export function getWeekDayStatus(day: WeekPlanDay): WeekDayStatus {
+  if (!day.enabled) return 'rest';
+  if (!day.outfit) return 'not_generated';
+  if (getMissingOutfitSlots(day.outfit).length > 0) return 'missing';
+  return 'ready';
+}
+
+export function formatOccasionLabel(occasion: string | null | undefined): string {
+  if (!occasion) return '';
+  return occasion.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export const DEFAULT_REMINDER_TIME = '07:30';
 export const DEFAULT_SHARED_STYLE = 'classic'; // legacy plan field; prefer per-day style
 export const DEFAULT_DAY_STYLE = 'classic';

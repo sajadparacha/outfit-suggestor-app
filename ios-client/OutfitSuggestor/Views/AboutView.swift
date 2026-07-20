@@ -23,6 +23,7 @@ struct AboutView: View {
                     Text(AboutCopy.wardrobeInsightsFeature)
                     Text(AboutCopy.outfitSuggestionsFeature)
                     Text(AboutCopy.weekPlannerFeature)
+                    Text("• Week overview → day detail with missing-item resolve (wardrobe, alternative, or continue) and Save weekly plan.")
                     Text(AboutCopy.wardrobeFilterFeature)
                     Text("• Blazers, jackets, coats (outerwear), and sweaters can be selected for outfit completion—only one of blazer, outerwear, or sweater at a time.")
                     Text("• Outfit history when logged in")

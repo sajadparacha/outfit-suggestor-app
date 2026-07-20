@@ -155,9 +155,8 @@ struct UserGuideView: View {
                         "Pick a shared season for the week and a daily reminder time (device timezone).",
                         "Tap Save plan, then Generate week to create one wardrobe outfit per enabled day.",
                         "Clear plan saves a copy under Previous plans, then clears the current week — tap Load to restore one.",
-                        "Expand a day or Today for slot details, source badges, and Why this works; use Regenerate for a fresh look.",
-                        "Today at the top shows today’s occasion and outfit summary.",
-                        "On iOS, local notifications remind you at the reminder time with the outfit summary. Web shows Today in-app only (no OS push in v1)."
+                        "Select a day in the week overview to see detail, resolve missing items (wardrobe / alternative / continue), and Save weekly plan.",
+                        "Expand Why this outfit works for styling notes; use Regenerate for a fresh look. On iOS, local notifications remind you at the reminder time."
                     ],
                     tip: isAdmin
                         ? "Add wardrobe items first — generate prefers your closet. Admins: expand Admin diagnostics on a day after generate to see prompt, response, and API cost."

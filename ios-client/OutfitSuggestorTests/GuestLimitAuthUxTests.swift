@@ -2,6 +2,24 @@ import XCTest
 @testable import OutfitSuggestor
 
 final class GuestLimitAuthUxTests: XCTestCase {
+    private var savedToken: String?
+    private var savedUser: User?
+
+    override func setUp() {
+        super.setUp()
+        savedToken = AuthService.shared.authToken
+        savedUser = AuthService.shared.currentUser
+        // isGuestBlocked short-circuits when authenticated; force a guest session.
+        AuthService.shared.authToken = nil
+        AuthService.shared.currentUser = nil
+    }
+
+    override func tearDown() {
+        AuthService.shared.authToken = savedToken
+        AuthService.shared.currentUser = savedUser
+        super.tearDown()
+    }
+
     // MARK: - AuthPromptCopy parity with web authPromptCopy.ts
 
     func testGuestLimitCopyMatchesWebSpec() {
