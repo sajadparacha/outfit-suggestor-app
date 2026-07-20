@@ -54,6 +54,7 @@ from models.week_plan import (  # noqa: F401 — register metadata for create_al
     WeeklyPlan,
     WeeklyPlanDay,
     WeeklyPlanOutfit,
+    WeeklyPlanHistory,
 )
 from utils.auth import get_password_hash
 from dependencies import get_current_user, get_current_active_user, get_optional_user
@@ -106,6 +107,7 @@ class _MockAIService:
         if avoid_outfit_texts:
             parts.append("AVOID:" + "|".join(avoid_outfit_texts))
         suggestion.ai_prompt = " ".join(parts)
+        suggestion.ai_raw_response = '{"shirt":"Test shirt"}'
         return (
             suggestion,
             {"gpt4_cost": 0.0, "model_image_cost": 0.0, "total_cost": 0.0},

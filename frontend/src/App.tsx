@@ -844,9 +844,11 @@ function App() {
               <WeekPlanner
                 plan={weekPlan.plan}
                 today={weekPlan.today}
+                history={weekPlan.history}
                 loading={weekPlan.loading}
                 generating={weekPlan.generating}
                 saving={weekPlan.saving}
+                restoring={weekPlan.restoring}
                 error={weekPlan.error}
                 message={weekPlan.message}
                 enabledDayCount={weekPlan.enabledDayCount}
@@ -866,6 +868,11 @@ function App() {
                 onClearPlan={() => {
                   weekPlan.clearPlan().catch(() => undefined);
                 }}
+                onRestoreHistory={(id) => {
+                  weekPlan.restoreHistory(id).catch(() => undefined);
+                }}
+                isAdmin={!!user?.is_admin}
+                showAiPromptResponse={showAiPromptResponse}
               />
             </ErrorBoundary>
           ) : (

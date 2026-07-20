@@ -18,6 +18,7 @@ import {
 import {
   WeekPlan,
   WeekPlanGenerateRequest,
+  WeekPlanHistoryListResponse,
   WeekPlanToday,
   WeekPlanUpsertRequest,
 } from '../models/WeekPlanModels';
@@ -1367,6 +1368,37 @@ class ApiService {
       const error: ApiError = await response.json().catch(() => ({ detail: 'Failed to clear week plan' }));
       throw new Error(error.detail || 'Failed to clear week plan');
     }
+  }
+
+  /** GET /api/week-plan/history — list recent plan snapshots */
+  async getWeekPlanHistory(): Promise<WeekPlanHistoryListResponse> {
+    const url = `${this.baseUrl}/api/week-plan/history`;
+    const response = await this.fetchWithLogging(url, {
+      headers: this.getHeaders(),
+    });
+    if (!response.ok) {
+      const error: ApiError = await response.json().catch(() => ({
+        detail: 'Failed to load week plan history',
+      }));
+      throw new Error(error.detail || 'Failed to load week plan history');
+    }
+    return await response.json();
+  }
+
+  /** POST /api/week-plan/history/{id}/restore — restore snapshot as current plan */
+  async restoreWeekPlanHistory(historyId: number): Promise<WeekPlan> {
+    const url = `${this.baseUrl}/api/week-plan/history/${historyId}/restore`;
+    const response = await this.fetchWithLogging(url, {
+      method: 'POST',
+      headers: this.getHeaders(),
+    });
+    if (!response.ok) {
+      const error: ApiError = await response.json().catch(() => ({
+        detail: 'Failed to restore week plan',
+      }));
+      throw new Error(error.detail || 'Failed to restore week plan');
+    }
+    return await response.json();
   }
 }
 

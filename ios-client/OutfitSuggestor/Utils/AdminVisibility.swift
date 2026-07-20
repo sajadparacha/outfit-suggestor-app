@@ -64,7 +64,7 @@ enum AboutCopy {
     static let outfitSuggestionsFeature =
         "• Outfit suggestions with occasion, season, and style filters. Results show five core pieces; the AI may also suggest optional layering (sweater, coat/jacket, or tie) when relevant."
     static let weekPlannerFeature =
-        "• Week Outfit Planner — enable days, set occasion and style per day (season is shared), toggle Use wardrobe, generate outfits, and expand a day for slot details and Why this works. On iOS, daily wake-up reminders use local notifications; on web, Today is shown in-app only."
+        "• Week Outfit Planner — enable days, set occasion and style per day (season is shared), toggle Use wardrobe, generate outfits, and Load a previous plan from history. On iOS, daily wake-up reminders use local notifications; on web, Today is shown in-app only."
     static let adminDiagnosticsSuffix = " Includes transparent admin diagnostics for administrators."
 
     static func techStackDescription(isAdmin: Bool) -> String {

@@ -16,12 +16,15 @@ from models.week_plan import (
     DEFAULT_SEASON,
     DEFAULT_STYLE,
     WeekPlanDayResponse,
+    WeekPlanHistoryItem,
+    WeekPlanHistoryListResponse,
     WeekPlanOutfitResponse,
     WeekPlanResponse,
     WeekPlanTodayResponse,
     WeekPlanUpsertRequest,
     WeeklyPlan,
     WeeklyPlanDay,
+    WeeklyPlanHistory,
     WeeklyPlanOutfit,
 )
 
@@ -82,7 +85,20 @@ def suggestion_to_outfit_json(suggestion: OutfitSuggestion) -> dict[str, Any]:
     return data
 
 
-def outfit_row_to_response(row: WeeklyPlanOutfit) -> WeekPlanOutfitResponse:
+def admin_fields_from_suggestion(suggestion: OutfitSuggestion) -> dict[str, Any]:
+    """Extract admin diagnostics from a fresh suggestion (not stored on plan rows)."""
+    return {
+        "ai_prompt": getattr(suggestion, "ai_prompt", None),
+        "ai_raw_response": getattr(suggestion, "ai_raw_response", None),
+        "cost": getattr(suggestion, "cost", None),
+    }
+
+
+def outfit_row_to_response(
+    row: WeeklyPlanOutfit,
+    *,
+    admin_fields: Optional[dict[str, Any]] = None,
+) -> WeekPlanOutfitResponse:
     try:
         payload = json.loads(row.outfit_json or "{}")
     except json.JSONDecodeError:
@@ -93,9 +109,13 @@ def outfit_row_to_response(row: WeeklyPlanOutfit) -> WeekPlanOutfitResponse:
         item_ids = []
     if not isinstance(item_ids, list):
         item_ids = []
+    admin = admin_fields or {}
     return WeekPlanOutfitResponse(
         summary=row.summary or "",
         generated_at=row.generated_at.isoformat() if row.generated_at else None,
+        ai_prompt=admin.get("ai_prompt"),
+        ai_raw_response=admin.get("ai_raw_response"),
+        cost=admin.get("cost"),
         shirt=payload.get("shirt") or "",
         trouser=payload.get("trouser") or "",
         blazer=payload.get("blazer") or "",
@@ -119,10 +139,14 @@ def outfit_row_to_response(row: WeeklyPlanOutfit) -> WeekPlanOutfitResponse:
     )
 
 
-def day_to_response(day: WeeklyPlanDay) -> WeekPlanDayResponse:
+def day_to_response(
+    day: WeeklyPlanDay,
+    *,
+    admin_outfit_fields: Optional[dict[str, Any]] = None,
+) -> WeekPlanDayResponse:
     outfit = None
     if day.outfit is not None:
-        outfit = outfit_row_to_response(day.outfit)
+        outfit = outfit_row_to_response(day.outfit, admin_fields=admin_outfit_fields)
     return WeekPlanDayResponse(
         day_of_week=day.day_of_week,
         enabled=bool(day.enabled),
@@ -138,12 +162,18 @@ def plan_to_response(
     *,
     wardrobe_empty: bool = False,
     message: Optional[str] = None,
+    admin_outfit_by_day: Optional[dict[int, dict[str, Any]]] = None,
 ) -> WeekPlanResponse:
     days_by_dow = {d.day_of_week: d for d in plan.days}
     days: list[WeekPlanDayResponse] = []
     for dow in range(7):
         if dow in days_by_dow:
-            days.append(day_to_response(days_by_dow[dow]))
+            admin_fields = (
+                admin_outfit_by_day.get(dow) if admin_outfit_by_day else None
+            )
+            days.append(
+                day_to_response(days_by_dow[dow], admin_outfit_fields=admin_fields)
+            )
         else:
             days.append(
                 WeekPlanDayResponse(
@@ -271,14 +301,6 @@ class WeekPlanService:
         db.commit()
         return self.get_plan(db, user_id)  # type: ignore[return-value]
 
-    def delete_plan(self, db: Session, user_id: int) -> bool:
-        plan = self.get_plan(db, user_id)
-        if plan is None:
-            return False
-        db.delete(plan)
-        db.commit()
-        return True
-
     def save_day_outfit(
         self,
         db: Session,
@@ -387,3 +409,154 @@ class WeekPlanService:
             has_plan=True,
             message=None if outfit else "No outfit generated for today yet.",
         )
+
+    def plan_has_content(self, plan: WeeklyPlan) -> bool:
+        for day in plan.days:
+            if day.enabled or day.outfit is not None:
+                return True
+        return False
+
+    def _history_label(self, plan: WeeklyPlan) -> str:
+        enabled = sum(1 for d in plan.days if d.enabled)
+        stamp = datetime.utcnow().strftime("%b %d, %Y %H:%M")
+        return f"{enabled} day{'s' if enabled != 1 else ''} · {plan.reminder_time} · {stamp}"
+
+    def snapshot_current(
+        self, db: Session, user_id: int
+    ) -> Optional[WeeklyPlanHistory]:
+        plan = self.get_plan(db, user_id)
+        if plan is None or not self.plan_has_content(plan):
+            return None
+        payload = plan_to_response(plan).model_dump()
+        row = WeeklyPlanHistory(
+            user_id=user_id,
+            label=self._history_label(plan),
+            plan_json=json.dumps(payload),
+            created_at=datetime.utcnow(),
+        )
+        db.add(row)
+        db.flush()
+        return row
+
+    def list_history(
+        self, db: Session, user_id: int, limit: int = 20
+    ) -> WeekPlanHistoryListResponse:
+        rows = (
+            db.query(WeeklyPlanHistory)
+            .filter(WeeklyPlanHistory.user_id == user_id)
+            .order_by(WeeklyPlanHistory.created_at.desc())
+            .limit(max(1, min(limit, 50)))
+            .all()
+        )
+        items: list[WeekPlanHistoryItem] = []
+        for row in rows:
+            enabled_count = 0
+            try:
+                data = json.loads(row.plan_json or "{}")
+                days = data.get("days") or []
+                enabled_count = sum(1 for d in days if d.get("enabled"))
+            except json.JSONDecodeError:
+                enabled_count = 0
+            items.append(
+                WeekPlanHistoryItem(
+                    id=row.id,
+                    label=row.label or f"Plan #{row.id}",
+                    created_at=row.created_at.isoformat() if row.created_at else "",
+                    enabled_day_count=enabled_count,
+                )
+            )
+        return WeekPlanHistoryListResponse(items=items)
+
+    def delete_plan(
+        self, db: Session, user_id: int, *, snapshot: bool = True
+    ) -> bool:
+        plan = self.get_plan(db, user_id)
+        if plan is None:
+            return False
+        if snapshot:
+            self.snapshot_current(db, user_id)
+        db.delete(plan)
+        db.commit()
+        return True
+
+    def apply_plan_payload(self, db: Session, user_id: int, payload: dict) -> WeeklyPlan:
+        """Replace current plan with a full plan payload (including outfits)."""
+        existing = self.get_plan(db, user_id)
+        if existing is not None:
+            db.delete(existing)
+            db.flush()
+
+        plan = WeeklyPlan(
+            user_id=user_id,
+            reminder_time=payload.get("reminder_time") or DEFAULT_REMINDER_TIME,
+            timezone=payload.get("timezone") or "UTC",
+            shared_style=payload.get("shared_style") or DEFAULT_STYLE,
+            shared_season=payload.get("shared_season") or DEFAULT_SEASON,
+        )
+        db.add(plan)
+        db.flush()
+
+        days_in = payload.get("days") or []
+        by_dow = {int(d.get("day_of_week")): d for d in days_in if "day_of_week" in d}
+        for dow in range(7):
+            raw = by_dow.get(dow, {})
+            day = WeeklyPlanDay(
+                plan_id=plan.id,
+                day_of_week=dow,
+                enabled=bool(raw.get("enabled", False)),
+                occasion=raw.get("occasion") or DEFAULT_OCCASION,
+                style=raw.get("style") or DEFAULT_STYLE,
+                use_wardrobe_only=bool(raw.get("use_wardrobe_only", True)),
+            )
+            db.add(day)
+            db.flush()
+            outfit_raw = raw.get("outfit")
+            if outfit_raw and isinstance(outfit_raw, dict):
+                item_ids = outfit_raw.get("wardrobe_item_ids") or []
+                if not isinstance(item_ids, list):
+                    item_ids = []
+                generated = outfit_raw.get("generated_at")
+                try:
+                    generated_at = (
+                        datetime.fromisoformat(generated)
+                        if isinstance(generated, str) and generated
+                        else datetime.utcnow()
+                    )
+                except ValueError:
+                    generated_at = datetime.utcnow()
+                outfit_row = WeeklyPlanOutfit(
+                    day_id=day.id,
+                    summary=outfit_raw.get("summary") or "",
+                    outfit_json=json.dumps(outfit_raw),
+                    wardrobe_item_ids_json=json.dumps(
+                        [int(x) for x in item_ids if isinstance(x, int)]
+                    ),
+                    generated_at=generated_at,
+                )
+                db.add(outfit_row)
+
+        db.commit()
+        refreshed = self.get_plan(db, user_id)
+        assert refreshed is not None
+        return refreshed
+
+    def restore_history(
+        self, db: Session, user_id: int, history_id: int
+    ) -> WeeklyPlan:
+        row = (
+            db.query(WeeklyPlanHistory)
+            .filter(
+                WeeklyPlanHistory.id == history_id,
+                WeeklyPlanHistory.user_id == user_id,
+            )
+            .first()
+        )
+        if row is None:
+            raise LookupError("History entry not found")
+        try:
+            payload = json.loads(row.plan_json or "{}")
+        except json.JSONDecodeError as exc:
+            raise ValueError("Corrupt history snapshot") from exc
+        # Preserve current before overwrite
+        self.snapshot_current(db, user_id)
+        return self.apply_plan_payload(db, user_id, payload)

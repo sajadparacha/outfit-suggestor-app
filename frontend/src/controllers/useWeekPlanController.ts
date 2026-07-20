@@ -1,5 +1,5 @@
 /**
- * Week Outfit Planner controller — load, edit, save, generate, today.
+ * Week Outfit Planner controller — load, edit, save, generate, today, history.
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -7,6 +7,7 @@ import apiService from '../services/ApiService';
 import {
   WeekPlan,
   WeekPlanDay,
+  WeekPlanHistoryItem,
   WeekPlanToday,
   createEmptyWeekPlan,
   getDeviceTimezone,
@@ -22,9 +23,11 @@ interface UseWeekPlanControllerOptions {
 export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) => {
   const [plan, setPlan] = useState<WeekPlan | null>(null);
   const [today, setToday] = useState<WeekPlanToday | null>(null);
+  const [history, setHistory] = useState<WeekPlanHistoryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [restoring, setRestoring] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -36,6 +39,15 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
     }
     if (normalized.wardrobe_empty) {
       setMessage(normalized.message || 'Add items to your wardrobe to generate outfits.');
+    }
+  }, []);
+
+  const loadHistory = useCallback(async () => {
+    try {
+      const data = await apiService.getWeekPlanHistory();
+      setHistory(data.items ?? []);
+    } catch {
+      // Soft-fail: keep existing history list
     }
   }, []);
 
@@ -60,7 +72,8 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
     } finally {
       setLoading(false);
     }
-  }, [applyPlan]);
+    await loadHistory();
+  }, [applyPlan, loadHistory]);
 
   const refreshToday = useCallback(async () => {
     try {
@@ -107,7 +120,8 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
       const saved = await apiService.putWeekPlan(payload);
       applyPlan(saved);
       await refreshToday();
-      setMessage('Plan saved.');
+      await loadHistory();
+      setMessage('Plan saved to your account.');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to save week plan';
       setError(errorMessage);
@@ -115,7 +129,7 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
     } finally {
       setSaving(false);
     }
-  }, [plan, applyPlan, refreshToday]);
+  }, [plan, applyPlan, refreshToday, loadHistory]);
 
   const generateWeek = useCallback(async () => {
     if (!plan) return;
@@ -129,6 +143,7 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
       const result = await apiService.generateWeekPlan();
       applyPlan(result);
       await refreshToday();
+      await loadHistory();
       if (result.wardrobe_empty) {
         setMessage(result.message || 'Add items to your wardrobe to generate outfits.');
       } else if (result.message) {
@@ -141,7 +156,7 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
     } finally {
       setGenerating(false);
     }
-  }, [plan, applyPlan, refreshToday]);
+  }, [plan, applyPlan, refreshToday, loadHistory]);
 
   const regenerateDay = useCallback(
     async (dayOfWeek: number) => {
@@ -179,6 +194,7 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
       setPlan(createEmptyWeekPlan(getDeviceTimezone()));
       setToday(null);
       setMessage('Plan cleared.');
+      await loadHistory();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to clear week plan';
       setError(errorMessage);
@@ -186,7 +202,30 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
     } finally {
       setSaving(false);
     }
-  }, []);
+  }, [loadHistory]);
+
+  const restoreHistory = useCallback(
+    async (historyId: number) => {
+      setRestoring(true);
+      setError(null);
+      setMessage(null);
+      try {
+        const restored = await apiService.restoreWeekPlanHistory(historyId);
+        applyPlan(restored);
+        await refreshToday();
+        await loadHistory();
+        setMessage('Previous plan loaded.');
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to restore week plan';
+        setError(errorMessage);
+        throw err;
+      } finally {
+        setRestoring(false);
+      }
+    },
+    [applyPlan, refreshToday, loadHistory]
+  );
 
   useEffect(() => {
     const isAuthenticated = options?.isAuthenticated ?? false;
@@ -195,6 +234,7 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
     if (!isAuthenticated || !currentUserId) {
       setPlan(null);
       setToday(null);
+      setHistory([]);
       setError(null);
       setMessage(null);
       return;
@@ -209,13 +249,16 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
   return {
     plan,
     today,
+    history,
     loading,
     generating,
     saving,
+    restoring,
     error,
     message,
     enabledDayCount,
     load,
+    loadHistory,
     updateDay,
     setReminderTime,
     setSharedStyle,
@@ -224,6 +267,7 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
     generateWeek,
     regenerateDay,
     clearPlan,
+    restoreHistory,
     clearError: () => setError(null),
     clearMessage: () => setMessage(null),
   };

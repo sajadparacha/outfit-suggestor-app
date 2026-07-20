@@ -249,7 +249,7 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
                     <h4 className="font-semibold text-white">Week Outfit Planner</h4>
                     <p className="text-sm text-slate-300">
                       Plan outfits for selected days with per-day occasion and style (season is shared). Generate a week of looks from your wardrobe, see Today’s outfit in the app, and set a reminder time.
-                      Toggle Use wardrobe per day, then expand a day’s look for item details. Daily wake-up reminders are iOS-first (local notifications); on the web, Today stays in-app.
+                      Toggle Use wardrobe per day, then expand a day’s look for item details. Load a previous plan from history when you want an earlier week back. Daily wake-up reminders are iOS-first (local notifications); on the web, Today stays in-app.
                     </p>
                   </div>
                 </div>

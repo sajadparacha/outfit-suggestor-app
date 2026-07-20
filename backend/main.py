@@ -23,7 +23,7 @@ from models.database import Base, engine
 from models.user import User  # noqa: F401
 from models.outfit_history import OutfitHistory  # noqa: F401
 from models.wardrobe import WardrobeItem  # noqa: F401
-from models.week_plan import WeeklyPlan, WeeklyPlanDay, WeeklyPlanOutfit  # noqa: F401
+from models.week_plan import WeeklyPlan, WeeklyPlanDay, WeeklyPlanOutfit, WeeklyPlanHistory  # noqa: F401
 from models.access_log import AccessLog  # noqa: F401
 from models.guest_usage import GuestUsage  # noqa: F401
 from exceptions import GuestLimitReachedException

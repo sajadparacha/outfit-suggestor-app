@@ -13,6 +13,8 @@ protocol WeekPlanAPIClient {
     func generateWeekPlan(dayOfWeek: Int?) async throws -> WeekPlanResponse
     func getWeekPlanToday() async throws -> WeekPlanTodayResponse
     func deleteWeekPlan() async throws -> WeekPlanDeleteResponse
+    func getWeekPlanHistory() async throws -> WeekPlanHistoryListResponse
+    func restoreWeekPlanHistory(id: Int) async throws -> WeekPlanResponse
 }
 
 protocol WeekPlanNotificationScheduling {
@@ -34,9 +36,11 @@ struct DefaultWeekPlanNotifier: WeekPlanNotificationScheduling {
 final class WeekPlannerViewModel: ObservableObject {
     @Published var plan: WeekPlanResponse = .empty()
     @Published var today: WeekPlanTodayResponse?
+    @Published var history: [WeekPlanHistoryItem] = []
     @Published var isLoading = false
     @Published var isSaving = false
     @Published var isGenerating = false
+    @Published var isRestoring = false
     @Published var errorMessage: String?
     @Published var infoMessage: String?
 
@@ -71,9 +75,11 @@ final class WeekPlannerViewModel: ObservableObject {
         do {
             async let planTask = api.getWeekPlan()
             async let todayTask = api.getWeekPlanToday()
+            async let historyTask = api.getWeekPlanHistory()
             let loaded = try await planTask
             plan = normalize(loaded)
             today = try? await todayTask
+            history = (try? await historyTask)?.items ?? []
             if let message = plan.message, !message.isEmpty {
                 infoMessage = message
             }
@@ -81,6 +87,34 @@ final class WeekPlannerViewModel: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
             plan = .empty(timezone: timezoneProvider())
+        }
+    }
+
+    func refreshHistory() async {
+        do {
+            history = try await api.getWeekPlanHistory().items
+        } catch {
+            // Keep existing history on refresh failure; surface only if empty.
+            if history.isEmpty {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    func restoreHistory(id: Int) async {
+        isRestoring = true
+        errorMessage = nil
+        infoMessage = nil
+        defer { isRestoring = false }
+        do {
+            let restored = try await api.restoreWeekPlanHistory(id: id)
+            plan = normalize(restored)
+            today = try? await api.getWeekPlanToday()
+            infoMessage = WeekPlanCopy.planRestored
+            await refreshHistory()
+            await syncNotifications()
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 
@@ -131,7 +165,7 @@ final class WeekPlannerViewModel: ObservableObject {
             let saved = try await api.putWeekPlan(body)
             plan = normalize(saved)
             today = try? await api.getWeekPlanToday()
-            infoMessage = "Plan saved."
+            infoMessage = "Plan saved to your account."
             await syncNotifications()
         } catch {
             errorMessage = error.localizedDescription
@@ -155,6 +189,7 @@ final class WeekPlannerViewModel: ObservableObject {
             plan = .empty(timezone: timezoneProvider())
             today = nil
             infoMessage = "Plan cleared."
+            await refreshHistory()
             await notifier.cancelAll()
         } catch {
             errorMessage = error.localizedDescription
@@ -188,6 +223,7 @@ final class WeekPlannerViewModel: ObservableObject {
             } else if let message = plan.message, !message.isEmpty {
                 infoMessage = message
             }
+            await refreshHistory()
             await syncNotifications()
         } catch {
             errorMessage = error.localizedDescription

@@ -154,12 +154,14 @@ struct UserGuideView: View {
                         "Turn on the days you want to plan and set an occasion and style for each; use Use wardrobe per day when you want closet-only looks.",
                         "Pick a shared season for the week and a daily reminder time (device timezone).",
                         "Tap Save plan, then Generate week to create one wardrobe outfit per enabled day.",
-                        "Clear plan asks for confirmation, then permanently deletes the saved week (no undo).",
+                        "Clear plan saves a copy under Previous plans, then clears the current week — tap Load to restore one.",
                         "Expand a day or Today for slot details, source badges, and Why this works; use Regenerate for a fresh look.",
                         "Today at the top shows today’s occasion and outfit summary.",
                         "On iOS, local notifications remind you at the reminder time with the outfit summary. Web shows Today in-app only (no OS push in v1)."
                     ],
-                    tip: "Add wardrobe items first — generate prefers your closet and skips AI when the wardrobe is empty."
+                    tip: isAdmin
+                        ? "Add wardrobe items first — generate prefers your closet. Admins: expand Admin diagnostics on a day after generate to see prompt, response, and API cost."
+                        : "Add wardrobe items first — generate prefers your closet and skips AI when the wardrobe is empty."
                 )
 
                 if isAdmin {

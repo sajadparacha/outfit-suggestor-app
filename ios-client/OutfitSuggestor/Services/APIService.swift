@@ -978,7 +978,38 @@ class APIService {
         }
         return WeekPlanDeleteResponse(deleted: true)
     }
-    
+
+    func getWeekPlanHistory() async throws -> WeekPlanHistoryListResponse {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
+        guard let url = URL(string: "\(baseURL)/api/week-plan/history") else { throw APIServiceError.invalidURL }
+        var request = URLRequest(url: url)
+        setAuthIfNeeded(&request)
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
+            throw APIServiceError.invalidResponse
+        }
+        return try JSONDecoder().decode(WeekPlanHistoryListResponse.self, from: data)
+    }
+
+    func restoreWeekPlanHistory(id: Int) async throws -> WeekPlanResponse {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
+        guard let url = URL(string: "\(baseURL)/api/week-plan/history/\(id)/restore") else {
+            throw APIServiceError.invalidURL
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        setAuthIfNeeded(&request)
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
+            throw APIServiceError.invalidResponse
+        }
+        return try JSONDecoder().decode(WeekPlanResponse.self, from: data)
+    }
+
 }
 
 extension APIService: APIServiceProtocol {}

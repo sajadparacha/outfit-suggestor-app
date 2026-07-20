@@ -11,6 +11,8 @@ jest.mock('../services/ApiService', () => ({
     putWeekPlan: jest.fn(),
     generateWeekPlan: jest.fn(),
     deleteWeekPlan: jest.fn(),
+    getWeekPlanHistory: jest.fn(),
+    restoreWeekPlanHistory: jest.fn(),
   },
 }));
 
@@ -46,6 +48,7 @@ describe('useWeekPlanController', () => {
     jest.clearAllMocks();
     mockApi.getWeekPlan.mockResolvedValue(emptyPlan);
     mockApi.getWeekPlanToday.mockResolvedValue(todayEmpty);
+    mockApi.getWeekPlanHistory.mockResolvedValue({ items: [] });
     mockApi.putWeekPlan.mockImplementation(async (body) => ({
       ...emptyPlan,
       ...body,

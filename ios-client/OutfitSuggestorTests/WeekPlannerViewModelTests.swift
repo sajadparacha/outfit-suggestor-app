@@ -25,8 +25,12 @@ final class WeekPlannerViewModelTests: XCTestCase {
         var generateCalls: [Int?] = []
         var deleteCount = 0
         var getCount = 0
+        var historyGetCount = 0
+        var restoreIds: [Int] = []
+        var historyItems: [WeekPlanHistoryItem] = []
         var shouldFailGenerate = false
         var wardrobeEmptyOnGenerate = false
+        var restorePlan: WeekPlanResponse?
 
         func getWeekPlan() async throws -> WeekPlanResponse {
             getCount += 1
@@ -91,6 +95,23 @@ final class WeekPlannerViewModelTests: XCTestCase {
             deleteCount += 1
             plan = .empty(timezone: "UTC")
             return WeekPlanDeleteResponse(deleted: true)
+        }
+
+        func getWeekPlanHistory() async throws -> WeekPlanHistoryListResponse {
+            historyGetCount += 1
+            return WeekPlanHistoryListResponse(items: historyItems)
+        }
+
+        func restoreWeekPlanHistory(id: Int) async throws -> WeekPlanResponse {
+            restoreIds.append(id)
+            if let restorePlan {
+                plan = restorePlan
+                return restorePlan
+            }
+            plan.days[0].enabled = true
+            plan.days[0].occasion = "work"
+            plan.days[0].outfit = WeekPlanOutfitResponse(summary: "Restored look")
+            return plan
         }
     }
 
@@ -283,5 +304,103 @@ final class WeekPlannerViewModelTests: XCTestCase {
         let outfit = WeekPlanOutfitResponse(summary: "   ", reasoning: "")
         XCTAssertFalse(WeekPlanOutfitDisplay.hasExpandableDetails(outfit))
         XCTAssertTrue(WeekPlanOutfitDisplay.slotRows(for: outfit).isEmpty)
+    }
+
+    func testOutfitDisplayAdminDiagnosticsDetection() {
+        XCTAssertFalse(WeekPlanOutfitDisplay.hasAdminDiagnostics(WeekPlanOutfitResponse(summary: "Look")))
+        let withMeta = WeekPlanOutfitResponse(
+            summary: "Look",
+            ai_prompt: "prompt",
+            cost: OutfitCost(
+                gpt4_cost: 0.01,
+                model_image_cost: nil,
+                total_cost: 0.01,
+                input_tokens: nil,
+                output_tokens: nil
+            )
+        )
+        XCTAssertTrue(WeekPlanOutfitDisplay.hasAdminDiagnostics(withMeta))
+    }
+
+    func testLoadPopulatesHistory() async {
+        let api = MockAPI()
+        api.historyItems = [
+            WeekPlanHistoryItem(
+                id: 11,
+                label: "Mon–Fri work week",
+                created_at: "2026-07-18T10:00:00Z",
+                enabled_day_count: 5
+            ),
+        ]
+        let vm = WeekPlannerViewModel(api: api, notifier: MockNotifier(), timezoneProvider: { "UTC" })
+
+        await vm.load()
+
+        XCTAssertEqual(api.historyGetCount, 1)
+        XCTAssertEqual(vm.history.count, 1)
+        XCTAssertEqual(vm.history.first?.id, 11)
+        XCTAssertEqual(vm.history.first?.label, "Mon–Fri work week")
+        XCTAssertEqual(vm.history.first?.enabled_day_count, 5)
+    }
+
+    func testRestoreHistoryUpdatesPlanAndRefreshesHistory() async {
+        let api = MockAPI()
+        api.historyItems = [
+            WeekPlanHistoryItem(
+                id: 7,
+                label: "Weekend casual",
+                created_at: "2026-07-17T08:00:00Z",
+                enabled_day_count: 2
+            ),
+        ]
+        var restored = WeekPlanResponse.empty(timezone: "UTC")
+        restored.days[5].enabled = true
+        restored.days[5].occasion = "casual"
+        restored.days[5].outfit = WeekPlanOutfitResponse(summary: "Saturday look")
+        api.restorePlan = restored
+        api.today = WeekPlanTodayResponse(
+            day_of_week: 5,
+            enabled: true,
+            occasion: "casual",
+            outfit: WeekPlanOutfitResponse(summary: "Saturday look"),
+            reminder_time: "07:30",
+            timezone: "UTC",
+            has_plan: true,
+            message: nil
+        )
+        let notifier = MockNotifier()
+        let vm = WeekPlannerViewModel(api: api, notifier: notifier, timezoneProvider: { "UTC" })
+        await vm.load()
+        let historyFetchesBeforeRestore = api.historyGetCount
+
+        await vm.restoreHistory(id: 7)
+
+        XCTAssertEqual(api.restoreIds, [7])
+        XCTAssertEqual(vm.plan.days[5].outfit?.summary, "Saturday look")
+        XCTAssertEqual(vm.today?.outfit?.summary, "Saturday look")
+        XCTAssertEqual(vm.infoMessage, WeekPlanCopy.planRestored)
+        XCTAssertEqual(api.historyGetCount, historyFetchesBeforeRestore + 1)
+        XCTAssertEqual(notifier.rescheduleCount, 1)
+    }
+
+    func testClearPlanRefreshesHistory() async {
+        let api = MockAPI()
+        api.historyItems = [
+            WeekPlanHistoryItem(
+                id: 3,
+                label: "Cleared week",
+                created_at: "2026-07-19T12:00:00Z",
+                enabled_day_count: 3
+            ),
+        ]
+        let vm = WeekPlannerViewModel(api: api, notifier: MockNotifier(), timezoneProvider: { "UTC" })
+        await vm.load()
+        let before = api.historyGetCount
+
+        await vm.clearPlan()
+
+        XCTAssertEqual(api.deleteCount, 1)
+        XCTAssertEqual(api.historyGetCount, before + 1)
+        XCTAssertEqual(vm.history.first?.id, 3)
     }
 }

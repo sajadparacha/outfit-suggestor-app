@@ -48,6 +48,29 @@ async def delete_week_plan(
     return controller.delete_plan(db, current_user)
 
 
+@router.get("/history", name="list_week_plan_history")
+async def list_week_plan_history(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    controller: WeekPlanController = Depends(get_week_plan_controller),
+):
+    return controller.list_history(db, current_user)
+
+
+@router.post(
+    "/history/{history_id}/restore",
+    response_model=WeekPlanResponse,
+    name="restore_week_plan_history",
+)
+async def restore_week_plan_history(
+    history_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    controller: WeekPlanController = Depends(get_week_plan_controller),
+):
+    return controller.restore_history(db, current_user, history_id)
+
+
 @router.post("/generate", response_model=WeekPlanResponse, name="generate_week_plan")
 async def generate_week_plan(
     body: WeekPlanGenerateRequest = Body(default_factory=WeekPlanGenerateRequest),

@@ -322,7 +322,8 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               'Open the Week tab (sign in required). Turn on the days you want to plan and pick an occasion and style for each.',
               'Set a shared season for the week, plus a reminder time. Your device timezone is saved with the plan.',
               'Tap Save plan to persist, or Generate week to create wardrobe-based outfits for every enabled day. Use Regenerate on a single day anytime.',
-              'Clear plan asks for confirmation, then permanently deletes the saved week (no undo).',
+              'Clear plan asks for confirmation, then clears the current week (a snapshot is kept under Previous plans).',
+              'Under Previous plans, tap Load to restore an earlier week as your current plan.',
               'Today at the top shows today’s occasion and outfit summary (with wardrobe preview thumbnails when available).',
               'Per day: toggle Use wardrobe (default on), then expand a day’s look for item details.',
             ]}
@@ -332,6 +333,14 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
             <span className="text-white font-medium">iOS-first</span> (local notifications on your phone). On the web,
             use the <span className="text-white font-medium">Today</span> section in the app—no OS push required for v1.
             Add items to your wardrobe first so Generate week can fill looks without calling open-ended AI.
+            {isAdmin && (
+              <>
+                {' '}
+                <strong className="text-white">Admins:</strong> after Generate week or Regenerate, expand{' '}
+                <span className="text-white font-medium">Admin diagnostics</span> on each day (with Show AI Prompt
+                &amp; Response enabled on web) to see the prompt, raw response, and API cost.
+              </>
+            )}
           </TipBox>
         </SectionCard>
 

@@ -5,6 +5,7 @@
 import React from 'react';
 import {
   WeekPlan,
+  WeekPlanHistoryItem,
   WeekPlanOutfit,
   WeekPlanToday,
   WEEK_DAY_LABELS,
@@ -20,13 +21,16 @@ import {
   type OutfitCategoryKey,
 } from '../utils/outfitItemThumbnail';
 import OutfitItemCard from './components/suggestion/OutfitItemCard';
+import WeekPlanOutfitAdminPanel from './components/weekPlan/WeekPlanOutfitAdminPanel';
 
 export interface WeekPlannerProps {
   plan: WeekPlan | null;
   today: WeekPlanToday | null;
+  history?: WeekPlanHistoryItem[];
   loading: boolean;
   generating: boolean;
   saving: boolean;
+  restoring?: boolean;
   error: string | null;
   message: string | null;
   enabledDayCount: number;
@@ -46,6 +50,9 @@ export interface WeekPlannerProps {
   onGenerateWeek: () => void;
   onRegenerateDay: (dayOfWeek: number) => void;
   onClearPlan?: () => void;
+  onRestoreHistory?: (historyId: number) => void;
+  isAdmin?: boolean;
+  showAiPromptResponse?: boolean;
 }
 
 const selectClass =
@@ -255,9 +262,11 @@ const TodaySection: React.FC<{ today: WeekPlanToday | null }> = ({ today }) => {
 const WeekPlanner: React.FC<WeekPlannerProps> = ({
   plan,
   today,
+  history = [],
   loading,
   generating,
   saving,
+  restoring = false,
   error,
   message,
   enabledDayCount,
@@ -269,6 +278,9 @@ const WeekPlanner: React.FC<WeekPlannerProps> = ({
   onGenerateWeek,
   onRegenerateDay,
   onClearPlan,
+  onRestoreHistory,
+  isAdmin = false,
+  showAiPromptResponse = false,
 }) => {
   if (loading && !plan) {
     return (
@@ -288,7 +300,8 @@ const WeekPlanner: React.FC<WeekPlannerProps> = ({
     );
   }
 
-  const busy = loading || generating || saving;
+  const busy = loading || generating || saving || restoring;
+  const showAdminDiagnostics = isAdmin && showAiPromptResponse;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 pb-10" data-testid="week-planner">
@@ -321,9 +334,13 @@ const WeekPlanner: React.FC<WeekPlannerProps> = ({
         </div>
       )}
 
-      {(generating || saving) && (
+      {(generating || saving || restoring) && (
         <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300" role="status">
-          {generating ? 'Generating outfits…' : 'Saving plan…'}
+          {generating
+            ? 'Generating outfits…'
+            : restoring
+              ? 'Loading previous plan…'
+              : 'Saving plan…'}
         </div>
       )}
 
@@ -465,10 +482,18 @@ const WeekPlanner: React.FC<WeekPlannerProps> = ({
                   )}
                 </div>
                 {day.enabled && day.outfit && (
-                  <WeekOutfitDetails
-                    outfit={day.outfit}
-                    testIdPrefix={`week-day-summary-${day.day_of_week}`}
-                  />
+                  <>
+                    <WeekOutfitDetails
+                      outfit={day.outfit}
+                      testIdPrefix={`week-day-summary-${day.day_of_week}`}
+                    />
+                    {showAdminDiagnostics && (
+                      <WeekPlanOutfitAdminPanel
+                        dayLabel={label}
+                        outfit={day.outfit}
+                      />
+                    )}
+                  </>
                 )}
               </li>
             );
@@ -499,7 +524,7 @@ const WeekPlanner: React.FC<WeekPlannerProps> = ({
             type="button"
             onClick={() => {
               const ok = window.confirm(
-                "Delete this week’s plan and outfits? This cannot be undone."
+                "Clear this week’s plan from Today? A copy is kept under Previous plans so you can Load it later."
               );
               if (ok) onClearPlan();
             }}
@@ -511,6 +536,54 @@ const WeekPlanner: React.FC<WeekPlannerProps> = ({
           </button>
         )}
       </div>
+
+      {/* Previous plans */}
+      <section
+        className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur"
+        aria-label="Previous plans"
+        data-testid="week-plan-history"
+      >
+        <h2 className="text-lg font-semibold text-white">Previous plans</h2>
+        <p className="mt-1 text-sm text-slate-400">
+          Backups when you clear the week or regenerate over existing outfits. Save plan
+          updates your current week—it loads automatically when you return.
+        </p>
+        {history.length === 0 ? (
+          <p className="mt-4 text-sm text-slate-400" data-testid="week-plan-history-empty">
+            No previous plans yet. Clear plan or regenerate after outfits exist to keep a copy
+            here.
+          </p>
+        ) : (
+          <ul className="mt-4 space-y-2" data-testid="week-plan-history-list">
+            {history.map((item) => (
+              <li
+                key={item.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-slate-950/40 px-4 py-3"
+                data-testid={`week-plan-history-item-${item.id}`}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-white">{item.label}</p>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    {item.enabled_day_count} day{item.enabled_day_count === 1 ? '' : 's'}
+                    {item.created_at ? ` · ${item.created_at}` : ''}
+                  </p>
+                </div>
+                {onRestoreHistory && (
+                  <button
+                    type="button"
+                    onClick={() => onRestoreHistory(item.id)}
+                    disabled={busy}
+                    className="min-h-[36px] rounded-full border border-white/15 px-4 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-white/10 disabled:opacity-50"
+                    data-testid={`week-plan-history-load-${item.id}`}
+                  >
+                    Load
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 };

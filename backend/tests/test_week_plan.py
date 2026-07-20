@@ -184,6 +184,38 @@ class TestWeekPlanGenerate:
         )
         assert res.status_code == 400
 
+    def test_generate_includes_admin_diagnostics_for_admin(
+        self, client, auth_headers, wardrobe_item
+    ):
+        client.put(PLAN_URL, json=_sample_plan_body(), headers=auth_headers)
+        res = client.post(GENERATE_URL, json={}, headers=auth_headers)
+        assert res.status_code == 200
+        data = res.json()
+        for day in [d for d in data["days"] if d["enabled"]]:
+            outfit = day["outfit"]
+            assert outfit is not None
+            assert outfit.get("ai_prompt")
+            assert outfit.get("ai_raw_response")
+            assert outfit.get("cost") is not None
+            assert "total_cost" in outfit["cost"]
+
+    def test_generate_omits_admin_diagnostics_for_non_admin(
+        self, client, non_admin_auth_headers, wardrobe_item
+    ):
+        client.put(
+            PLAN_URL, json=_sample_plan_body(), headers=non_admin_auth_headers
+        )
+        res = client.post(GENERATE_URL, json={}, headers=non_admin_auth_headers)
+        assert res.status_code == 200
+        data = res.json()
+        for day in data["days"]:
+            outfit = day.get("outfit")
+            if not outfit:
+                continue
+            assert outfit.get("ai_prompt") is None
+            assert outfit.get("ai_raw_response") is None
+            assert outfit.get("cost") is None
+
 
 class TestWeekPlanToday:
     def test_today_no_plan(self, client, auth_headers):
@@ -281,3 +313,55 @@ class TestWeekPlanUseWardrobeOnly:
         res = client.post(GENERATE_URL, json={}, headers=auth_headers)
         assert res.status_code == 200
         assert res.json()["days"][0]["outfit"] is not None
+
+
+HISTORY_URL = "/api/week-plan/history"
+
+
+class TestWeekPlanHistory:
+    def test_history_unauthorized(self, client):
+        assert client.get(HISTORY_URL).status_code == 401
+        assert client.post(f"{HISTORY_URL}/1/restore").status_code == 401
+
+    def test_clear_creates_history_and_restore(self, client, auth_headers, wardrobe_item):
+        body = _sample_plan_body()
+        for d in body["days"]:
+            d["enabled"] = d["day_of_week"] in (0, 1)
+            if d["day_of_week"] == 0:
+                d["occasion"] = "work"
+                d["style"] = "classic"
+            if d["day_of_week"] == 1:
+                d["occasion"] = "party"
+                d["style"] = "edgy"
+        client.put(PLAN_URL, json=body, headers=auth_headers)
+        client.post(GENERATE_URL, json={}, headers=auth_headers)
+
+        cleared = client.delete(PLAN_URL, headers=auth_headers)
+        assert cleared.status_code == 200
+        assert cleared.json()["deleted"] is True
+
+        hist = client.get(HISTORY_URL, headers=auth_headers)
+        assert hist.status_code == 200
+        items = hist.json()["items"]
+        assert len(items) >= 1
+        entry_id = items[0]["id"]
+        assert items[0]["enabled_day_count"] >= 1
+        assert items[0]["label"]
+
+        # Current plan empty after clear
+        current = client.get(PLAN_URL, headers=auth_headers)
+        assert all(not d["enabled"] for d in current.json()["days"])
+
+        restored = client.post(
+            f"{HISTORY_URL}/{entry_id}/restore", headers=auth_headers
+        )
+        assert restored.status_code == 200
+        data = restored.json()
+        assert data["days"][0]["enabled"] is True
+        assert data["days"][0]["occasion"] == "work"
+        assert data["days"][0]["outfit"] is not None
+        assert data["days"][1]["occasion"] == "party"
+
+    def test_restore_missing_history_404(self, client, auth_headers):
+        res = client.post(f"{HISTORY_URL}/999999/restore", headers=auth_headers)
+        assert res.status_code == 404

@@ -11,6 +11,7 @@ from models.outfit import OutfitSuggestion
 from models.user import User
 from models.week_plan import (
     WeekPlanGenerateRequest,
+    WeekPlanHistoryListResponse,
     WeekPlanResponse,
     WeekPlanTodayResponse,
     WeekPlanUpsertRequest,
@@ -18,6 +19,7 @@ from models.week_plan import (
 from services.wardrobe_service import WardrobeService
 from services.week_plan_service import (
     WeekPlanService,
+    admin_fields_from_suggestion,
     empty_plan_response,
     extract_wardrobe_item_ids,
     outfit_summary,
@@ -57,8 +59,28 @@ class WeekPlanController:
         return plan_to_response(plan)
 
     def delete_plan(self, db: Session, current_user: User) -> dict:
-        deleted = self.week_plan_service.delete_plan(db, current_user.id)
+        deleted = self.week_plan_service.delete_plan(
+            db, current_user.id, snapshot=True
+        )
         return {"deleted": deleted}
+
+    def list_history(
+        self, db: Session, current_user: User
+    ) -> WeekPlanHistoryListResponse:
+        return self.week_plan_service.list_history(db, current_user.id)
+
+    def restore_history(
+        self, db: Session, current_user: User, history_id: int
+    ) -> WeekPlanResponse:
+        try:
+            plan = self.week_plan_service.restore_history(
+                db, current_user.id, history_id
+            )
+        except LookupError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return plan_to_response(plan)
 
     def today(self, db: Session, current_user: User) -> WeekPlanTodayResponse:
         return self.week_plan_service.today_response(db, current_user.id)
@@ -157,6 +179,21 @@ class WeekPlanController:
                     detail="Enable at least one day before generating.",
                 )
 
+        # Preserve prior generated outfits before overwrite
+        if any(d.outfit is not None for d in plan.days):
+            self.week_plan_service.snapshot_current(db, current_user.id)
+            db.commit()
+            plan = self.week_plan_service.get_plan(db, current_user.id)
+            assert plan is not None
+            if body.day_of_week is not None:
+                target_days = [
+                    d
+                    for d in plan.days
+                    if d.day_of_week == body.day_of_week and d.enabled
+                ]
+            else:
+                target_days = [d for d in plan.days if d.enabled]
+
         wardrobe_service = WardrobeService()
         items, total = wardrobe_service.get_user_wardrobe(
             db=db,
@@ -195,6 +232,8 @@ class WeekPlanController:
             exclude_day=body.day_of_week,
         )
         avoid_texts: list[str] = []
+        is_admin = bool(getattr(current_user, "is_admin", False))
+        admin_outfit_by_day: dict[int, dict] = {}
 
         days_to_generate = sorted(
             ([d for d in wardrobe_days if has_wardrobe] + open_days),
@@ -239,6 +278,10 @@ class WeekPlanController:
                 )
 
             self.week_plan_service.save_day_outfit(db, day, suggestion)
+            if is_admin:
+                admin_outfit_by_day[day.day_of_week] = admin_fields_from_suggestion(
+                    suggestion
+                )
             new_ids = extract_wardrobe_item_ids(suggestion)
             for i in new_ids:
                 if i not in used_ids:
@@ -257,5 +300,8 @@ class WeekPlanController:
                 "Other days were generated without wardrobe-only."
             )
         return plan_to_response(
-            refreshed, wardrobe_empty=wardrobe_empty, message=message
+            refreshed,
+            wardrobe_empty=wardrobe_empty,
+            message=message,
+            admin_outfit_by_day=admin_outfit_by_day if is_admin else None,
         )

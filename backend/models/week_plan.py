@@ -128,6 +128,25 @@ class WeeklyPlanOutfit(Base):
     )
 
 
+class WeeklyPlanHistory(Base):
+    """Snapshot of a weekly plan for later reload."""
+
+    __tablename__ = "weekly_plan_history"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    label: Mapped[str] = mapped_column(String(160), nullable=False, default="")
+    plan_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False, index=True
+    )
+
+
 # --- Pydantic schemas ---
 
 
@@ -162,6 +181,18 @@ class WeekPlanGenerateRequest(BaseModel):
 class WeekPlanOutfitResponse(BaseModel):
     summary: str
     generated_at: Optional[str] = None
+    ai_prompt: Optional[str] = Field(
+        default=None,
+        description="Admin-only: prompt sent for this day's generation (not persisted).",
+    )
+    ai_raw_response: Optional[str] = Field(
+        default=None,
+        description="Admin-only: raw AI response for this day (not persisted).",
+    )
+    cost: Optional[dict[str, Any]] = Field(
+        default=None,
+        description="Admin-only: API cost breakdown for this day's generation (not persisted).",
+    )
     shirt: str = ""
     trouser: str = ""
     blazer: str = ""
@@ -214,6 +245,17 @@ class WeekPlanTodayResponse(BaseModel):
     timezone: str
     has_plan: bool = True
     message: Optional[str] = None
+
+
+class WeekPlanHistoryItem(BaseModel):
+    id: int
+    label: str
+    created_at: str
+    enabled_day_count: int = 0
+
+
+class WeekPlanHistoryListResponse(BaseModel):
+    items: list[WeekPlanHistoryItem]
 
 
 # Avoid circular import type hints

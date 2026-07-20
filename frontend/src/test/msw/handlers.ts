@@ -201,5 +201,30 @@ export const handlers = [
   rest.delete(`${API_BASE}/api/week-plan`, (_req, res, ctx) => {
     return res(ctx.status(204));
   }),
+
+  rest.get(`${API_BASE}/api/week-plan/history`, (_req, res, ctx) => {
+    return res(ctx.json({ items: [] }));
+  }),
+
+  rest.post(`${API_BASE}/api/week-plan/history/:id/restore`, (_req, res, ctx) => {
+    return res(
+      ctx.json({
+        reminder_time: '07:30',
+        timezone: 'UTC',
+        shared_style: 'classic',
+        shared_season: 'all-season',
+        days: Array.from({ length: 7 }, (_, i) => ({
+          day_of_week: i,
+          enabled: i === 0,
+          occasion: i === 0 ? 'work' : 'everyday',
+          style: 'classic',
+          use_wardrobe_only: true,
+          outfit: null,
+        })),
+        wardrobe_empty: false,
+        message: null,
+      })
+    );
+  }),
 ];
 

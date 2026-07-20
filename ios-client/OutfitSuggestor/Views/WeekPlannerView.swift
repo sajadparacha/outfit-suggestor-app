@@ -70,6 +70,7 @@ struct WeekPlannerView: View {
                     sharedControlsSection
                     daysSection
                     actionsSection
+                    historySection
 
                     if let info = viewModel.infoMessage {
                         Text(info)
@@ -272,13 +273,22 @@ struct WeekPlannerView: View {
                     )
                 }
 
+                if AdminVisibility.isAdmin(user: auth.currentUser),
+                   let outfit = day.outfit,
+                   WeekPlanOutfitDisplay.hasAdminDiagnostics(outfit) {
+                    WeekPlanOutfitAdminDiagnosticsView(
+                        dayLabel: WeekPlanConstants.dayName(for: day.day_of_week),
+                        outfit: outfit
+                    )
+                }
+
                 Button {
                     Task { await viewModel.regenerateDay(day.day_of_week) }
                 } label: {
                     Text(WeekPlanCopy.regenerate)
                         .font(.caption.weight(.semibold))
                 }
-                .disabled(viewModel.isGenerating || viewModel.isSaving)
+                .disabled(viewModel.isGenerating || viewModel.isSaving || viewModel.isRestoring)
                 .foregroundColor(AppTheme.gradientStart)
                 .accessibilityIdentifier("week.day.\(day.day_of_week).regenerate")
             }
@@ -301,7 +311,7 @@ struct WeekPlannerView: View {
                     .padding(.vertical, 14)
             }
             .buttonStyle(GradientButtonStyle())
-            .disabled(viewModel.isGenerating || viewModel.isSaving || !viewModel.hasEnabledDays)
+            .disabled(viewModel.isGenerating || viewModel.isSaving || viewModel.isRestoring || !viewModel.hasEnabledDays)
             .accessibilityIdentifier("week.generate")
 
             Button {
@@ -314,7 +324,7 @@ struct WeekPlannerView: View {
             }
             .buttonStyle(.bordered)
             .tint(AppTheme.gradientStart)
-            .disabled(viewModel.isGenerating || viewModel.isSaving)
+            .disabled(viewModel.isGenerating || viewModel.isSaving || viewModel.isRestoring)
             .accessibilityIdentifier("week.save")
 
             Button(role: .destructive) {
@@ -323,9 +333,83 @@ struct WeekPlannerView: View {
                 Text(WeekPlanCopy.clearPlan)
                     .font(.caption.weight(.semibold))
             }
-            .disabled(viewModel.isGenerating || viewModel.isSaving)
+            .disabled(viewModel.isGenerating || viewModel.isSaving || viewModel.isRestoring)
             .accessibilityIdentifier("week.clear")
         }
+    }
+
+    // MARK: - History
+
+    private var historySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(WeekPlanCopy.previousPlans)
+                .font(.headline)
+                .foregroundColor(AppTheme.textPrimary)
+
+            Text(WeekPlanCopy.previousPlansHint)
+                .font(.subheadline)
+                .foregroundColor(AppTheme.textSecondary)
+
+            if viewModel.history.isEmpty {
+                Text(WeekPlanCopy.emptyHistory)
+                    .font(.subheadline)
+                    .foregroundColor(AppTheme.textSecondary)
+                    .accessibilityIdentifier("week.history.empty")
+            } else {
+                ForEach(viewModel.history) { item in
+                    historyRow(item)
+                }
+            }
+        }
+        .accessibilityIdentifier("week.history")
+    }
+
+    private func historyRow(_ item: WeekPlanHistoryItem) -> some View {
+        HStack(alignment: .center, spacing: isRegularWidth ? 16 : 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.label)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(AppTheme.textPrimary)
+                Text(historySubtitle(item))
+                    .font(.caption)
+                    .foregroundColor(AppTheme.textSecondary)
+            }
+            Spacer(minLength: 8)
+            Button {
+                Task { await viewModel.restoreHistory(id: item.id) }
+            } label: {
+                Text(WeekPlanCopy.loadPlan)
+                    .font(.caption.weight(.semibold))
+            }
+            .disabled(viewModel.isGenerating || viewModel.isSaving || viewModel.isRestoring)
+            .foregroundColor(AppTheme.gradientStart)
+            .accessibilityIdentifier("week.history.\(item.id).load")
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassCard()
+        .accessibilityIdentifier("week.history.\(item.id)")
+    }
+
+    private func historySubtitle(_ item: WeekPlanHistoryItem) -> String {
+        let days = item.enabled_day_count == 1
+            ? "1 day"
+            : "\(item.enabled_day_count) days"
+        let date = formatHistoryDate(item.created_at)
+        if date.isEmpty { return days }
+        return "\(days) · \(date)"
+    }
+
+    private func formatHistoryDate(_ iso: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        var date = formatter.date(from: iso)
+        if date == nil {
+            formatter.formatOptions = [.withInternetDateTime]
+            date = formatter.date(from: iso)
+        }
+        guard let date else { return iso }
+        return date.formatted(date: .abbreviated, time: .shortened)
     }
 
     // MARK: - Helpers
@@ -462,5 +546,98 @@ private struct WeekPlanOutfitSlotRowView: View {
             }
             Spacer(minLength: 0)
         }
+    }
+}
+
+private struct WeekPlanOutfitAdminDiagnosticsView: View {
+    let dayLabel: String
+    let outfit: WeekPlanOutfitResponse
+    @State private var isExpanded = true
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button(action: { isExpanded.toggle() }) {
+                HStack {
+                    Text("Admin diagnostics — \(dayLabel)")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(AppTheme.textSecondary)
+                    Spacer()
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundColor(AppTheme.textSecondary)
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("week.adminDiagnostics.\(dayLabel)")
+
+            if isExpanded {
+                if let cost = outfit.cost {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Generation cost")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(AppTheme.accent)
+                        Text("ChatGPT: \(formatInsightsCost(cost.gpt4_cost))")
+                            .font(.caption)
+                            .foregroundColor(AppTheme.textSecondary)
+                        if let input = cost.input_tokens {
+                            Text("Input tokens: \(input)")
+                                .font(.caption2)
+                                .foregroundColor(AppTheme.textSecondary)
+                        }
+                        if let output = cost.output_tokens {
+                            Text("Output tokens: \(output)")
+                                .font(.caption2)
+                                .foregroundColor(AppTheme.textSecondary)
+                        }
+                        Text("Total: \(formatInsightsCost(cost.total_cost))")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(AppTheme.textPrimary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(10)
+                    .background(AppTheme.accentSoft)
+                    .cornerRadius(10)
+                    .accessibilityIdentifier("week.generationCost")
+                }
+
+                weekPlanAdminTextPanel(
+                    title: InsightsCopy.inputPromptTitle,
+                    content: outfit.ai_prompt ?? "—",
+                    accessibilityIdentifier: "week.inputPrompt"
+                )
+                weekPlanAdminTextPanel(
+                    title: InsightsCopy.aiResponseTitle,
+                    content: outfit.ai_raw_response ?? "—",
+                    accessibilityIdentifier: "week.aiResponse"
+                )
+            }
+        }
+        .padding(10)
+        .background(Color.white.opacity(0.04))
+        .cornerRadius(12)
+    }
+
+    private func weekPlanAdminTextPanel(
+        title: String,
+        content: String,
+        accessibilityIdentifier: String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundColor(AppTheme.textSecondary)
+            ScrollView(.vertical, showsIndicators: true) {
+                Text(content)
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundColor(AppTheme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(minHeight: 72, maxHeight: 120)
+            .padding(8)
+            .background(Color.black.opacity(0.25))
+            .cornerRadius(8)
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(AppTheme.border, lineWidth: 1))
+        }
+        .accessibilityIdentifier(accessibilityIdentifier)
     }
 }

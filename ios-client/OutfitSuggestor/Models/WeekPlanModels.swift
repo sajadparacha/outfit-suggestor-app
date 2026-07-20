@@ -69,6 +69,9 @@ struct WeekPlanOutfitResponse: Codable, Identifiable {
     var matching_wardrobe_items: MatchingWardrobeItems?
     var model_image: String?
     var wardrobe_item_ids: [Int]
+    var ai_prompt: String?
+    var ai_raw_response: String?
+    var cost: OutfitCost?
 
     enum CodingKeys: String, CodingKey {
         case summary, generated_at, shirt, trouser, blazer, shoes, belt, reasoning
@@ -76,6 +79,7 @@ struct WeekPlanOutfitResponse: Codable, Identifiable {
         case shirt_id, trouser_id, blazer_id, shoes_id, belt_id
         case sweater_id, outerwear_id, tie_id
         case matching_wardrobe_items, model_image, wardrobe_item_ids
+        case ai_prompt, ai_raw_response, cost
     }
 
     init(
@@ -100,7 +104,10 @@ struct WeekPlanOutfitResponse: Codable, Identifiable {
         tie_id: Int? = nil,
         matching_wardrobe_items: MatchingWardrobeItems? = nil,
         model_image: String? = nil,
-        wardrobe_item_ids: [Int] = []
+        wardrobe_item_ids: [Int] = [],
+        ai_prompt: String? = nil,
+        ai_raw_response: String? = nil,
+        cost: OutfitCost? = nil
     ) {
         self.summary = summary
         self.generated_at = generated_at
@@ -124,6 +131,9 @@ struct WeekPlanOutfitResponse: Codable, Identifiable {
         self.matching_wardrobe_items = matching_wardrobe_items
         self.model_image = model_image
         self.wardrobe_item_ids = wardrobe_item_ids
+        self.ai_prompt = ai_prompt
+        self.ai_raw_response = ai_raw_response
+        self.cost = cost
     }
 
     init(from decoder: Decoder) throws {
@@ -150,6 +160,9 @@ struct WeekPlanOutfitResponse: Codable, Identifiable {
         matching_wardrobe_items = try c.decodeIfPresent(MatchingWardrobeItems.self, forKey: .matching_wardrobe_items)
         model_image = try c.decodeIfPresent(String.self, forKey: .model_image)
         wardrobe_item_ids = try c.decodeIfPresent([Int].self, forKey: .wardrobe_item_ids) ?? []
+        ai_prompt = try c.decodeIfPresent(String.self, forKey: .ai_prompt)
+        ai_raw_response = try c.decodeIfPresent(String.self, forKey: .ai_raw_response)
+        cost = try c.decodeIfPresent(OutfitCost.self, forKey: .cost)
     }
 }
 
@@ -288,6 +301,17 @@ struct WeekPlanDeleteResponse: Codable, Equatable {
     var deleted: Bool
 }
 
+struct WeekPlanHistoryItem: Codable, Equatable, Identifiable {
+    var id: Int
+    var label: String
+    var created_at: String
+    var enabled_day_count: Int
+}
+
+struct WeekPlanHistoryListResponse: Codable, Equatable {
+    var items: [WeekPlanHistoryItem]
+}
+
 enum WeekPlanCopy {
     static let loading = "Loading your week…"
     static let generating = "Generating outfits…"
@@ -304,9 +328,16 @@ enum WeekPlanCopy {
     static let useWardrobe = "Use wardrobe"
     static let outfitDetails = "Outfit details"
     static let clearPlan = "Clear plan"
-    static let clearConfirmTitle = "Delete this week’s plan and outfits?"
-    static let clearConfirmMessage = "This cannot be undone. You’ll need to set days and generate again."
-    static let clearConfirmDelete = "Delete plan"
+    static let clearConfirmTitle = "Clear this week’s plan?"
+    static let clearConfirmMessage = "A copy is saved under Previous plans. You can Load it later, or set days and generate again."
+    static let clearConfirmDelete = "Clear plan"
+    static let previousPlans = "Previous plans"
+    static let previousPlansHint =
+        "Backups when you clear or regenerate over existing outfits. Save plan updates your current week automatically."
+    static let loadPlan = "Load"
+    static let emptyHistory =
+        "No previous plans yet. Clear plan or regenerate after outfits exist to keep a copy here."
+    static let planRestored = "Previous plan loaded."
 }
 
 /// Presentation helpers for collapsible week-plan outfit UI (summary vs expanded slots).
@@ -326,6 +357,12 @@ enum WeekPlanOutfitDisplay {
         !summaryLine(for: outfit).isEmpty
             || !slotRows(for: outfit).isEmpty
             || !outfit.reasoning.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    static func hasAdminDiagnostics(_ outfit: WeekPlanOutfitResponse) -> Bool {
+        let hasPrompt = !(outfit.ai_prompt ?? "").isEmpty
+        let hasResponse = !(outfit.ai_raw_response ?? "").isEmpty
+        return hasPrompt || hasResponse || outfit.cost != nil
     }
 
     static func slotRows(for outfit: WeekPlanOutfitResponse) -> [SlotRow] {

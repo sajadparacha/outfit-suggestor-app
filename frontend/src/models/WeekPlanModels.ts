@@ -2,7 +2,7 @@
  * Week Outfit Planner DTOs — match backend `/api/week-plan` schemas.
  */
 
-import { MatchingWardrobeItems } from './OutfitModels';
+import { MatchingWardrobeItems, OutfitCost } from './OutfitModels';
 
 /** 0 = Monday … 6 = Sunday */
 export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -26,6 +26,9 @@ export const DEFAULT_OCCASION = 'everyday';
 export interface WeekPlanOutfit {
   summary: string;
   generated_at?: string | null;
+  ai_prompt?: string | null;
+  ai_raw_response?: string | null;
+  cost?: OutfitCost | null;
   shirt: string;
   trouser: string;
   blazer: string;
@@ -99,6 +102,18 @@ export interface WeekPlanToday {
   timezone: string;
   has_plan: boolean;
   message?: string | null;
+}
+
+/** Snapshot summary from GET /api/week-plan/history */
+export interface WeekPlanHistoryItem {
+  id: number;
+  label: string;
+  created_at: string;
+  enabled_day_count: number;
+}
+
+export interface WeekPlanHistoryListResponse {
+  items: WeekPlanHistoryItem[];
 }
 
 /** Build a blank Mon–Sun plan for local editing before the first save. */
