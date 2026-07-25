@@ -23,7 +23,6 @@ describe('Guide and footer navigation (App)', () => {
     expect(screen.getByText(/Choose one item per outfit slot/i)).toBeInTheDocument();
     expect(screen.getByText(/Tap Shopping list to open a market-ready table/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Week Outfit Planner/i })).toBeInTheDocument();
-    expect(screen.getByText(/iOS-first/i)).toBeInTheDocument();
   });
 
   it('opens About from footer', async () => {
@@ -48,7 +47,7 @@ describe('Guide and footer navigation (App)', () => {
     expect(screen.getByText(/select one or more saved pieces/i)).toBeInTheDocument();
     expect(screen.getAllByText(/market-ready shopping list/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Week Outfit Planner/i)).toBeInTheDocument();
-    expect(screen.getByText(/iOS-first/i)).toBeInTheDocument();
+    expect(screen.getByText(/Save named week configurations/i)).toBeInTheDocument();
   });
 
   it('opens User guide from footer link', async () => {

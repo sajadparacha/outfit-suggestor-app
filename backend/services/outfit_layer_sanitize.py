@@ -80,12 +80,13 @@ def sanitize_outfit_layers(
     if not (has_blazer and has_outerwear):
         return payload
 
-    keep_blazer = prefers_blazer_over_jacket(occasion=occasion, style=style)
-    if not keep_blazer:
-        if payload.get("outerwear_id") is not None and payload.get("blazer_id") is None:
-            keep_blazer = False
-        else:
-            keep_blazer = True
+    # Wardrobe pins win: selected jacket without a blazer id stays outerwear.
+    if payload.get("outerwear_id") is not None and payload.get("blazer_id") is None:
+        keep_blazer = False
+    elif payload.get("blazer_id") is not None and payload.get("outerwear_id") is None:
+        keep_blazer = True
+    else:
+        keep_blazer = prefers_blazer_over_jacket(occasion=occasion, style=style)
 
     matching = payload.get("matching_wardrobe_items")
     if keep_blazer:

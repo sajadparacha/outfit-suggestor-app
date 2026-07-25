@@ -272,6 +272,8 @@ describe('OutfitPreview', () => {
     it('shows Also wear section when optional layers are present', () => {
       const suggestionWithLayers: OutfitSuggestion = {
         ...baseSuggestion,
+        // Empty blazer so outerwear is not exclusivity-hidden from Also wear.
+        blazer: '',
         sweater: 'Navy merino crewneck — extra warmth for cool evenings',
         outerwear: 'Charcoal wool overcoat',
         tie: null,

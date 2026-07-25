@@ -46,3 +46,25 @@ def test_casual_keeps_outerwear_when_no_blazer():
     )
     assert payload["outerwear"] == "Denim jacket"
     assert payload["outerwear_id"] == 9
+
+
+def test_pinned_outerwear_wins_over_work_occasion_preference():
+    """Selected jacket (outerwear_id) must not be dropped for work/classic preference."""
+    payload = {
+        "blazer": "Test blazer",
+        "blazer_id": None,
+        "outerwear": "Navy bomber jacket",
+        "outerwear_id": 7,
+        "matching_wardrobe_items": {
+            "blazer": [],
+            "outerwear": [{"id": 7}],
+        },
+    }
+    sanitize_outfit_layers(
+        payload, season="all-season", occasion="work", style="smart-casual"
+    )
+    assert payload["outerwear_id"] == 7
+    assert payload["outerwear"] == "Navy bomber jacket"
+    assert payload["blazer"] == ""
+    assert payload["blazer_id"] is None
+

@@ -411,6 +411,10 @@ describe('Week Outfit Planner', () => {
 
     fireEvent.click(screen.getByTestId('week-missing-find-alternative'));
     await waitFor(() => expect(regenerated).toBe(true));
+    // Wait until regenerate finishes (busy clears); disabled buttons ignore clicks.
+    await waitFor(() => {
+      expect(screen.getByTestId('week-missing-continue')).not.toBeDisabled();
+    });
 
     fireEvent.click(screen.getByTestId('week-missing-continue'));
     await waitFor(() => {
@@ -548,11 +552,11 @@ describe('Week Outfit Planner', () => {
     fireEvent.click(saveBtn);
 
     await waitFor(() => {
-      expect(screen.getByTestId('week-save-plan')).toBeDisabled();
-      expect(screen.getByTestId('week-save-plan')).toHaveAttribute('aria-busy', 'true');
+      expect(resolvePut).not.toBeNull();
     });
+    expect(screen.getByTestId('week-save-plan')).toBeDisabled();
+    expect(screen.getByTestId('week-save-plan')).toHaveAttribute('aria-busy', 'true');
 
-    expect(resolvePut).not.toBeNull();
     resolvePut!(undefined);
 
     await waitFor(() => {

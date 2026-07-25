@@ -2,6 +2,8 @@
 from fastapi import APIRouter, Body, Depends
 from sqlalchemy.orm import Session
 
+from config import get_outfit_controller
+from controllers.outfit_controller import OutfitController
 from controllers.week_plan_controller import WeekPlanController
 from dependencies import get_current_active_user
 from models.database import get_db
@@ -20,8 +22,11 @@ from models.week_plan import (
 router = APIRouter(prefix="/api/week-plan", tags=["week-plan"])
 
 
-def get_week_plan_controller() -> WeekPlanController:
-    return WeekPlanController()
+def get_week_plan_controller(
+    outfit_controller: OutfitController = Depends(get_outfit_controller),
+) -> WeekPlanController:
+    """Inject outfit controller so tests can override get_outfit_controller."""
+    return WeekPlanController(outfit_controller=outfit_controller)
 
 
 @router.get("", response_model=WeekPlanResponse, name="get_week_plan")

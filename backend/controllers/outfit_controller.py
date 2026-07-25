@@ -204,15 +204,13 @@ class OutfitController:
         if not (has_blazer and has_outerwear):
             return
 
-        # Prefer blazer for work/classic; otherwise keep whichever has a wardrobe id, else blazer
-        keep_blazer = self._prefers_blazer_over_jacket(occasion=occasion, style=style)
-        if not keep_blazer:
-            if suggestion.outerwear_id is not None and suggestion.blazer_id is None:
-                keep_blazer = False
-            elif suggestion.blazer_id is not None and suggestion.outerwear_id is None:
-                keep_blazer = True
-            else:
-                keep_blazer = True
+        # Wardrobe pins win: selected jacket without a blazer id stays outerwear.
+        if suggestion.outerwear_id is not None and suggestion.blazer_id is None:
+            keep_blazer = False
+        elif suggestion.blazer_id is not None and suggestion.outerwear_id is None:
+            keep_blazer = True
+        else:
+            keep_blazer = self._prefers_blazer_over_jacket(occasion=occasion, style=style)
 
         if keep_blazer:
             self._clear_outerwear_layer(suggestion, matching_items)
