@@ -134,4 +134,54 @@ describe('useWeekPlanController', () => {
     expect(result.current.plan?.days[0].outfit?.summary).toBe('Monday work look');
     expect(result.current.today?.outfit?.summary).toBe('Monday work look');
   });
+
+  it('regenerateDay persists the latest day style even via a stale callback', async () => {
+    mockApi.generateWeekPlan.mockImplementation(async () => {
+      const body = mockApi.putWeekPlan.mock.calls.at(-1)?.[0];
+      const days =
+        body?.days.map((d) => ({
+          ...d,
+          outfit: d.day_of_week === 3 ? {
+            summary: 'Thu look',
+            shirt: 'Shirt',
+            trouser: 'Trousers',
+            blazer: 'Blazer',
+            shoes: 'Shoes',
+            belt: 'Belt',
+            reasoning: 'ok',
+          } : null,
+        })) ?? emptyPlan.days;
+      return {
+        ...emptyPlan,
+        shared_season: body?.shared_season ?? emptyPlan.shared_season,
+        reminder_time: body?.reminder_time ?? emptyPlan.reminder_time,
+        days,
+      };
+    });
+
+    const { result } = renderHook(() =>
+      useWeekPlanController({ isAuthenticated: true, userId: 1 })
+    );
+    await waitFor(() => expect(result.current.plan).not.toBeNull());
+
+    act(() => {
+      result.current.updateDay(3, { enabled: true, occasion: 'work' });
+    });
+
+    // Capture callback before style change (simulates regenerate wired to a prior render).
+    const staleRegenerate = result.current.regenerateDay;
+
+    act(() => {
+      result.current.updateDay(3, { style: 'smart-casual' });
+    });
+
+    await act(async () => {
+      await staleRegenerate(3);
+    });
+
+    const putBody = mockApi.putWeekPlan.mock.calls.at(-1)?.[0];
+    expect(putBody?.days.find((d) => d.day_of_week === 3)?.style).toBe('smart-casual');
+    expect(putBody?.days.find((d) => d.day_of_week === 3)?.occasion).toBe('work');
+    expect(result.current.plan?.days[3].style).toBe('smart-casual');
+  });
 });

@@ -277,6 +277,21 @@ class TestWeekPlanUseWardrobeOnly:
         assert get.json()["days"][0]["style"] == "streetwear"
         assert get.json()["days"][1]["style"] == "preppy"
 
+    def test_generate_preserves_per_day_style(self, client, auth_headers):
+        body = _sample_plan_body()
+        for d in body["days"]:
+            d["enabled"] = d["day_of_week"] == 3
+            d["use_wardrobe_only"] = False
+        body["days"][3]["occasion"] = "work"
+        body["days"][3]["style"] = "smart-casual"
+        assert client.put(PLAN_URL, json=body, headers=auth_headers).status_code == 200
+        res = client.post(GENERATE_URL, json={"day_of_week": 3}, headers=auth_headers)
+        assert res.status_code == 200
+        assert res.json()["days"][3]["style"] == "smart-casual"
+        assert res.json()["days"][3]["occasion"] == "work"
+        get = client.get(PLAN_URL, headers=auth_headers)
+        assert get.json()["days"][3]["style"] == "smart-casual"
+
     def test_generate_wardrobe_only_empty_wardrobe(self, client, auth_headers):
         body = _sample_plan_body()
         for d in body["days"]:

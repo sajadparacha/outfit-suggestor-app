@@ -2,7 +2,7 @@
  * Week Outfit Planner controller — load, edit, save, generate, today, history.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import apiService from '../services/ApiService';
 import {
   WeekPlan,
@@ -22,6 +22,8 @@ interface UseWeekPlanControllerOptions {
 
 export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) => {
   const [plan, setPlan] = useState<WeekPlan | null>(null);
+  /** Always-current plan for save/generate (avoids stale closure after updateDay). */
+  const planRef = useRef<WeekPlan | null>(null);
   const [today, setToday] = useState<WeekPlanToday | null>(null);
   const [history, setHistory] = useState<WeekPlanHistoryItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -31,16 +33,21 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
+  const replacePlan = useCallback((next: WeekPlan | null) => {
+    planRef.current = next;
+    setPlan(next);
+  }, []);
+
   const applyPlan = useCallback((next: WeekPlan) => {
     const normalized = normalizeWeekPlanDays(next);
-    setPlan(normalized);
+    replacePlan(normalized);
     if (normalized.message) {
       setMessage(normalized.message);
     }
     if (normalized.wardrobe_empty) {
       setMessage(normalized.message || 'Add items to your wardrobe to generate outfits.');
     }
-  }, []);
+  }, [replacePlan]);
 
   const loadHistory = useCallback(async () => {
     try {
@@ -67,13 +74,13 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load week plan';
       setError(errorMessage);
-      setPlan(createEmptyWeekPlan(getDeviceTimezone()));
+      replacePlan(createEmptyWeekPlan(getDeviceTimezone()));
       setToday(null);
     } finally {
       setLoading(false);
     }
     await loadHistory();
-  }, [applyPlan, loadHistory]);
+  }, [applyPlan, loadHistory, replacePlan]);
 
   const refreshToday = useCallback(async () => {
     try {
@@ -84,39 +91,57 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
     }
   }, []);
 
-  /** Patch a day locally (enabled, occasion, use_wardrobe_only, …). */
+  /** Patch a day locally (enabled, occasion, style, use_wardrobe_only, …). */
   const updateDay = useCallback((dayOfWeek: number, patch: Partial<WeekPlanDay>) => {
     setPlan((prev) => {
       if (!prev) return prev;
-      return {
+      const next = {
         ...prev,
         days: prev.days.map((d) =>
           d.day_of_week === dayOfWeek ? { ...d, ...patch } : d
         ),
       };
+      planRef.current = next;
+      return next;
     });
   }, []);
 
   const setReminderTime = useCallback((reminder_time: string) => {
-    setPlan((prev) => (prev ? { ...prev, reminder_time } : prev));
+    setPlan((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, reminder_time };
+      planRef.current = next;
+      return next;
+    });
   }, []);
 
   const setSharedStyle = useCallback((shared_style: string) => {
-    setPlan((prev) => (prev ? { ...prev, shared_style } : prev));
+    setPlan((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, shared_style };
+      planRef.current = next;
+      return next;
+    });
   }, []);
 
   const setSharedSeason = useCallback((shared_season: string) => {
-    setPlan((prev) => (prev ? { ...prev, shared_season } : prev));
+    setPlan((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, shared_season };
+      planRef.current = next;
+      return next;
+    });
   }, []);
 
   const savePlan = useCallback(async () => {
-    if (!plan) return;
+    const current = planRef.current;
+    if (!current) return;
     setSaving(true);
     setError(null);
     setMessage(null);
     try {
       const timezone = getDeviceTimezone();
-      const payload = toUpsertPayload({ ...plan, timezone });
+      const payload = toUpsertPayload({ ...current, timezone });
       const saved = await apiService.putWeekPlan(payload);
       applyPlan(saved);
       await refreshToday();
@@ -129,17 +154,18 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
     } finally {
       setSaving(false);
     }
-  }, [plan, applyPlan, refreshToday, loadHistory]);
+  }, [applyPlan, refreshToday, loadHistory]);
 
   const generateWeek = useCallback(async () => {
-    if (!plan) return;
+    const current = planRef.current;
+    if (!current) return;
     setGenerating(true);
     setError(null);
     setMessage(null);
     try {
       // Persist edits first so generate uses current occasions/style/reminder
       const timezone = getDeviceTimezone();
-      await apiService.putWeekPlan(toUpsertPayload({ ...plan, timezone }));
+      await apiService.putWeekPlan(toUpsertPayload({ ...current, timezone }));
       const result = await apiService.generateWeekPlan();
       applyPlan(result);
       await refreshToday();
@@ -156,17 +182,18 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
     } finally {
       setGenerating(false);
     }
-  }, [plan, applyPlan, refreshToday, loadHistory]);
+  }, [applyPlan, refreshToday, loadHistory]);
 
   const regenerateDay = useCallback(
     async (dayOfWeek: number) => {
-      if (!plan) return;
+      const current = planRef.current;
+      if (!current) return;
       setGenerating(true);
       setError(null);
       setMessage(null);
       try {
         const timezone = getDeviceTimezone();
-        await apiService.putWeekPlan(toUpsertPayload({ ...plan, timezone }));
+        await apiService.putWeekPlan(toUpsertPayload({ ...current, timezone }));
         const result = await apiService.generateWeekPlan({ day_of_week: dayOfWeek });
         applyPlan(result);
         await refreshToday();
@@ -183,7 +210,7 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
         setGenerating(false);
       }
     },
-    [plan, applyPlan, refreshToday]
+    [applyPlan, refreshToday]
   );
 
   const clearPlan = useCallback(async () => {
@@ -191,7 +218,7 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
     setError(null);
     try {
       await apiService.deleteWeekPlan();
-      setPlan(createEmptyWeekPlan(getDeviceTimezone()));
+      replacePlan(createEmptyWeekPlan(getDeviceTimezone()));
       setToday(null);
       setMessage('Plan cleared.');
       await loadHistory();
@@ -202,7 +229,7 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
     } finally {
       setSaving(false);
     }
-  }, [loadHistory]);
+  }, [loadHistory, replacePlan]);
 
   const restoreHistory = useCallback(
     async (historyId: number) => {
@@ -232,7 +259,7 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
     const currentUserId = options?.userId;
 
     if (!isAuthenticated || !currentUserId) {
-      setPlan(null);
+      replacePlan(null);
       setToday(null);
       setHistory([]);
       setError(null);

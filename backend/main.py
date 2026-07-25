@@ -72,6 +72,13 @@ except ImportError:
 # Create database tables (simple auto-migration for now)
 Base.metadata.create_all(bind=engine)
 
+try:
+    from utils.ensure_week_plan_schema import ensure_week_plan_day_columns
+
+    ensure_week_plan_day_columns(engine)
+except Exception as exc:  # pragma: no cover — never block boot on alter edge cases
+    print(f"⚠️  Week plan schema ensure skipped: {exc}")
+
 
 @app.exception_handler(GuestLimitReachedException)
 async def guest_limit_reached_handler(_request: Request, _exc: GuestLimitReachedException):
