@@ -55,3 +55,24 @@ def test_parse_response_treats_nullish_optional_fields_as_none():
     assert parsed.sweater is None
     assert parsed.outerwear is None
     assert parsed.tie is None
+
+
+def test_parse_response_coerces_null_blazer_to_empty_string():
+    """AI may return blazer: null for outerwear-focused looks; must not raise ValidationError."""
+    ai = _ai_service()
+    raw = json.dumps(
+        {
+            "shirt": "White oxford",
+            "trouser": "Navy chinos",
+            "blazer": None,
+            "shoes": "Brown loafers",
+            "belt": "Brown belt",
+            "outerwear": "Tan corduroy jacket",
+            "reasoning": "Casual look built around outerwear.",
+        }
+    )
+
+    parsed = ai._parse_response(raw)  # type: ignore[attr-defined]
+    assert parsed.blazer == ""
+    assert parsed.outerwear == "Tan corduroy jacket"
+    assert parsed.shirt == "White oxford"

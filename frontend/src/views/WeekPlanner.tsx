@@ -9,6 +9,7 @@ import {
   MissingOutfitSlot,
   WeekPlan,
   WeekPlanHistoryItem,
+  WeekPlanPresetItem,
   WeekPlanToday,
   WEEK_DAY_LABELS,
   formatOccasionLabel,
@@ -19,6 +20,7 @@ import PlannerSettings from './components/weekPlan/PlannerSettings';
 import WeekDaySelector from './components/weekPlan/WeekDaySelector';
 import OutfitPreview from './components/weekPlan/OutfitPreview';
 import PlannerActionBar from './components/weekPlan/PlannerActionBar';
+import WeekPlanPresets from './components/weekPlan/WeekPlanPresets';
 import { plannerSurface } from './components/weekPlan/weekPlanStyles';
 
 export interface WeekPlannerProps {
@@ -49,6 +51,16 @@ export interface WeekPlannerProps {
   onRegenerateDay: (dayOfWeek: number) => void;
   onClearPlan?: () => void;
   onRestoreHistory?: (historyId: number) => void;
+  presets?: WeekPlanPresetItem[];
+  presetCount?: number;
+  presetLimit?: number;
+  presetAtLimit?: boolean;
+  presetBusy?: boolean;
+  onSavePresetAs?: (name: string) => void | Promise<void>;
+  onUpdatePreset?: (presetId: number) => void | Promise<void>;
+  onRenamePreset?: (presetId: number, name: string) => void | Promise<void>;
+  onDeletePreset?: (presetId: number) => void | Promise<void>;
+  onLoadPreset?: (presetId: number) => void | Promise<void>;
   isAdmin?: boolean;
   showAiPromptResponse?: boolean;
 }
@@ -116,6 +128,16 @@ const WeekPlanner: React.FC<WeekPlannerProps> = ({
   onRegenerateDay,
   onClearPlan,
   onRestoreHistory,
+  presets = [],
+  presetCount = 0,
+  presetLimit = 0,
+  presetAtLimit = false,
+  presetBusy = false,
+  onSavePresetAs,
+  onUpdatePreset,
+  onRenamePreset,
+  onDeletePreset,
+  onLoadPreset,
   isAdmin = false,
   showAiPromptResponse = false,
 }) => {
@@ -136,7 +158,7 @@ const WeekPlanner: React.FC<WeekPlannerProps> = ({
     if (firstEnabled) setSelectedDay(firstEnabled.day_of_week);
   }, [plan?.days?.length, today?.day_of_week]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const busy = loading || generating || saving || restoring;
+  const busy = loading || generating || saving || restoring || presetBusy;
   const showAdminDiagnostics = isAdmin && showAiPromptResponse;
 
   const selectedDayPlan = useMemo(
@@ -203,7 +225,7 @@ const WeekPlanner: React.FC<WeekPlannerProps> = ({
         </div>
       )}
 
-      {(generating || saving || restoring) && (
+      {(generating || saving || restoring || presetBusy) && (
         <div
           className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300"
           role="status"
@@ -212,7 +234,9 @@ const WeekPlanner: React.FC<WeekPlannerProps> = ({
             ? 'Generating outfits…'
             : restoring
               ? 'Loading previous plan…'
-              : 'Saving plan…'}
+              : presetBusy
+                ? 'Updating configurations…'
+                : 'Saving plan…'}
         </div>
       )}
 
@@ -238,6 +262,7 @@ const WeekPlanner: React.FC<WeekPlannerProps> = ({
       {selectedDayPlan && (
         <OutfitPreview
           day={selectedDayPlan}
+          season={plan.shared_season}
           busy={busy}
           showAdminDiagnostics={showAdminDiagnostics}
           dismissedMissing={dismissedMissingDays.has(selectedDayPlan.day_of_week)}
@@ -257,6 +282,23 @@ const WeekPlanner: React.FC<WeekPlannerProps> = ({
         onClearPlan={onClearPlan}
       />
 
+      {onSavePresetAs && onUpdatePreset && onRenamePreset && onDeletePreset && onLoadPreset && (
+        <WeekPlanPresets
+          plan={plan}
+          presets={presets}
+          presetCount={presetCount}
+          presetLimit={presetLimit}
+          presetAtLimit={presetAtLimit}
+          busy={busy}
+          presetBusy={presetBusy}
+          onSaveAs={onSavePresetAs}
+          onUpdate={onUpdatePreset}
+          onRename={onRenamePreset}
+          onDelete={onDeletePreset}
+          onLoad={onLoadPreset}
+        />
+      )}
+
       <section
         className={`${plannerSurface} p-4 min-[768px]:p-5`}
         aria-label="Previous plans"
@@ -264,8 +306,9 @@ const WeekPlanner: React.FC<WeekPlannerProps> = ({
       >
         <h2 className="text-lg font-semibold text-white">Previous plans</h2>
         <p className="mt-1 text-sm text-slate-400">
-          Backups when you clear the week or regenerate over existing outfits. Save weekly plan
-          updates your current week—it loads automatically when you return.
+          Backups when you clear the week or regenerate over existing outfits. Load restores a
+          backup without adding a new row. Save weekly plan updates your current week—it loads
+          automatically when you return.
         </p>
         {history.length === 0 ? (
           <p className="mt-4 text-sm text-slate-400" data-testid="week-plan-history-empty">

@@ -844,10 +844,20 @@ ALSO AVOID these recent outfit suggestions from this session (do NOT repeat or c
             summer_guidance = """
 SUMMER / WARM-WEATHER RULES (strict):
 - Prioritize breathable fabrics: linen, cotton, lightweight wool blends only when office/formal requires it.
+- Do NOT recommend jackets, coats, bombers, parkas, or any casual outerwear — set "outerwear" to null.
 - Do NOT recommend heavy outerwear (wool coats, parkas, insulated jackets, chunky sweaters, wool blazers).
-- Optional outerwear should be lightweight only (linen overshirt, denim jacket, harrington, unlined blazer) or null.
-- Casual jackets and coats belong in the optional outerwear slot — never substitute them for the structured blazer slot.
+- For work/business/classic looks, prefer a single unlined/lightweight blazer when needed; otherwise set blazer appropriately.
+- NEVER recommend both a blazer and outerwear/jacket — pick at most one upper layer (for summer: blazer only or neither; outerwear always null).
+- Casual jackets and coats belong in the optional outerwear slot — but for summer that slot must be null.
 - Favor open collars, lighter colors, and fewer layers unless occasion is formal/business.
+"""
+        else:
+            summer_guidance = """
+LAYERING RULES (strict):
+- NEVER recommend both a structured blazer and a casual jacket/coat. Pick at most one upper layer:
+  - work / business / formal / classic → prefer blazer; set outerwear to null
+  - casual looks built around a jacket → put it in outerwear and set blazer to null or "No structured blazer"
+- Casual jackets and coats belong in the optional outerwear slot — never substitute them for the structured blazer slot.
 """
 
         normalized_source = (source_wardrobe_category or "").strip().lower()
@@ -891,7 +901,8 @@ Please provide a complete outfit recommendation including:
 5. Belt
 6. Optional layering when relevant to season/occasion:
    - sweater: merino/cardigan/crew neck for cooler weather or smart-casual layering (null if not needed)
-   - outerwear: coat or casual jacket layer worn over the outfit, NOT the blazer (null if not needed)
+   - outerwear: coat or casual jacket layer worn over the outfit, NOT the blazer (null if not needed; null for summer)
+   - IMPORTANT: never fill both blazer and outerwear — at most one of those two layers
    - tie: for business, formal, office, or wedding-guest occasions (null if not needed)
 7. Brief reasoning for the outfit choice
 
@@ -1001,12 +1012,30 @@ Respond in JSON format with the following structure:
                     return stripped
                 return None
 
+            def _parse_core_text(value, default: str) -> str:
+                """Required string slots: coerce null/nullish JSON to default (never None)."""
+                if value is None:
+                    return default
+                if isinstance(value, str):
+                    stripped = value.strip()
+                    if not stripped or stripped.lower() in {"null", "none", "n/a"}:
+                        return default
+                    return stripped
+                return default
+
             return OutfitSuggestion(
-                shirt=outfit_data.get("shirt", "Classic white dress shirt"),
-                trouser=outfit_data.get("trouser", "Dark navy dress trousers"),
-                blazer=outfit_data.get("blazer", "Charcoal gray blazer"),
-                shoes=outfit_data.get("shoes", "Black leather dress shoes"),
-                belt=outfit_data.get("belt", "Black leather belt"),
+                # Explicit null blazer is valid (outerwear-only looks) — use "" not a fake blazer.
+                shirt=_parse_core_text(
+                    outfit_data.get("shirt"), "Classic white dress shirt"
+                ),
+                trouser=_parse_core_text(
+                    outfit_data.get("trouser"), "Dark navy dress trousers"
+                ),
+                blazer=_parse_core_text(outfit_data.get("blazer"), ""),
+                shoes=_parse_core_text(
+                    outfit_data.get("shoes"), "Black leather dress shoes"
+                ),
+                belt=_parse_core_text(outfit_data.get("belt"), "Black leather belt"),
                 sweater=_parse_optional_text(outfit_data.get("sweater")),
                 outerwear=_parse_optional_text(outfit_data.get("outerwear")),
                 tie=_parse_optional_text(outfit_data.get("tie")),
@@ -1019,12 +1048,12 @@ Respond in JSON format with the following structure:
                 outerwear_id=_parse_optional_int(outfit_data.get("outerwear_id")),
                 tie_id=_parse_optional_int(outfit_data.get("tie_id")),
                 source_slot=_parse_source_slot(outfit_data.get("source_slot")),
-                reasoning=outfit_data.get(
-                    "reasoning", 
-                    "A classic professional look that works for most business occasions."
-                )
+                reasoning=_parse_core_text(
+                    outfit_data.get("reasoning"),
+                    "A classic professional look that works for most business occasions.",
+                ),
             )
-        except (json.JSONDecodeError, KeyError):
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError):
             # Fallback if JSON parsing fails
             return OutfitSuggestion(
                 shirt="Classic white dress shirt",

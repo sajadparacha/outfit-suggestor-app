@@ -8,6 +8,10 @@ from models.database import get_db
 from models.user import User
 from models.week_plan import (
     WeekPlanGenerateRequest,
+    WeekPlanPresetCreateRequest,
+    WeekPlanPresetItem,
+    WeekPlanPresetListResponse,
+    WeekPlanPresetUpdateRequest,
     WeekPlanResponse,
     WeekPlanTodayResponse,
     WeekPlanUpsertRequest,
@@ -69,6 +73,72 @@ async def restore_week_plan_history(
     controller: WeekPlanController = Depends(get_week_plan_controller),
 ):
     return controller.restore_history(db, current_user, history_id)
+
+
+@router.get(
+    "/presets",
+    response_model=WeekPlanPresetListResponse,
+    name="list_week_plan_presets",
+)
+async def list_week_plan_presets(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    controller: WeekPlanController = Depends(get_week_plan_controller),
+):
+    return controller.list_presets(db, current_user)
+
+
+@router.post(
+    "/presets",
+    response_model=WeekPlanPresetItem,
+    name="create_week_plan_preset",
+)
+async def create_week_plan_preset(
+    body: WeekPlanPresetCreateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    controller: WeekPlanController = Depends(get_week_plan_controller),
+):
+    return controller.create_preset(db, current_user, body)
+
+
+@router.put(
+    "/presets/{preset_id}",
+    response_model=WeekPlanPresetItem,
+    name="update_week_plan_preset",
+)
+async def update_week_plan_preset(
+    preset_id: int,
+    body: WeekPlanPresetUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    controller: WeekPlanController = Depends(get_week_plan_controller),
+):
+    return controller.update_preset(db, current_user, preset_id, body)
+
+
+@router.delete("/presets/{preset_id}", name="delete_week_plan_preset")
+async def delete_week_plan_preset(
+    preset_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    controller: WeekPlanController = Depends(get_week_plan_controller),
+):
+    return controller.delete_preset(db, current_user, preset_id)
+
+
+@router.post(
+    "/presets/{preset_id}/apply",
+    response_model=WeekPlanResponse,
+    name="apply_week_plan_preset",
+)
+async def apply_week_plan_preset(
+    preset_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    controller: WeekPlanController = Depends(get_week_plan_controller),
+):
+    return controller.apply_preset(db, current_user, preset_id)
 
 
 @router.post("/generate", response_model=WeekPlanResponse, name="generate_week_plan")

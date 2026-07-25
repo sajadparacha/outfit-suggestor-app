@@ -12,21 +12,55 @@ import {
 import { FILTER_OPTIONS } from '../../../utils/constants';
 import { MAIN_FLOW_UX_COPY } from '../../../utils/mainFlowUxCopy';
 import type { OutfitCategoryKey } from '../../../utils/outfitItemThumbnail';
+import {
+  optionalLayerCategories,
+  resolveOptionalLayerText,
+  shouldShowBlazerCard,
+} from '../../../utils/outfitLayerExclusivity';
 import WeekPlanOutfitAdminPanel from './WeekPlanOutfitAdminPanel';
 import OutfitItem from './OutfitItem';
 import OutfitSummary from './OutfitSummary';
 import MissingItemCard from './MissingItemCard';
 import { plannerSurface, secondaryCtaClass, selectClass } from './weekPlanStyles';
+import type { OutfitSuggestion } from '../../../models/OutfitModels';
 
-const OPTIONAL_SLOTS: Array<{ key: OutfitCategoryKey; label: string; field: keyof WeekPlanOutfit }> =
-  [
-    { key: 'sweater', label: MAIN_FLOW_UX_COPY.layerLabel, field: 'sweater' },
-    { key: 'outerwear', label: MAIN_FLOW_UX_COPY.outerwearLabel, field: 'outerwear' },
-    { key: 'tie', label: MAIN_FLOW_UX_COPY.tieLabel, field: 'tie' },
-  ];
+const OPTIONAL_SLOT_META: Record<
+  'sweater' | 'outerwear' | 'tie',
+  { key: OutfitCategoryKey; label: string; field: keyof WeekPlanOutfit }
+> = {
+  sweater: { key: 'sweater', label: MAIN_FLOW_UX_COPY.layerLabel, field: 'sweater' },
+  outerwear: { key: 'outerwear', label: MAIN_FLOW_UX_COPY.outerwearLabel, field: 'outerwear' },
+  tie: { key: 'tie', label: MAIN_FLOW_UX_COPY.tieLabel, field: 'tie' },
+};
+
+function asSuggestion(outfit: WeekPlanOutfit): OutfitSuggestion {
+  return {
+    id: 'week-plan',
+    shirt: outfit.shirt,
+    trouser: outfit.trouser,
+    blazer: outfit.blazer,
+    shoes: outfit.shoes,
+    belt: outfit.belt,
+    reasoning: outfit.reasoning,
+    sweater: outfit.sweater,
+    outerwear: outfit.outerwear,
+    tie: outfit.tie,
+    shirt_id: outfit.shirt_id,
+    trouser_id: outfit.trouser_id,
+    blazer_id: outfit.blazer_id,
+    shoes_id: outfit.shoes_id,
+    belt_id: outfit.belt_id,
+    sweater_id: outfit.sweater_id,
+    outerwear_id: outfit.outerwear_id,
+    tie_id: outfit.tie_id,
+    matching_wardrobe_items: outfit.matching_wardrobe_items ?? undefined,
+    model_image: outfit.model_image,
+  };
+}
 
 export interface OutfitPreviewProps {
   day: WeekPlanDay;
+  season?: string;
   busy: boolean;
   showAdminDiagnostics?: boolean;
   dismissedMissing: boolean;
@@ -47,6 +81,7 @@ export interface OutfitPreviewProps {
 
 const OutfitPreview: React.FC<OutfitPreviewProps> = ({
   day,
+  season,
   busy,
   showAdminDiagnostics = false,
   dismissedMissing,
@@ -62,18 +97,32 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
   const outfit = day.outfit;
   const missingSlots = outfit && !dismissedMissing ? getMissingOutfitSlots(outfit) : [];
   const testIdPrefix = `week-day-summary-${day.day_of_week}`;
+  const layerOpts = {
+    season: season ?? null,
+    occasion: day.occasion,
+    style: day.style || 'classic',
+  };
 
-  const filledCore = WEEK_PLAN_CORE_SLOTS.filter(({ field }) => {
+  const suggestion = outfit ? asSuggestion(outfit) : null;
+  const showBlazer = suggestion ? shouldShowBlazerCard(suggestion) : false;
+
+  const filledCore = WEEK_PLAN_CORE_SLOTS.filter(({ field, key }) => {
     if (!outfit) return false;
+    if (key === 'blazer' && !showBlazer) return false;
     const value = outfit[field];
     return typeof value === 'string' && value.trim();
   });
 
-  const filledOptional = OPTIONAL_SLOTS.filter(({ field }) => {
-    if (!outfit) return false;
-    const value = outfit[field];
-    return typeof value === 'string' && value.trim();
-  });
+  const filledOptional =
+    outfit && suggestion
+      ? optionalLayerCategories(suggestion, null, layerOpts)
+          .map((optKey) => {
+            const text = resolveOptionalLayerText(suggestion, optKey, null, layerOpts);
+            if (!text) return null;
+            return { ...OPTIONAL_SLOT_META[optKey], value: text };
+          })
+          .filter((row): row is NonNullable<typeof row> => row != null)
+      : [];
 
   return (
     <section
@@ -197,12 +246,12 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
             </div>
             {filledOptional.length > 0 && (
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {filledOptional.map(({ key, label: slotLabel, field }) => (
+                {filledOptional.map(({ key, label: slotLabel, value }) => (
                   <OutfitItem
                     key={key}
                     categoryKey={key}
                     label={slotLabel}
-                    value={String(outfit[field])}
+                    value={value}
                     outfit={outfit}
                   />
                 ))}

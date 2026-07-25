@@ -8,11 +8,14 @@ import {
   WeekPlan,
   WeekPlanDay,
   WeekPlanHistoryItem,
+  WeekPlanPresetItem,
   WeekPlanToday,
   createEmptyWeekPlan,
   getDeviceTimezone,
   normalizeWeekPlanDays,
+  planToPresetConfig,
   toUpsertPayload,
+  WEEK_PLAN_PRESET_NAME_MAX,
 } from '../models/WeekPlanModels';
 
 interface UseWeekPlanControllerOptions {
@@ -26,6 +29,10 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
   const planRef = useRef<WeekPlan | null>(null);
   const [today, setToday] = useState<WeekPlanToday | null>(null);
   const [history, setHistory] = useState<WeekPlanHistoryItem[]>([]);
+  const [presets, setPresets] = useState<WeekPlanPresetItem[]>([]);
+  const [presetCount, setPresetCount] = useState(0);
+  const [presetLimit, setPresetLimit] = useState(0);
+  const [presetBusy, setPresetBusy] = useState(false);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -58,6 +65,25 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
     }
   }, []);
 
+  const loadPresets = useCallback(async (options?: { soft?: boolean }) => {
+    const soft = options?.soft ?? true;
+    try {
+      const data = await apiService.getWeekPlanPresets();
+      setPresets(data.items ?? []);
+      setPresetCount(data.count);
+      setPresetLimit(data.limit);
+    } catch (err) {
+      if (soft) {
+        // Keep existing list on background refresh; only clear if never loaded.
+        return;
+      }
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to load saved configurations';
+      setError(errorMessage);
+      throw err;
+    }
+  }, []);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -80,7 +106,8 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
       setLoading(false);
     }
     await loadHistory();
-  }, [applyPlan, loadHistory, replacePlan]);
+    await loadPresets();
+  }, [applyPlan, loadHistory, loadPresets, replacePlan]);
 
   const refreshToday = useCallback(async () => {
     try {
@@ -254,6 +281,134 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
     [applyPlan, refreshToday, loadHistory]
   );
 
+  const normalizePresetName = (name: string): string => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      throw new Error('Name must not be empty');
+    }
+    if (trimmed.length > WEEK_PLAN_PRESET_NAME_MAX) {
+      throw new Error(`Name must be at most ${WEEK_PLAN_PRESET_NAME_MAX} characters`);
+    }
+    return trimmed;
+  };
+
+  const savePresetAs = useCallback(
+    async (name: string) => {
+      const current = planRef.current;
+      if (!current) return;
+      setPresetBusy(true);
+      setError(null);
+      setMessage(null);
+      try {
+        const normalizedName = normalizePresetName(name);
+        await apiService.createWeekPlanPreset({
+          name: normalizedName,
+          config: planToPresetConfig(current),
+        });
+        await loadPresets({ soft: false });
+        setMessage(`Saved configuration “${normalizedName}”.`);
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to save configuration';
+        setError(errorMessage);
+        throw err;
+      } finally {
+        setPresetBusy(false);
+      }
+    },
+    [loadPresets]
+  );
+
+  const updatePreset = useCallback(
+    async (presetId: number) => {
+      const current = planRef.current;
+      if (!current) return;
+      setPresetBusy(true);
+      setError(null);
+      setMessage(null);
+      try {
+        await apiService.updateWeekPlanPreset(presetId, {
+          config: planToPresetConfig(current),
+        });
+        await loadPresets({ soft: false });
+        setMessage('Configuration updated.');
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to update configuration';
+        setError(errorMessage);
+        throw err;
+      } finally {
+        setPresetBusy(false);
+      }
+    },
+    [loadPresets]
+  );
+
+  const renamePreset = useCallback(
+    async (presetId: number, name: string) => {
+      setPresetBusy(true);
+      setError(null);
+      setMessage(null);
+      try {
+        const normalizedName = normalizePresetName(name);
+        await apiService.updateWeekPlanPreset(presetId, { name: normalizedName });
+        await loadPresets({ soft: false });
+        setMessage('Configuration renamed.');
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to rename configuration';
+        setError(errorMessage);
+        throw err;
+      } finally {
+        setPresetBusy(false);
+      }
+    },
+    [loadPresets]
+  );
+
+  const deletePreset = useCallback(
+    async (presetId: number) => {
+      setPresetBusy(true);
+      setError(null);
+      setMessage(null);
+      try {
+        await apiService.deleteWeekPlanPreset(presetId);
+        await loadPresets({ soft: false });
+        setMessage('Configuration deleted.');
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to delete configuration';
+        setError(errorMessage);
+        throw err;
+      } finally {
+        setPresetBusy(false);
+      }
+    },
+    [loadPresets]
+  );
+
+  const applyPreset = useCallback(
+    async (presetId: number) => {
+      setPresetBusy(true);
+      setError(null);
+      setMessage(null);
+      try {
+        const applied = await apiService.applyWeekPlanPreset(presetId);
+        applyPlan(applied);
+        await refreshToday();
+        setMessage('Configuration loaded. Generate week when you are ready.');
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to load configuration';
+        setError(errorMessage);
+        throw err;
+      } finally {
+        setPresetBusy(false);
+      }
+    },
+    [applyPlan, refreshToday]
+  );
+
   useEffect(() => {
     const isAuthenticated = options?.isAuthenticated ?? false;
     const currentUserId = options?.userId;
@@ -262,6 +417,9 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
       replacePlan(null);
       setToday(null);
       setHistory([]);
+      setPresets([]);
+      setPresetCount(0);
+      setPresetLimit(0);
       setError(null);
       setMessage(null);
       return;
@@ -272,11 +430,17 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
   }, [options?.userId, options?.isAuthenticated]);
 
   const enabledDayCount = plan?.days.filter((d) => d.enabled).length ?? 0;
+  const presetAtLimit = presetLimit > 0 && presetCount >= presetLimit;
 
   return {
     plan,
     today,
     history,
+    presets,
+    presetCount,
+    presetLimit,
+    presetAtLimit,
+    presetBusy,
     loading,
     generating,
     saving,
@@ -286,6 +450,7 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
     enabledDayCount,
     load,
     loadHistory,
+    loadPresets,
     updateDay,
     setReminderTime,
     setSharedStyle,
@@ -295,6 +460,11 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
     regenerateDay,
     clearPlan,
     restoreHistory,
+    savePresetAs,
+    updatePreset,
+    renamePreset,
+    deletePreset,
+    applyPreset,
     clearError: () => setError(null),
     clearMessage: () => setMessage(null),
   };

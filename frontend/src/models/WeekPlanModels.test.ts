@@ -3,8 +3,13 @@ import {
   normalizeWeekPlanDays,
   toUpsertPayload,
   getDeviceTimezone,
+  getMissingOutfitSlots,
+  getWeekDayPreviewThumbSources,
+  getWeekDayStatus,
   DEFAULT_REMINDER_TIME,
   DEFAULT_SHARED_STYLE,
+  WeekPlanDay,
+  WeekPlanOutfit,
 } from '../models/WeekPlanModels';
 
 describe('WeekPlanModels helpers', () => {
@@ -78,5 +83,89 @@ describe('WeekPlanModels helpers', () => {
   it('getDeviceTimezone returns a non-empty string', () => {
     expect(typeof getDeviceTimezone()).toBe('string');
     expect(getDeviceTimezone().length).toBeGreaterThan(0);
+  });
+
+  it('getWeekDayPreviewThumbSources skips matching images for empty/missing slots', () => {
+    const outfit: WeekPlanOutfit = {
+      summary: 'Everyday look',
+      shirt: 'Navy shirt',
+      trouser: 'Tan chinos',
+      blazer: '',
+      shoes: 'Brown brogues',
+      belt: 'Consider adding a belt',
+      reasoning: 'Test',
+      matching_wardrobe_items: {
+        shirt: [
+          {
+            id: 1,
+            category: 'shirt',
+            color: 'navy',
+            description: 'Navy shirt',
+            image_data: 'shirt_img',
+          },
+        ],
+        trouser: [
+          {
+            id: 2,
+            category: 'trouser',
+            color: 'tan',
+            description: 'Tan chinos',
+            image_data: 'trouser_img',
+          },
+        ],
+        blazer: [
+          {
+            id: 3,
+            category: 'blazer',
+            color: 'navy',
+            description: 'Navy blazer candidate',
+            image_data: 'blazer_img',
+          },
+        ],
+        shoes: [
+          {
+            id: 4,
+            category: 'shoes',
+            color: 'brown',
+            description: 'Brown brogues',
+            image_data: 'shoes_img',
+          },
+        ],
+        belt: [],
+      },
+    };
+    const day: WeekPlanDay = {
+      day_of_week: 3,
+      enabled: true,
+      occasion: 'everyday',
+      style: 'trendy',
+      use_wardrobe_only: true,
+      outfit,
+    };
+
+    expect(getMissingOutfitSlots(outfit).map((s) => s.key)).toEqual([]);
+    expect(getWeekDayStatus(day)).toBe('ready');
+    expect(getWeekDayPreviewThumbSources(day)).toEqual([
+      'shirt_img',
+      'trouser_img',
+      'shoes_img',
+    ]);
+    expect(getWeekDayPreviewThumbSources(day)).not.toContain('blazer_img');
+  });
+
+  it('getMissingOutfitSlots still flags empty required slots, not empty blazer', () => {
+    const outfit: WeekPlanOutfit = {
+      summary: 'Incomplete',
+      shirt: 'Navy shirt',
+      trouser: '',
+      blazer: '',
+      shoes: 'Brown brogues',
+      belt: '',
+      reasoning: 'Test',
+    };
+    expect(getMissingOutfitSlots(outfit).map((s) => s.key)).toEqual([
+      'trouser',
+      'belt',
+    ]);
   });
 });

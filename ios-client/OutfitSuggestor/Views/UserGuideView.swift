@@ -154,6 +154,7 @@ struct UserGuideView: View {
                         "Turn on the days you want to plan and set an occasion and style for each; use Use wardrobe per day when you want closet-only looks.",
                         "Pick a shared season for the week and a daily reminder time (device timezone).",
                         "Tap Save plan, then Generate week to create one wardrobe outfit per enabled day.",
+                        "Save as… under Saved configurations to store a named week setup; Load one when you want that layout back, then Generate week.",
                         "Clear plan saves a copy under Previous plans, then clears the current week — tap Load to restore one.",
                         "Select a day in the week overview to see detail, resolve missing items (wardrobe / alternative / continue), and Save weekly plan.",
                         "Expand Why this outfit works for styling notes; use Regenerate for a fresh look. On iOS, local notifications remind you at the reminder time."

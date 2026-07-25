@@ -61,6 +61,108 @@ function TabEmptyMessage() {
   return <p className="text-slate-400 text-center py-8">No data for the selected filters.</p>;
 }
 
+function WeekPlanPresetLimitPanel() {
+  const [userId, setUserId] = React.useState('');
+  const [limitInput, setLimitInput] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const [result, setResult] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const handleSubmit = async (clearOverride: boolean) => {
+    const parsedId = Number(userId.trim());
+    if (!Number.isInteger(parsedId) || parsedId <= 0) {
+      setError('Enter a valid user id');
+      setResult(null);
+      return;
+    }
+    let limit: number | null = null;
+    if (!clearOverride) {
+      const parsedLimit = Number(limitInput.trim());
+      if (!Number.isInteger(parsedLimit) || parsedLimit < 1 || parsedLimit > 20) {
+        setError('Limit must be an integer from 1 to 20, or use Clear override');
+        setResult(null);
+        return;
+      }
+      limit = parsedLimit;
+    }
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    try {
+      const response = await ApiService.patchWeekPlanPresetLimit(parsedId, { limit });
+      setResult(
+        `User ${response.user_id}: effective limit ${response.effective_limit} (${response.limit_source})${
+          response.week_plan_preset_limit_override != null
+            ? `, override ${response.week_plan_preset_limit_override}`
+            : ', override cleared'
+        }`
+      );
+    } catch (e) {
+      setError(formatApiErrorMessage(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div
+      className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-6"
+      data-testid="admin-week-plan-preset-limit"
+    >
+      <h3 className="text-lg font-semibold text-white mb-1">Week plan preset limit</h3>
+      <p className="text-sm text-slate-400 mb-4">
+        Set a per-user saved-configuration limit (1–20) or clear the override to use tier/default.
+      </p>
+      <div className="flex flex-wrap gap-3 items-end">
+        <label className="flex flex-col gap-1 text-sm text-slate-300">
+          User id
+          <input
+            type="number"
+            min={1}
+            value={userId}
+            onChange={(e) => setUserId(e.target.value)}
+            className="px-3 py-2 border border-white/20 rounded-xl bg-white/5 text-white w-32"
+            data-testid="admin-preset-limit-user-id"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm text-slate-300">
+          Limit (1–20)
+          <input
+            type="number"
+            min={1}
+            max={20}
+            value={limitInput}
+            onChange={(e) => setLimitInput(e.target.value)}
+            placeholder="e.g. 8"
+            className="px-3 py-2 border border-white/20 rounded-xl bg-white/5 text-white w-32"
+            data-testid="admin-preset-limit-value"
+          />
+        </label>
+        <button
+          type="button"
+          onClick={() => handleSubmit(false)}
+          disabled={loading}
+          className="px-4 py-2 btn-brand rounded-xl font-medium disabled:opacity-50"
+          data-testid="admin-preset-limit-set"
+        >
+          {loading ? 'Saving…' : 'Set limit'}
+        </button>
+        <button
+          type="button"
+          onClick={() => handleSubmit(true)}
+          disabled={loading}
+          className="px-4 py-2 bg-white/10 text-slate-200 rounded-xl font-medium border border-white/15 hover:bg-white/20 disabled:opacity-50"
+          data-testid="admin-preset-limit-clear"
+        >
+          Clear override
+        </button>
+      </div>
+      {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
+      {result && <p className="mt-3 text-sm text-emerald-300">{result}</p>}
+    </div>
+  );
+}
+
 type ChartCardProps = {
   title: string;
   children: React.ReactNode;
@@ -329,10 +431,16 @@ export default function AdminReports({ user }: AdminReportsProps) {
   };
 
   const renderUsersTab = () => {
-    if (!hasSearched) return null;
     return (
       <div className="space-y-6">
         <h2 className="text-xl font-semibold text-white">Users</h2>
+        <WeekPlanPresetLimitPanel />
+        {!hasSearched ? (
+          <p className="text-sm text-slate-400">
+            Run Search above to load usage charts and top users.
+          </p>
+        ) : (
+          <>
         <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-6">
           <h3 className="text-lg font-semibold text-white mb-4">Top users</h3>
           {topUsers.length > 0 ? (
@@ -404,6 +512,8 @@ export default function AdminReports({ user }: AdminReportsProps) {
             )}
           </ChartCard>
         </div>
+          </>
+        )}
       </div>
     );
   };

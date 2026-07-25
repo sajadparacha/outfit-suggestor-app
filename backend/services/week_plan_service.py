@@ -9,16 +9,24 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy.orm import Session, joinedload
 
+from services.outfit_layer_sanitize import sanitize_outfit_layers
 from models.outfit import OutfitSuggestion
 from models.week_plan import (
     DEFAULT_OCCASION,
     DEFAULT_REMINDER_TIME,
     DEFAULT_SEASON,
     DEFAULT_STYLE,
+    WEEK_PLAN_PRESET_NAME_MAX,
     WeekPlanDayResponse,
     WeekPlanHistoryItem,
     WeekPlanHistoryListResponse,
     WeekPlanOutfitResponse,
+    WeekPlanPresetConfig,
+    WeekPlanPresetConfigDay,
+    WeekPlanPresetCreateRequest,
+    WeekPlanPresetItem,
+    WeekPlanPresetListResponse,
+    WeekPlanPresetUpdateRequest,
     WeekPlanResponse,
     WeekPlanTodayResponse,
     WeekPlanUpsertRequest,
@@ -26,7 +34,14 @@ from models.week_plan import (
     WeeklyPlanDay,
     WeeklyPlanHistory,
     WeeklyPlanOutfit,
+    WeeklyPlanPreset,
 )
+from services.week_plan_preset_limit import (
+    PresetLimitReachedError,
+    resolve_week_plan_preset_limit,
+)
+from models.user import User
+
 
 _REMINDER_RE = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)$")
 
@@ -98,11 +113,19 @@ def outfit_row_to_response(
     row: WeeklyPlanOutfit,
     *,
     admin_fields: Optional[dict[str, Any]] = None,
+    season: Optional[str] = None,
+    occasion: Optional[str] = None,
+    style: Optional[str] = None,
 ) -> WeekPlanOutfitResponse:
     try:
         payload = json.loads(row.outfit_json or "{}")
     except json.JSONDecodeError:
         payload = {}
+    if not isinstance(payload, dict):
+        payload = {}
+    sanitize_outfit_layers(
+        payload, season=season, occasion=occasion, style=style
+    )
     try:
         item_ids = json.loads(row.wardrobe_item_ids_json or "[]")
     except json.JSONDecodeError:
@@ -143,10 +166,17 @@ def day_to_response(
     day: WeeklyPlanDay,
     *,
     admin_outfit_fields: Optional[dict[str, Any]] = None,
+    season: Optional[str] = None,
 ) -> WeekPlanDayResponse:
     outfit = None
     if day.outfit is not None:
-        outfit = outfit_row_to_response(day.outfit, admin_fields=admin_outfit_fields)
+        outfit = outfit_row_to_response(
+            day.outfit,
+            admin_fields=admin_outfit_fields,
+            season=season,
+            occasion=day.occasion or DEFAULT_OCCASION,
+            style=getattr(day, "style", None) or DEFAULT_STYLE,
+        )
     return WeekPlanDayResponse(
         day_of_week=day.day_of_week,
         enabled=bool(day.enabled),
@@ -165,6 +195,7 @@ def plan_to_response(
     admin_outfit_by_day: Optional[dict[int, dict[str, Any]]] = None,
 ) -> WeekPlanResponse:
     days_by_dow = {d.day_of_week: d for d in plan.days}
+    season = plan.shared_season or DEFAULT_SEASON
     days: list[WeekPlanDayResponse] = []
     for dow in range(7):
         if dow in days_by_dow:
@@ -172,7 +203,11 @@ def plan_to_response(
                 admin_outfit_by_day.get(dow) if admin_outfit_by_day else None
             )
             days.append(
-                day_to_response(days_by_dow[dow], admin_outfit_fields=admin_fields)
+                day_to_response(
+                    days_by_dow[dow],
+                    admin_outfit_fields=admin_fields,
+                    season=season,
+                )
             )
         else:
             days.append(
@@ -189,7 +224,7 @@ def plan_to_response(
         reminder_time=plan.reminder_time or DEFAULT_REMINDER_TIME,
         timezone=plan.timezone or "UTC",
         shared_style=plan.shared_style or DEFAULT_STYLE,
-        shared_season=plan.shared_season or DEFAULT_SEASON,
+        shared_season=season,
         days=days,
         wardrobe_empty=wardrobe_empty,
         message=message,
@@ -309,7 +344,27 @@ class WeekPlanService:
     ) -> WeeklyPlanOutfit:
         summary = outfit_summary(suggestion)
         payload = suggestion_to_outfit_json(suggestion)
-        item_ids = extract_wardrobe_item_ids(suggestion)
+        plan = day.plan
+        sanitize_outfit_layers(
+            payload,
+            season=getattr(plan, "shared_season", None) if plan is not None else None,
+            occasion=day.occasion or DEFAULT_OCCASION,
+            style=getattr(day, "style", None) or DEFAULT_STYLE,
+        )
+        item_ids = [
+            int(payload[key])
+            for key in (
+                "shirt_id",
+                "trouser_id",
+                "blazer_id",
+                "shoes_id",
+                "belt_id",
+                "sweater_id",
+                "outerwear_id",
+                "tie_id",
+            )
+            if isinstance(payload.get(key), int)
+        ]
         if day.outfit is not None:
             row = day.outfit
             row.summary = summary
@@ -396,7 +451,16 @@ class WeekPlanService:
                 has_plan=True,
                 message="Today is not enabled in your week plan.",
             )
-        outfit = outfit_row_to_response(day.outfit) if day.outfit else None
+        outfit = (
+            outfit_row_to_response(
+                day.outfit,
+                season=plan.shared_season or DEFAULT_SEASON,
+                occasion=day.occasion or DEFAULT_OCCASION,
+                style=getattr(day, "style", None) or DEFAULT_STYLE,
+            )
+            if day.outfit
+            else None
+        )
         return WeekPlanTodayResponse(
             day_of_week=dow,
             enabled=True,
@@ -557,6 +621,192 @@ class WeekPlanService:
             payload = json.loads(row.plan_json or "{}")
         except json.JSONDecodeError as exc:
             raise ValueError("Corrupt history snapshot") from exc
-        # Preserve current before overwrite
-        self.snapshot_current(db, user_id)
+        # Load restores only — do not snapshot current (that duplicated Previous plans rows).
         return self.apply_plan_payload(db, user_id, payload)
+
+    # --- Named configurations (presets) — config only, distinct from history ---
+
+    def _normalize_preset_name(self, name: str) -> str:
+        cleaned = (name or "").strip()
+        if not cleaned:
+            raise ValueError("name must not be empty")
+        if len(cleaned) > WEEK_PLAN_PRESET_NAME_MAX:
+            raise ValueError(
+                f"name must be at most {WEEK_PLAN_PRESET_NAME_MAX} characters"
+            )
+        return cleaned
+
+    def _validate_preset_config(
+        self, config: WeekPlanPresetConfig
+    ) -> WeekPlanPresetConfig:
+        reminder = validate_reminder_time(
+            config.reminder_time or DEFAULT_REMINDER_TIME
+        )
+        days_in = config.days or []
+        by_dow = {d.day_of_week: d for d in days_in}
+        days: list[WeekPlanPresetConfigDay] = []
+        for dow in range(7):
+            raw = by_dow.get(dow)
+            if raw is None:
+                days.append(
+                    WeekPlanPresetConfigDay(
+                        day_of_week=dow,
+                        enabled=False,
+                        occasion=DEFAULT_OCCASION,
+                        style=DEFAULT_STYLE,
+                        use_wardrobe_only=True,
+                    )
+                )
+            else:
+                days.append(
+                    WeekPlanPresetConfigDay(
+                        day_of_week=dow,
+                        enabled=bool(raw.enabled),
+                        occasion=raw.occasion or DEFAULT_OCCASION,
+                        style=raw.style or DEFAULT_STYLE,
+                        use_wardrobe_only=bool(raw.use_wardrobe_only),
+                    )
+                )
+        return WeekPlanPresetConfig(
+            reminder_time=reminder,
+            shared_season=config.shared_season or DEFAULT_SEASON,
+            days=days,
+        )
+
+    def _preset_to_item(self, row: WeeklyPlanPreset) -> WeekPlanPresetItem:
+        try:
+            raw = json.loads(row.config_json or "{}")
+        except json.JSONDecodeError:
+            raw = {}
+        config = self._validate_preset_config(WeekPlanPresetConfig(**raw))
+        return WeekPlanPresetItem(
+            id=row.id,
+            name=row.name,
+            config=config,
+            created_at=row.created_at.isoformat() if row.created_at else "",
+            updated_at=row.updated_at.isoformat() if row.updated_at else "",
+        )
+
+    def _count_presets(self, db: Session, user_id: int) -> int:
+        return (
+            db.query(WeeklyPlanPreset)
+            .filter(WeeklyPlanPreset.user_id == user_id)
+            .count()
+        )
+
+    def list_presets(
+        self, db: Session, user: User
+    ) -> WeekPlanPresetListResponse:
+        limit, limit_source = resolve_week_plan_preset_limit(user)
+        rows = (
+            db.query(WeeklyPlanPreset)
+            .filter(WeeklyPlanPreset.user_id == user.id)
+            .order_by(WeeklyPlanPreset.updated_at.desc())
+            .all()
+        )
+        items = [self._preset_to_item(row) for row in rows]
+        return WeekPlanPresetListResponse(
+            items=items,
+            count=len(items),
+            limit=limit,
+            limit_source=limit_source,
+        )
+
+    def create_preset(
+        self, db: Session, user: User, body: WeekPlanPresetCreateRequest
+    ) -> WeekPlanPresetItem:
+        name = self._normalize_preset_name(body.name)
+        config = self._validate_preset_config(body.config)
+        limit, _source = resolve_week_plan_preset_limit(user)
+        count = self._count_presets(db, user.id)
+        if count >= limit:
+            raise PresetLimitReachedError(count=count, limit=limit)
+        row = WeeklyPlanPreset(
+            user_id=user.id,
+            name=name,
+            config_json=json.dumps(config.model_dump()),
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        )
+        db.add(row)
+        db.commit()
+        db.refresh(row)
+        return self._preset_to_item(row)
+
+    def update_preset(
+        self,
+        db: Session,
+        user: User,
+        preset_id: int,
+        body: WeekPlanPresetUpdateRequest,
+    ) -> WeekPlanPresetItem:
+        row = (
+            db.query(WeeklyPlanPreset)
+            .filter(
+                WeeklyPlanPreset.id == preset_id,
+                WeeklyPlanPreset.user_id == user.id,
+            )
+            .first()
+        )
+        if row is None:
+            raise LookupError("Preset not found")
+        if body.name is None and body.config is None:
+            raise ValueError("Provide name and/or config to update")
+        if body.name is not None:
+            row.name = self._normalize_preset_name(body.name)
+        if body.config is not None:
+            config = self._validate_preset_config(body.config)
+            row.config_json = json.dumps(config.model_dump())
+        row.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(row)
+        return self._preset_to_item(row)
+
+    def delete_preset(self, db: Session, user: User, preset_id: int) -> bool:
+        row = (
+            db.query(WeeklyPlanPreset)
+            .filter(
+                WeeklyPlanPreset.id == preset_id,
+                WeeklyPlanPreset.user_id == user.id,
+            )
+            .first()
+        )
+        if row is None:
+            raise LookupError("Preset not found")
+        db.delete(row)
+        db.commit()
+        return True
+
+    def apply_preset(
+        self, db: Session, user: User, preset_id: int
+    ) -> WeeklyPlan:
+        """Apply config to current plan and clear all outfits. No auto-generate."""
+        row = (
+            db.query(WeeklyPlanPreset)
+            .filter(
+                WeeklyPlanPreset.id == preset_id,
+                WeeklyPlanPreset.user_id == user.id,
+            )
+            .first()
+        )
+        if row is None:
+            raise LookupError("Preset not found")
+        try:
+            raw = json.loads(row.config_json or "{}")
+        except json.JSONDecodeError as exc:
+            raise ValueError("Corrupt preset config") from exc
+        config = self._validate_preset_config(WeekPlanPresetConfig(**raw))
+        existing = self.get_plan(db, user.id)
+        timezone = existing.timezone if existing is not None else "UTC"
+        shared_style = (
+            existing.shared_style if existing is not None else DEFAULT_STYLE
+        )
+        # Config-only payload — outfits omitted so apply_plan_payload clears them
+        payload = {
+            "reminder_time": config.reminder_time,
+            "timezone": timezone,
+            "shared_style": shared_style,
+            "shared_season": config.shared_season,
+            "days": [d.model_dump() for d in config.days],
+        }
+        return self.apply_plan_payload(db, user.id, payload)

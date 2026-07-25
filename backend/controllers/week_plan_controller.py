@@ -12,11 +12,16 @@ from models.user import User
 from models.week_plan import (
     WeekPlanGenerateRequest,
     WeekPlanHistoryListResponse,
+    WeekPlanPresetCreateRequest,
+    WeekPlanPresetItem,
+    WeekPlanPresetListResponse,
+    WeekPlanPresetUpdateRequest,
     WeekPlanResponse,
     WeekPlanTodayResponse,
     WeekPlanUpsertRequest,
 )
 from services.wardrobe_service import WardrobeService
+from services.week_plan_preset_limit import PresetLimitReachedError
 from services.week_plan_service import (
     WeekPlanService,
     admin_fields_from_suggestion,
@@ -82,6 +87,64 @@ class WeekPlanController:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         return plan_to_response(plan)
 
+    def list_presets(
+        self, db: Session, current_user: User
+    ) -> WeekPlanPresetListResponse:
+        return self.week_plan_service.list_presets(db, current_user)
+
+    def create_preset(
+        self,
+        db: Session,
+        current_user: User,
+        body: WeekPlanPresetCreateRequest,
+    ) -> WeekPlanPresetItem:
+        try:
+            return self.week_plan_service.create_preset(db, current_user, body)
+        except PresetLimitReachedError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    def update_preset(
+        self,
+        db: Session,
+        current_user: User,
+        preset_id: int,
+        body: WeekPlanPresetUpdateRequest,
+    ) -> WeekPlanPresetItem:
+        try:
+            return self.week_plan_service.update_preset(
+                db, current_user, preset_id, body
+            )
+        except LookupError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    def delete_preset(
+        self, db: Session, current_user: User, preset_id: int
+    ) -> dict:
+        try:
+            deleted = self.week_plan_service.delete_preset(
+                db, current_user, preset_id
+            )
+        except LookupError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return {"deleted": deleted}
+
+    def apply_preset(
+        self, db: Session, current_user: User, preset_id: int
+    ) -> WeekPlanResponse:
+        try:
+            plan = self.week_plan_service.apply_preset(
+                db, current_user, preset_id
+            )
+        except LookupError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return plan_to_response(plan)
+
     def today(self, db: Session, current_user: User) -> WeekPlanTodayResponse:
         return self.week_plan_service.today_response(db, current_user.id)
 
@@ -122,10 +185,19 @@ class WeekPlanController:
             previous_outfit_text=previous_outfit_text,
             avoid_outfit_texts=avoid_outfit_texts,
         )
+        matching_items = None
         if all_items:
             matching_items = outfit_controller.wardrobe_matcher.match_wardrobe_to_outfit(
                 suggestion, all_items
             )
+        outfit_controller._apply_upper_body_layer_exclusivity(
+            suggestion,
+            matching_items,
+            season=season,
+            occasion=occasion,
+            style=style,
+        )
+        if matching_items is not None:
             suggestion.matching_wardrobe_items = matching_items
 
         outfit_controller.outfit_service.save_outfit_history(

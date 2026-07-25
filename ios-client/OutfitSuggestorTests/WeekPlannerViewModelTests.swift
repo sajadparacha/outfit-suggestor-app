@@ -31,6 +31,12 @@ final class WeekPlannerViewModelTests: XCTestCase {
         var shouldFailGenerate = false
         var wardrobeEmptyOnGenerate = false
         var restorePlan: WeekPlanResponse?
+        var presetList = WeekPlanPresetListResponse(items: [], count: 0, limit: 4, limit_source: "default")
+        var createPresetBodies: [WeekPlanPresetCreateRequest] = []
+        var updatePresetBodies: [(id: Int, body: WeekPlanPresetUpdateRequest)] = []
+        var deletePresetIds: [Int] = []
+        var applyPresetIds: [Int] = []
+        var nextPresetId = 1
 
         func getWeekPlan() async throws -> WeekPlanResponse {
             getCount += 1
@@ -112,6 +118,70 @@ final class WeekPlannerViewModelTests: XCTestCase {
             plan.days[0].occasion = "work"
             plan.days[0].outfit = WeekPlanOutfitResponse(summary: "Restored look")
             return plan
+        }
+
+        func getWeekPlanPresets() async throws -> WeekPlanPresetListResponse {
+            presetList
+        }
+
+        func createWeekPlanPreset(_ body: WeekPlanPresetCreateRequest) async throws -> WeekPlanPresetItem {
+            createPresetBodies.append(body)
+            if presetList.count >= presetList.limit {
+                throw APIServiceError.serverError("Preset limit reached")
+            }
+            let item = WeekPlanPresetItem(
+                id: nextPresetId,
+                name: body.name,
+                config: body.config,
+                created_at: "2026-07-25T10:00:00Z",
+                updated_at: "2026-07-25T10:00:00Z"
+            )
+            nextPresetId += 1
+            presetList.items.append(item)
+            presetList.count = presetList.items.count
+            return item
+        }
+
+        func updateWeekPlanPreset(id: Int, body: WeekPlanPresetUpdateRequest) async throws -> WeekPlanPresetItem {
+            updatePresetBodies.append((id, body))
+            guard let idx = presetList.items.firstIndex(where: { $0.id == id }) else {
+                throw APIServiceError.serverError("Not found")
+            }
+            var item = presetList.items[idx]
+            if let name = body.name { item.name = name }
+            if let config = body.config { item.config = config }
+            item.updated_at = "2026-07-25T11:00:00Z"
+            presetList.items[idx] = item
+            return item
+        }
+
+        func deleteWeekPlanPreset(id: Int) async throws -> WeekPlanDeleteResponse {
+            deletePresetIds.append(id)
+            presetList.items.removeAll { $0.id == id }
+            presetList.count = presetList.items.count
+            return WeekPlanDeleteResponse(deleted: true)
+        }
+
+        func applyWeekPlanPreset(id: Int) async throws -> WeekPlanResponse {
+            applyPresetIds.append(id)
+            guard let preset = presetList.items.first(where: { $0.id == id }) else {
+                throw APIServiceError.serverError("Not found")
+            }
+            var applied = WeekPlanResponse.empty(timezone: plan.timezone)
+            applied.reminder_time = preset.config.reminder_time
+            applied.shared_season = preset.config.shared_season
+            applied.days = preset.config.days.map {
+                WeekPlanDayResponse(
+                    day_of_week: $0.day_of_week,
+                    enabled: $0.enabled,
+                    occasion: $0.occasion,
+                    style: $0.style,
+                    use_wardrobe_only: $0.use_wardrobe_only,
+                    outfit: nil
+                )
+            }
+            plan = applied
+            return applied
         }
     }
 
@@ -549,5 +619,153 @@ final class WeekPlannerViewModelTests: XCTestCase {
         XCTAssertEqual(api.generateCalls, [1])
         // After regenerate, dismissal cleared so missing UI can reappear if still incomplete.
         XCTAssertFalse(vm.dismissedMissingDays.contains(1))
+    }
+
+    // MARK: - Saved configurations (presets)
+
+    private func samplePresetConfig() -> WeekPlanPresetConfig {
+        WeekPlanPresetConfig(
+            reminder_time: "08:00",
+            shared_season: "summer",
+            days: (0..<7).map {
+                WeekPlanPresetConfigDay(
+                    day_of_week: $0,
+                    enabled: $0 < 5,
+                    occasion: "work",
+                    style: "classic",
+                    use_wardrobe_only: true
+                )
+            }
+        )
+    }
+
+    func testLoadUsesPresetCountAndLimitFromAPI() async {
+        let api = MockAPI()
+        api.presetList = WeekPlanPresetListResponse(
+            items: [
+                WeekPlanPresetItem(
+                    id: 1,
+                    name: "Work week",
+                    config: samplePresetConfig(),
+                    created_at: "2026-07-25T10:00:00Z",
+                    updated_at: "2026-07-25T10:00:00Z"
+                ),
+            ],
+            count: 1,
+            limit: 8,
+            limit_source: "tier"
+        )
+        let vm = WeekPlannerViewModel(api: api, notifier: MockNotifier(), timezoneProvider: { "UTC" })
+
+        await vm.load()
+
+        XCTAssertEqual(vm.presetCount, 1)
+        XCTAssertEqual(vm.presetLimit, 8)
+        XCTAssertEqual(vm.presetLimitSource, "tier")
+        XCTAssertEqual(vm.presetUsageText, "1 of 8 saved")
+        XCTAssertFalse(vm.isPresetAtLimit)
+        XCTAssertFalse(vm.isPresetSaveDisabled)
+    }
+
+    func testPresetAtLimitDisablesSaveAs() async {
+        let api = MockAPI()
+        api.presetList = WeekPlanPresetListResponse(
+            items: (1...4).map { id in
+                WeekPlanPresetItem(
+                    id: id,
+                    name: "Preset \(id)",
+                    config: samplePresetConfig(),
+                    created_at: "2026-07-25T10:00:00Z",
+                    updated_at: "2026-07-25T10:00:00Z"
+                )
+            },
+            count: 4,
+            limit: 4,
+            limit_source: "default"
+        )
+        let vm = WeekPlannerViewModel(api: api, notifier: MockNotifier(), timezoneProvider: { "UTC" })
+        await vm.load()
+
+        XCTAssertTrue(vm.isPresetAtLimit)
+        XCTAssertTrue(vm.isPresetSaveDisabled)
+        XCTAssertEqual(vm.presetAtLimitMessage, WeekPlanCopy.configurationAtLimit(limit: 4))
+        XCTAssertEqual(vm.presetUsageText, "4 of 4 saved")
+    }
+
+    func testSaveLoadAndDeletePreset() async throws {
+        let api = MockAPI()
+        api.presetList.limit = 6
+        let vm = WeekPlannerViewModel(api: api, notifier: MockNotifier(), timezoneProvider: { "UTC" })
+        await vm.load()
+
+        vm.setDayEnabled(0, enabled: true)
+        vm.setDayOccasion(0, occasion: "work")
+        vm.setSharedSeason("winter")
+        vm.setReminderTime("09:15")
+        await vm.saveAsPreset(name: "  Winter work  ")
+
+        XCTAssertEqual(api.createPresetBodies.count, 1)
+        XCTAssertEqual(api.createPresetBodies.first?.name, "Winter work")
+        XCTAssertEqual(api.createPresetBodies.first?.config.shared_season, "winter")
+        XCTAssertEqual(vm.presetCount, 1)
+        XCTAssertEqual(vm.infoMessage, WeekPlanCopy.configurationSaved)
+
+        await vm.applyPreset(id: 1)
+        XCTAssertEqual(api.applyPresetIds, [1])
+        XCTAssertTrue(vm.plan.days[0].enabled)
+        XCTAssertEqual(vm.plan.shared_season, "winter")
+        XCTAssertNil(vm.plan.days[0].outfit)
+        XCTAssertEqual(vm.infoMessage, WeekPlanCopy.configurationLoaded)
+
+        await vm.deletePreset(id: 1)
+        XCTAssertEqual(api.deletePresetIds, [1])
+        XCTAssertEqual(vm.presetCount, 0)
+        XCTAssertEqual(vm.infoMessage, WeekPlanCopy.configurationDeleted)
+    }
+
+    func testUpdateAndRenamePreset() async {
+        let api = MockAPI()
+        api.presetList = WeekPlanPresetListResponse(
+            items: [
+                WeekPlanPresetItem(
+                    id: 3,
+                    name: "Old name",
+                    config: samplePresetConfig(),
+                    created_at: "2026-07-25T10:00:00Z",
+                    updated_at: "2026-07-25T10:00:00Z"
+                ),
+            ],
+            count: 1,
+            limit: 4,
+            limit_source: "default"
+        )
+        let vm = WeekPlannerViewModel(api: api, notifier: MockNotifier(), timezoneProvider: { "UTC" })
+        await vm.load()
+
+        vm.setSharedSeason("fall")
+        await vm.updatePreset(id: 3)
+        XCTAssertEqual(api.updatePresetBodies.count, 1)
+        XCTAssertEqual(api.updatePresetBodies.first?.body.config?.shared_season, "fall")
+        XCTAssertEqual(vm.infoMessage, WeekPlanCopy.configurationUpdated)
+
+        await vm.renamePreset(id: 3, name: "Fall week")
+        XCTAssertEqual(api.updatePresetBodies.last?.body.name, "Fall week")
+        XCTAssertEqual(vm.infoMessage, WeekPlanCopy.configurationRenamed)
+    }
+
+    func testHasGeneratedOutfitsDetectsAppliedWipeNeed() async {
+        let api = MockAPI()
+        api.plan.days[0].enabled = true
+        api.plan.days[0].outfit = WeekPlanOutfitResponse(
+            summary: "Existing",
+            shirt: "Shirt",
+            trouser: "Trouser",
+            shoes: "Shoes",
+            belt: "Belt"
+        )
+        let vm = WeekPlannerViewModel(api: api, notifier: MockNotifier(), timezoneProvider: { "UTC" })
+        await vm.load()
+
+        XCTAssertTrue(vm.hasGeneratedOutfits)
     }
 }

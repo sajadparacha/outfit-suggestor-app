@@ -324,6 +324,7 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               'Tap Save weekly plan to persist, or Generate week to create wardrobe-based outfits for every enabled day. Use Regenerate on a single day anytime.',
               'Clear plan asks for confirmation, then clears the current week (a snapshot is kept under Previous plans).',
               'Under Previous plans, tap Load to restore an earlier week as your current plan.',
+              'Saved configurations: use Save as… to store your week setup (days, occasions, styles); Load applies it and clears outfits—tap Generate week when ready.',
               'Today at the top shows today’s occasion and outfit summary (with wardrobe preview thumbnails when available).',
               'Per day: toggle Use wardrobe (default on), then open the day detail for item images, a collapsed Why this outfit works section, and missing-item actions (Choose from wardrobe / Find an alternative / Continue without).',
             ]}

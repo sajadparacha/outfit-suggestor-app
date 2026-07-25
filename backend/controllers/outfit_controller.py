@@ -95,12 +95,80 @@ class OutfitController:
             return "outerwear"
         return None
 
-    def _apply_upper_body_layer_exclusivity(
+    @staticmethod
+    def _has_meaningful_layer_text(text: Optional[str]) -> bool:
+        """True when a blazer/outerwear slot holds a real recommendation (not null/placeholder)."""
+        lowered = (text or "").strip().lower()
+        if not lowered or lowered in {"null", "none", "n/a", "-"}:
+            return False
+        if lowered.startswith("no structured blazer"):
+            return False
+        if lowered.startswith("consider adding"):
+            return False
+        return True
+
+    @staticmethod
+    def _is_warm_season(season: Optional[str]) -> bool:
+        return (season or "").strip().lower() in {"summer", "warm"}
+
+    @staticmethod
+    def _prefers_blazer_over_jacket(
+        *,
+        occasion: Optional[str] = None,
+        style: Optional[str] = None,
+    ) -> bool:
+        occ = (occasion or "").strip().lower().replace("_", "-")
+        sty = (style or "").strip().lower()
+        if occ in {
+            "work",
+            "business",
+            "formal",
+            "office",
+            "interview",
+            "wedding",
+            "wedding-guest",
+            "date-night",
+            "everyday",
+        }:
+            return True
+        if sty in {"classic", "elegant", "formal", "business"}:
+            return True
+        return False
+
+    def _clear_outerwear_layer(
         self,
         suggestion: OutfitSuggestion,
         matching_items: Optional[Dict[str, List[Dict]]] = None,
     ) -> None:
-        """Jacket/coat upload → no blazer or extra sweater; blazer upload → no jacket/sweater."""
+        suggestion.outerwear = None
+        suggestion.outerwear_id = None
+        if matching_items is not None:
+            matching_items.pop("outerwear", None)
+
+    def _clear_blazer_layer(
+        self,
+        suggestion: OutfitSuggestion,
+        matching_items: Optional[Dict[str, List[Dict]]] = None,
+    ) -> None:
+        suggestion.blazer = ""
+        suggestion.blazer_id = None
+        if matching_items is not None:
+            matching_items.pop("blazer", None)
+
+    def _apply_upper_body_layer_exclusivity(
+        self,
+        suggestion: OutfitSuggestion,
+        matching_items: Optional[Dict[str, List[Dict]]] = None,
+        *,
+        season: Optional[str] = None,
+        occasion: Optional[str] = None,
+        style: Optional[str] = None,
+    ) -> None:
+        """
+        At most one of blazer or casual jacket/outerwear.
+        Summer: never recommend a jacket/coat (outerwear cleared).
+        Upload anchors still win when present.
+        """
         anchor = self._resolve_upper_body_anchor(suggestion)
         if anchor == "outerwear":
             suggestion.blazer_id = None
@@ -122,6 +190,34 @@ class OutfitController:
             if matching_items is not None:
                 matching_items.pop("outerwear", None)
                 matching_items.pop("sweater", None)
+
+        # Summer / warm weather: no jacket or coat layer (unless upload anchors outerwear)
+        if self._is_warm_season(season) and anchor != "outerwear":
+            self._clear_outerwear_layer(suggestion, matching_items)
+
+        has_blazer = self._has_meaningful_layer_text(suggestion.blazer) or (
+            suggestion.blazer_id is not None
+        )
+        has_outerwear = self._has_meaningful_layer_text(suggestion.outerwear) or (
+            suggestion.outerwear_id is not None
+        )
+        if not (has_blazer and has_outerwear):
+            return
+
+        # Prefer blazer for work/classic; otherwise keep whichever has a wardrobe id, else blazer
+        keep_blazer = self._prefers_blazer_over_jacket(occasion=occasion, style=style)
+        if not keep_blazer:
+            if suggestion.outerwear_id is not None and suggestion.blazer_id is None:
+                keep_blazer = False
+            elif suggestion.blazer_id is not None and suggestion.outerwear_id is None:
+                keep_blazer = True
+            else:
+                keep_blazer = True
+
+        if keep_blazer:
+            self._clear_outerwear_layer(suggestion, matching_items)
+        else:
+            self._clear_blazer_layer(suggestion, matching_items)
 
     def _normalize_item_category_for_outfit(self, category: str) -> str:
         """Map wardrobe category variants to outfit categories."""
@@ -742,7 +838,13 @@ class OutfitController:
                         )
 
                 self._reconcile_outerwear_upload_slot(suggestion, matching_items, similar_item)
-                self._apply_upper_body_layer_exclusivity(suggestion, matching_items)
+                self._apply_upper_body_layer_exclusivity(
+                    suggestion,
+                    matching_items,
+                    season=season,
+                    occasion=occasion,
+                    style=style,
+                )
                 
                 # Add matching items to suggestion (Pydantic will handle serialization)
                 suggestion.matching_wardrobe_items = matching_items
@@ -904,6 +1006,13 @@ class OutfitController:
             )
             self._apply_selected_ids_to_matches(suggestion, matching_items, all_wardrobe_items)
             self._ensure_pinned_selected_items_in_matches(matching_items, ordered_selected_items)
+            self._apply_upper_body_layer_exclusivity(
+                suggestion,
+                matching_items,
+                season=season,
+                occasion=occasion,
+                style=style,
+            )
             suggestion.matching_wardrobe_items = matching_items
 
             # Save to history (no image_data/model_image)
@@ -1331,7 +1440,13 @@ class OutfitController:
             self._apply_selected_ids_to_matches(suggestion, matching_items, all_wardrobe_items)
             self._apply_source_wardrobe_match_overrides(suggestion, matching_items, wardrobe_item)
             self._reconcile_outerwear_upload_slot(suggestion, matching_items)
-            self._apply_upper_body_layer_exclusivity(suggestion, matching_items)
+            self._apply_upper_body_layer_exclusivity(
+                suggestion,
+                matching_items,
+                season=season,
+                occasion=occasion,
+                style=style,
+            )
             suggestion.matching_wardrobe_items = matching_items
             
             # Save to database using outfit service

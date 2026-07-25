@@ -871,6 +871,16 @@ function App() {
                 onRestoreHistory={(id) => {
                   weekPlan.restoreHistory(id).catch(() => undefined);
                 }}
+                presets={weekPlan.presets}
+                presetCount={weekPlan.presetCount}
+                presetLimit={weekPlan.presetLimit}
+                presetAtLimit={weekPlan.presetAtLimit}
+                presetBusy={weekPlan.presetBusy}
+                onSavePresetAs={(name) => weekPlan.savePresetAs(name)}
+                onUpdatePreset={(id) => weekPlan.updatePreset(id)}
+                onRenamePreset={(id, name) => weekPlan.renamePreset(id, name)}
+                onDeletePreset={(id) => weekPlan.deletePreset(id)}
+                onLoadPreset={(id) => weekPlan.applyPreset(id)}
                 isAdmin={!!user?.is_admin}
                 showAiPromptResponse={showAiPromptResponse}
               />

@@ -60,6 +60,7 @@ describe('outfitLayerExclusivity', () => {
   it('does not synthesize upload copy for wardrobe multi-select without image', () => {
     const suggestion: OutfitSuggestion = {
       ...base,
+      blazer: 'No structured blazer — outfit built around your outerwear',
       outerwear_id: 55,
       outerwear: 'Tan wool overcoat',
       source_wardrobe_item_id: 55,
@@ -67,6 +68,29 @@ describe('outfitLayerExclusivity', () => {
     expect(resolveUploadCategory(suggestion)).toBeNull();
     expect(shouldShowAnchoredOuterwearInCoreGrid(suggestion)).toBe(false);
     expect(resolveOuterwearDisplayText(suggestion)).toBe('Tan wool overcoat');
+  });
+
+  it('hides outerwear when classic blazer is also present', () => {
+    const suggestion: OutfitSuggestion = {
+      ...base,
+      blazer: 'Slim fit blazer',
+      outerwear: 'Brown jacket',
+      outerwear_id: 9,
+    };
+    expect(
+      resolveOuterwearDisplayText(suggestion, null, {
+        season: 'summer',
+        occasion: 'everyday',
+        style: 'classic',
+      })
+    ).toBeNull();
+    expect(
+      optionalLayerCategories(suggestion, null, {
+        season: 'summer',
+        occasion: 'everyday',
+        style: 'classic',
+      })
+    ).not.toContain('outerwear');
   });
 
   it('hides blazer card for empty or placeholder blazer text', () => {

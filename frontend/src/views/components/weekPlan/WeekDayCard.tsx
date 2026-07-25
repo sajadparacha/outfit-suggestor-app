@@ -5,6 +5,7 @@ import {
   WEEK_DAY_LABELS,
   WEEK_DAY_SHORT_LABELS,
   formatOccasionLabel,
+  getWeekDayPreviewThumbSources,
   getWeekDayStatus,
 } from '../../../models/WeekPlanModels';
 import {
@@ -13,19 +14,6 @@ import {
   statusLabel,
   statusPillClass,
 } from './weekPlanStyles';
-
-function outfitPreviewThumbs(day: WeekPlanDay): string[] {
-  const items = day.outfit?.matching_wardrobe_items;
-  if (!items) return [];
-  const thumbs: string[] = [];
-  for (const slot of ['shirt', 'trouser', 'blazer', 'shoes', 'belt'] as const) {
-    const list = items[slot];
-    if (list?.[0]?.image_data) {
-      thumbs.push(list[0].image_data);
-    }
-  }
-  return thumbs.slice(0, 3);
-}
 
 export interface WeekDayCardProps {
   day: WeekPlanDay;
@@ -53,7 +41,7 @@ const WeekDayCard: React.FC<WeekDayCardProps> = ({
   const label = WEEK_DAY_LABELS[day.day_of_week as DayOfWeek] ?? `Day ${day.day_of_week}`;
   const short = WEEK_DAY_SHORT_LABELS[day.day_of_week as DayOfWeek] ?? label.slice(0, 3);
   const status = getWeekDayStatus(day);
-  const thumbs = outfitPreviewThumbs(day);
+  const thumbs = getWeekDayPreviewThumbSources(day);
   const occasion = formatOccasionLabel(day.occasion);
 
   return (

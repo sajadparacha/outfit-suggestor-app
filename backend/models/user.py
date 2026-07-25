@@ -21,6 +21,12 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     # Admins can access privileged endpoints like access-log reports
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Stub for future subscription tiers (unused in product UI until billing exists)
+    subscription_plan: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Per-user override for week-plan named configs; null → tier/default resolver
+    week_plan_preset_limit_override: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     activation_token: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     activation_token_expires: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

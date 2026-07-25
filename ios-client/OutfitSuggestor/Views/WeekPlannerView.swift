@@ -14,6 +14,13 @@ struct WeekPlannerView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showClearConfirm = false
     @State private var whyExpanded = false
+    @State private var showSavePresetAlert = false
+    @State private var savePresetName = ""
+    @State private var presetToRename: WeekPlanPresetItem?
+    @State private var renamePresetName = ""
+    @State private var presetToDelete: WeekPlanPresetItem?
+    @State private var presetToApply: WeekPlanPresetItem?
+    @State private var showApplyPresetConfirm = false
 
     private var isRegularWidth: Bool { horizontalSizeClass == .regular }
 
@@ -43,6 +50,75 @@ struct WeekPlannerView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text(WeekPlanCopy.clearConfirmMessage)
+        }
+        .confirmationDialog(
+            WeekPlanCopy.configurationDeleteTitle,
+            isPresented: Binding(
+                get: { presetToDelete != nil },
+                set: { if !$0 { presetToDelete = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            if let preset = presetToDelete {
+                Button(WeekPlanCopy.deleteConfiguration, role: .destructive) {
+                    let id = preset.id
+                    presetToDelete = nil
+                    Task { await viewModel.deletePreset(id: id) }
+                }
+            }
+            Button("Cancel", role: .cancel) { presetToDelete = nil }
+        } message: {
+            Text(WeekPlanCopy.configurationDeleteMessage)
+        }
+        .confirmationDialog(
+            WeekPlanCopy.configurationApplyTitle,
+            isPresented: $showApplyPresetConfirm,
+            titleVisibility: .visible
+        ) {
+            if let preset = presetToApply {
+                Button(WeekPlanCopy.loadConfiguration) {
+                    let id = preset.id
+                    presetToApply = nil
+                    Task { await viewModel.applyPreset(id: id) }
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                presetToApply = nil
+            }
+        } message: {
+            Text(WeekPlanCopy.configurationApplyMessage)
+        }
+        .alert(WeekPlanCopy.saveConfiguration, isPresented: $showSavePresetAlert) {
+            TextField("Name", text: $savePresetName)
+                .textInputAutocapitalization(.words)
+            Button("Save") {
+                let name = savePresetName
+                savePresetName = ""
+                Task { await viewModel.saveAsPreset(name: name) }
+            }
+            Button("Cancel", role: .cancel) {
+                savePresetName = ""
+            }
+        } message: {
+            Text(WeekPlanCopy.savedConfigurationsHint)
+        }
+        .alert(WeekPlanCopy.renameConfiguration, isPresented: Binding(
+            get: { presetToRename != nil },
+            set: { if !$0 { presetToRename = nil } }
+        )) {
+            TextField("Name", text: $renamePresetName)
+                .textInputAutocapitalization(.words)
+            Button("Save") {
+                guard let preset = presetToRename else { return }
+                let name = renamePresetName
+                presetToRename = nil
+                renamePresetName = ""
+                Task { await viewModel.renamePreset(id: preset.id, name: name) }
+            }
+            Button("Cancel", role: .cancel) {
+                presetToRename = nil
+                renamePresetName = ""
+            }
         }
         .task {
             guard auth.isAuthenticated else { return }
@@ -80,6 +156,7 @@ struct WeekPlannerView: View {
                         sharedControlsSection
                         weekOverviewSection
                         selectedDayDetailSection
+                        presetsSection
                         historySection
 
                         Button(role: .destructive) {
@@ -290,7 +367,14 @@ struct WeekPlannerView: View {
     private func dayCard(_ day: WeekPlanDayResponse) -> some View {
         let selected = day.day_of_week == viewModel.selectedDayOfWeek
         let status = viewModel.dayStatus(for: day)
-        let previewSlots = day.outfit.map { WeekPlanOutfitDisplay.slotRows(for: $0).prefix(3) } ?? []
+        let previewSlots = day.outfit.map {
+            WeekPlanOutfitDisplay.slotRows(
+                for: $0,
+                season: viewModel.plan.shared_season,
+                occasion: day.occasion,
+                style: day.style
+            ).prefix(3)
+        } ?? []
 
         return Button {
             viewModel.selectDay(day.day_of_week)
@@ -516,7 +600,13 @@ struct WeekPlannerView: View {
     }
 
     private func outfitItemGallery(_ outfit: WeekPlanOutfitResponse) -> some View {
-        let slots = WeekPlanOutfitDisplay.slotRows(for: outfit)
+        let day = viewModel.selectedDay
+        let slots = WeekPlanOutfitDisplay.slotRows(
+            for: outfit,
+            season: viewModel.plan.shared_season,
+            occasion: day?.occasion,
+            style: day?.style
+        )
         let missing = WeekPlanMissingSlots.missing(for: outfit)
         return LazyVGrid(
             columns: [GridItem(.adaptive(minimum: isRegularWidth ? 100 : 88), spacing: 10)],
@@ -693,6 +783,141 @@ struct WeekPlannerView: View {
         }
         .background(AppTheme.bgPrimary.opacity(0.96))
         .accessibilityIdentifier("week.stickySave")
+    }
+
+    // MARK: - Saved configurations
+
+    private var presetsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(WeekPlanCopy.savedConfigurations)
+                    .font(.headline)
+                    .foregroundColor(AppTheme.textPrimary)
+                Spacer(minLength: 8)
+                if viewModel.presetLimit > 0 {
+                    Text(viewModel.presetUsageText)
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(AppTheme.textSecondary)
+                        .accessibilityIdentifier("week.presets.usage")
+                }
+            }
+
+            Text(WeekPlanCopy.savedConfigurationsHint)
+                .font(.subheadline)
+                .foregroundColor(AppTheme.textSecondary)
+
+            if let atLimit = viewModel.presetAtLimitMessage {
+                Text(atLimit)
+                    .font(.subheadline)
+                    .foregroundColor(AppTheme.accent)
+                    .accessibilityIdentifier("week.presets.atLimit")
+            }
+
+            Button {
+                savePresetName = ""
+                showSavePresetAlert = true
+            } label: {
+                Text(WeekPlanCopy.saveConfiguration)
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+            }
+            .buttonStyle(GradientButtonStyle(isEnabled: !viewModel.isPresetSaveDisabled))
+            .disabled(viewModel.isPresetSaveDisabled)
+            .frame(minHeight: 44)
+            .accessibilityIdentifier("week.presets.saveAs")
+
+            if viewModel.presets.isEmpty {
+                Text(WeekPlanCopy.emptyConfigurations)
+                    .font(.subheadline)
+                    .foregroundColor(AppTheme.textSecondary)
+                    .accessibilityIdentifier("week.presets.empty")
+            } else {
+                ForEach(viewModel.presets) { preset in
+                    presetRow(preset)
+                }
+            }
+        }
+        .accessibilityIdentifier("week.presets")
+    }
+
+    private func presetRow(_ preset: WeekPlanPresetItem) -> some View {
+        let enabledDays = preset.config.days.filter(\.enabled).count
+        let daysLabel = enabledDays == 1 ? "1 day" : "\(enabledDays) days"
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: isRegularWidth ? 16 : 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(preset.name)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(AppTheme.textPrimary)
+                    Text(daysLabel)
+                        .font(.caption)
+                        .foregroundColor(AppTheme.textSecondary)
+                }
+                Spacer(minLength: 8)
+                Button {
+                    beginApplyPreset(preset)
+                } label: {
+                    Text(WeekPlanCopy.loadConfiguration)
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                }
+                .disabled(viewModel.isBusy || viewModel.isPresetBusy)
+                .foregroundColor(AppTheme.gradientStart)
+                .frame(minHeight: 44)
+                .accessibilityIdentifier("week.presets.\(preset.id).load")
+            }
+
+            HStack(spacing: 12) {
+                Button {
+                    Task { await viewModel.updatePreset(id: preset.id) }
+                } label: {
+                    Text(WeekPlanCopy.updateConfiguration)
+                        .font(.caption.weight(.semibold))
+                }
+                .disabled(viewModel.isBusy || viewModel.isPresetBusy)
+                .accessibilityIdentifier("week.presets.\(preset.id).update")
+
+                Button {
+                    presetToRename = preset
+                    renamePresetName = preset.name
+                } label: {
+                    Text(WeekPlanCopy.renameConfiguration)
+                        .font(.caption.weight(.semibold))
+                }
+                .disabled(viewModel.isBusy || viewModel.isPresetBusy)
+                .accessibilityIdentifier("week.presets.\(preset.id).rename")
+
+                Button(role: .destructive) {
+                    presetToDelete = preset
+                } label: {
+                    Text(WeekPlanCopy.deleteConfiguration)
+                        .font(.caption.weight(.semibold))
+                }
+                .disabled(viewModel.isBusy || viewModel.isPresetBusy)
+                .accessibilityIdentifier("week.presets.\(preset.id).delete")
+            }
+            .foregroundColor(AppTheme.textSecondary)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Self.elevatedCard)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(AppTheme.border, lineWidth: 1)
+        )
+        .accessibilityIdentifier("week.presets.\(preset.id)")
+    }
+
+    private func beginApplyPreset(_ preset: WeekPlanPresetItem) {
+        if viewModel.hasGeneratedOutfits {
+            presetToApply = preset
+            showApplyPresetConfirm = true
+        } else {
+            Task { await viewModel.applyPreset(id: preset.id) }
+        }
     }
 
     // MARK: - History

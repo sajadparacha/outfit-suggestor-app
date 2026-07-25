@@ -15,6 +15,7 @@ from routes.outfit_routes import router as outfit_router
 from routes.auth_routes import router as auth_router
 from routes.wardrobe_routes import router as wardrobe_router
 from routes.week_plan_routes import router as week_plan_router
+from routes.admin_user_routes import router as admin_user_router
 from routes.access_log_routes import router as access_log_router
 from routes.reports_routes import router as reports_router
 from routes.integration_test_routes import router as integration_test_router
@@ -23,7 +24,13 @@ from models.database import Base, engine
 from models.user import User  # noqa: F401
 from models.outfit_history import OutfitHistory  # noqa: F401
 from models.wardrobe import WardrobeItem  # noqa: F401
-from models.week_plan import WeeklyPlan, WeeklyPlanDay, WeeklyPlanOutfit, WeeklyPlanHistory  # noqa: F401
+from models.week_plan import (  # noqa: F401
+    WeeklyPlan,
+    WeeklyPlanDay,
+    WeeklyPlanOutfit,
+    WeeklyPlanHistory,
+    WeeklyPlanPreset,
+)
 from models.access_log import AccessLog  # noqa: F401
 from models.guest_usage import GuestUsage  # noqa: F401
 from exceptions import GuestLimitReachedException
@@ -73,9 +80,9 @@ except ImportError:
 Base.metadata.create_all(bind=engine)
 
 try:
-    from utils.ensure_week_plan_schema import ensure_week_plan_day_columns
+    from utils.ensure_week_plan_schema import ensure_week_plan_schema
 
-    ensure_week_plan_day_columns(engine)
+    ensure_week_plan_schema(engine)
 except Exception as exc:  # pragma: no cover — never block boot on alter edge cases
     print(f"⚠️  Week plan schema ensure skipped: {exc}")
 
@@ -95,6 +102,7 @@ app.include_router(auth_router)
 app.include_router(outfit_router)
 app.include_router(wardrobe_router)
 app.include_router(week_plan_router)
+app.include_router(admin_user_router)
 app.include_router(access_log_router)
 app.include_router(reports_router)
 app.include_router(integration_test_router)

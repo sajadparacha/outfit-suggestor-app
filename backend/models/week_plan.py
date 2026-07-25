@@ -147,7 +147,31 @@ class WeeklyPlanHistory(Base):
     )
 
 
+class WeeklyPlanPreset(Base):
+    """User-named week configuration (settings only — no outfits)."""
+
+    __tablename__ = "weekly_plan_presets"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    name: Mapped[str] = mapped_column(String(40), nullable=False, default="")
+    config_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False, index=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+
 # --- Pydantic schemas ---
+
+WEEK_PLAN_PRESET_NAME_MAX = 40
 
 
 class WeekPlanDayInput(BaseModel):
@@ -256,6 +280,65 @@ class WeekPlanHistoryItem(BaseModel):
 
 class WeekPlanHistoryListResponse(BaseModel):
     items: list[WeekPlanHistoryItem]
+
+
+class WeekPlanPresetConfigDay(BaseModel):
+    day_of_week: int = Field(..., ge=0, le=6)
+    enabled: bool = False
+    occasion: str = DEFAULT_OCCASION
+    style: str = DEFAULT_STYLE
+    use_wardrobe_only: bool = True
+
+
+class WeekPlanPresetConfig(BaseModel):
+    """Config-only payload (no outfits)."""
+
+    reminder_time: str = Field(default=DEFAULT_REMINDER_TIME)
+    shared_season: str = Field(default=DEFAULT_SEASON)
+    days: list[WeekPlanPresetConfigDay] = Field(default_factory=list)
+
+
+class WeekPlanPresetCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=WEEK_PLAN_PRESET_NAME_MAX)
+    config: WeekPlanPresetConfig
+
+
+class WeekPlanPresetUpdateRequest(BaseModel):
+    name: Optional[str] = Field(
+        default=None, min_length=1, max_length=WEEK_PLAN_PRESET_NAME_MAX
+    )
+    config: Optional[WeekPlanPresetConfig] = None
+
+
+class WeekPlanPresetItem(BaseModel):
+    id: int
+    name: str
+    config: WeekPlanPresetConfig
+    created_at: str
+    updated_at: str
+
+
+class WeekPlanPresetListResponse(BaseModel):
+    items: list[WeekPlanPresetItem]
+    count: int
+    limit: int
+    limit_source: str = Field(
+        description="override | tier | default",
+    )
+
+
+class WeekPlanPresetLimitPatchRequest(BaseModel):
+    limit: Optional[int] = Field(
+        default=None,
+        description="1–20 to set override; null clears override",
+    )
+
+
+class WeekPlanPresetLimitPatchResponse(BaseModel):
+    user_id: int
+    week_plan_preset_limit_override: Optional[int] = None
+    effective_limit: int
+    limit_source: str
 
 
 # Avoid circular import type hints

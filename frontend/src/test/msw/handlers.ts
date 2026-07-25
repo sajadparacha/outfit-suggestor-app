@@ -2,6 +2,26 @@ import { rest } from 'msw';
 
 const API_BASE = 'http://localhost:8001';
 
+const mockPresetLimit = 4;
+let mockPresets: Array<{
+  id: number;
+  name: string;
+  config: {
+    reminder_time: string;
+    shared_season: string;
+    days: Array<{
+      day_of_week: number;
+      enabled: boolean;
+      occasion: string;
+      style: string;
+      use_wardrobe_only: boolean;
+    }>;
+  };
+  created_at: string;
+  updated_at: string;
+}> = [];
+let mockPresetIdSeq = 1;
+
 export const handlers = [
   // Default: App fetches recent history after a suggestion; tests can override with server.use.
   rest.get(`${API_BASE}/api/outfit-history`, (_req, res, ctx) => {
@@ -223,6 +243,90 @@ export const handlers = [
         })),
         wardrobe_empty: false,
         message: null,
+      })
+    );
+  }),
+
+  rest.get(`${API_BASE}/api/week-plan/presets`, (_req, res, ctx) => {
+    return res(
+      ctx.json({
+        items: mockPresets,
+        count: mockPresets.length,
+        limit: mockPresetLimit,
+        limit_source: 'default',
+      })
+    );
+  }),
+
+  rest.post(`${API_BASE}/api/week-plan/presets`, async (req, res, ctx) => {
+    const body = await req.json();
+    if (mockPresets.length >= mockPresetLimit) {
+      return res(ctx.status(409), ctx.json({ detail: 'Preset limit reached' }));
+    }
+    const now = new Date().toISOString();
+    const item = {
+      id: mockPresetIdSeq++,
+      name: String(body.name || '').trim(),
+      config: body.config,
+      created_at: now,
+      updated_at: now,
+    };
+    mockPresets = [item, ...mockPresets];
+    return res(ctx.json(item));
+  }),
+
+  rest.put(`${API_BASE}/api/week-plan/presets/:id`, async (req, res, ctx) => {
+    const presetId = Number(req.params.id);
+    const body = await req.json();
+    const idx = mockPresets.findIndex((p) => p.id === presetId);
+    if (idx < 0) {
+      return res(ctx.status(404), ctx.json({ detail: 'Preset not found' }));
+    }
+    const updated = {
+      ...mockPresets[idx],
+      ...(body.name != null ? { name: String(body.name).trim() } : {}),
+      ...(body.config != null ? { config: body.config } : {}),
+      updated_at: new Date().toISOString(),
+    };
+    mockPresets = mockPresets.map((p) => (p.id === presetId ? updated : p));
+    return res(ctx.json(updated));
+  }),
+
+  rest.delete(`${API_BASE}/api/week-plan/presets/:id`, (req, res, ctx) => {
+    const presetId = Number(req.params.id);
+    mockPresets = mockPresets.filter((p) => p.id !== presetId);
+    return res(ctx.status(204));
+  }),
+
+  rest.post(`${API_BASE}/api/week-plan/presets/:id/apply`, (req, res, ctx) => {
+    const presetId = Number(req.params.id);
+    const preset = mockPresets.find((p) => p.id === presetId);
+    if (!preset) {
+      return res(ctx.status(404), ctx.json({ detail: 'Preset not found' }));
+    }
+    return res(
+      ctx.json({
+        reminder_time: preset.config.reminder_time,
+        timezone: 'UTC',
+        shared_style: 'classic',
+        shared_season: preset.config.shared_season,
+        days: preset.config.days.map((d) => ({ ...d, outfit: null })),
+        wardrobe_empty: false,
+        message: null,
+      })
+    );
+  }),
+
+  rest.patch(`${API_BASE}/api/admin/users/:id/week-plan-preset-limit`, async (req, res, ctx) => {
+    const userId = Number(req.params.id);
+    const body = await req.json();
+    const effective = body.limit ?? mockPresetLimit;
+    return res(
+      ctx.json({
+        user_id: userId,
+        week_plan_preset_limit_override: body.limit ?? null,
+        effective_limit: effective,
+        limit_source: body.limit != null ? 'override' : 'default',
       })
     );
   }),

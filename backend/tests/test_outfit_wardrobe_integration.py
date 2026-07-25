@@ -265,6 +265,83 @@ class TestSourceWardrobeMatchOverrides:
         assert suggestion.blazer == ""
         assert suggestion.blazer_id is None
         assert suggestion.outerwear == "Tan corduroy jacket"
+
+    def test_summer_clears_jacket_keeps_blazer_for_work(self):
+        controller = self._controller()
+        suggestion = OutfitSuggestion(
+            shirt="White linen shirt",
+            trouser="Navy chinos",
+            blazer="Unstructured navy blazer",
+            shoes="Loafers",
+            belt="Brown belt",
+            reasoning="Work summer",
+            blazer_id=3,
+            outerwear="Lightweight harrington jacket",
+            outerwear_id=9,
+        )
+        matching_items: dict = {
+            "blazer": [{"id": 3}],
+            "outerwear": [{"id": 9}],
+        }
+        controller._apply_upper_body_layer_exclusivity(
+            suggestion,
+            matching_items,
+            season="summer",
+            occasion="work",
+            style="classic",
+        )
+        assert suggestion.blazer == "Unstructured navy blazer"
+        assert suggestion.blazer_id == 3
+        assert suggestion.outerwear is None
+        assert suggestion.outerwear_id is None
+        assert "outerwear" not in matching_items
+
+    def test_mutual_exclusivity_prefers_blazer_for_classic_without_season(self):
+        controller = self._controller()
+        suggestion = OutfitSuggestion(
+            shirt="Oxford shirt",
+            trouser="Grey trousers",
+            blazer="Charcoal blazer",
+            shoes="Derbies",
+            belt="Black belt",
+            reasoning="Classic",
+            outerwear="Field jacket",
+        )
+        controller._apply_upper_body_layer_exclusivity(
+            suggestion,
+            None,
+            season="fall",
+            occasion="everyday",
+            style="classic",
+        )
+        assert suggestion.blazer == "Charcoal blazer"
+        assert suggestion.outerwear is None
+
+    def test_summer_keeps_uploaded_jacket_anchor(self):
+        controller = self._controller()
+        suggestion = OutfitSuggestion(
+            shirt="Tee",
+            trouser="Chinos",
+            blazer="Navy blazer",
+            shoes="Sneakers",
+            belt="Belt",
+            reasoning="Casual",
+            upload_matched_category="outerwear",
+            outerwear="Denim jacket",
+            outerwear_id=12,
+        )
+        matching_items: dict = {"outerwear": [{"id": 12}], "blazer": [{"id": 1}]}
+        controller._apply_upper_body_layer_exclusivity(
+            suggestion,
+            matching_items,
+            season="summer",
+            occasion="casual",
+            style="casual",
+        )
+        assert suggestion.outerwear == "Denim jacket"
+        assert suggestion.outerwear_id == 12
+        assert suggestion.blazer == ""
+        assert suggestion.blazer_id is None
     """Test suite for outfit suggestions with wardrobe matching"""
     
     def test_suggest_outfit_with_wardrobe_matching(self, client, auth_headers, sample_image, db, test_user):

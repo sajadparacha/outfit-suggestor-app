@@ -15,6 +15,11 @@ protocol WeekPlanAPIClient {
     func deleteWeekPlan() async throws -> WeekPlanDeleteResponse
     func getWeekPlanHistory() async throws -> WeekPlanHistoryListResponse
     func restoreWeekPlanHistory(id: Int) async throws -> WeekPlanResponse
+    func getWeekPlanPresets() async throws -> WeekPlanPresetListResponse
+    func createWeekPlanPreset(_ body: WeekPlanPresetCreateRequest) async throws -> WeekPlanPresetItem
+    func updateWeekPlanPreset(id: Int, body: WeekPlanPresetUpdateRequest) async throws -> WeekPlanPresetItem
+    func deleteWeekPlanPreset(id: Int) async throws -> WeekPlanDeleteResponse
+    func applyWeekPlanPreset(id: Int) async throws -> WeekPlanResponse
 }
 
 protocol WeekPlanNotificationScheduling {
@@ -37,11 +42,16 @@ final class WeekPlannerViewModel: ObservableObject {
     @Published var plan: WeekPlanResponse = .empty()
     @Published var today: WeekPlanTodayResponse?
     @Published var history: [WeekPlanHistoryItem] = []
+    @Published var presets: [WeekPlanPresetItem] = []
+    @Published var presetCount: Int = 0
+    @Published var presetLimit: Int = 0
+    @Published var presetLimitSource: String?
     @Published var selectedDayOfWeek: Int = 0
     @Published var isLoading = false
     @Published var isSaving = false
     @Published var isGenerating = false
     @Published var isRestoring = false
+    @Published var isPresetBusy = false
     @Published var errorMessage: String?
     @Published var infoMessage: String?
     /// Days where the user dismissed the missing-item prompt (local only).
@@ -79,6 +89,34 @@ final class WeekPlannerViewModel: ObservableObject {
 
     var isSaveDisabled: Bool {
         isGenerating || isSaving || isRestoring
+    }
+
+    var isPresetSaveDisabled: Bool {
+        isPresetBusy || isBusy || isPresetAtLimit
+    }
+
+    var isPresetAtLimit: Bool {
+        presetLimit > 0 && presetCount >= presetLimit
+    }
+
+    var presetUsageText: String {
+        WeekPlanCopy.configurationUsage(count: presetCount, limit: presetLimit)
+    }
+
+    var presetAtLimitMessage: String? {
+        guard isPresetAtLimit else { return nil }
+        return WeekPlanCopy.configurationAtLimit(limit: presetLimit)
+    }
+
+    var hasGeneratedOutfits: Bool {
+        plan.days.contains { day in
+            guard day.enabled, let outfit = day.outfit else { return false }
+            let hasSummary = !outfit.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            let hasAnySlot = WeekPlanMissingSlots.core.contains {
+                !outfit[keyPath: $0.keyPath].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            }
+            return hasSummary || hasAnySlot
+        }
     }
 
     var selectedDay: WeekPlanDayResponse? {
@@ -130,10 +168,12 @@ final class WeekPlannerViewModel: ObservableObject {
             async let planTask = api.getWeekPlan()
             async let todayTask = api.getWeekPlanToday()
             async let historyTask = api.getWeekPlanHistory()
+            async let presetsTask = api.getWeekPlanPresets()
             let loaded = try await planTask
             plan = normalize(loaded)
             today = try? await todayTask
             history = (try? await historyTask)?.items ?? []
+            applyPresetList(try? await presetsTask)
             if let message = plan.message, !message.isEmpty {
                 infoMessage = message
             }
@@ -239,6 +279,114 @@ final class WeekPlannerViewModel: ObservableObject {
         await generate(dayOfWeek: dayOfWeek)
     }
 
+    func refreshPresets() async {
+        do {
+            applyPresetList(try await api.getWeekPlanPresets())
+        } catch {
+            if presets.isEmpty {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    func saveAsPreset(name: String) async {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            errorMessage = WeekPlanCopy.configurationNameRequired
+            return
+        }
+        guard trimmed.count <= WeekPlanPresetConstants.nameMaxLength else {
+            errorMessage = "Name must be \(WeekPlanPresetConstants.nameMaxLength) characters or fewer."
+            return
+        }
+        guard !isPresetAtLimit else { return }
+
+        isPresetBusy = true
+        errorMessage = nil
+        infoMessage = nil
+        defer { isPresetBusy = false }
+        do {
+            let body = WeekPlanPresetCreateRequest(name: trimmed, config: presetConfigFromPlan())
+            _ = try await api.createWeekPlanPreset(body)
+            infoMessage = WeekPlanCopy.configurationSaved
+            await refreshPresets()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func updatePreset(id: Int) async {
+        isPresetBusy = true
+        errorMessage = nil
+        infoMessage = nil
+        defer { isPresetBusy = false }
+        do {
+            let body = WeekPlanPresetUpdateRequest(name: nil, config: presetConfigFromPlan())
+            _ = try await api.updateWeekPlanPreset(id: id, body: body)
+            infoMessage = WeekPlanCopy.configurationUpdated
+            await refreshPresets()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func renamePreset(id: Int, name: String) async {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            errorMessage = WeekPlanCopy.configurationNameRequired
+            return
+        }
+        guard trimmed.count <= WeekPlanPresetConstants.nameMaxLength else {
+            errorMessage = "Name must be \(WeekPlanPresetConstants.nameMaxLength) characters or fewer."
+            return
+        }
+
+        isPresetBusy = true
+        errorMessage = nil
+        infoMessage = nil
+        defer { isPresetBusy = false }
+        do {
+            let body = WeekPlanPresetUpdateRequest(name: trimmed, config: nil)
+            _ = try await api.updateWeekPlanPreset(id: id, body: body)
+            infoMessage = WeekPlanCopy.configurationRenamed
+            await refreshPresets()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func deletePreset(id: Int) async {
+        isPresetBusy = true
+        errorMessage = nil
+        infoMessage = nil
+        defer { isPresetBusy = false }
+        do {
+            _ = try await api.deleteWeekPlanPreset(id: id)
+            infoMessage = WeekPlanCopy.configurationDeleted
+            await refreshPresets()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func applyPreset(id: Int) async {
+        isPresetBusy = true
+        errorMessage = nil
+        infoMessage = nil
+        defer { isPresetBusy = false }
+        do {
+            let applied = try await api.applyWeekPlanPreset(id: id)
+            plan = normalize(applied)
+            today = try? await api.getWeekPlanToday()
+            infoMessage = WeekPlanCopy.configurationLoaded
+            dismissedMissingDays.removeAll()
+            syncSelectedDayAfterLoad()
+            await notifier.cancelAll()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     func clearPlan() async {
         isSaving = true
         errorMessage = nil
@@ -258,6 +406,40 @@ final class WeekPlannerViewModel: ObservableObject {
     }
 
     // MARK: - Private
+
+    private func applyPresetList(_ response: WeekPlanPresetListResponse?) {
+        guard let response else {
+            presets = []
+            presetCount = 0
+            presetLimit = 0
+            presetLimitSource = nil
+            return
+        }
+        presets = response.items
+        presetCount = response.count
+        presetLimit = response.limit
+        presetLimitSource = response.limit_source
+    }
+
+    private func presetConfigFromPlan() -> WeekPlanPresetConfig {
+        WeekPlanPresetConfig(
+            reminder_time: plan.reminder_time.isEmpty
+                ? WeekPlanConstants.defaultReminderTime
+                : plan.reminder_time,
+            shared_season: plan.shared_season.isEmpty
+                ? WeekPlanConstants.defaultSeason
+                : plan.shared_season,
+            days: plan.days.map {
+                WeekPlanPresetConfigDay(
+                    day_of_week: $0.day_of_week,
+                    enabled: $0.enabled,
+                    occasion: $0.occasion.isEmpty ? WeekPlanConstants.defaultOccasion : $0.occasion,
+                    style: $0.style.isEmpty ? WeekPlanConstants.defaultStyle : $0.style,
+                    use_wardrobe_only: $0.use_wardrobe_only
+                )
+            }
+        )
+    }
 
     private func syncSelectedDayAfterLoad() {
         if let todayDow = today?.day_of_week,

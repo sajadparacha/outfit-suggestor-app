@@ -314,7 +314,7 @@ describe('Week Outfit Planner', () => {
     expect(screen.queryByTestId('week-day-summary-0')).not.toBeInTheDocument();
   });
 
-  it('shows missing-item actions when a core outfit slot is empty', async () => {
+  it('shows missing-item actions when a required outfit slot is empty', async () => {
     localStorage.setItem('auth_token', 'test-token');
 
     const days = emptyDays().map((d, i) =>
@@ -327,10 +327,10 @@ describe('Week Outfit Planner', () => {
               summary: 'Almost ready',
               shirt: 'White shirt',
               trouser: 'Navy trousers',
-              blazer: '',
-              shoes: 'Brown shoes',
+              blazer: 'Navy blazer',
+              shoes: '',
               belt: 'Brown belt',
-              reasoning: 'Needs a blazer.',
+              reasoning: 'Needs shoes.',
             },
           }
         : d
@@ -403,7 +403,8 @@ describe('Week Outfit Planner', () => {
     await waitFor(() => {
       expect(screen.getByTestId('week-missing-item-card')).toBeInTheDocument();
     });
-    expect(screen.getByTestId('week-outfit-missing-slot-blazer')).toBeInTheDocument();
+    expect(screen.getByTestId('week-outfit-missing-slot-shoes')).toBeInTheDocument();
+    expect(screen.queryByTestId('week-outfit-missing-slot-blazer')).not.toBeInTheDocument();
     expect(screen.getByTestId('week-missing-choose-wardrobe')).toBeInTheDocument();
     expect(screen.getByTestId('week-missing-find-alternative')).toBeInTheDocument();
     expect(screen.getByTestId('week-missing-continue')).toBeInTheDocument();
@@ -415,6 +416,71 @@ describe('Week Outfit Planner', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('week-missing-item-card')).not.toBeInTheDocument();
     });
+  });
+
+  it('does not treat empty blazer as missing', async () => {
+    localStorage.setItem('auth_token', 'test-token');
+
+    const days = emptyDays().map((d, i) =>
+      i === 0
+        ? {
+            ...d,
+            enabled: true,
+            occasion: 'everyday',
+            style: 'trendy',
+            outfit: {
+              summary: 'No blazer needed',
+              shirt: 'White shirt',
+              trouser: 'Navy chinos',
+              blazer: '',
+              shoes: 'Brown shoes',
+              belt: 'Brown belt',
+              reasoning: 'Casual look without a blazer.',
+            },
+          }
+        : d
+    );
+
+    server.use(
+      authMe(),
+      rest.get(`${API_BASE}/api/week-plan`, (_req, res, ctx) =>
+        res(
+          ctx.json({
+            reminder_time: '07:30',
+            timezone: 'UTC',
+            shared_style: 'classic',
+            shared_season: 'all-season',
+            days,
+            wardrobe_empty: false,
+            message: null,
+          })
+        )
+      ),
+      rest.get(`${API_BASE}/api/week-plan/today`, (_req, res, ctx) =>
+        res(
+          ctx.json({
+            day_of_week: 0,
+            enabled: true,
+            occasion: 'everyday',
+            use_wardrobe_only: true,
+            outfit: days[0].outfit,
+            reminder_time: '07:30',
+            timezone: 'UTC',
+            has_plan: true,
+            message: null,
+          })
+        )
+      )
+    );
+
+    renderApp({ routerProps: { initialEntries: [ROUTES.WEEK] } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('week-day-detail')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('week-missing-item-card')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('week-outfit-missing-slot-blazer')).not.toBeInTheDocument();
+    expect(screen.getByTestId('week-day-status-0')).toHaveTextContent(/Ready/i);
   });
 
   it('disables Save weekly plan while saving', async () => {

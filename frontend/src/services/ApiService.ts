@@ -19,6 +19,12 @@ import {
   WeekPlan,
   WeekPlanGenerateRequest,
   WeekPlanHistoryListResponse,
+  WeekPlanPresetCreateRequest,
+  WeekPlanPresetItem,
+  WeekPlanPresetLimitPatchRequest,
+  WeekPlanPresetLimitPatchResponse,
+  WeekPlanPresetListResponse,
+  WeekPlanPresetUpdateRequest,
   WeekPlanToday,
   WeekPlanUpsertRequest,
 } from '../models/WeekPlanModels';
@@ -1397,6 +1403,109 @@ class ApiService {
         detail: 'Failed to restore week plan',
       }));
       throw new Error(error.detail || 'Failed to restore week plan');
+    }
+    return await response.json();
+  }
+
+  /** GET /api/week-plan/presets — list named configurations */
+  async getWeekPlanPresets(): Promise<WeekPlanPresetListResponse> {
+    const url = `${this.baseUrl}/api/week-plan/presets`;
+    const response = await this.fetchWithLogging(url, {
+      headers: this.getHeaders(),
+    });
+    if (!response.ok) {
+      const error: ApiError = await response.json().catch(() => ({
+        detail: 'Failed to load saved configurations',
+      }));
+      throw new Error(error.detail || 'Failed to load saved configurations');
+    }
+    return await response.json();
+  }
+
+  /** POST /api/week-plan/presets — create named configuration */
+  async createWeekPlanPreset(body: WeekPlanPresetCreateRequest): Promise<WeekPlanPresetItem> {
+    const url = `${this.baseUrl}/api/week-plan/presets`;
+    const response = await this.fetchWithLogging(url, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const error: ApiError = await response.json().catch(() => ({
+        detail: 'Failed to save configuration',
+      }));
+      throw new Error(error.detail || 'Failed to save configuration');
+    }
+    return await response.json();
+  }
+
+  /** PUT /api/week-plan/presets/{id} — rename or replace configuration */
+  async updateWeekPlanPreset(
+    presetId: number,
+    body: WeekPlanPresetUpdateRequest
+  ): Promise<WeekPlanPresetItem> {
+    const url = `${this.baseUrl}/api/week-plan/presets/${presetId}`;
+    const response = await this.fetchWithLogging(url, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const error: ApiError = await response.json().catch(() => ({
+        detail: 'Failed to update configuration',
+      }));
+      throw new Error(error.detail || 'Failed to update configuration');
+    }
+    return await response.json();
+  }
+
+  /** DELETE /api/week-plan/presets/{id} */
+  async deleteWeekPlanPreset(presetId: number): Promise<void> {
+    const url = `${this.baseUrl}/api/week-plan/presets/${presetId}`;
+    const response = await this.fetchWithLogging(url, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+    if (!response.ok) {
+      const error: ApiError = await response.json().catch(() => ({
+        detail: 'Failed to delete configuration',
+      }));
+      throw new Error(error.detail || 'Failed to delete configuration');
+    }
+  }
+
+  /** POST /api/week-plan/presets/{id}/apply — apply config; clears outfits */
+  async applyWeekPlanPreset(presetId: number): Promise<WeekPlan> {
+    const url = `${this.baseUrl}/api/week-plan/presets/${presetId}/apply`;
+    const response = await this.fetchWithLogging(url, {
+      method: 'POST',
+      headers: this.getHeaders(),
+    });
+    if (!response.ok) {
+      const error: ApiError = await response.json().catch(() => ({
+        detail: 'Failed to load configuration',
+      }));
+      throw new Error(error.detail || 'Failed to load configuration');
+    }
+    return await response.json();
+  }
+
+  /** PATCH /api/admin/users/{id}/week-plan-preset-limit — admin override */
+  async patchWeekPlanPresetLimit(
+    userId: number,
+    body: WeekPlanPresetLimitPatchRequest
+  ): Promise<WeekPlanPresetLimitPatchResponse> {
+    const url = `${this.baseUrl}/api/admin/users/${userId}/week-plan-preset-limit`;
+    const response = await this.fetchWithLogging(url, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const error: ApiError = await response.json().catch(() => ({
+        detail: 'Failed to update preset limit',
+      }));
+      throw new Error(error.detail || 'Failed to update preset limit');
     }
     return await response.json();
   }

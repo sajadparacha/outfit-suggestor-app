@@ -1,5 +1,5 @@
 """
-Ensure weekly_plan_days has columns that create_all will not add to existing tables.
+Ensure week-plan related schema that create_all will not add to existing tables.
 Safe to call on every startup.
 """
 from __future__ import annotations
@@ -77,3 +77,29 @@ def ensure_week_plan_day_columns(engine: Engine) -> None:
                     )
                 )
             print("✅ Added weekly_plan_days.use_wardrobe_only")
+
+
+def ensure_week_plan_preset_user_columns(engine: Engine) -> None:
+    """Add subscription_plan + week_plan_preset_limit_override on users if missing."""
+    with engine.begin() as conn:
+        if not _table_exists(conn, engine, "users"):
+            return
+        cols = _column_names(conn, engine, "users")
+        if "subscription_plan" not in cols:
+            conn.execute(
+                text("ALTER TABLE users ADD COLUMN subscription_plan VARCHAR(64)")
+            )
+            print("✅ Added users.subscription_plan")
+        if "week_plan_preset_limit_override" not in cols:
+            conn.execute(
+                text(
+                    "ALTER TABLE users "
+                    "ADD COLUMN week_plan_preset_limit_override INTEGER"
+                )
+            )
+            print("✅ Added users.week_plan_preset_limit_override")
+
+
+def ensure_week_plan_schema(engine: Engine) -> None:
+    ensure_week_plan_day_columns(engine)
+    ensure_week_plan_preset_user_columns(engine)

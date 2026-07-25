@@ -1,7 +1,7 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useWeekPlanController } from './useWeekPlanController';
 import apiService from '../services/ApiService';
-import { WeekPlan, WeekPlanToday } from '../models/WeekPlanModels';
+import { WeekPlan, WeekPlanPresetItem, WeekPlanToday } from '../models/WeekPlanModels';
 
 jest.mock('../services/ApiService', () => ({
   __esModule: true,
@@ -13,6 +13,11 @@ jest.mock('../services/ApiService', () => ({
     deleteWeekPlan: jest.fn(),
     getWeekPlanHistory: jest.fn(),
     restoreWeekPlanHistory: jest.fn(),
+    getWeekPlanPresets: jest.fn(),
+    createWeekPlanPreset: jest.fn(),
+    updateWeekPlanPreset: jest.fn(),
+    deleteWeekPlanPreset: jest.fn(),
+    applyWeekPlanPreset: jest.fn(),
   },
 }));
 
@@ -49,6 +54,7 @@ describe('useWeekPlanController', () => {
     mockApi.getWeekPlan.mockResolvedValue(emptyPlan);
     mockApi.getWeekPlanToday.mockResolvedValue(todayEmpty);
     mockApi.getWeekPlanHistory.mockResolvedValue({ items: [] });
+    mockApi.getWeekPlanPresets.mockResolvedValue({ items: [], count: 0, limit: 2 });
     mockApi.putWeekPlan.mockImplementation(async (body) => ({
       ...emptyPlan,
       ...body,
@@ -183,5 +189,151 @@ describe('useWeekPlanController', () => {
     expect(putBody?.days.find((d) => d.day_of_week === 3)?.style).toBe('smart-casual');
     expect(putBody?.days.find((d) => d.day_of_week === 3)?.occasion).toBe('work');
     expect(result.current.plan?.days[3].style).toBe('smart-casual');
+  });
+
+  it('loads presets with count and limit from API', async () => {
+    const items: WeekPlanPresetItem[] = [
+      {
+        id: 1,
+        name: 'Work week',
+        config: {
+          reminder_time: '07:30',
+          shared_season: 'all-season',
+          days: emptyPlan.days.map((d, i) => ({ ...d, enabled: i < 5 })),
+        },
+        created_at: '2026-01-01',
+        updated_at: '2026-01-01',
+      },
+    ];
+    mockApi.getWeekPlanPresets.mockResolvedValue({
+      items,
+      count: 1,
+      limit: 3,
+      limit_source: 'tier',
+    });
+
+    const { result } = renderHook(() =>
+      useWeekPlanController({ isAuthenticated: true, userId: 1 })
+    );
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+      expect(result.current.presets).toHaveLength(1);
+    });
+
+    expect(result.current.presetCount).toBe(1);
+    expect(result.current.presetLimit).toBe(3);
+    expect(result.current.presetAtLimit).toBe(false);
+  });
+
+  it('savePresetAs creates preset and refreshes list', async () => {
+    mockApi.createWeekPlanPreset.mockResolvedValue({
+      id: 2,
+      name: 'Casual',
+      config: {
+        reminder_time: '07:30',
+        shared_season: 'all-season',
+        days: emptyPlan.days,
+      },
+      created_at: '2026-01-02',
+      updated_at: '2026-01-02',
+    });
+    mockApi.getWeekPlanPresets
+      .mockResolvedValueOnce({ items: [], count: 0, limit: 2 })
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: 2,
+            name: 'Casual',
+            config: {
+              reminder_time: '07:30',
+              shared_season: 'all-season',
+              days: emptyPlan.days,
+            },
+            created_at: '2026-01-02',
+            updated_at: '2026-01-02',
+          },
+        ],
+        count: 1,
+        limit: 2,
+      });
+
+    const { result } = renderHook(() =>
+      useWeekPlanController({ isAuthenticated: true, userId: 1 })
+    );
+    await waitFor(() => expect(result.current.plan).not.toBeNull());
+
+    await act(async () => {
+      await result.current.savePresetAs('Casual');
+    });
+
+    expect(mockApi.createWeekPlanPreset).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Casual' })
+    );
+    expect(result.current.presetCount).toBe(1);
+    expect(result.current.presetLimit).toBe(2);
+  });
+
+  it('applyPreset loads configuration without generating', async () => {
+    const applied: WeekPlan = {
+      ...emptyPlan,
+      days: emptyPlan.days.map((d, i) => ({
+        ...d,
+        enabled: i === 1,
+        occasion: 'work',
+        outfit: null,
+      })),
+    };
+    mockApi.applyWeekPlanPreset.mockResolvedValue(applied);
+
+    const { result } = renderHook(() =>
+      useWeekPlanController({ isAuthenticated: true, userId: 1 })
+    );
+    await waitFor(() => expect(result.current.plan).not.toBeNull());
+
+    await act(async () => {
+      await result.current.applyPreset(5);
+    });
+
+    expect(mockApi.applyWeekPlanPreset).toHaveBeenCalledWith(5);
+    expect(mockApi.generateWeekPlan).not.toHaveBeenCalled();
+    expect(result.current.plan?.days[1].enabled).toBe(true);
+    expect(result.current.plan?.days[1].outfit).toBeNull();
+  });
+
+  it('deletePreset removes preset and refreshes count', async () => {
+    mockApi.getWeekPlanPresets
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: 9,
+            name: 'Old',
+            config: {
+              reminder_time: '07:30',
+              shared_season: 'all-season',
+              days: emptyPlan.days,
+            },
+            created_at: '2026-01-01',
+            updated_at: '2026-01-01',
+          },
+        ],
+        count: 1,
+        limit: 1,
+      })
+      .mockResolvedValueOnce({ items: [], count: 0, limit: 1 });
+
+    const { result } = renderHook(() =>
+      useWeekPlanController({ isAuthenticated: true, userId: 1 })
+    );
+    await waitFor(() => expect(result.current.presetCount).toBe(1));
+    expect(result.current.presetAtLimit).toBe(true);
+
+    await act(async () => {
+      await result.current.deletePreset(9);
+    });
+
+    expect(mockApi.deleteWeekPlanPreset).toHaveBeenCalledWith(9);
+    expect(result.current.presetCount).toBe(0);
+    expect(result.current.presetAtLimit).toBe(false);
   });
 });

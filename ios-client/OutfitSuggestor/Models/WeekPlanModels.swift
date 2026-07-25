@@ -312,6 +312,58 @@ struct WeekPlanHistoryListResponse: Codable, Equatable {
     var items: [WeekPlanHistoryItem]
 }
 
+struct WeekPlanPresetConfigDay: Codable, Equatable {
+    var day_of_week: Int
+    var enabled: Bool
+    var occasion: String
+    var style: String
+    var use_wardrobe_only: Bool
+}
+
+struct WeekPlanPresetConfig: Codable, Equatable {
+    var reminder_time: String
+    var shared_season: String
+    var days: [WeekPlanPresetConfigDay]
+}
+
+struct WeekPlanPresetItem: Codable, Equatable, Identifiable {
+    var id: Int
+    var name: String
+    var config: WeekPlanPresetConfig
+    var created_at: String
+    var updated_at: String
+}
+
+struct WeekPlanPresetListResponse: Codable, Equatable {
+    var items: [WeekPlanPresetItem]
+    var count: Int
+    var limit: Int
+    var limit_source: String?
+}
+
+struct WeekPlanPresetCreateRequest: Codable, Equatable {
+    var name: String
+    var config: WeekPlanPresetConfig
+}
+
+struct WeekPlanPresetUpdateRequest: Codable, Equatable {
+    var name: String?
+    var config: WeekPlanPresetConfig?
+}
+
+struct WeekPlanPresetLimitPatchRequest: Codable, Equatable {
+    var limit: Int?
+}
+
+struct WeekPlanPresetLimitPatchResponse: Codable, Equatable {
+    var user_id: Int
+    var week_plan_preset_limit_override: Int?
+}
+
+enum WeekPlanPresetConstants {
+    static let nameMaxLength = 40
+}
+
 enum WeekPlanDayStatus: String, Equatable {
     case ready
     case missing
@@ -358,7 +410,7 @@ enum WeekPlanCopy {
     static let clearConfirmDelete = "Clear plan"
     static let previousPlans = "Previous plans"
     static let previousPlansHint =
-        "Backups when you clear or regenerate over existing outfits. Save plan updates your current week automatically."
+        "Backups when you clear or regenerate over existing outfits. Load restores a backup without adding a new row. Save plan updates your current week automatically."
     static let loadPlan = "Load"
     static let emptyHistory =
         "No previous plans yet. Clear plan or regenerate after outfits exist to keep a copy here."
@@ -375,6 +427,35 @@ enum WeekPlanCopy {
     static let missingItemsHint = "Some outfit slots are empty for this day."
     static let weekOverview = "Week overview"
     static let dayDetail = "Day detail"
+    static let savedConfigurations = "Saved configurations"
+    static let savedConfigurationsHint =
+        "Named week setups (days, occasions, reminder). Load one, then Generate week — not the same as Previous plans."
+    static let saveConfiguration = "Save as…"
+    static let updateConfiguration = "Update"
+    static let renameConfiguration = "Rename"
+    static let deleteConfiguration = "Delete"
+    static let loadConfiguration = "Load"
+    static let emptyConfigurations =
+        "No saved configurations yet. Tap Save as… to store your current week setup."
+    static let configurationSaved = "Configuration saved."
+    static let configurationUpdated = "Configuration updated."
+    static let configurationRenamed = "Configuration renamed."
+    static let configurationDeleted = "Configuration deleted."
+    static let configurationLoaded = "Configuration loaded. Tap Generate week when ready."
+    static let configurationNameRequired = "Enter a name for this configuration."
+    static let configurationApplyTitle = "Load this configuration?"
+    static let configurationApplyMessage =
+        "This replaces your current week setup and clears generated outfits."
+    static let configurationDeleteTitle = "Delete this configuration?"
+    static let configurationDeleteMessage = "This cannot be undone."
+
+    static func configurationUsage(count: Int, limit: Int) -> String {
+        "\(count) of \(limit) saved"
+    }
+
+    static func configurationAtLimit(limit: Int) -> String {
+        "You’ve reached your limit of \(limit) saved configurations. Delete one to save another."
+    }
 }
 
 /// Core outfit slots used for missing-item detection (empty strings).
@@ -436,8 +517,18 @@ enum WeekPlanOutfitDisplay {
         return hasPrompt || hasResponse || outfit.cost != nil
     }
 
-    static func slotRows(for outfit: WeekPlanOutfitResponse) -> [SlotRow] {
+    static func slotRows(
+        for outfit: WeekPlanOutfitResponse,
+        season: String? = nil,
+        occasion: String? = nil,
+        style: String? = nil
+    ) -> [SlotRow] {
         let suggestion = asOutfitSuggestion(outfit)
+        let context = OutfitLayerExclusivity.LayerContext(
+            season: season,
+            occasion: occasion,
+            style: style
+        )
         var rows: [SlotRow] = []
 
         func append(category: String, label: String, text: String?) {
@@ -455,8 +546,19 @@ enum WeekPlanOutfitDisplay {
         append(category: "belt", label: "Belt", text: outfit.belt)
         for item in OutfitOptionalLayers.items(
             for: suggestion,
-            allowedCategories: OutfitLayerExclusivity.optionalLayerCategories(for: suggestion)
+            allowedCategories: OutfitLayerExclusivity.optionalLayerCategories(
+                for: suggestion,
+                context: context
+            )
         ) {
+            // Extra guard: never show outerwear text the exclusivity helper would hide
+            if item.category == "outerwear",
+               OutfitLayerExclusivity.resolveOuterwearDisplayText(
+                suggestion: suggestion,
+                context: context
+               ) == nil {
+                continue
+            }
             append(category: item.category, label: item.label, text: item.description)
         }
         return rows

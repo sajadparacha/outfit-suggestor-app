@@ -190,6 +190,8 @@ def test_summer_prompt_excludes_heavy_outerwear_from_wardrobe_payload():
     assert "ID: 11" not in prompt
     assert "ID: 12" not in prompt
     assert "SUMMER / WARM-WEATHER RULES" in prompt
+    assert 'set "outerwear" to null' in prompt
+    assert "NEVER recommend both a blazer and outerwear" in prompt
 
 
 def test_detected_upload_category_overrides_mis_slotted_shirt():

@@ -9,25 +9,80 @@ const BLAZER_PLACEHOLDER_PATTERNS = [
 function isBlazerPlaceholder(text: string): boolean {
   const lower = text.trim().toLowerCase();
   if (!lower || lower === 'null' || lower === 'n/a' || lower === 'none') return true;
+  if (lower.startsWith('consider adding')) return true;
   return BLAZER_PLACEHOLDER_PATTERNS.some((pattern) => lower.includes(pattern));
 }
 
-/** Text for the outerwear slot — synthesizes when upload anchors a jacket but API omitted outerwear. */
+function isWarmSeason(season?: string | null): boolean {
+  const s = (season || '').trim().toLowerCase();
+  return s === 'summer' || s === 'warm';
+}
+
+function hasMeaningfulLayer(text?: string | null): boolean {
+  if (text == null) return false;
+  return !isBlazerPlaceholder(String(text));
+}
+
+/** Prefer blazer over jacket for work/classic/everyday looks. */
+export function prefersBlazerOverJacket(opts?: {
+  occasion?: string | null;
+  style?: string | null;
+}): boolean {
+  const occ = (opts?.occasion || '').trim().toLowerCase().replace(/_/g, '-');
+  const sty = (opts?.style || '').trim().toLowerCase();
+  if (
+    [
+      'work',
+      'business',
+      'formal',
+      'office',
+      'interview',
+      'wedding',
+      'wedding-guest',
+      'date-night',
+      'everyday',
+    ].includes(occ)
+  ) {
+    return true;
+  }
+  if (['classic', 'elegant', 'formal', 'business'].includes(sty)) return true;
+  return false;
+}
+
+export type LayerDisplayOpts = {
+  season?: string | null;
+  occasion?: string | null;
+  style?: string | null;
+};
+
+/** Text for the outerwear slot — never alongside a real blazer; null in summer. */
 export function resolveOuterwearDisplayText(
   suggestion: OutfitSuggestion,
-  sourceWardrobeCategory?: string | null
+  sourceWardrobeCategory?: string | null,
+  opts?: LayerDisplayOpts
 ): string | null {
+  const anchor = resolveUploadCategory(suggestion, sourceWardrobeCategory);
+  if (isWarmSeason(opts?.season) && anchor !== 'outerwear') {
+    return null;
+  }
+
   const raw = suggestion.outerwear;
   if (raw != null && String(raw).trim() !== '') {
     const lower = String(raw).trim().toLowerCase();
     if (lower !== 'null' && lower !== 'none' && lower !== 'n/a') {
+      if (hasMeaningfulLayer(suggestion.blazer) && anchor !== 'outerwear') {
+        return null;
+      }
+      if (
+        hasMeaningfulLayer(suggestion.blazer) &&
+        prefersBlazerOverJacket({ occasion: opts?.occasion, style: opts?.style })
+      ) {
+        return null;
+      }
       return String(raw);
     }
   }
-  if (
-    suggestion.imageUrl &&
-    resolveUploadCategory(suggestion, sourceWardrobeCategory) === 'outerwear'
-  ) {
+  if (suggestion.imageUrl && anchor === 'outerwear') {
     return 'Your wardrobe jacket (uploaded item)';
   }
   return null;
@@ -54,10 +109,11 @@ export function shouldShowBlazerCard(
   return !isBlazerPlaceholder(suggestion.blazer ?? '');
 }
 
-/** Optional layers after upper-body exclusivity (no sweater/outerwear when blazer is anchor). */
+/** Optional layers after upper-body exclusivity. */
 export function optionalLayerCategories(
   suggestion: OutfitSuggestion,
-  sourceWardrobeCategory?: string | null
+  sourceWardrobeCategory?: string | null,
+  opts?: LayerDisplayOpts
 ): OptionalOutfitCategoryKey[] {
   const anchor = resolveUploadCategory(suggestion, sourceWardrobeCategory);
   const categories: OptionalOutfitCategoryKey[] = ['sweater', 'outerwear', 'tie'];
@@ -65,8 +121,10 @@ export function optionalLayerCategories(
     return categories.filter((c) => c === 'tie');
   }
   if (anchor === 'outerwear') {
-    // Outerwear shown in core grid when it is the upload anchor.
     return categories.filter((c) => c !== 'sweater' && c !== 'outerwear');
+  }
+  if (isWarmSeason(opts?.season) || shouldShowBlazerCard(suggestion, sourceWardrobeCategory)) {
+    return categories.filter((c) => c !== 'outerwear');
   }
   return categories;
 }
@@ -74,8 +132,12 @@ export function optionalLayerCategories(
 export function resolveOptionalLayerText(
   suggestion: OutfitSuggestion,
   key: OptionalOutfitCategoryKey,
-  sourceWardrobeCategory?: string | null
+  sourceWardrobeCategory?: string | null,
+  opts?: LayerDisplayOpts
 ): string | null {
+  if (key === 'outerwear') {
+    return resolveOuterwearDisplayText(suggestion, sourceWardrobeCategory, opts);
+  }
   const raw = suggestion[key];
   if (raw != null && String(raw).trim() !== '') {
     const lower = String(raw).trim().toLowerCase();
@@ -83,17 +145,15 @@ export function resolveOptionalLayerText(
       return String(raw);
     }
   }
-  if (key === 'outerwear') {
-    return resolveOuterwearDisplayText(suggestion, sourceWardrobeCategory);
-  }
   return null;
 }
 
 export function hasVisibleOptionalLayers(
   suggestion: OutfitSuggestion,
-  sourceWardrobeCategory?: string | null
+  sourceWardrobeCategory?: string | null,
+  opts?: LayerDisplayOpts
 ): boolean {
-  return optionalLayerCategories(suggestion, sourceWardrobeCategory).some(
-    (key) => resolveOptionalLayerText(suggestion, key, sourceWardrobeCategory) != null
+  return optionalLayerCategories(suggestion, sourceWardrobeCategory, opts).some(
+    (key) => resolveOptionalLayerText(suggestion, key, sourceWardrobeCategory, opts) != null
   );
 }

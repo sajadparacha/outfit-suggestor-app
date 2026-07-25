@@ -1,5 +1,5 @@
 """Outfit data models"""
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class OutfitSuggestion(BaseModel):
@@ -77,6 +77,14 @@ class OutfitSuggestion(BaseModel):
         None,
         description="Raw text response returned by the AI model before parsing."
     )
+
+    @field_validator("shirt", "trouser", "blazer", "shoes", "belt", "reasoning", mode="before")
+    @classmethod
+    def coerce_none_core_strings(cls, value):
+        """AI may return null for unused layers (e.g. blazer with outerwear); never pass None to str fields."""
+        if value is None:
+            return ""
+        return value
 
 
 class OutfitRequest(BaseModel):

@@ -377,6 +377,260 @@ class TestWeekPlanHistory:
         assert data["days"][0]["outfit"] is not None
         assert data["days"][1]["occasion"] == "party"
 
+    def test_restore_does_not_add_history_row(self, client, auth_headers, wardrobe_item):
+        body = _sample_plan_body()
+        for d in body["days"]:
+            d["enabled"] = d["day_of_week"] == 0
+            d["occasion"] = "work"
+        client.put(PLAN_URL, json=body, headers=auth_headers)
+        client.post(GENERATE_URL, json={}, headers=auth_headers)
+        client.delete(PLAN_URL, headers=auth_headers)
+
+        hist = client.get(HISTORY_URL, headers=auth_headers)
+        assert hist.status_code == 200
+        items = hist.json()["items"]
+        assert len(items) >= 1
+        entry_id = items[0]["id"]
+        count_before = len(items)
+
+        # Current week has content again after restore
+        restored = client.post(
+            f"{HISTORY_URL}/{entry_id}/restore", headers=auth_headers
+        )
+        assert restored.status_code == 200
+        assert restored.json()["days"][0]["outfit"] is not None
+
+        # Loading again must not append another Previous plans row
+        restored_again = client.post(
+            f"{HISTORY_URL}/{entry_id}/restore", headers=auth_headers
+        )
+        assert restored_again.status_code == 200
+
+        hist_after = client.get(HISTORY_URL, headers=auth_headers)
+        assert len(hist_after.json()["items"]) == count_before
+
     def test_restore_missing_history_404(self, client, auth_headers):
         res = client.post(f"{HISTORY_URL}/999999/restore", headers=auth_headers)
         assert res.status_code == 404
+
+
+PRESETS_URL = "/api/week-plan/presets"
+ADMIN_PRESET_LIMIT_URL = "/api/admin/users/{user_id}/week-plan-preset-limit"
+
+
+def _preset_config(**overrides):
+    body = _sample_plan_body()
+    config = {
+        "reminder_time": body["reminder_time"],
+        "shared_season": body["shared_season"],
+        "days": [
+            {
+                "day_of_week": d["day_of_week"],
+                "enabled": d["enabled"],
+                "occasion": d["occasion"],
+                "style": d["style"],
+                "use_wardrobe_only": d["use_wardrobe_only"],
+            }
+            for d in body["days"]
+        ],
+    }
+    config.update(overrides)
+    return config
+
+
+class TestWeekPlanPresetLimitResolver:
+    def test_default_is_four(self):
+        from models.user import User
+        from services.week_plan_preset_limit import (
+            WEEK_PLAN_PRESET_LIMIT_DEFAULT,
+            resolve_week_plan_preset_limit,
+        )
+
+        user = User(email="a@b.com", hashed_password="x")
+        user.week_plan_preset_limit_override = None
+        user.subscription_plan = None
+        limit, source = resolve_week_plan_preset_limit(user)
+        assert limit == WEEK_PLAN_PRESET_LIMIT_DEFAULT == 4
+        assert source == "default"
+
+    def test_override_wins_over_tier(self):
+        from models.user import User
+        from services.week_plan_preset_limit import resolve_week_plan_preset_limit
+
+        user = User(email="a@b.com", hashed_password="x")
+        user.subscription_plan = "pro"
+        user.week_plan_preset_limit_override = 3
+        limit, source = resolve_week_plan_preset_limit(user)
+        assert limit == 3
+        assert source == "override"
+
+    def test_tier_map_when_plan_set(self):
+        from models.user import User
+        from services.week_plan_preset_limit import resolve_week_plan_preset_limit
+
+        user = User(email="a@b.com", hashed_password="x")
+        user.subscription_plan = "free"
+        user.week_plan_preset_limit_override = None
+        limit, source = resolve_week_plan_preset_limit(user)
+        assert limit == 2
+        assert source == "tier"
+
+
+class TestWeekPlanPresets:
+    def test_presets_unauthorized(self, client):
+        assert client.get(PRESETS_URL).status_code == 401
+        assert client.post(
+            PRESETS_URL, json={"name": "Work", "config": _preset_config()}
+        ).status_code == 401
+
+    def test_list_empty_default_limit(self, client, auth_headers):
+        res = client.get(PRESETS_URL, headers=auth_headers)
+        assert res.status_code == 200
+        data = res.json()
+        assert data["items"] == []
+        assert data["count"] == 0
+        assert data["limit"] == 4
+        assert data["limit_source"] == "default"
+
+    def test_create_reject_empty_name(self, client, auth_headers):
+        res = client.post(
+            PRESETS_URL,
+            json={"name": "   ", "config": _preset_config()},
+            headers=auth_headers,
+        )
+        assert res.status_code == 400
+
+    def test_crud_and_apply_clears_outfits(
+        self, client, auth_headers, wardrobe_item
+    ):
+        # Seed current plan with generated outfits
+        body = _sample_plan_body()
+        for d in body["days"]:
+            d["enabled"] = d["day_of_week"] == 0
+        client.put(PLAN_URL, json=body, headers=auth_headers)
+        gen = client.post(GENERATE_URL, json={}, headers=auth_headers)
+        assert gen.json()["days"][0]["outfit"] is not None
+
+        created = client.post(
+            PRESETS_URL,
+            json={"name": "Work", "config": _preset_config()},
+            headers=auth_headers,
+        )
+        assert created.status_code == 200
+        preset = created.json()
+        assert preset["name"] == "Work"
+        assert preset["config"]["days"][0]["occasion"] == "work"
+        preset_id = preset["id"]
+
+        listed = client.get(PRESETS_URL, headers=auth_headers)
+        assert listed.json()["count"] == 1
+
+        renamed = client.put(
+            f"{PRESETS_URL}/{preset_id}",
+            json={"name": "Travel"},
+            headers=auth_headers,
+        )
+        assert renamed.status_code == 200
+        assert renamed.json()["name"] == "Travel"
+
+        applied = client.post(
+            f"{PRESETS_URL}/{preset_id}/apply", headers=auth_headers
+        )
+        assert applied.status_code == 200
+        plan = applied.json()
+        assert plan["days"][0]["enabled"] is True
+        assert plan["days"][0]["outfit"] is None
+        assert plan["shared_season"] == "all-season"
+
+        deleted = client.delete(
+            f"{PRESETS_URL}/{preset_id}", headers=auth_headers
+        )
+        assert deleted.status_code == 200
+        assert deleted.json()["deleted"] is True
+        assert client.get(PRESETS_URL, headers=auth_headers).json()["count"] == 0
+
+    def test_create_up_to_limit_then_409(self, client, auth_headers, test_user, db):
+        test_user.week_plan_preset_limit_override = 2
+        db.commit()
+
+        for i in range(2):
+            res = client.post(
+                PRESETS_URL,
+                json={"name": f"Cfg{i}", "config": _preset_config()},
+                headers=auth_headers,
+            )
+            assert res.status_code == 200, res.text
+
+        listed = client.get(PRESETS_URL, headers=auth_headers)
+        assert listed.json()["count"] == 2
+        assert listed.json()["limit"] == 2
+        assert listed.json()["limit_source"] == "override"
+
+        over = client.post(
+            PRESETS_URL,
+            json={"name": "Extra", "config": _preset_config()},
+            headers=auth_headers,
+        )
+        assert over.status_code == 409
+
+    def test_admin_override_changes_get_limit(
+        self, client, auth_headers, non_admin_auth_headers, test_user, test_user2, db
+    ):
+        from tests.test_helpers import setup_auth_override
+
+        # Non-admin cannot patch
+        setup_auth_override(test_user2)
+        forbidden = client.patch(
+            ADMIN_PRESET_LIMIT_URL.format(user_id=test_user2.id),
+            json={"limit": 1},
+            headers=non_admin_auth_headers,
+        )
+        assert forbidden.status_code == 403
+
+        # Admin sets override for user2
+        setup_auth_override(test_user)
+        patched = client.patch(
+            ADMIN_PRESET_LIMIT_URL.format(user_id=test_user2.id),
+            json={"limit": 1},
+            headers=auth_headers,
+        )
+        assert patched.status_code == 200
+        assert patched.json()["effective_limit"] == 1
+        assert patched.json()["limit_source"] == "override"
+
+        # User2 sees new limit
+        setup_auth_override(test_user2)
+        listed = client.get(PRESETS_URL, headers=non_admin_auth_headers)
+        assert listed.status_code == 200
+        assert listed.json()["limit"] == 1
+        assert listed.json()["limit_source"] == "override"
+
+        # Clear override → default
+        setup_auth_override(test_user)
+        cleared = client.patch(
+            ADMIN_PRESET_LIMIT_URL.format(user_id=test_user2.id),
+            json={"limit": None},
+            headers=auth_headers,
+        )
+        assert cleared.status_code == 200
+        assert cleared.json()["week_plan_preset_limit_override"] is None
+        assert cleared.json()["limit_source"] == "default"
+
+        setup_auth_override(test_user2)
+        listed2 = client.get(PRESETS_URL, headers=non_admin_auth_headers)
+        assert listed2.json()["limit"] == 4
+        assert listed2.json()["limit_source"] == "default"
+
+    def test_admin_override_bounds(self, client, auth_headers, test_user2):
+        res = client.patch(
+            ADMIN_PRESET_LIMIT_URL.format(user_id=test_user2.id),
+            json={"limit": 0},
+            headers=auth_headers,
+        )
+        assert res.status_code == 400
+        res = client.patch(
+            ADMIN_PRESET_LIMIT_URL.format(user_id=test_user2.id),
+            json={"limit": 21},
+            headers=auth_headers,
+        )
+        assert res.status_code == 400

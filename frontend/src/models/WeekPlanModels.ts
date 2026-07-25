@@ -40,20 +40,47 @@ export const WEEK_PLAN_CORE_SLOTS = [
 
 export type WeekPlanCoreSlotKey = (typeof WEEK_PLAN_CORE_SLOTS)[number]['key'];
 
+/**
+ * Slots that count as incomplete when empty.
+ * Blazer is optional: empty/null means "no blazer needed" (parity with iOS).
+ */
+export const WEEK_PLAN_REQUIRED_SLOTS = WEEK_PLAN_CORE_SLOTS.filter(
+  (slot) => slot.key !== 'blazer'
+);
+
 export interface MissingOutfitSlot {
   key: WeekPlanCoreSlotKey;
   label: string;
 }
 
-/** Empty core outfit slot strings = missing (client-side; no backend invent). */
+/** Empty required outfit slot strings = missing (client-side; no backend invent). */
 export function getMissingOutfitSlots(
   outfit: WeekPlanOutfit | null | undefined
 ): MissingOutfitSlot[] {
   if (!outfit) return [];
-  return WEEK_PLAN_CORE_SLOTS.filter(({ field }) => {
+  return WEEK_PLAN_REQUIRED_SLOTS.filter(({ field }) => {
     const value = outfit[field];
     return typeof value !== 'string' || !value.trim();
   }).map(({ key, label }) => ({ key, label }));
+}
+
+/**
+ * Day-card preview images from wardrobe matches.
+ * Only include slots that are filled on the outfit — never show a match for an empty
+ * optional blazer or a required Missing slot.
+ */
+export function getWeekDayPreviewThumbSources(day: WeekPlanDay): string[] {
+  const outfit = day.outfit;
+  const items = outfit?.matching_wardrobe_items;
+  if (!outfit || !items) return [];
+  const thumbs: string[] = [];
+  for (const { key, field } of WEEK_PLAN_CORE_SLOTS) {
+    const value = outfit[field];
+    if (typeof value !== 'string' || !value.trim()) continue;
+    const image = items[key]?.[0]?.image_data;
+    if (image) thumbs.push(image);
+  }
+  return thumbs.slice(0, 3);
 }
 
 export function getWeekDayStatus(day: WeekPlanDay): WeekDayStatus {
@@ -165,6 +192,86 @@ export interface WeekPlanHistoryItem {
 
 export interface WeekPlanHistoryListResponse {
   items: WeekPlanHistoryItem[];
+}
+
+/** Config-only snapshot for named week configurations (presets). */
+export interface WeekPlanPresetConfigDay {
+  day_of_week: number;
+  enabled: boolean;
+  occasion: string;
+  style: string;
+  use_wardrobe_only: boolean;
+}
+
+export interface WeekPlanPresetConfig {
+  reminder_time: string;
+  shared_season: string;
+  days: WeekPlanPresetConfigDay[];
+}
+
+export interface WeekPlanPresetItem {
+  id: number;
+  name: string;
+  config: WeekPlanPresetConfig;
+  created_at: string;
+  updated_at: string;
+}
+
+export type WeekPlanPresetLimitSource = 'override' | 'tier' | 'default';
+
+export interface WeekPlanPresetListResponse {
+  items: WeekPlanPresetItem[];
+  count: number;
+  limit: number;
+  limit_source?: WeekPlanPresetLimitSource;
+}
+
+export interface WeekPlanPresetCreateRequest {
+  name: string;
+  config: WeekPlanPresetConfig;
+}
+
+export interface WeekPlanPresetUpdateRequest {
+  name?: string;
+  config?: WeekPlanPresetConfig;
+}
+
+export interface WeekPlanPresetLimitPatchRequest {
+  limit: number | null;
+}
+
+export interface WeekPlanPresetLimitPatchResponse {
+  user_id: number;
+  week_plan_preset_limit_override: number | null;
+  effective_limit: number;
+  limit_source: string;
+}
+
+export const WEEK_PLAN_PRESET_NAME_MAX = 40;
+
+/** Extract config-only payload from the current editable plan. */
+export function planToPresetConfig(plan: WeekPlan): WeekPlanPresetConfig {
+  return {
+    reminder_time: plan.reminder_time,
+    shared_season: plan.shared_season,
+    days: plan.days.map(
+      ({ day_of_week, enabled, occasion, style, use_wardrobe_only }) => ({
+        day_of_week,
+        enabled,
+        occasion,
+        style: style || DEFAULT_DAY_STYLE,
+        use_wardrobe_only: use_wardrobe_only ?? true,
+      })
+    ),
+  };
+}
+
+export function countEnabledDaysInPresetConfig(config: WeekPlanPresetConfig): number {
+  return config.days.filter((d) => d.enabled).length;
+}
+
+export function planHasGeneratedOutfits(plan: WeekPlan): boolean {
+  return plan.days.some((d) => d.outfit != null);
 }
 
 /** Build a blank Mon–Sun plan for local editing before the first save. */

@@ -1010,6 +1010,108 @@ class APIService {
         return try JSONDecoder().decode(WeekPlanResponse.self, from: data)
     }
 
+    func getWeekPlanPresets() async throws -> WeekPlanPresetListResponse {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
+        guard let url = URL(string: "\(baseURL)/api/week-plan/presets") else { throw APIServiceError.invalidURL }
+        var request = URLRequest(url: url)
+        setAuthIfNeeded(&request)
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
+            throw APIServiceError.invalidResponse
+        }
+        return try JSONDecoder().decode(WeekPlanPresetListResponse.self, from: data)
+    }
+
+    func createWeekPlanPreset(_ body: WeekPlanPresetCreateRequest) async throws -> WeekPlanPresetItem {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
+        guard let url = URL(string: "\(baseURL)/api/week-plan/presets") else { throw APIServiceError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        setAuthIfNeeded(&request)
+        request.httpBody = try JSONEncoder().encode(body)
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
+            throw APIServiceError.invalidResponse
+        }
+        return try JSONDecoder().decode(WeekPlanPresetItem.self, from: data)
+    }
+
+    func updateWeekPlanPreset(id: Int, body: WeekPlanPresetUpdateRequest) async throws -> WeekPlanPresetItem {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
+        guard let url = URL(string: "\(baseURL)/api/week-plan/presets/\(id)") else { throw APIServiceError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        setAuthIfNeeded(&request)
+        request.httpBody = try JSONEncoder().encode(body)
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
+            throw APIServiceError.invalidResponse
+        }
+        return try JSONDecoder().decode(WeekPlanPresetItem.self, from: data)
+    }
+
+    func deleteWeekPlanPreset(id: Int) async throws -> WeekPlanDeleteResponse {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
+        guard let url = URL(string: "\(baseURL)/api/week-plan/presets/\(id)") else { throw APIServiceError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        setAuthIfNeeded(&request)
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
+            throw APIServiceError.invalidResponse
+        }
+        if let decoded = try? JSONDecoder().decode(WeekPlanDeleteResponse.self, from: data) {
+            return decoded
+        }
+        return WeekPlanDeleteResponse(deleted: true)
+    }
+
+    func applyWeekPlanPreset(id: Int) async throws -> WeekPlanResponse {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
+        guard let url = URL(string: "\(baseURL)/api/week-plan/presets/\(id)/apply") else {
+            throw APIServiceError.invalidURL
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        setAuthIfNeeded(&request)
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
+            throw APIServiceError.invalidResponse
+        }
+        return try JSONDecoder().decode(WeekPlanResponse.self, from: data)
+    }
+
+    func patchAdminWeekPlanPresetLimit(userId: Int, limit: Int?) async throws -> WeekPlanPresetLimitPatchResponse {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
+        guard let url = URL(string: "\(baseURL)/api/admin/users/\(userId)/week-plan-preset-limit") else {
+            throw APIServiceError.invalidURL
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        setAuthIfNeeded(&request)
+        request.httpBody = try JSONEncoder().encode(WeekPlanPresetLimitPatchRequest(limit: limit))
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
+            throw APIServiceError.invalidResponse
+        }
+        return try JSONDecoder().decode(WeekPlanPresetLimitPatchResponse.self, from: data)
+    }
+
 }
 
 extension APIService: APIServiceProtocol {}
