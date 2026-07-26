@@ -201,8 +201,10 @@ describe('Week Outfit Planner', () => {
       );
     });
 
-    // Ready status not shown on all-ready planned days
-    expect(screen.queryByTestId('week-day-status-0')).not.toBeInTheDocument();
+    // Ready status not shown on all-ready planned days (wait until generate flag clears)
+    await waitFor(() => {
+      expect(screen.queryByTestId('week-day-status-0')).not.toBeInTheDocument();
+    });
     expect(screen.queryByText(/^Ready$/i)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('week-day-select-1'));

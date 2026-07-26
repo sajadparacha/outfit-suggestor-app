@@ -533,8 +533,27 @@ final class WeekPlannerViewModelTests: XCTestCase {
         let day = try XCTUnwrap(vm.plan.days.first)
         XCTAssertEqual(vm.dayStatus(for: day), .missing)
         let missing = vm.missingSlots(for: day)
-        XCTAssertEqual(missing.map(\.category), ["trouser", "belt"])
+        XCTAssertEqual(missing.map(\.category), ["trouser"])
         XCTAssertTrue(vm.showsMissingActions(for: day))
+    }
+
+    func testEmptyAccessoryDoesNotCountAsMissing() {
+        let readyWithoutBelt = WeekPlanDayResponse(
+            day_of_week: 0,
+            enabled: true,
+            occasion: "work",
+            outfit: WeekPlanOutfitResponse(
+                summary: "No accessory needed",
+                shirt: "Shirt",
+                trouser: "Trouser",
+                shoes: "Shoes",
+                belt: ""
+            )
+        )
+        XCTAssertEqual(WeekPlanMissingSlots.status(for: readyWithoutBelt), .ready)
+        XCTAssertTrue(WeekPlanMissingSlots.missing(for: readyWithoutBelt.outfit!).isEmpty)
+        XCTAssertEqual(WeekPlanCopy.includeDay, "Include day")
+        XCTAssertEqual(WeekPlanCopy.changeItem, "Change")
     }
 
     func testDayStatusReadyRestAndNotGenerated() {

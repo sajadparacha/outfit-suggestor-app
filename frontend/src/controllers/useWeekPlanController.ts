@@ -250,6 +250,9 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
       await apiService.putWeekPlan(toUpsertPayload({ ...current, timezone }));
       const result = await apiService.generateWeekPlan();
       applyPlan(result);
+      // Clear before follow-up loads so day cards don't stay on "Generating"
+      // after outfits are already applied.
+      setGenerating(false);
       await refreshToday();
       await loadHistory();
       if (result.wardrobe_empty) {
@@ -278,6 +281,7 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
         await apiService.putWeekPlan(toUpsertPayload({ ...current, timezone }));
         const result = await apiService.generateWeekPlan({ day_of_week: dayOfWeek });
         applyPlan(result);
+        setGenerating(false);
         await refreshToday();
         if (result.wardrobe_empty) {
           setMessage(result.message || 'Add items to your wardrobe to generate outfits.');

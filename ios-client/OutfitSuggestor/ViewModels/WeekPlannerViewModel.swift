@@ -165,7 +165,7 @@ final class WeekPlannerViewModel: ObservableObject {
         plan.days.contains { day in
             guard day.enabled, let outfit = day.outfit else { return false }
             let hasSummary = !outfit.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            let hasAnySlot = WeekPlanMissingSlots.core.contains {
+            let hasAnySlot = WeekPlanMissingSlots.contentSlots.contains {
                 !outfit[keyPath: $0.keyPath].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             }
             return hasSummary || hasAnySlot

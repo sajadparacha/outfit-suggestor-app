@@ -191,8 +191,13 @@ list_failing_tests() {
   case "$kind" in
     jest)
       # Prefer individual test titles ("● Suite › name"); fall back to FAIL file lines.
+      # Skip Jest meta sections like "● Console" (logged output, not a failing test).
       if grep -E '^\s*● ' "$log_file" >/dev/null 2>&1; then
-        grep -E '^\s*● ' "$log_file" | sed -E 's/^[[:space:]]*●[[:space:]]+//' | sed '/^$/d' | awk '!seen[$0]++'
+        grep -E '^\s*● ' "$log_file" \
+          | sed -E 's/^[[:space:]]*●[[:space:]]+//' \
+          | sed '/^$/d' \
+          | grep -Ev '^(Console|Logged warnings|Logged errors)$' \
+          | awk '!seen[$0]++'
       else
         grep -E '^[[:space:]]*FAIL[[:space:]]+' "$log_file" | sed -E 's/^[[:space:]]*FAIL[[:space:]]+//' | awk '!seen[$0]++'
       fi

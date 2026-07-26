@@ -490,7 +490,9 @@ enum WeekPlanCopy {
     static let outfitDetails = "Outfit details"
     static let whyThisOutfitWorks = "Why this outfit works"
     static let addAccessory = "Add accessory"
+    static let changeItem = "Change"
     static let planned = "Planned"
+    static let includeDay = "Include day"
     static let notPlanned = "Not planned"
     static let clearPlan = "Clear plan"
     static let clearConfirmTitle = "Clear this week’s plan?"
@@ -561,9 +563,17 @@ enum WeekPlanCopy {
     }
 }
 
-/// Core outfit slots used for missing-item detection (empty strings).
+/// Required outfit slots used for missing-item detection (empty strings).
+/// Blazer and accessory (belt) are optional — empty means none needed / add later.
 enum WeekPlanMissingSlots {
-    static let core: [(category: String, label: String, keyPath: KeyPath<WeekPlanOutfitResponse, String>)] = [
+    static let required: [(category: String, label: String, keyPath: KeyPath<WeekPlanOutfitResponse, String>)] = [
+        ("shirt", "Shirt", \.shirt),
+        ("trouser", "Trousers", \.trouser),
+        ("shoes", "Shoes", \.shoes),
+    ]
+
+    /// All core text slots used to detect whether an outfit has any content.
+    static let contentSlots: [(category: String, label: String, keyPath: KeyPath<WeekPlanOutfitResponse, String>)] = [
         ("shirt", "Shirt", \.shirt),
         ("trouser", "Trousers", \.trouser),
         ("shoes", "Shoes", \.shoes),
@@ -571,7 +581,7 @@ enum WeekPlanMissingSlots {
     ]
 
     static func missing(for outfit: WeekPlanOutfitResponse) -> [WeekPlanOutfitDisplay.SlotRow] {
-        core.compactMap { entry in
+        required.compactMap { entry in
             let text = outfit[keyPath: entry.keyPath].trimmingCharacters(in: .whitespacesAndNewlines)
             guard text.isEmpty else { return nil }
             return WeekPlanOutfitDisplay.SlotRow(
@@ -586,7 +596,7 @@ enum WeekPlanMissingSlots {
         guard day.enabled else { return .restDay }
         guard let outfit = day.outfit else { return .notGenerated }
         let hasSummary = !outfit.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let hasAnySlot = core.contains {
+        let hasAnySlot = contentSlots.contains {
             !outfit[keyPath: $0.keyPath].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
         if !hasSummary && !hasAnySlot { return .notGenerated }

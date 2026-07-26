@@ -466,12 +466,12 @@ struct WeekPlannerView: View {
                             .foregroundColor(AppTheme.textSecondary)
                     }
                     Spacer(minLength: 2)
-                    if let exceptional {
+                    if let exceptional, exceptional != WeekPlanCopy.statusNotPlanned {
                         statusPill(exceptional)
                     }
                 }
 
-                Text(day.enabled ? occasionDisplay(day.occasion) : WeekPlanCopy.notPlanned)
+                Text(day.enabled ? occasionDisplay(day.occasion) : "Off")
                     .font(.caption)
                     .foregroundColor(AppTheme.textSecondary)
                     .lineLimit(1)
@@ -490,7 +490,7 @@ struct WeekPlannerView: View {
                     }
                 }
 
-                Text(day.enabled ? WeekPlanCopy.planned : WeekPlanCopy.notPlanned)
+                Text(day.enabled ? WeekPlanCopy.planned : WeekPlanCopy.includeDay)
                     .font(.caption2.weight(.semibold))
                     .foregroundColor(day.enabled ? Self.selectedAccent : AppTheme.textSecondary)
             }
@@ -555,7 +555,8 @@ struct WeekPlannerView: View {
                     .font(.title3.weight(.semibold))
                     .foregroundColor(AppTheme.textPrimary)
                 Spacer()
-                if let exceptional = viewModel.exceptionalStatusLabel(for: day) {
+                if let exceptional = viewModel.exceptionalStatusLabel(for: day),
+                   exceptional != WeekPlanCopy.statusNotPlanned {
                     statusPill(exceptional)
                 }
             }
@@ -638,24 +639,34 @@ struct WeekPlannerView: View {
     }
 
     private func plannedToggle(_ day: WeekPlanDayResponse) -> some View {
-        HStack {
-            Text(day.enabled ? WeekPlanCopy.planned : WeekPlanCopy.notPlanned)
+        Button {
+            viewModel.setDayEnabled(day.day_of_week, enabled: !day.enabled)
+            if !day.enabled {
+                viewModel.selectDay(day.day_of_week)
+            }
+        } label: {
+            Text(day.enabled ? WeekPlanCopy.planned : WeekPlanCopy.includeDay)
                 .font(.subheadline.weight(.semibold))
-                .foregroundColor(AppTheme.textPrimary)
-            Spacer()
-            Toggle("", isOn: Binding(
-                get: { day.enabled },
-                set: { viewModel.setDayEnabled(day.day_of_week, enabled: $0) }
-            ))
-            .labelsHidden()
-            .tint(AppTheme.gradientStart)
-            .accessibilityIdentifier("week.day.\(day.day_of_week).toggle")
-            .accessibilityLabel(day.enabled ? WeekPlanCopy.planned : WeekPlanCopy.notPlanned)
+                .foregroundColor(day.enabled ? AppTheme.textPrimary : AppTheme.textSecondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(day.enabled ? AppTheme.gradientStart.opacity(0.15) : AppTheme.surface)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(day.enabled ? AppTheme.gradientStart.opacity(0.45) : AppTheme.border, lineWidth: 1)
+                )
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(AppTheme.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .buttonStyle(.plain)
+        .disabled(viewModel.isBusy)
+        .frame(minHeight: 44)
+        .accessibilityIdentifier("week.day.\(day.day_of_week).toggle")
+        .accessibilityLabel(
+            day.enabled
+                ? "Mark \(WeekPlanConstants.dayName(for: day.day_of_week)) as not planned"
+                : "Mark \(WeekPlanConstants.dayName(for: day.day_of_week)) as planned"
+        )
+        .accessibilityAddTraits(.isButton)
     }
 
     private func dayPrefsNearby(_ day: WeekPlanDayResponse) -> some View {
@@ -706,30 +717,57 @@ struct WeekPlannerView: View {
         let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 2)
         return LazyVGrid(columns: columns, spacing: 10) {
             ForEach(slots, id: \.category) { slot in
+                let wardrobeCategory = slot.category == "accessory" ? "belt" : slot.category
                 VStack(spacing: 6) {
                     if slot.isPlaceholder {
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [5]))
-                            .foregroundColor(Self.statusNeeds.opacity(0.7))
-                            .frame(height: isRegularWidth ? 72 : 64)
-                            .overlay(
-                                Image(systemName: "plus")
-                                    .foregroundColor(Self.statusNeeds)
-                            )
+                        Button {
+                            openWardrobe(category: wardrobeCategory, dayOfWeek: day.day_of_week)
+                        } label: {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [5]))
+                                .foregroundColor(
+                                    slot.category == "accessory"
+                                        ? AppTheme.textSecondary.opacity(0.7)
+                                        : Self.statusNeeds.opacity(0.7)
+                                )
+                                .frame(height: isRegularWidth ? 72 : 64)
+                                .overlay(
+                                    VStack(spacing: 4) {
+                                        Image(systemName: "plus")
+                                        if slot.category == "accessory" {
+                                            Text(WeekPlanCopy.addAccessory)
+                                                .font(.caption2.weight(.semibold))
+                                        } else {
+                                            Text("Add \(slot.label)")
+                                                .font(.caption2.weight(.semibold))
+                                        }
+                                    }
+                                    .foregroundColor(
+                                        slot.category == "accessory" ? AppTheme.textSecondary : Self.statusNeeds
+                                    )
+                                )
+                        }
+                        .buttonStyle(.plain)
+                        .frame(minHeight: 44)
+                        .accessibilityLabel(
+                            slot.category == "accessory"
+                                ? WeekPlanCopy.addAccessory
+                                : "Add \(slot.label)"
+                        )
                     } else if let outfit = day.outfit {
                         slotThumb(
                             outfit: outfit,
                             slot: WeekPlanOutfitDisplay.SlotRow(
-                                category: slot.category == "accessory" ? "belt" : slot.category,
+                                category: wardrobeCategory,
                                 label: slot.label,
                                 description: slot.description
                             ),
                             size: isRegularWidth ? 72 : 64
                         )
                     }
-                    Text(slot.label)
+                    Text(slot.isPlaceholder && slot.category == "accessory" ? "Accessory" : slot.label)
                         .font(.caption2.weight(.semibold))
-                        .foregroundColor(slot.isPlaceholder ? Self.statusNeeds : AppTheme.textSecondary)
+                        .foregroundColor(slot.isPlaceholder ? AppTheme.textSecondary : AppTheme.textSecondary)
                         .multilineTextAlignment(.center)
                     if !slot.isPlaceholder && !slot.description.isEmpty {
                         Text(slot.description)
@@ -737,6 +775,27 @@ struct WeekPlannerView: View {
                             .foregroundColor(AppTheme.textPrimary)
                             .lineLimit(2)
                             .multilineTextAlignment(.center)
+                    }
+                    if !slot.isPlaceholder {
+                        Button {
+                            openWardrobe(category: wardrobeCategory, dayOfWeek: day.day_of_week)
+                        } label: {
+                            Text(WeekPlanCopy.changeItem)
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(AppTheme.textPrimary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(AppTheme.surface)
+                                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                        .stroke(AppTheme.border, lineWidth: 1)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                        .frame(minHeight: 44)
+                        .accessibilityIdentifier("week.slot.\(slot.category).change")
+                        .accessibilityLabel("\(WeekPlanCopy.changeItem) \(slot.label)")
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -748,6 +807,12 @@ struct WeekPlannerView: View {
             }
         }
         .accessibilityIdentifier("week.itemGallery")
+    }
+
+    private func openWardrobe(category: String, dayOfWeek: Int) {
+        viewModel.chooseFromWardrobe(dayOfWeek: dayOfWeek)
+        RouteCoordinator.shared.wardrobeCategoryFilter = category
+        RouteCoordinator.shared.selectedTab = .wardrobe
     }
 
     private func missingItemsCard(_ day: WeekPlanDayResponse) -> some View {
