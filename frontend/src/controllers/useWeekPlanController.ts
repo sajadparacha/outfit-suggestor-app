@@ -13,6 +13,7 @@ import {
   createEmptyWeekPlan,
   getDeviceTimezone,
   normalizeWeekPlanDays,
+  planHasGeneratedOutfits,
   planToPresetConfig,
   toUpsertPayload,
   WEEK_PLAN_PRESET_NAME_MAX,
@@ -23,10 +24,26 @@ interface UseWeekPlanControllerOptions {
   userId?: number | null;
 }
 
+/** Fingerprint of editable plan state for dirty detection (config + outfits). */
+function planFingerprint(plan: WeekPlan): string {
+  return JSON.stringify({
+    ...toUpsertPayload(plan),
+    outfits: plan.days.map((d) => ({
+      day: d.day_of_week,
+      summary: d.outfit?.summary ?? null,
+      shirt: d.outfit?.shirt ?? null,
+      trouser: d.outfit?.trouser ?? null,
+      shoes: d.outfit?.shoes ?? null,
+      belt: d.outfit?.belt ?? null,
+    })),
+  });
+}
+
 export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) => {
   const [plan, setPlan] = useState<WeekPlan | null>(null);
   /** Always-current plan for save/generate (avoids stale closure after updateDay). */
   const planRef = useRef<WeekPlan | null>(null);
+  const baselineRef = useRef<string | null>(null);
   const [today, setToday] = useState<WeekPlanToday | null>(null);
   const [history, setHistory] = useState<WeekPlanHistoryItem[]>([]);
   const [presets, setPresets] = useState<WeekPlanPresetItem[]>([]);
@@ -39,22 +56,42 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
   const [restoring, setRestoring] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+
+  const markClean = useCallback((next: WeekPlan, opts?: { saved?: boolean }) => {
+    baselineRef.current = planFingerprint(next);
+    setIsDirty(false);
+    if (opts?.saved) {
+      setLastSavedAt(new Date());
+    }
+  }, []);
+
+  const markDirtyFromPlan = useCallback((next: WeekPlan) => {
+    const baseline = baselineRef.current;
+    if (baseline == null) {
+      setIsDirty(false);
+      return;
+    }
+    setIsDirty(planFingerprint(next) !== baseline);
+  }, []);
 
   const replacePlan = useCallback((next: WeekPlan | null) => {
     planRef.current = next;
     setPlan(next);
   }, []);
 
-  const applyPlan = useCallback((next: WeekPlan) => {
+  const applyPlan = useCallback((next: WeekPlan, opts?: { saved?: boolean }) => {
     const normalized = normalizeWeekPlanDays(next);
     replacePlan(normalized);
+    markClean(normalized, opts);
     if (normalized.message) {
       setMessage(normalized.message);
     }
     if (normalized.wardrobe_empty) {
       setMessage(normalized.message || 'Add items to your wardrobe to generate outfits.');
     }
-  }, [replacePlan]);
+  }, [markClean, replacePlan]);
 
   const loadHistory = useCallback(async () => {
     try {
@@ -78,7 +115,7 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
         return;
       }
       const errorMessage =
-        err instanceof Error ? err.message : 'Failed to load saved configurations';
+        err instanceof Error ? err.message : 'Failed to load planning templates';
       setError(errorMessage);
       throw err;
     }
@@ -100,14 +137,16 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load week plan';
       setError(errorMessage);
-      replacePlan(createEmptyWeekPlan(getDeviceTimezone()));
+      const empty = createEmptyWeekPlan(getDeviceTimezone());
+      replacePlan(empty);
+      markClean(empty);
       setToday(null);
     } finally {
       setLoading(false);
     }
     await loadHistory();
     await loadPresets();
-  }, [applyPlan, loadHistory, loadPresets, replacePlan]);
+  }, [applyPlan, loadHistory, loadPresets, markClean, replacePlan]);
 
   const refreshToday = useCallback(async () => {
     try {
@@ -119,46 +158,62 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
   }, []);
 
   /** Patch a day locally (enabled, occasion, style, use_wardrobe_only, …). */
-  const updateDay = useCallback((dayOfWeek: number, patch: Partial<WeekPlanDay>) => {
-    setPlan((prev) => {
-      if (!prev) return prev;
-      const next = {
-        ...prev,
-        days: prev.days.map((d) =>
-          d.day_of_week === dayOfWeek ? { ...d, ...patch } : d
-        ),
-      };
-      planRef.current = next;
-      return next;
-    });
-  }, []);
+  const updateDay = useCallback(
+    (dayOfWeek: number, patch: Partial<WeekPlanDay>) => {
+      setPlan((prev) => {
+        if (!prev) return prev;
+        const next = {
+          ...prev,
+          days: prev.days.map((d) =>
+            d.day_of_week === dayOfWeek ? { ...d, ...patch } : d
+          ),
+        };
+        planRef.current = next;
+        markDirtyFromPlan(next);
+        return next;
+      });
+    },
+    [markDirtyFromPlan]
+  );
 
-  const setReminderTime = useCallback((reminder_time: string) => {
-    setPlan((prev) => {
-      if (!prev) return prev;
-      const next = { ...prev, reminder_time };
-      planRef.current = next;
-      return next;
-    });
-  }, []);
+  const setReminderTime = useCallback(
+    (reminder_time: string) => {
+      setPlan((prev) => {
+        if (!prev) return prev;
+        const next = { ...prev, reminder_time };
+        planRef.current = next;
+        markDirtyFromPlan(next);
+        return next;
+      });
+    },
+    [markDirtyFromPlan]
+  );
 
-  const setSharedStyle = useCallback((shared_style: string) => {
-    setPlan((prev) => {
-      if (!prev) return prev;
-      const next = { ...prev, shared_style };
-      planRef.current = next;
-      return next;
-    });
-  }, []);
+  const setSharedStyle = useCallback(
+    (shared_style: string) => {
+      setPlan((prev) => {
+        if (!prev) return prev;
+        const next = { ...prev, shared_style };
+        planRef.current = next;
+        markDirtyFromPlan(next);
+        return next;
+      });
+    },
+    [markDirtyFromPlan]
+  );
 
-  const setSharedSeason = useCallback((shared_season: string) => {
-    setPlan((prev) => {
-      if (!prev) return prev;
-      const next = { ...prev, shared_season };
-      planRef.current = next;
-      return next;
-    });
-  }, []);
+  const setSharedSeason = useCallback(
+    (shared_season: string) => {
+      setPlan((prev) => {
+        if (!prev) return prev;
+        const next = { ...prev, shared_season };
+        planRef.current = next;
+        markDirtyFromPlan(next);
+        return next;
+      });
+    },
+    [markDirtyFromPlan]
+  );
 
   const savePlan = useCallback(async () => {
     const current = planRef.current;
@@ -170,10 +225,10 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
       const timezone = getDeviceTimezone();
       const payload = toUpsertPayload({ ...current, timezone });
       const saved = await apiService.putWeekPlan(payload);
-      applyPlan(saved);
+      applyPlan(saved, { saved: true });
       await refreshToday();
       await loadHistory();
-      setMessage('Plan saved to your account.');
+      setMessage('Plan saved.');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to save week plan';
       setError(errorMessage);
@@ -245,7 +300,9 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
     setError(null);
     try {
       await apiService.deleteWeekPlan();
-      replacePlan(createEmptyWeekPlan(getDeviceTimezone()));
+      const empty = createEmptyWeekPlan(getDeviceTimezone());
+      replacePlan(empty);
+      markClean(empty, { saved: true });
       setToday(null);
       setMessage('Plan cleared.');
       await loadHistory();
@@ -256,7 +313,7 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
     } finally {
       setSaving(false);
     }
-  }, [loadHistory, replacePlan]);
+  }, [loadHistory, markClean, replacePlan]);
 
   const restoreHistory = useCallback(
     async (historyId: number) => {
@@ -265,10 +322,10 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
       setMessage(null);
       try {
         const restored = await apiService.restoreWeekPlanHistory(historyId);
-        applyPlan(restored);
+        applyPlan(restored, { saved: true });
         await refreshToday();
         await loadHistory();
-        setMessage('Previous plan loaded.');
+        setMessage('Plan loaded.');
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to restore week plan';
@@ -306,10 +363,10 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
           config: planToPresetConfig(current),
         });
         await loadPresets({ soft: false });
-        setMessage(`Saved configuration “${normalizedName}”.`);
+        setMessage(`Template “${normalizedName}” saved.`);
       } catch (err) {
         const errorMessage =
-          err instanceof Error ? err.message : 'Failed to save configuration';
+          err instanceof Error ? err.message : 'Failed to save planning template';
         setError(errorMessage);
         throw err;
       } finally {
@@ -331,10 +388,10 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
           config: planToPresetConfig(current),
         });
         await loadPresets({ soft: false });
-        setMessage('Configuration updated.');
+        setMessage('Planning template updated.');
       } catch (err) {
         const errorMessage =
-          err instanceof Error ? err.message : 'Failed to update configuration';
+          err instanceof Error ? err.message : 'Failed to update planning template';
         setError(errorMessage);
         throw err;
       } finally {
@@ -353,10 +410,10 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
         const normalizedName = normalizePresetName(name);
         await apiService.updateWeekPlanPreset(presetId, { name: normalizedName });
         await loadPresets({ soft: false });
-        setMessage('Configuration renamed.');
+        setMessage('Planning template renamed.');
       } catch (err) {
         const errorMessage =
-          err instanceof Error ? err.message : 'Failed to rename configuration';
+          err instanceof Error ? err.message : 'Failed to rename planning template';
         setError(errorMessage);
         throw err;
       } finally {
@@ -374,10 +431,10 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
       try {
         await apiService.deleteWeekPlanPreset(presetId);
         await loadPresets({ soft: false });
-        setMessage('Configuration deleted.');
+        setMessage('Planning template deleted.');
       } catch (err) {
         const errorMessage =
-          err instanceof Error ? err.message : 'Failed to delete configuration';
+          err instanceof Error ? err.message : 'Failed to delete planning template';
         setError(errorMessage);
         throw err;
       } finally {
@@ -396,10 +453,10 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
         const applied = await apiService.applyWeekPlanPreset(presetId);
         applyPlan(applied);
         await refreshToday();
-        setMessage('Configuration loaded. Generate week when you are ready.');
+        setMessage('Planning template loaded. Generate outfits when ready.');
       } catch (err) {
         const errorMessage =
-          err instanceof Error ? err.message : 'Failed to load configuration';
+          err instanceof Error ? err.message : 'Failed to load planning template';
         setError(errorMessage);
         throw err;
       } finally {
@@ -415,6 +472,7 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
 
     if (!isAuthenticated || !currentUserId) {
       replacePlan(null);
+      baselineRef.current = null;
       setToday(null);
       setHistory([]);
       setPresets([]);
@@ -422,6 +480,8 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
       setPresetLimit(0);
       setError(null);
       setMessage(null);
+      setIsDirty(false);
+      setLastSavedAt(null);
       return;
     }
 
@@ -431,6 +491,7 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
 
   const enabledDayCount = plan?.days.filter((d) => d.enabled).length ?? 0;
   const presetAtLimit = presetLimit > 0 && presetCount >= presetLimit;
+  const hasGeneratedOutfits = plan ? planHasGeneratedOutfits(plan) : false;
 
   return {
     plan,
@@ -447,6 +508,9 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
     restoring,
     error,
     message,
+    isDirty,
+    lastSavedAt,
+    hasGeneratedOutfits,
     enabledDayCount,
     load,
     loadHistory,

@@ -1,8 +1,8 @@
 import React from 'react';
-import { WeekPlanOutfit } from '../../../models/WeekPlanModels';
+import { WeekPlanOutfit, getExceptionalStatusLabel } from '../../../models/WeekPlanModels';
 import { MAIN_FLOW_UX_COPY } from '../../../utils/mainFlowUxCopy';
 import { reasoningToBullets } from '../../../utils/reasoningBullets';
-import { statusLabel, statusPillClass } from './weekPlanStyles';
+import { statusPillClass } from './weekPlanStyles';
 import type { WeekDayStatus } from '../../../models/WeekPlanModels';
 
 export interface OutfitSummaryProps {
@@ -19,23 +19,23 @@ const OutfitSummary: React.FC<OutfitSummaryProps> = ({
   fromWardrobe = true,
 }) => {
   const reasoningBullets = reasoningToBullets(outfit.reasoning || '');
+  const exceptional = getExceptionalStatusLabel(status);
 
   return (
     <div className="space-y-3" data-testid={`${testIdPrefix}-summary-panel`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p
-            className="text-base font-semibold text-white"
-            data-testid={testIdPrefix}
-          >
+          <p className="text-base font-semibold text-white" data-testid={testIdPrefix}>
             {outfit.summary || 'Outfit details'}
           </p>
           <div className="mt-2 flex flex-wrap gap-1.5">
-            <span
-              className={`inline-flex rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${statusPillClass[status]}`}
-            >
-              {statusLabel[status]}
-            </span>
+            {exceptional && (
+              <span
+                className={`inline-flex rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${statusPillClass[status]}`}
+              >
+                {exceptional}
+              </span>
+            )}
             {fromWardrobe && (
               <span className="inline-flex rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
                 From your wardrobe
@@ -51,10 +51,10 @@ const OutfitSummary: React.FC<OutfitSummaryProps> = ({
           data-testid={`${testIdPrefix}-details`}
         >
           <summary
-            className="cursor-pointer list-none px-4 py-3 text-sm text-slate-300 [&::-webkit-details-marker]:hidden"
+            className="cursor-pointer list-none px-4 py-3 text-sm text-slate-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue [&::-webkit-details-marker]:hidden"
             data-testid={`${testIdPrefix}-why-toggle`}
           >
-            <span className="inline-flex items-center gap-2">
+            <span className="inline-flex min-h-[44px] items-center gap-2">
               <span className="text-slate-500 transition-transform group-open:rotate-180" aria-hidden>
                 ▼
               </span>

@@ -54,6 +54,9 @@ final class WeekPlannerViewModel: ObservableObject {
     @Published var isPresetBusy = false
     @Published var errorMessage: String?
     @Published var infoMessage: String?
+    /// Transient feedback (saved / loaded) — not a permanent banner.
+    @Published var toastMessage: String?
+    @Published private(set) var lastSavedAt: Date?
     /// Days where the user dismissed the missing-item prompt (local only).
     @Published private(set) var dismissedMissingDays: Set<Int> = []
     /// Last missing-item action taken (for tests / navigation hooks).
@@ -62,6 +65,9 @@ final class WeekPlannerViewModel: ObservableObject {
     private let api: WeekPlanAPIClient
     private let notifier: WeekPlanNotificationScheduling
     private let timezoneProvider: () -> String
+    /// Fingerprint of last persisted / loaded editable plan state.
+    private var baselineFingerprint: String = ""
+    private var toastClearTask: Task<Void, Never>?
 
     init(
         api: WeekPlanAPIClient = APIService.shared,
@@ -85,6 +91,53 @@ final class WeekPlannerViewModel: ObservableObject {
 
     var isBusy: Bool {
         isGenerating || isSaving || isRestoring || isLoading
+    }
+
+    var isDirty: Bool {
+        currentFingerprint() != baselineFingerprint
+    }
+
+    var primaryCTA: WeekPlanPrimaryCTA {
+        if hasGeneratedOutfits && isDirty {
+            return .save
+        }
+        return .generate
+    }
+
+    var isPrimaryCTAEnabled: Bool {
+        switch primaryCTA {
+        case .generate:
+            return !isBusy && hasEnabledDays
+        case .save:
+            return isDirty && !isSaveDisabled
+        }
+    }
+
+    var documentState: WeekPlanDocumentState {
+        if isGenerating { return .generating }
+        if isDirty { return .unsaved }
+        if let lastSavedAt { return .lastSaved(lastSavedAt) }
+        return .saved
+    }
+
+    var weekRangeLabel: String {
+        WeekPlanDateFormatting.weekRangeLabel()
+    }
+
+    var recentHistory: [WeekPlanHistoryItem] {
+        Array(history.prefix(3))
+    }
+
+    var recentPresets: [WeekPlanPresetItem] {
+        Array(presets.prefix(3))
+    }
+
+    var showsViewAllHistory: Bool {
+        history.count > 3
+    }
+
+    var showsViewAllPresets: Bool {
+        presets.count > 3
     }
 
     var isSaveDisabled: Bool {
@@ -123,6 +176,11 @@ final class WeekPlannerViewModel: ObservableObject {
         plan.days.first { $0.day_of_week == selectedDayOfWeek }
     }
 
+    /// Confirm generate when outfits already exist (overwrite risk).
+    var shouldConfirmGenerateOverwrite: Bool {
+        hasGeneratedOutfits
+    }
+
     func selectDay(_ dayOfWeek: Int) {
         guard plan.days.contains(where: { $0.day_of_week == dayOfWeek }) else { return }
         selectedDayOfWeek = dayOfWeek
@@ -130,6 +188,14 @@ final class WeekPlannerViewModel: ObservableObject {
 
     func dayStatus(for day: WeekPlanDayResponse) -> WeekPlanDayStatus {
         WeekPlanMissingSlots.status(for: day)
+    }
+
+    /// Exceptional card status; Ready omitted. Generating overrides while busy for that day.
+    func exceptionalStatusLabel(for day: WeekPlanDayResponse) -> String? {
+        if isGenerating, day.enabled {
+            return WeekPlanCopy.statusGenerating
+        }
+        return dayStatus(for: day).exceptionalLabel
     }
 
     func missingSlots(for day: WeekPlanDayResponse) -> [WeekPlanOutfitDisplay.SlotRow] {
@@ -140,6 +206,15 @@ final class WeekPlannerViewModel: ObservableObject {
     func showsMissingActions(for day: WeekPlanDayResponse) -> Bool {
         guard dayStatus(for: day) == .missing else { return false }
         return !dismissedMissingDays.contains(day.day_of_week)
+    }
+
+    func performPrimaryCTA() async {
+        switch primaryCTA {
+        case .generate:
+            await generateWeek()
+        case .save:
+            await save()
+        }
     }
 
     /// Choose from wardrobe — typed stub; view navigates to Wardrobe tab. No invent PUT.
@@ -175,13 +250,15 @@ final class WeekPlannerViewModel: ObservableObject {
             history = (try? await historyTask)?.items ?? []
             applyPresetList(try? await presetsTask)
             if let message = plan.message, !message.isEmpty {
-                infoMessage = message
+                presentToast(message)
             }
+            markBaseline(persisted: true)
             syncSelectedDayAfterLoad()
             await syncNotifications()
         } catch {
             errorMessage = error.localizedDescription
             plan = .empty(timezone: timezoneProvider())
+            markBaseline(persisted: false)
             syncSelectedDayAfterLoad()
         }
     }
@@ -206,8 +283,9 @@ final class WeekPlannerViewModel: ObservableObject {
             let restored = try await api.restoreWeekPlanHistory(id: id)
             plan = normalize(restored)
             today = try? await api.getWeekPlanToday()
-            infoMessage = WeekPlanCopy.planRestored
+            presentToast(WeekPlanCopy.planRestored)
             dismissedMissingDays.removeAll()
+            markBaseline(persisted: true)
             syncSelectedDayAfterLoad()
             await refreshHistory()
             await syncNotifications()
@@ -264,7 +342,8 @@ final class WeekPlannerViewModel: ObservableObject {
             let saved = try await api.putWeekPlan(body)
             plan = normalize(saved)
             today = try? await api.getWeekPlanToday()
-            infoMessage = WeekPlanCopy.planSaved
+            presentToast(WeekPlanCopy.planSaved)
+            markBaseline(persisted: true)
             await syncNotifications()
         } catch {
             errorMessage = error.localizedDescription
@@ -308,7 +387,7 @@ final class WeekPlannerViewModel: ObservableObject {
         do {
             let body = WeekPlanPresetCreateRequest(name: trimmed, config: presetConfigFromPlan())
             _ = try await api.createWeekPlanPreset(body)
-            infoMessage = WeekPlanCopy.configurationSaved
+            presentToast(WeekPlanCopy.configurationSaved)
             await refreshPresets()
         } catch {
             errorMessage = error.localizedDescription
@@ -323,7 +402,7 @@ final class WeekPlannerViewModel: ObservableObject {
         do {
             let body = WeekPlanPresetUpdateRequest(name: nil, config: presetConfigFromPlan())
             _ = try await api.updateWeekPlanPreset(id: id, body: body)
-            infoMessage = WeekPlanCopy.configurationUpdated
+            presentToast(WeekPlanCopy.configurationUpdated)
             await refreshPresets()
         } catch {
             errorMessage = error.localizedDescription
@@ -348,7 +427,7 @@ final class WeekPlannerViewModel: ObservableObject {
         do {
             let body = WeekPlanPresetUpdateRequest(name: trimmed, config: nil)
             _ = try await api.updateWeekPlanPreset(id: id, body: body)
-            infoMessage = WeekPlanCopy.configurationRenamed
+            presentToast(WeekPlanCopy.configurationRenamed)
             await refreshPresets()
         } catch {
             errorMessage = error.localizedDescription
@@ -362,7 +441,7 @@ final class WeekPlannerViewModel: ObservableObject {
         defer { isPresetBusy = false }
         do {
             _ = try await api.deleteWeekPlanPreset(id: id)
-            infoMessage = WeekPlanCopy.configurationDeleted
+            presentToast(WeekPlanCopy.configurationDeleted)
             await refreshPresets()
         } catch {
             errorMessage = error.localizedDescription
@@ -378,8 +457,9 @@ final class WeekPlannerViewModel: ObservableObject {
             let applied = try await api.applyWeekPlanPreset(id: id)
             plan = normalize(applied)
             today = try? await api.getWeekPlanToday()
-            infoMessage = WeekPlanCopy.configurationLoaded
+            presentToast(WeekPlanCopy.configurationLoaded)
             dismissedMissingDays.removeAll()
+            markBaseline(persisted: true)
             syncSelectedDayAfterLoad()
             await notifier.cancelAll()
         } catch {
@@ -395,8 +475,9 @@ final class WeekPlannerViewModel: ObservableObject {
             _ = try await api.deleteWeekPlan()
             plan = .empty(timezone: timezoneProvider())
             today = nil
-            infoMessage = "Plan cleared."
+            presentToast("Plan cleared.")
             dismissedMissingDays.removeAll()
+            markBaseline(persisted: true)
             syncSelectedDayAfterLoad()
             await refreshHistory()
             await notifier.cancelAll()
@@ -406,6 +487,66 @@ final class WeekPlannerViewModel: ObservableObject {
     }
 
     // MARK: - Private
+
+    private func presentToast(_ message: String) {
+        infoMessage = message
+        toastMessage = message
+        toastClearTask?.cancel()
+        toastClearTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                if self?.toastMessage == message {
+                    self?.toastMessage = nil
+                }
+                if self?.infoMessage == message {
+                    self?.infoMessage = nil
+                }
+            }
+        }
+    }
+
+    private func markBaseline(persisted: Bool) {
+        baselineFingerprint = currentFingerprint()
+        if persisted {
+            lastSavedAt = Date()
+        }
+    }
+
+    private func currentFingerprint() -> String {
+        let days = plan.days
+            .sorted { $0.day_of_week < $1.day_of_week }
+            .map { day -> String in
+                let outfitKey: String
+                if let outfit = day.outfit {
+                    outfitKey = [
+                        outfit.summary,
+                        outfit.shirt,
+                        outfit.trouser,
+                        outfit.shoes,
+                        outfit.belt,
+                        outfit.blazer,
+                    ].joined(separator: "|")
+                } else {
+                    outfitKey = ""
+                }
+                return [
+                    "\(day.day_of_week)",
+                    day.enabled ? "1" : "0",
+                    day.occasion,
+                    day.style,
+                    day.use_wardrobe_only ? "1" : "0",
+                    outfitKey,
+                ].joined(separator: ":")
+            }
+            .joined(separator: ";")
+        return [
+            plan.reminder_time,
+            plan.shared_season,
+            plan.shared_style,
+            days,
+        ].joined(separator: "#")
+    }
 
     private func applyPresetList(_ response: WeekPlanPresetListResponse?) {
         guard let response else {
@@ -465,6 +606,7 @@ final class WeekPlannerViewModel: ObservableObject {
             let body = upsertBody()
             let saved = try await api.putWeekPlan(body)
             plan = normalize(saved)
+            markBaseline(persisted: true)
         } catch {
             errorMessage = error.localizedDescription
             return
@@ -481,10 +623,11 @@ final class WeekPlannerViewModel: ObservableObject {
                 dismissedMissingDays.removeAll()
             }
             if plan.wardrobe_empty {
-                infoMessage = plan.message ?? WeekPlanCopy.emptyWardrobe
+                presentToast(plan.message ?? WeekPlanCopy.emptyWardrobe)
             } else if let message = plan.message, !message.isEmpty {
-                infoMessage = message
+                presentToast(message)
             }
+            markBaseline(persisted: true)
             await refreshHistory()
             await syncNotifications()
         } catch {

@@ -1,5 +1,5 @@
 /**
- * Week Outfit Planner — guest gate + generate flow + responsive redesign integration
+ * Week Outfit Planner — UX hierarchy + generate flow integration
  */
 import { screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { rest } from 'msw';
@@ -156,12 +156,18 @@ describe('Week Outfit Planner', () => {
     expect(screen.getByLabelText(/Shared season/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/Shared style/i)).not.toBeInTheDocument();
     expect(screen.getByLabelText(/Reminder time/i)).toBeInTheDocument();
+    expect(screen.getByTestId('week-planner-timezone')).toHaveTextContent(/Timezone:/i);
     expect(screen.getByTestId('week-empty-days')).toHaveTextContent(
       /Turn on the days you want to plan/i
     );
 
+    // Primary CTA before generate
+    expect(screen.getByTestId('week-generate-week')).toHaveTextContent(/Generate outfits/i);
+    expect(screen.getByTestId('week-plan-presets-disclosure')).not.toHaveAttribute('open');
+    expect(screen.getByTestId('week-plan-history-disclosure')).not.toHaveAttribute('open');
+
     const monday = screen.getByTestId('week-day-0');
-    fireEvent.click(within(monday).getByLabelText(/Enable Monday/i));
+    fireEvent.click(within(monday).getByLabelText(/Mark Monday as planned/i));
 
     await waitFor(() => {
       expect(screen.getByTestId('week-day-detail')).toHaveAttribute('data-day', '0');
@@ -176,7 +182,7 @@ describe('Week Outfit Planner', () => {
     expect(wardrobeToggle).not.toBeChecked();
 
     const tuesday = screen.getByTestId('week-day-1');
-    fireEvent.click(within(tuesday).getByLabelText(/Enable Tuesday/i));
+    fireEvent.click(within(tuesday).getByLabelText(/Mark Tuesday as planned/i));
     await waitFor(() => {
       expect(screen.getByTestId('week-day-detail')).toHaveAttribute('data-day', '1');
     });
@@ -184,7 +190,7 @@ describe('Week Outfit Planner', () => {
       target: { value: 'date-night' },
     });
 
-    const generateBtn = screen.getByRole('button', { name: /Generate week/i });
+    const generateBtn = screen.getByRole('button', { name: /Generate outfits/i });
     await waitFor(() => expect(generateBtn).not.toBeDisabled());
     fireEvent.click(generateBtn);
 
@@ -194,6 +200,10 @@ describe('Week Outfit Planner', () => {
         /work look for day 0/i
       );
     });
+
+    // Ready status not shown on all-ready planned days
+    expect(screen.queryByTestId('week-day-status-0')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Ready$/i)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('week-day-select-1'));
     await waitFor(() => {
@@ -221,12 +231,168 @@ describe('Week Outfit Planner', () => {
     });
     expect(screen.getByText(/White oxford shirt/i)).toBeInTheDocument();
     expect(screen.getAllByText(/AI Suggested/i).length).toBeGreaterThan(0);
+    expect(screen.getByTestId('week-outfit-change-shirt')).toBeInTheDocument();
+    expect(screen.getByTestId('week-outfit-slots').children).toHaveLength(4);
 
     await waitFor(() => {
       expect(screen.getByTestId('week-today-summary')).toHaveTextContent(
         /work look for day 0/i
       );
     });
+  });
+
+  it('shows Add accessory for empty optional belt and Change on filled slots', async () => {
+    localStorage.setItem('auth_token', 'test-token');
+
+    const days = emptyDays().map((d, i) =>
+      i === 0
+        ? {
+            ...d,
+            enabled: true,
+            occasion: 'work',
+            outfit: {
+              summary: 'No accessory yet',
+              shirt: 'White shirt',
+              trouser: 'Navy trousers',
+              blazer: '',
+              shoes: 'Brown shoes',
+              belt: '',
+              reasoning: 'Looks complete without a belt.',
+            },
+          }
+        : d
+    );
+
+    server.use(
+      authMe(),
+      rest.get(`${API_BASE}/api/week-plan`, (_req, res, ctx) =>
+        res(
+          ctx.json({
+            reminder_time: '07:30',
+            timezone: 'UTC',
+            shared_style: 'classic',
+            shared_season: 'all-season',
+            days,
+            wardrobe_empty: false,
+            message: null,
+          })
+        )
+      ),
+      rest.get(`${API_BASE}/api/week-plan/today`, (_req, res, ctx) =>
+        res(
+          ctx.json({
+            day_of_week: 0,
+            enabled: true,
+            occasion: 'work',
+            use_wardrobe_only: true,
+            outfit: days[0].outfit,
+            reminder_time: '07:30',
+            timezone: 'UTC',
+            has_plan: true,
+            message: null,
+          })
+        )
+      )
+    );
+
+    renderApp({ routerProps: { initialEntries: [ROUTES.WEEK] } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('week-outfit-add-accessory')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('week-missing-item-card')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('week-day-status-0')).not.toBeInTheDocument();
+    expect(screen.getByTestId('week-outfit-change-shirt')).toHaveTextContent(/Change/i);
+  });
+
+  it('switches primary CTA to Save plan when dirty after generate', async () => {
+    localStorage.setItem('auth_token', 'test-token');
+
+    const days = emptyDays().map((d, i) =>
+      i === 0
+        ? {
+            ...d,
+            enabled: true,
+            occasion: 'work',
+            outfit: {
+              summary: 'Monday work look',
+              shirt: 'Blue shirt',
+              trouser: 'Gray trousers',
+              blazer: 'Navy blazer',
+              shoes: 'Black shoes',
+              belt: 'Black belt',
+              reasoning: 'Sharp for work.',
+            },
+          }
+        : d
+    );
+
+    server.use(
+      authMe(),
+      rest.get(`${API_BASE}/api/week-plan`, (_req, res, ctx) =>
+        res(
+          ctx.json({
+            reminder_time: '07:30',
+            timezone: 'UTC',
+            shared_style: 'classic',
+            shared_season: 'all-season',
+            days,
+            wardrobe_empty: false,
+            message: null,
+          })
+        )
+      ),
+      rest.get(`${API_BASE}/api/week-plan/today`, (_req, res, ctx) =>
+        res(
+          ctx.json({
+            day_of_week: 0,
+            enabled: true,
+            occasion: 'work',
+            use_wardrobe_only: true,
+            outfit: days[0].outfit,
+            reminder_time: '07:30',
+            timezone: 'UTC',
+            has_plan: true,
+            message: null,
+          })
+        )
+      ),
+      rest.put(`${API_BASE}/api/week-plan`, async (req, res, ctx) => {
+        const body = (await req.json()) as WeekPlanUpsertRequest;
+        return res(
+          ctx.json({
+            reminder_time: body.reminder_time,
+            timezone: body.timezone,
+            shared_style: body.shared_style,
+            shared_season: body.shared_season,
+            days: body.days.map((d) => ({
+              ...d,
+              outfit: days.find((s) => s.day_of_week === d.day_of_week)?.outfit ?? null,
+            })),
+            wardrobe_empty: false,
+            message: null,
+          })
+        );
+      })
+    );
+
+    renderApp({ routerProps: { initialEntries: [ROUTES.WEEK] } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('week-day-detail')).toBeInTheDocument();
+    });
+
+    // Clean with outfits → Generate outfits is primary
+    expect(screen.getByTestId('week-generate-week')).toHaveTextContent(/Generate outfits/i);
+
+    fireEvent.change(screen.getByLabelText(/Monday occasion/i), {
+      target: { value: 'date-night' },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('week-save-plan')).toHaveTextContent(/Save plan/i);
+    });
+    expect(screen.getByTestId('week-planner-doc-state')).toHaveTextContent(/Unsaved changes/i);
   });
 
   it('updates detail panel when selecting a different day without reload', async () => {
@@ -405,13 +571,13 @@ describe('Week Outfit Planner', () => {
     });
     expect(screen.getByTestId('week-outfit-missing-slot-shoes')).toBeInTheDocument();
     expect(screen.queryByTestId('week-outfit-missing-slot-blazer')).not.toBeInTheDocument();
+    expect(screen.getByTestId('week-day-status-0')).toHaveTextContent(/Needs outfit/i);
     expect(screen.getByTestId('week-missing-choose-wardrobe')).toBeInTheDocument();
     expect(screen.getByTestId('week-missing-find-alternative')).toBeInTheDocument();
     expect(screen.getByTestId('week-missing-continue')).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('week-missing-find-alternative'));
     await waitFor(() => expect(regenerated).toBe(true));
-    // Wait until regenerate finishes (busy clears); disabled buttons ignore clicks.
     await waitFor(() => {
       expect(screen.getByTestId('week-missing-continue')).not.toBeDisabled();
     });
@@ -422,7 +588,7 @@ describe('Week Outfit Planner', () => {
     });
   });
 
-  it('does not treat empty blazer as missing', async () => {
+  it('does not treat empty blazer as missing and omits Ready status', async () => {
     localStorage.setItem('auth_token', 'test-token');
 
     const days = emptyDays().map((d, i) =>
@@ -484,10 +650,11 @@ describe('Week Outfit Planner', () => {
     });
     expect(screen.queryByTestId('week-missing-item-card')).not.toBeInTheDocument();
     expect(screen.queryByTestId('week-outfit-missing-slot-blazer')).not.toBeInTheDocument();
-    expect(screen.getByTestId('week-day-status-0')).toHaveTextContent(/Ready/i);
+    expect(screen.queryByTestId('week-day-status-0')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Ready$/i)).not.toBeInTheDocument();
   });
 
-  it('disables Save weekly plan while saving', async () => {
+  it('disables Save plan while saving', async () => {
     localStorage.setItem('auth_token', 'test-token');
 
     let resolvePut: ((value: unknown) => void) | null = null;
@@ -562,6 +729,9 @@ describe('Week Outfit Planner', () => {
     await waitFor(() => {
       expect(screen.getByTestId('week-save-plan')).not.toBeDisabled();
     });
+    await waitFor(() => {
+      expect(screen.getByTestId('week-plan-message')).toHaveTextContent(/Plan saved/i);
+    });
   });
 
   it('asks to confirm before clearing the plan', async () => {
@@ -625,7 +795,7 @@ describe('Week Outfit Planner', () => {
     confirmSpy.mockRestore();
   });
 
-  it('lists previous plans and Load restores the plan UI', async () => {
+  it('lists plan history and Load restores via toast (not permanent banner)', async () => {
     localStorage.setItem('auth_token', 'test-token');
 
     let storedDays = emptyDays();
@@ -713,11 +883,16 @@ describe('Week Outfit Planner', () => {
       expect(screen.getByTestId('week-planner')).toBeInTheDocument();
     });
 
+    expect(screen.getByTestId('week-plan-history-disclosure')).not.toHaveAttribute('open');
+    expect(screen.getByRole('heading', { name: /Plan history/i })).toBeInTheDocument();
+
     await waitFor(() => {
       expect(screen.getByTestId('week-plan-history-list')).toBeInTheDocument();
     });
     expect(screen.getByText(/Mon–Fri work week/i)).toBeInTheDocument();
     expect(screen.getByTestId('week-plan-history-item-42')).toBeInTheDocument();
+    // Human-readable date (en-GB style)
+    expect(screen.getByText(/10 Jul 2026/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('week-plan-history-load-42'));
 
@@ -728,9 +903,9 @@ describe('Week Outfit Planner', () => {
     });
     expect(screen.getByLabelText(/Reminder time/i)).toHaveValue('08:00');
     await waitFor(() => {
-      expect(screen.getByTestId('week-plan-message')).toHaveTextContent(
-        /Previous plan loaded/i
-      );
+      const toast = screen.getByTestId('week-plan-message');
+      expect(toast).toHaveTextContent(/Plan loaded/i);
+      expect(toast.className).toMatch(/fixed/);
     });
   });
 
@@ -801,7 +976,7 @@ describe('Week Outfit Planner', () => {
       expect(screen.getByTestId('week-planner')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Generate week/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Generate outfits/i }));
 
     await waitFor(() => {
       expect(screen.getByTestId('week-plan-admin-diagnostics')).toBeInTheDocument();
@@ -810,7 +985,7 @@ describe('Week Outfit Planner', () => {
     expect(screen.getByTestId('week-plan-generation-cost')).toHaveTextContent(/\$0\.01/);
   });
 
-  it('shows empty state when there are no previous plans', async () => {
+  it('shows empty state when there is no plan history', async () => {
     localStorage.setItem('auth_token', 'test-token');
 
     server.use(
@@ -825,8 +1000,9 @@ describe('Week Outfit Planner', () => {
     await waitFor(() => {
       expect(screen.getByTestId('week-planner')).toBeInTheDocument();
     });
+    expect(screen.getByTestId('week-plan-history-disclosure')).not.toHaveAttribute('open');
     expect(screen.getByTestId('week-plan-history-empty')).toHaveTextContent(
-      /No previous plans yet.*Clear plan or regenerate/i
+      /No plan history yet.*Clear plan or regenerate/i
     );
   });
 });

@@ -768,4 +768,108 @@ final class WeekPlannerViewModelTests: XCTestCase {
 
         XCTAssertTrue(vm.hasGeneratedOutfits)
     }
+
+    // MARK: - UX hierarchy: primary CTA / dirty / exceptional status / naming
+
+    func testPrimaryCTAIsGenerateBeforeOutfitsAndSaveWhenDirty() async {
+        let api = MockAPI()
+        let vm = WeekPlannerViewModel(api: api, notifier: MockNotifier(), timezoneProvider: { "UTC" })
+        await vm.load()
+
+        XCTAssertEqual(vm.primaryCTA, .generate)
+        XCTAssertEqual(vm.primaryCTA.title, WeekPlanCopy.generateOutfits)
+        XCTAssertFalse(vm.isDirty)
+
+        vm.setDayEnabled(0, enabled: true)
+        XCTAssertTrue(vm.isDirty)
+        XCTAssertEqual(vm.primaryCTA, .generate, "Without outfits, primary stays Generate even when dirty")
+
+        await vm.generateWeek()
+        XCTAssertTrue(vm.hasGeneratedOutfits)
+        XCTAssertFalse(vm.isDirty)
+        XCTAssertEqual(vm.primaryCTA, .generate)
+
+        vm.setSharedSeason("summer")
+        XCTAssertTrue(vm.isDirty)
+        XCTAssertEqual(vm.primaryCTA, .save)
+        XCTAssertEqual(vm.primaryCTA.title, WeekPlanCopy.savePlan)
+        XCTAssertEqual(vm.documentState, .unsaved)
+
+        await vm.save()
+        XCTAssertFalse(vm.isDirty)
+        XCTAssertEqual(vm.toastMessage, WeekPlanCopy.planSaved)
+        XCTAssertEqual(vm.primaryCTA, .generate)
+    }
+
+    func testExceptionalStatusOmitsReadyOnCompleteDays() {
+        let ready = WeekPlanDayResponse(
+            day_of_week: 2,
+            enabled: true,
+            occasion: "work",
+            outfit: WeekPlanOutfitResponse(
+                summary: "Ready look",
+                shirt: "Shirt",
+                trouser: "Trouser",
+                shoes: "Shoes",
+                belt: "Belt"
+            )
+        )
+        XCTAssertEqual(WeekPlanMissingSlots.status(for: ready), .ready)
+        XCTAssertNil(ready.dayStatusExceptionalLabel)
+
+        let missing = WeekPlanDayResponse(
+            day_of_week: 1,
+            enabled: true,
+            occasion: "work",
+            outfit: WeekPlanOutfitResponse(summary: "Gap", shirt: "Shirt", trouser: "", shoes: "Shoes", belt: "")
+        )
+        XCTAssertEqual(WeekPlanMissingSlots.status(for: missing).exceptionalLabel, WeekPlanCopy.statusNeedsOutfit)
+
+        let rest = WeekPlanDayResponse(day_of_week: 0, enabled: false, occasion: "everyday")
+        XCTAssertEqual(WeekPlanMissingSlots.status(for: rest).exceptionalLabel, WeekPlanCopy.statusNotPlanned)
+    }
+
+    func testPlanningTemplatesAndPlanHistoryNaming() {
+        XCTAssertEqual(WeekPlanCopy.planningTemplates, "Planning templates")
+        XCTAssertEqual(WeekPlanCopy.planHistory, "Plan history")
+        XCTAssertEqual(WeekPlanCopy.savedConfigurations, "Planning templates")
+        XCTAssertEqual(WeekPlanCopy.previousPlans, "Plan history")
+        XCTAssertEqual(WeekPlanCopy.generateOutfits, "Generate outfits")
+        XCTAssertEqual(WeekPlanCopy.savePlan, "Save plan")
+    }
+
+    func testHumanReadableHistoryDateHelper() {
+        let formatted = WeekPlanDateFormatting.humanReadable("2026-07-18T10:00:00Z")
+        XCTAssertFalse(formatted.isEmpty)
+        XCTAssertNotEqual(formatted, "2026-07-18T10:00:00Z")
+        XCTAssertFalse(WeekPlanDateFormatting.weekRangeLabel().isEmpty)
+    }
+
+    func testToastForLoadedPlanIsTransientNotPermanentBanner() async {
+        let api = MockAPI()
+        api.historyItems = [
+            WeekPlanHistoryItem(
+                id: 7,
+                label: "Weekend casual",
+                created_at: "2026-07-17T08:00:00Z",
+                enabled_day_count: 2
+            ),
+        ]
+        var restored = WeekPlanResponse.empty(timezone: "UTC")
+        restored.days[5].enabled = true
+        restored.days[5].outfit = WeekPlanOutfitResponse(summary: "Saturday look")
+        api.restorePlan = restored
+        let vm = WeekPlannerViewModel(api: api, notifier: MockNotifier(), timezoneProvider: { "UTC" })
+        await vm.load()
+        await vm.restoreHistory(id: 7)
+
+        XCTAssertEqual(vm.toastMessage, WeekPlanCopy.planRestored)
+        XCTAssertEqual(vm.infoMessage, WeekPlanCopy.planRestored)
+    }
+}
+
+private extension WeekPlanDayResponse {
+    var dayStatusExceptionalLabel: String? {
+        WeekPlanMissingSlots.status(for: self).exceptionalLabel
+    }
 }

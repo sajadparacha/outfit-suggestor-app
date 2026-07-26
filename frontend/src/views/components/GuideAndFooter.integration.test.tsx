@@ -47,7 +47,8 @@ describe('Guide and footer navigation (App)', () => {
     expect(screen.getByText(/select one or more saved pieces/i)).toBeInTheDocument();
     expect(screen.getAllByText(/market-ready shopping list/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Week Outfit Planner/i)).toBeInTheDocument();
-    expect(screen.getByText(/Save named week configurations/i)).toBeInTheDocument();
+    expect(screen.getByText(/Planning templates/i)).toBeInTheDocument();
+    expect(screen.getByText(/Plan history/i)).toBeInTheDocument();
   });
 
   it('opens User guide from footer link', async () => {

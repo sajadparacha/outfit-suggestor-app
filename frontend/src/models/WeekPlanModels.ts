@@ -27,8 +27,37 @@ export const WEEK_DAY_SHORT_LABELS: Record<DayOfWeek, string> = {
   6: 'Sun',
 };
 
-/** Client-side day status for week overview pills. */
-export type WeekDayStatus = 'ready' | 'missing' | 'rest' | 'not_generated';
+/**
+ * Client-side day status for week overview.
+ * Exceptional statuses are shown on cards; `ready` is silent (no Ready spam).
+ */
+export type WeekDayStatus =
+  | 'ready'
+  | 'needs_outfit'
+  | 'not_planned'
+  | 'generating'
+  | 'edited'
+  | 'missing'
+  | 'rest'
+  | 'not_generated';
+
+/** Display labels for exceptional day statuses (Ready is intentionally omitted). */
+export const WEEK_DAY_EXCEPTIONAL_STATUS_LABELS: Partial<Record<WeekDayStatus, string>> = {
+  needs_outfit: 'Needs outfit',
+  not_planned: 'Not planned',
+  generating: 'Generating',
+  edited: 'Edited',
+  missing: 'Needs outfit',
+  rest: 'Not planned',
+  not_generated: 'Needs outfit',
+};
+
+export function getExceptionalStatusLabel(
+  status: WeekDayStatus
+): string | null {
+  if (status === 'ready') return null;
+  return WEEK_DAY_EXCEPTIONAL_STATUS_LABELS[status] ?? null;
+}
 
 export const WEEK_PLAN_CORE_SLOTS = [
   { key: 'shirt', label: 'Shirt', field: 'shirt' as const },
@@ -38,14 +67,22 @@ export const WEEK_PLAN_CORE_SLOTS = [
   { key: 'belt', label: 'Belt', field: 'belt' as const },
 ] as const;
 
+/** Four aligned day-editor slots: top, bottom, shoes, accessory. */
+export const WEEK_PLAN_EDITOR_SLOTS = [
+  { key: 'shirt' as const, label: 'Top', field: 'shirt' as const },
+  { key: 'trouser' as const, label: 'Bottom', field: 'trouser' as const },
+  { key: 'shoes' as const, label: 'Shoes', field: 'shoes' as const },
+  { key: 'belt' as const, label: 'Accessory', field: 'belt' as const },
+] as const;
+
 export type WeekPlanCoreSlotKey = (typeof WEEK_PLAN_CORE_SLOTS)[number]['key'];
 
 /**
  * Slots that count as incomplete when empty.
- * Blazer is optional: empty/null means "no blazer needed" (parity with iOS).
+ * Blazer and accessory (belt) are optional: empty means “none needed / add later”.
  */
 export const WEEK_PLAN_REQUIRED_SLOTS = WEEK_PLAN_CORE_SLOTS.filter(
-  (slot) => slot.key !== 'blazer'
+  (slot) => slot.key !== 'blazer' && slot.key !== 'belt'
 );
 
 export interface MissingOutfitSlot {
@@ -83,16 +120,106 @@ export function getWeekDayPreviewThumbSources(day: WeekPlanDay): string[] {
   return thumbs.slice(0, 3);
 }
 
-export function getWeekDayStatus(day: WeekPlanDay): WeekDayStatus {
-  if (!day.enabled) return 'rest';
-  if (!day.outfit) return 'not_generated';
-  if (getMissingOutfitSlots(day.outfit).length > 0) return 'missing';
+export function getWeekDayStatus(
+  day: WeekPlanDay,
+  options?: { generating?: boolean; edited?: boolean }
+): WeekDayStatus {
+  if (options?.generating && day.enabled) return 'generating';
+  if (!day.enabled) return 'not_planned';
+  if (!day.outfit) return 'needs_outfit';
+  if (getMissingOutfitSlots(day.outfit).length > 0) return 'needs_outfit';
+  if (options?.edited) return 'edited';
   return 'ready';
 }
 
 export function formatOccasionLabel(occasion: string | null | undefined): string {
   if (!occasion) return '';
   return occasion.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/** Monday–Sunday date range label for the current week in a timezone. */
+export function formatWeekDateRange(
+  referenceDate: Date = new Date(),
+  timeZone?: string
+): string {
+  const tz = timeZone || getDeviceTimezone();
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    weekday: 'short',
+  }).formatToParts(referenceDate);
+  const get = (type: string) =>
+    Number(parts.find((p) => p.type === type)?.value ?? NaN);
+  const year = get('year');
+  const month = get('month');
+  const day = get('day');
+  const weekday = parts.find((p) => p.type === 'weekday')?.value ?? 'Mon';
+  const weekdayIndex: Record<string, number> = {
+    Mon: 0,
+    Tue: 1,
+    Wed: 2,
+    Thu: 3,
+    Fri: 4,
+    Sat: 5,
+    Sun: 6,
+  };
+  const dow = weekdayIndex[weekday] ?? 0;
+  // Build local calendar date at noon to avoid DST edge cases
+  const localNoon = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  const monday = new Date(localNoon);
+  monday.setUTCDate(localNoon.getUTCDate() - dow);
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
+
+  const fmt = new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+  return `${fmt.format(monday)} – ${fmt.format(sunday)}`;
+}
+
+/** Human-readable localized datetime, e.g. "25 Jul 2026, 4:49 PM". */
+export function formatLocalizedDateTime(
+  iso: string | null | undefined,
+  timeZone?: string
+): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  try {
+    return new Intl.DateTimeFormat('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: timeZone || undefined,
+    }).format(date);
+  } catch {
+    return date.toLocaleString();
+  }
+}
+
+/** Short time for document state, e.g. "4:49 PM". */
+export function formatLocalizedTime(
+  date: Date | null | undefined,
+  timeZone?: string
+): string {
+  if (!date || Number.isNaN(date.getTime())) return '';
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: timeZone || undefined,
+    }).format(date);
+  } catch {
+    return date.toLocaleTimeString();
+  }
 }
 
 export const DEFAULT_REMINDER_TIME = '07:30';

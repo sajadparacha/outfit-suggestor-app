@@ -321,10 +321,10 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
             items={[
               'Open the Week tab (sign in required). Turn on the days you want to plan and pick an occasion and style for each.',
               'Set a shared season for the week, plus a reminder time. Your device timezone is saved with the plan.',
-              'Tap Save weekly plan to persist, or Generate week to create wardrobe-based outfits for every enabled day. Use Regenerate on a single day anytime.',
-              'Clear plan asks for confirmation, then clears the current week (a snapshot is kept under Previous plans).',
-              'Under Previous plans, tap Load to restore an earlier week as your current plan.',
-              'Saved configurations: use Save as… to store your week setup (days, occasions, styles); Load applies it and clears outfits—tap Generate week when ready.',
+              'The primary button is Generate outfits before looks exist, or Save plan when you have unsaved changes after generating. Use Regenerate this day anytime.',
+              'Clear plan asks for confirmation, then clears the current week (a snapshot is kept under Plan history).',
+              'Under Plan history (collapsed by default), tap Load to restore an earlier week as your current plan.',
+              'Planning templates (prefs only): use Save as… to store your week setup; Load applies it and clears outfits—tap Generate outfits when ready.',
               'Today at the top shows today’s occasion and outfit summary (with wardrobe preview thumbnails when available).',
               'Per day: toggle Use wardrobe (default on), then open the day detail for item images, a collapsed Why this outfit works section, and missing-item actions (Choose from wardrobe / Find an alternative / Continue without).',
             ]}
@@ -333,11 +333,12 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
             <strong className="text-white">Reminders:</strong> daily wake-up notifications are{' '}
             <span className="text-white font-medium">iOS-first</span> (local notifications on your phone). On the web,
             use the <span className="text-white font-medium">Today</span> section in the app—no OS push required for v1.
-            Add items to your wardrobe first so Generate week can fill looks without calling open-ended AI.
+            Add items to your wardrobe first so Generate outfits can fill looks without calling open-ended AI.
+            Day cards show exceptional status only (Needs outfit, Not planned, Generating, Edited)—not Ready on every day.
             {isAdmin && (
               <>
                 {' '}
-                <strong className="text-white">Admins:</strong> after Generate week or Regenerate, expand{' '}
+                <strong className="text-white">Admins:</strong> after Generate outfits or Regenerate this day, expand{' '}
                 <span className="text-white font-medium">Admin diagnostics</span> on each day (with Show AI Prompt
                 &amp; Response enabled on web) to see the prompt, raw response, and API cost.
               </>

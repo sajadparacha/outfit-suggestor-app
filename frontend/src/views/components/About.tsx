@@ -248,8 +248,8 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
                   <div>
                     <h4 className="font-semibold text-white">Week Outfit Planner</h4>
                     <p className="text-sm text-slate-300">
-                      Plan outfits for selected days with per-day occasion and style (season is shared). Generate a week of looks from your wardrobe, see Today’s outfit in the app, and set a reminder time.
-                      Use the week overview to pick a day, open its detail panel for items and missing-item actions, then Save weekly plan. Toggle Use wardrobe per day, and load a previous plan from history when you want an earlier week back. Save named week configurations (up to your account limit) and load them anytime—generate outfits after loading.
+                      Plan outfits for selected days with per-day occasion and style (season is shared). Use Generate outfits, then Save plan when you have changes; see Today’s look and set a reminder time.
+                      Week overview day cards highlight exceptional status only. Open a day to edit slots and why-it-works, then use Planning templates (prefs) or Plan history (past outfits) when you need them—both stay collapsed by default.
                     </p>
                   </div>
                 </div>

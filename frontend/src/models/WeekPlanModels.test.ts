@@ -153,7 +153,7 @@ describe('WeekPlanModels helpers', () => {
     expect(getWeekDayPreviewThumbSources(day)).not.toContain('blazer_img');
   });
 
-  it('getMissingOutfitSlots still flags empty required slots, not empty blazer', () => {
+  it('getMissingOutfitSlots flags empty required slots, not empty blazer or accessory', () => {
     const outfit: WeekPlanOutfit = {
       summary: 'Incomplete',
       shirt: 'Navy shirt',
@@ -163,9 +163,6 @@ describe('WeekPlanModels helpers', () => {
       belt: '',
       reasoning: 'Test',
     };
-    expect(getMissingOutfitSlots(outfit).map((s) => s.key)).toEqual([
-      'trouser',
-      'belt',
-    ]);
+    expect(getMissingOutfitSlots(outfit).map((s) => s.key)).toEqual(['trouser']);
   });
 });

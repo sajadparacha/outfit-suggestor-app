@@ -373,10 +373,86 @@ enum WeekPlanDayStatus: String, Equatable {
     var label: String {
         switch self {
         case .ready: return WeekPlanCopy.statusReady
-        case .missing: return WeekPlanCopy.statusMissing
-        case .restDay: return WeekPlanCopy.statusRestDay
-        case .notGenerated: return WeekPlanCopy.statusNotGenerated
+        case .missing: return WeekPlanCopy.statusNeedsOutfit
+        case .restDay: return WeekPlanCopy.statusNotPlanned
+        case .notGenerated: return WeekPlanCopy.statusNeedsOutfit
         }
+    }
+
+    /// Exceptional statuses only — Ready is omitted so overview cards stay quiet.
+    var exceptionalLabel: String? {
+        switch self {
+        case .ready: return nil
+        case .missing, .notGenerated: return WeekPlanCopy.statusNeedsOutfit
+        case .restDay: return WeekPlanCopy.statusNotPlanned
+        }
+    }
+}
+
+enum WeekPlanPrimaryCTA: Equatable {
+    case generate
+    case save
+
+    var title: String {
+        switch self {
+        case .generate: return WeekPlanCopy.generateOutfits
+        case .save: return WeekPlanCopy.savePlan
+        }
+    }
+}
+
+enum WeekPlanDocumentState: Equatable {
+    case generating
+    case unsaved
+    case lastSaved(Date)
+    case saved
+
+    var label: String {
+        switch self {
+        case .generating: return WeekPlanCopy.documentGenerating
+        case .unsaved: return WeekPlanCopy.documentUnsaved
+        case .lastSaved(let date):
+            return WeekPlanCopy.documentLastSaved(WeekPlanDateFormatting.timeOnly(date))
+        case .saved: return WeekPlanCopy.documentSaved
+        }
+    }
+}
+
+enum WeekPlanDateFormatting {
+    /// Human-readable absolute date for history / template rows.
+    static func humanReadable(_ iso: String) -> String {
+        guard let date = parseISO(iso) else { return iso }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        formatter.doesRelativeDateFormatting = true
+        return formatter.string(from: date)
+    }
+
+    static func timeOnly(_ date: Date) -> String {
+        date.formatted(date: .omitted, time: .shortened)
+    }
+
+    static func weekRangeLabel(from reference: Date = Date()) -> String {
+        var cal = Calendar.current
+        cal.firstWeekday = 2
+        let weekday = cal.component(.weekday, from: reference)
+        let todayDow = (weekday + 5) % 7
+        guard let monday = cal.date(byAdding: .day, value: -todayDow, to: reference),
+              let sunday = cal.date(byAdding: .day, value: 6, to: monday) else {
+            return ""
+        }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "d MMM"
+        return "\(formatter.string(from: monday)) – \(formatter.string(from: sunday))"
+    }
+
+    static func parseISO(_ iso: String) -> Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: iso) { return date }
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: iso)
     }
 }
 
@@ -391,70 +467,97 @@ enum WeekPlanCopy {
     static let generating = "Generating outfits…"
     static let emptyDays = "Turn on the days you want to plan."
     static let emptyWardrobe = "Add items to your wardrobe to generate outfits."
-    static let savePlan = "Save weekly plan"
-    static let generateWeek = "Generate week"
-    static let regenerate = "Regenerate"
+    static let savePlan = "Save plan"
+    /// Legacy alias — prefer `generateOutfits`.
+    static let generateWeek = "Generate outfits"
+    static let generateOutfits = "Generate outfits"
+    static let regenerate = "Regenerate this day"
+    static let regenerateConfirmTitle = "Regenerate this day?"
+    static let regenerateConfirmMessage = "This replaces the current outfit for this day."
+    static let generateOverwriteTitle = "Generate new outfits?"
+    static let generateOverwriteMessage = "This replaces outfits already on your plan."
+    static let leaveUnsavedTitle = "Discard unsaved changes?"
+    static let leaveUnsavedMessage = "You have unsaved changes that will be lost."
     static let todayTitle = "Today"
-    static let reminderLabel = "Daily reminder"
+    static let reminderLabel = "Reminder"
+    static let timezoneLabel = "Timezone"
     static let sharedStyleLabel = "Style for the week"
     static let sharedSeasonLabel = "Season"
     static let navTitle = "Week Planner"
     static let pageTitle = "Week Outfit Planner"
-    static let pageSubtitle = "Plan outfits for the week and get a daily reminder."
-    static let useWardrobe = "From your wardrobe"
+    static let pageSubtitle = "Select days, generate outfits, review each day, then save."
+    static let useWardrobe = "Use wardrobe"
     static let outfitDetails = "Outfit details"
     static let whyThisOutfitWorks = "Why this outfit works"
+    static let addAccessory = "Add accessory"
+    static let planned = "Planned"
+    static let notPlanned = "Not planned"
     static let clearPlan = "Clear plan"
     static let clearConfirmTitle = "Clear this week’s plan?"
-    static let clearConfirmMessage = "A copy is saved under Previous plans. You can Load it later, or set days and generate again."
+    static let clearConfirmMessage = "A copy is saved under Plan history. You can Load it later, or set days and generate again."
     static let clearConfirmDelete = "Clear plan"
-    static let previousPlans = "Previous plans"
+    static let previousPlans = "Plan history"
+    static let planHistory = "Plan history"
     static let previousPlansHint =
-        "Backups when you clear or regenerate over existing outfits. Load restores a backup without adding a new row. Save plan updates your current week automatically."
+        "Past weekly outfits from clear or regenerate. Load restores a backup. Not the same as Planning templates."
     static let loadPlan = "Load"
+    static let viewAll = "View all"
     static let emptyHistory =
-        "No previous plans yet. Clear plan or regenerate after outfits exist to keep a copy here."
-    static let planRestored = "Previous plan loaded."
+        "No plan history yet. Clear plan or regenerate after outfits exist to keep a copy here."
+    static let planRestored = "Plan loaded."
     static let planSaved = "Plan saved."
+    static let documentSaved = "Saved"
+    static let documentUnsaved = "Unsaved changes"
+    static let documentGenerating = "Generating…"
+    static func documentLastSaved(_ time: String) -> String { "Last saved \(time)" }
+    /// Kept for tests / legacy; not shown on overview cards (no Ready spam).
     static let statusReady = "Ready"
-    static let statusMissing = "Missing"
-    static let statusRestDay = "Rest day"
-    static let statusNotGenerated = "Not generated"
+    static let statusNeedsOutfit = "Needs outfit"
+    static let statusNotPlanned = "Not planned"
+    static let statusEdited = "Edited"
+    static let statusGenerating = "Generating"
+    /// Legacy aliases
+    static let statusMissing = "Needs outfit"
+    static let statusRestDay = "Not planned"
+    static let statusNotGenerated = "Needs outfit"
     static let chooseFromWardrobe = "Choose from wardrobe"
     static let findAlternative = "Find an alternative"
     static let continueWithout = "Continue without"
     static let missingItemsTitle = "Missing items"
     static let missingItemsHint = "Some outfit slots are empty for this day."
     static let weekOverview = "Week overview"
-    static let dayDetail = "Day detail"
-    static let savedConfigurations = "Saved configurations"
+    static let dayDetail = "Selected day"
+    static let savedConfigurations = "Planning templates"
+    static let planningTemplates = "Planning templates"
     static let savedConfigurationsHint =
-        "Named week setups (days, occasions, reminder). Load one, then Generate week — not the same as Previous plans."
-    static let saveConfiguration = "Save as…"
+        "Prefs only (days, occasions, reminder) — no outfits. Load one, then Generate outfits. Not the same as Plan history."
+    static let saveConfiguration = "Save template…"
     static let updateConfiguration = "Update"
     static let renameConfiguration = "Rename"
     static let deleteConfiguration = "Delete"
     static let loadConfiguration = "Load"
     static let emptyConfigurations =
-        "No saved configurations yet. Tap Save as… to store your current week setup."
-    static let configurationSaved = "Configuration saved."
-    static let configurationUpdated = "Configuration updated."
-    static let configurationRenamed = "Configuration renamed."
-    static let configurationDeleted = "Configuration deleted."
-    static let configurationLoaded = "Configuration loaded. Tap Generate week when ready."
-    static let configurationNameRequired = "Enter a name for this configuration."
-    static let configurationApplyTitle = "Load this configuration?"
+        "No planning templates yet. Tap Save template… to store your current week setup."
+    static let configurationSaved = "Template saved."
+    static let configurationUpdated = "Template updated."
+    static let configurationRenamed = "Template renamed."
+    static let configurationDeleted = "Template deleted."
+    static let configurationLoaded = "Template loaded. Tap Generate outfits when ready."
+    static let configurationNameRequired = "Enter a name for this template."
+    static let configurationApplyTitle = "Load this template?"
     static let configurationApplyMessage =
         "This replaces your current week setup and clears generated outfits."
-    static let configurationDeleteTitle = "Delete this configuration?"
+    static let configurationDeleteTitle = "Delete this template?"
     static let configurationDeleteMessage = "This cannot be undone."
+    static let loadHistoryConfirmTitle = "Load this plan?"
+    static let loadHistoryConfirmMessage = "This replaces your current week and any unsaved changes."
 
     static func configurationUsage(count: Int, limit: Int) -> String {
         "\(count) of \(limit) saved"
     }
 
     static func configurationAtLimit(limit: Int) -> String {
-        "You’ve reached your limit of \(limit) saved configurations. Delete one to save another."
+        "You’ve reached your limit of \(limit) planning templates. Delete one to save another."
     }
 }
 
@@ -498,6 +601,47 @@ enum WeekPlanOutfitDisplay {
         let category: String
         let label: String
         let description: String
+        /// Empty accessory placeholder (“Add accessory”).
+        var isPlaceholder: Bool
+
+        init(category: String, label: String, description: String, isPlaceholder: Bool = false) {
+            self.category = category
+            self.label = label
+            self.description = description
+            self.isPlaceholder = isPlaceholder
+        }
+    }
+
+    /// Four aligned slots: top, bottom, shoes, optional accessory.
+    static func fourSlotRows(for outfit: WeekPlanOutfitResponse?) -> [SlotRow] {
+        guard let outfit else {
+            return [
+                SlotRow(category: "shirt", label: "Top", description: "", isPlaceholder: true),
+                SlotRow(category: "trouser", label: "Bottom", description: "", isPlaceholder: true),
+                SlotRow(category: "shoes", label: "Shoes", description: "", isPlaceholder: true),
+                SlotRow(category: "accessory", label: WeekPlanCopy.addAccessory, description: "", isPlaceholder: true),
+            ]
+        }
+        func text(_ value: String?) -> String {
+            (value ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        let top = text(outfit.shirt)
+        let bottom = text(outfit.trouser)
+        let shoes = text(outfit.shoes)
+        let accessoryCandidates = [outfit.belt, outfit.tie ?? "", outfit.blazer].map(text).filter { !$0.isEmpty }
+        let accessory = accessoryCandidates.first ?? ""
+
+        return [
+            SlotRow(category: "shirt", label: "Top", description: top, isPlaceholder: top.isEmpty),
+            SlotRow(category: "trouser", label: "Bottom", description: bottom, isPlaceholder: bottom.isEmpty),
+            SlotRow(category: "shoes", label: "Shoes", description: shoes, isPlaceholder: shoes.isEmpty),
+            SlotRow(
+                category: "accessory",
+                label: accessory.isEmpty ? WeekPlanCopy.addAccessory : "Accessory",
+                description: accessory,
+                isPlaceholder: accessory.isEmpty
+            ),
+        ]
     }
 
     static func summaryLine(for outfit: WeekPlanOutfitResponse) -> String {

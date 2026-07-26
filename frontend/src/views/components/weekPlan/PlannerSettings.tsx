@@ -1,42 +1,38 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { WeekPlan } from '../../../models/WeekPlanModels';
 import { FILTER_OPTIONS } from '../../../utils/constants';
-import { plannerSurface, primaryCtaClass, selectClass } from './weekPlanStyles';
+import { plannerSurface, selectClass } from './weekPlanStyles';
 
 export interface PlannerSettingsProps {
   plan: WeekPlan;
   busy: boolean;
   enabledDayCount: number;
-  generating: boolean;
+  generating?: boolean;
   onSetSharedSeason: (season: string) => void;
   onSetReminderTime: (time: string) => void;
-  onGenerateWeek: () => void;
+  /** @deprecated Generate lives on the page header primary CTA */
+  onGenerateWeek?: () => void;
 }
 
 const PlannerSettings: React.FC<PlannerSettingsProps> = ({
   plan,
   busy,
-  enabledDayCount,
-  generating,
   onSetSharedSeason,
   onSetReminderTime,
-  onGenerateWeek,
 }) => {
-  const seasonLabel =
-    FILTER_OPTIONS.seasons.find((s) => s.value === plan.shared_season)?.label ??
-    plan.shared_season;
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   return (
     <section
-      className={`${plannerSurface} space-y-4 p-4 min-[768px]:p-5`}
+      className={`${plannerSurface} space-y-3 p-3 min-[768px]:p-4`}
       aria-label="Week settings"
       data-testid="week-planner-settings"
     >
       <div className="flex flex-wrap items-end gap-3">
-        <div className="min-w-[9rem] flex-1">
+        <div className="min-w-[8rem] flex-1">
           <label
             htmlFor="week-shared-season"
-            className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-400"
+            className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-300"
           >
             Season
           </label>
@@ -54,14 +50,11 @@ const PlannerSettings: React.FC<PlannerSettingsProps> = ({
               </option>
             ))}
           </select>
-          <p className="mt-1 hidden text-xs text-slate-500 min-[768px]:block" aria-hidden>
-            {seasonLabel}
-          </p>
         </div>
-        <div className="min-w-[9rem] flex-1">
+        <div className="min-w-[8rem] flex-1">
           <label
             htmlFor="week-reminder-time"
-            className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-400"
+            className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-300"
           >
             Reminder
           </label>
@@ -74,17 +67,28 @@ const PlannerSettings: React.FC<PlannerSettingsProps> = ({
             disabled={busy}
             aria-label="Reminder time"
           />
-          <p className="mt-1 text-xs text-slate-500">Timezone: {plan.timezone}</p>
+          <p className="mt-1 text-xs text-slate-400" data-testid="week-planner-timezone">
+            Timezone: {plan.timezone}
+          </p>
         </div>
+      </div>
+
+      <div>
         <button
           type="button"
-          onClick={onGenerateWeek}
-          disabled={busy || enabledDayCount === 0}
-          className={`${primaryCtaClass} w-full min-[480px]:w-auto`}
-          data-testid="week-generate-week"
+          onClick={() => setAdvancedOpen((o) => !o)}
+          className="min-h-[44px] text-left text-xs font-medium text-slate-400 underline-offset-2 hover:text-slate-300 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/40"
+          aria-expanded={advancedOpen}
+          data-testid="week-planner-advanced-toggle"
         >
-          {generating ? 'Generating…' : 'Generate week'}
+          {advancedOpen ? 'Hide advanced preferences' : 'Advanced preferences'}
         </button>
+        {advancedOpen && (
+          <p className="mt-2 text-xs text-slate-500" data-testid="week-planner-advanced">
+            Per-day occasion, style, and wardrobe options are in the selected-day editor below.
+            Daily wake-up reminders are available on iOS.
+          </p>
+        )}
       </div>
     </section>
   );

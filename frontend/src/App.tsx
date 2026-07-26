@@ -851,6 +851,9 @@ function App() {
                 restoring={weekPlan.restoring}
                 error={weekPlan.error}
                 message={weekPlan.message}
+                isDirty={weekPlan.isDirty}
+                lastSavedAt={weekPlan.lastSavedAt}
+                hasGeneratedOutfits={weekPlan.hasGeneratedOutfits}
                 enabledDayCount={weekPlan.enabledDayCount}
                 onUpdateDay={weekPlan.updateDay}
                 onSetReminderTime={weekPlan.setReminderTime}
@@ -871,6 +874,7 @@ function App() {
                 onRestoreHistory={(id) => {
                   weekPlan.restoreHistory(id).catch(() => undefined);
                 }}
+                onDismissMessage={weekPlan.clearMessage}
                 presets={weekPlan.presets}
                 presetCount={weekPlan.presetCount}
                 presetLimit={weekPlan.presetLimit}

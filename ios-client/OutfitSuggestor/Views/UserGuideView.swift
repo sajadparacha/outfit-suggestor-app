@@ -151,13 +151,13 @@ struct UserGuideView: View {
                     color: .cyan,
                     steps: [
                         "Open the Week tab (sign in required), or Week Planner from Profile.",
-                        "Turn on the days you want to plan and set an occasion and style for each; use Use wardrobe per day when you want closet-only looks.",
-                        "Pick a shared season for the week and a daily reminder time (device timezone).",
-                        "Tap Save plan, then Generate week to create one wardrobe outfit per enabled day.",
-                        "Save as… under Saved configurations to store a named week setup; Load one when you want that layout back, then Generate week.",
-                        "Clear plan saves a copy under Previous plans, then clears the current week — tap Load to restore one.",
-                        "Select a day in the week overview to see detail, resolve missing items (wardrobe / alternative / continue), and Save weekly plan.",
-                        "Expand Why this outfit works for styling notes; use Regenerate for a fresh look. On iOS, local notifications remind you at the reminder time."
+                        "Turn on the days you want to plan and set Occasion, Style, and Use wardrobe for each selected day.",
+                        "Pick a shared Season and Reminder time (device timezone).",
+                        "Tap Generate outfits (primary). After outfits exist, Save plan appears when you have unsaved changes.",
+                        "Review the selected day — four slots (top, bottom, shoes, accessory), Why this outfit works, and Regenerate this day.",
+                        "Planning templates store prefs only (no outfits). Plan history keeps past weekly outfits — both stay collapsed until you expand them.",
+                        "Clear plan saves a copy under Plan history. Day cards show Needs outfit / Not planned only when exceptional — not Ready on every day.",
+                        "On iOS, local notifications remind you at the reminder time."
                     ],
                     tip: isAdmin
                         ? "Add wardrobe items first — generate prefers your closet. Admins: expand Admin diagnostics on a day after generate to see prompt, response, and API cost."
