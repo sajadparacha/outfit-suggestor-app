@@ -9,14 +9,14 @@
 //  |---------------------------|-------------|-------------------------|
 //  | /                         | Suggest (0) | —                       |
 //  | /wardrobe                 | Wardrobe (1)| —                       |
-//  | /week                     | Week (2)    | —                       |
-//  | /history                  | Looks (3)   | —                       |
-//  | /insights                 | Profile (4) | InsightsView            |
-//  | /guide                    | Profile (4) | UserGuideView           |
-//  | /about                    | Profile (4) | AboutView               |
-//  | /settings                 | Profile (4) | — (root SettingsView)   |
-//  | /admin/reports            | Profile (4) | ReportsView             |
-//  | /admin/integration-tests  | Profile (4) | AdminIntegrationTest…   |
+//  | /week                     | Week Planner (2) | —                  |
+//  | /insights                 | Insights (3)| —                       |
+//  | /history                  | Looks (4)   | —                       |
+//  | /guide                    | Profile (5) | UserGuideView           |
+//  | /about                    | Profile (5) | AboutView               |
+//  | /settings                 | Profile (5) | — (root SettingsView)   |
+//  | /admin/reports            | Profile (5) | ReportsView             |
+//  | /admin/integration-tests  | Profile (5) | AdminIntegrationTest…   |
 //
 //  Unknown paths redirect to `/`.
 //  Query: `/wardrobe?category=shirt` seeds wardrobe category filter.
@@ -55,13 +55,14 @@ enum AppRoute {
         case suggest = 0
         case wardrobe = 1
         case week = 2
-        case history = 3
-        case profile = 4
+        case insights = 3
+        case history = 4
+        case profile = 5
     }
 
     enum ProfileDestination: String, Hashable {
-        case insights
-        case week // kept for Settings NavigationLink / legacy deep-link stack; primary entry is Week tab
+        case insights // kept for Settings / legacy stack; primary entry is Insights tab
+        case week // kept for Settings NavigationLink / legacy deep-link stack; primary entry is Week Planner tab
         case guide
         case about
         case adminReports
@@ -103,16 +104,17 @@ enum AppRoute {
         case home: return .suggest
         case wardrobe: return .wardrobe
         case week: return .week
+        case insights: return .insights
         case history: return .history
-        case insights, guide, about, settings, adminReports, adminIntegrationTests: return .profile
+        case guide, about, settings, adminReports, adminIntegrationTests: return .profile
         default: return nil
         }
     }
 
     static func profileDestination(for path: String) -> ProfileDestination? {
         switch path {
-        case insights: return .insights
-        case week: return nil // Week is its own tab; do not push Profile stack
+        case insights: return nil // Insights is its own tab; do not push Profile stack
+        case week: return nil // Week Planner is its own tab; do not push Profile stack
         case guide: return .guide
         case about: return .about
         case adminReports: return .adminReports

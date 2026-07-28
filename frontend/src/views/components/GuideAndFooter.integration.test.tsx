@@ -3,8 +3,21 @@
  */
 import { screen, waitFor, fireEvent } from '@testing-library/react';
 import { renderApp } from '../../test/renderWithRouter';
+import { ROUTES } from '../../navigation/routes';
 
 describe('Guide and footer navigation (App)', () => {
+  it('shows Week Planner in main nav and links to /week', async () => {
+    renderApp();
+
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: 'Week Planner' })).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('link', { name: /^Week$/ })).not.toBeInTheDocument();
+
+    const weekLink = screen.getByRole('link', { name: 'Week Planner' });
+    expect(weekLink).toHaveAttribute('href', ROUTES.WEEK);
+  });
+
   it('shows User guide when Guide tab is clicked', async () => {
     renderApp();
 

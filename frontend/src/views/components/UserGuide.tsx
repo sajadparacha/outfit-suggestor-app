@@ -319,7 +319,7 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
         >
           <StepList
             items={[
-              'Open the Week tab (sign in required). Turn on the days you want to plan and pick an occasion and style for each.',
+              'Open the Week Planner tab (sign in required). Turn on the days you want to plan and pick an occasion and style for each.',
               'Set a shared season for the week, plus a reminder time. Your device timezone is saved with the plan.',
               'The primary button is Generate outfits before looks exist, or Save plan when you have unsaved changes after generating. Use Regenerate this day anytime.',
               'Clear plan asks for confirmation, then clears the current week (a snapshot is kept under Plan history).',
@@ -391,7 +391,7 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
           <div className="grid gap-3 sm:grid-cols-2">
             {[
               { k: 'Settings', d: 'Email, name, password, and a shortcut to your wardrobe.' },
-              { k: 'Week', d: 'Week Outfit Planner—enable days, occasions, generate looks, and see Today in-app.' },
+              { k: 'Week Planner', d: 'Week Outfit Planner—enable days, occasions, generate looks, and see Today in-app.' },
               { k: 'Insights', d: 'Wardrobe Insights—gap score, priorities, coverage dashboard, and actionable buy-next cards.' },
               { k: 'Guide', d: 'Step-by-step help and tips (this page).' },
               { k: 'About', d: 'Product story, features, and creator links—open from the page footer.' },

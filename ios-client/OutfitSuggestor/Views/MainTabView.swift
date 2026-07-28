@@ -2,7 +2,7 @@
 //  MainTabView.swift
 //  OutfitSuggestor
 //
-//  Tab navigation: Suggest, Wardrobe, Week, Looks, Profile
+//  Tab navigation: Suggest, Wardrobe, Week Planner, Insights, Looks, Profile
 //
 
 import SwiftUI
@@ -135,9 +135,23 @@ struct MainTabView: View {
                     )
                 }
             }
-            .tabItem { Label("Week", systemImage: "calendar") }
+            .tabItem { Label(WeekPlanCopy.navTitle, systemImage: "calendar") }
             .tag(AppRoute.TabIndex.week)
             .accessibilityIdentifier("tab.week")
+
+            NavigationStack {
+                if auth.isAuthenticated {
+                    InsightsView()
+                } else {
+                    GuestTabPlaceholderView(
+                        title: InsightsCopy.pageTitle,
+                        context: .insights
+                    )
+                }
+            }
+            .tabItem { Label("Insights", systemImage: "chart.bar.xaxis") }
+            .tag(AppRoute.TabIndex.insights)
+            .accessibilityIdentifier("tab.insights")
 
             NavigationStack {
                 if auth.isAuthenticated {
@@ -183,7 +197,8 @@ struct MainTabView: View {
                 Task { await viewModel.refreshGuestUsage() }
                 if routeCoordinator.selectedTab == .wardrobe
                     || routeCoordinator.selectedTab == .history
-                    || routeCoordinator.selectedTab == .week {
+                    || routeCoordinator.selectedTab == .week
+                    || routeCoordinator.selectedTab == .insights {
                     routeCoordinator.selectedTab = .suggest
                 }
             }
