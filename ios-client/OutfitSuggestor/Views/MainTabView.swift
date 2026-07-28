@@ -91,6 +91,7 @@ struct MainTabView: View {
             }
             .tabItem { Label("Suggest", systemImage: "sparkles") }
             .tag(AppRoute.TabIndex.suggest)
+            .accessibilityIdentifier("tab.suggest")
 
             NavigationStack {
                 if auth.isAuthenticated {
@@ -124,6 +125,7 @@ struct MainTabView: View {
             }
             .tabItem { Label("Wardrobe", systemImage: "tshirt") }
             .tag(AppRoute.TabIndex.wardrobe)
+            .accessibilityIdentifier("tab.wardrobe")
 
             NavigationStack {
                 if auth.isAuthenticated {
@@ -168,6 +170,7 @@ struct MainTabView: View {
             }
             .tabItem { Label("Looks", systemImage: "clock.arrow.circlepath") }
             .tag(AppRoute.TabIndex.history)
+            .accessibilityIdentifier("tab.history")
 
             NavigationStack(path: $routeCoordinator.profilePath) {
                 SettingsView()
@@ -177,6 +180,7 @@ struct MainTabView: View {
             }
             .tabItem { Label("Profile", systemImage: "person.crop.circle") }
             .tag(AppRoute.TabIndex.profile)
+            .accessibilityIdentifier("tab.profile")
         }
         .environmentObject(viewModel)
         .tint(AppTheme.accent)

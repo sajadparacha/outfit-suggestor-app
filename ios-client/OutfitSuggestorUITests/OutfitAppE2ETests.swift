@@ -22,8 +22,73 @@ final class OutfitAppE2ETests: XCTestCase {
         element.waitForExistence(timeout: timeout)
     }
 
+    private func tabIdentifier(for name: String) -> String? {
+        switch name {
+        case "Suggest": return "tab.suggest"
+        case "Wardrobe": return "tab.wardrobe"
+        case "Week Planner", "Week": return "tab.week"
+        case "Insights": return "tab.insights"
+        case "Looks": return "tab.history"
+        case "Profile": return "tab.profile"
+        default: return nil
+        }
+    }
+
+    private func tabBarButton(named name: String) -> XCUIElement {
+        if let id = tabIdentifier(for: name) {
+            let byId = app.tabBars.buttons[id]
+            if byId.exists { return byId }
+            let anyById = app.descendants(matching: .any)[id]
+            if anyById.exists { return anyById }
+        }
+        return app.tabBars.buttons[name]
+    }
+
+    /// iOS shows only the first 4 tabs + More when there are 6+ tabs.
+    private func openOverflowTabIfNeeded(named name: String) -> Bool {
+        let moreCandidates: [XCUIElement] = [
+            app.tabBars.buttons["More"],
+            app.tabBars.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "More")).firstMatch,
+        ]
+        var moreButton: XCUIElement?
+        for candidate in moreCandidates where candidate.exists {
+            moreButton = candidate
+            break
+        }
+        if moreButton == nil, app.tabBars.buttons.count >= 5 {
+            moreButton = app.tabBars.buttons.element(boundBy: app.tabBars.buttons.count - 1)
+        }
+        guard let more = moreButton, more.exists else { return false }
+
+        if !app.navigationBars["More"].exists {
+            more.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.35))
+        }
+
+        let overflowMatches: [XCUIElement] = [
+            app.tables.cells.staticTexts[name],
+            app.tables.cells[name],
+            app.tables.staticTexts[name],
+            app.collectionViews.staticTexts[name],
+            app.buttons[name].firstMatch,
+            app.staticTexts[name].firstMatch,
+        ]
+        if let id = tabIdentifier(for: name) {
+            let byId = app.descendants(matching: .any)[id]
+            if byId.waitForExistence(timeout: 1) {
+                byId.tap()
+                return true
+            }
+        }
+        for match in overflowMatches where match.waitForExistence(timeout: 1) {
+            match.tap()
+            return true
+        }
+        return false
+    }
+
     private func tabTarget(_ name: String) -> XCUIElement {
-        let tabBarButton = app.tabBars.buttons[name]
+        let tabBarButton = tabBarButton(named: name)
         if tabBarButton.exists { return tabBarButton }
 
         let navButton = app.navigationBars.buttons[name]
@@ -39,9 +104,32 @@ final class OutfitAppE2ETests: XCTestCase {
     }
 
     private func openTab(_ name: String, timeout: TimeInterval = 20) {
-        let tabBarButton = app.tabBars.buttons[name]
-        let target = tabBarButton.waitForExistence(timeout: timeout) ? tabBarButton : tabTarget(name)
-        XCTAssertTrue(target.waitForExistence(timeout: timeout), "Tab \"\(name)\" not found")
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            let tabBarButton = tabBarButton(named: name)
+            if tabBarButton.exists, tabBarButton.isHittable {
+                tabBarButton.tap()
+                return
+            }
+            // Visible but not yet hittable
+            if tabBarButton.waitForExistence(timeout: 0.3), tabBarButton.isHittable {
+                tabBarButton.tap()
+                return
+            }
+
+            if openOverflowTabIfNeeded(named: name) {
+                return
+            }
+
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+        }
+
+        if openOverflowTabIfNeeded(named: name) {
+            return
+        }
+
+        let target = tabTarget(name)
+        XCTAssertTrue(target.waitForExistence(timeout: 2), "Tab \"\(name)\" not found (including More overflow)")
         target.tap()
     }
 
@@ -483,19 +571,31 @@ final class OutfitAppE2ETests: XCTestCase {
             || cancelButton.waitForExistence(timeout: 2)
         XCTAssertTrue(sawProgress, "Expected AI progress panel during suggestion")
 
-        let historyTarget = tabTarget("Looks")
-        XCTAssertTrue(waitFor(historyTarget, timeout: 2))
-        historyTarget.tap()
-        XCTAssertTrue(app.navigationBars["Looks"].waitForExistence(timeout: 3))
+        openTab("Looks")
+        XCTAssertTrue(
+            app.navigationBars["Looks"].waitForExistence(timeout: 5)
+                || app.buttons["history.loadAllButton"].waitForExistence(timeout: 2),
+            "Expected Looks tab content while suggestion runs"
+        )
 
         openTab("Suggest")
         XCTAssertTrue(app.staticTexts["Your Styled Look"].waitForExistence(timeout: 12))
     }
 
     func testAdminPremiumInsightsShowsCostPromptAndResponse() {
-        openTab("Profile")
-        XCTAssertTrue(waitFor(app.buttons["profile.insightsLink"]))
-        app.buttons["profile.insightsLink"].tap()
+        // Insights is a main tab (first 4 + More). Prefer that path.
+        openTab("Insights")
+        if !app.buttons["insights.analyzeButton"].waitForExistence(timeout: 6) {
+            // Fallback: Profile may live under More; Suggest header also opens Profile.
+            if !openOverflowTabIfNeeded(named: "Profile") {
+                openTab("Suggest")
+                let profileButton = app.buttons["home.profileButton"]
+                XCTAssertTrue(profileButton.waitForExistence(timeout: 4), "Expected home profile button")
+                profileButton.tap()
+            }
+            XCTAssertTrue(waitFor(app.buttons["profile.insightsLink"]))
+            app.buttons["profile.insightsLink"].tap()
+        }
         XCTAssertTrue(waitFor(app.buttons["insights.analyzeButton"]))
         XCTAssertTrue(app.staticTexts["Wardrobe Insights"].waitForExistence(timeout: 4))
         XCTAssertTrue(
