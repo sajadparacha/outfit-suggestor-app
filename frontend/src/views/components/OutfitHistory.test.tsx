@@ -81,8 +81,10 @@ describe('OutfitHistory', () => {
         />
       );
       expect(screen.getByText(/Outfit History/i)).toBeInTheDocument();
-      expect(screen.getByText(/No History Yet/i)).toBeInTheDocument();
-      expect(screen.getByText(/Your outfit suggestions will appear here/i)).toBeInTheDocument();
+      expect(screen.getByText(/No saved looks yet/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Generate an outfit on Suggest, then tap Save Look/i)
+      ).toBeInTheDocument();
     });
   });
 

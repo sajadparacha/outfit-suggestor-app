@@ -74,4 +74,46 @@ export function wardrobePath(category?: string | null): string {
   return `${ROUTES.WARDROBE}?${params.toString()}`;
 }
 
+/** Week Planner → Wardrobe pick session (day + slot). */
+export function wardrobePickPath(opts: {
+  dayOfWeek: number;
+  slotKey: string;
+  category?: string | null;
+}): string {
+  const params = new URLSearchParams();
+  const category = opts.category ?? opts.slotKey;
+  if (category) params.set('category', category);
+  params.set('pickDay', String(opts.dayOfWeek));
+  params.set('pickSlot', opts.slotKey);
+  return `${ROUTES.WARDROBE}?${params.toString()}`;
+}
+
+export function weekPath(dayOfWeek?: number | null): string {
+  if (dayOfWeek == null || !Number.isInteger(dayOfWeek)) {
+    return ROUTES.WEEK;
+  }
+  return `${ROUTES.WEEK}?day=${dayOfWeek}`;
+}
+
+export type WardrobePickSession = {
+  dayOfWeek: number;
+  slotKey: string;
+  category: string | null;
+};
+
+export function parseWardrobePickSession(
+  searchParams: URLSearchParams
+): WardrobePickSession | null {
+  const pickDay = searchParams.get('pickDay');
+  const pickSlot = searchParams.get('pickSlot');
+  if (pickDay == null || !pickSlot) return null;
+  const dayOfWeek = Number(pickDay);
+  if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) return null;
+  return {
+    dayOfWeek,
+    slotKey: pickSlot,
+    category: searchParams.get('category'),
+  };
+}
+
 export const LOGIN_REDIRECT_STATE = 'showLogin' as const;

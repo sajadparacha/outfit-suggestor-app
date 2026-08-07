@@ -4,7 +4,7 @@ import {
   WeekPlanDay,
   WEEK_DAY_LABELS,
   WEEK_DAY_SHORT_LABELS,
-  formatOccasionLabel,
+  formatDayOccasionStyleLine,
   getExceptionalStatusLabel,
   getWeekDayPreviewThumbSources,
   getWeekDayStatus,
@@ -47,7 +47,7 @@ const WeekDayCard: React.FC<WeekDayCardProps> = ({
   const status = getWeekDayStatus(day, { generating });
   const exceptionalLabel = getExceptionalStatusLabel(status);
   const thumbs = getWeekDayPreviewThumbSources(day);
-  const occasion = formatOccasionLabel(day.occasion);
+  const occasionStyleLine = formatDayOccasionStyleLine(day.occasion, day.style);
 
   const togglePlanned = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
@@ -79,7 +79,9 @@ const WeekDayCard: React.FC<WeekDayCardProps> = ({
         aria-pressed={selected}
         aria-label={`${label}${selected ? ', selected' : ''}${
           exceptionalLabel ? `. Status: ${exceptionalLabel}` : ''
-        }${day.enabled ? ', planned' : ', not planned'}`}
+        }${
+          day.enabled ? `, planned, ${occasionStyleLine}` : ', not planned'
+        }`}
         data-testid={`week-day-select-${day.day_of_week}`}
       >
         <div className="min-w-0 pl-1">
@@ -92,7 +94,7 @@ const WeekDayCard: React.FC<WeekDayCardProps> = ({
           )}
           {day.enabled ? (
             <p className="mt-0.5 truncate text-xs text-slate-300">
-              {occasion || 'Everyday'}
+              {occasionStyleLine}
             </p>
           ) : (
             <p className="mt-0.5 truncate text-xs text-slate-400">Off</p>

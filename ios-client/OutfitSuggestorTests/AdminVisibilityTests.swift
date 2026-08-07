@@ -58,6 +58,14 @@ final class AdminVisibilityTests: XCTestCase {
         XCTAssertTrue(GuideCopy.reportsNavDescription.contains("Admins only"))
     }
 
+    func testAboutTaglineAndThreeRingsStory() {
+        XCTAssertEqual(AboutCopy.tagline, "Your personal AI men's stylist")
+        XCTAssertTrue(AboutCopy.threeRingsStory.contains("Suggest a look from a photo"))
+        XCTAssertTrue(AboutCopy.threeRingsStory.contains("plan your week"))
+        XCTAssertTrue(AboutCopy.guideLocationNote.contains("Profile"))
+        XCTAssertTrue(AboutCopy.guideLocationNote.contains("Guide"))
+    }
+
     func testGuideAndAboutCopyMentionWardrobeCompletion() {
         XCTAssertTrue(GuideCopy.wardrobeSingleItemStep.contains("Style this item with AI"))
         XCTAssertTrue(GuideCopy.wardrobeMultiSelectStep.contains("Select items"))

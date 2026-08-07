@@ -222,6 +222,116 @@ final class WeekPlannerViewModel: ObservableObject {
         lastMissingAction = .chooseFromWardrobe(dayOfWeek: dayOfWeek)
     }
 
+    /// Apply a wardrobe item into a day’s outfit slot (local dirty edit; existing save path).
+    @discardableResult
+    func applyWardrobeItem(_ item: WardrobeItem, dayOfWeek: Int, slotKey: String) -> Bool {
+        guard let idx = plan.days.firstIndex(where: { $0.day_of_week == dayOfWeek }) else {
+            return false
+        }
+        let key = WardrobePickSession(dayOfWeek: dayOfWeek, slotKey: slotKey).normalizedSlotKey
+        var outfit = plan.days[idx].outfit ?? WeekPlanOutfitResponse()
+        let text = Self.displayText(for: item)
+        let match = MatchingWardrobeItem(
+            id: item.id,
+            category: item.category,
+            color: item.color,
+            description: item.description,
+            image_data: item.image_data
+        )
+
+        switch key {
+        case "shirt":
+            outfit.shirt = text
+            outfit.shirt_id = item.id
+        case "trouser":
+            outfit.trouser = text
+            outfit.trouser_id = item.id
+        case "shoes":
+            outfit.shoes = text
+            outfit.shoes_id = item.id
+        case "belt":
+            outfit.belt = text
+            outfit.belt_id = item.id
+        case "blazer":
+            outfit.blazer = text
+            outfit.blazer_id = item.id
+        case "sweater":
+            outfit.sweater = text
+            outfit.sweater_id = item.id
+        case "outerwear":
+            outfit.outerwear = text
+            outfit.outerwear_id = item.id
+        case "tie":
+            outfit.tie = text
+            outfit.tie_id = item.id
+        default:
+            return false
+        }
+
+        outfit.matching_wardrobe_items = Self.replacingMatching(
+            outfit.matching_wardrobe_items,
+            slotKey: key,
+            item: match
+        )
+        outfit.wardrobe_item_ids = Self.syncedWardrobeItemIds(from: outfit)
+        if outfit.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            outfit.summary = text
+        }
+
+        plan.days[idx].enabled = true
+        plan.days[idx].outfit = outfit
+        dismissedMissingDays.remove(dayOfWeek)
+        selectedDayOfWeek = dayOfWeek
+        lastMissingAction = .chooseFromWardrobe(dayOfWeek: dayOfWeek)
+        return true
+    }
+
+    private static func displayText(for item: WardrobeItem) -> String {
+        if let description = item.description?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !description.isEmpty {
+            return description
+        }
+        if let name = item.name?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty {
+            return name
+        }
+        let color = item.color?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let category = WardrobeCategoryDisplay.wardrobeCategoryLabel(item.category)
+        if !color.isEmpty {
+            return "\(color) \(category)"
+        }
+        return category
+    }
+
+    private static func replacingMatching(
+        _ existing: MatchingWardrobeItems?,
+        slotKey: String,
+        item: MatchingWardrobeItem
+    ) -> MatchingWardrobeItems {
+        MatchingWardrobeItems(
+            shirt: slotKey == "shirt" ? [item] : existing?.shirt,
+            trouser: slotKey == "trouser" ? [item] : existing?.trouser,
+            blazer: slotKey == "blazer" ? [item] : existing?.blazer,
+            shoes: slotKey == "shoes" ? [item] : existing?.shoes,
+            belt: slotKey == "belt" ? [item] : existing?.belt,
+            sweater: slotKey == "sweater" ? [item] : existing?.sweater,
+            outerwear: slotKey == "outerwear" ? [item] : existing?.outerwear,
+            tie: slotKey == "tie" ? [item] : existing?.tie
+        )
+    }
+
+    private static func syncedWardrobeItemIds(from outfit: WeekPlanOutfitResponse) -> [Int] {
+        [
+            outfit.shirt_id,
+            outfit.trouser_id,
+            outfit.blazer_id,
+            outfit.shoes_id,
+            outfit.belt_id,
+            outfit.sweater_id,
+            outfit.outerwear_id,
+            outfit.tie_id,
+        ].compactMap { $0 }
+    }
+
     /// Find alternative → existing regenerate-day API.
     func findAlternative(dayOfWeek: Int) async {
         lastMissingAction = .findAlternative(dayOfWeek: dayOfWeek)

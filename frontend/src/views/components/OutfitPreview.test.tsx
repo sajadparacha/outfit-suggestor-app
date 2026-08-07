@@ -72,8 +72,10 @@ describe('OutfitPreview', () => {
   });
 
   describe('empty state (no suggestion)', () => {
-    it('shows headline and subline when no suggestion', () => {
+    it('shows product promise and empty preview when no suggestion', () => {
       render(<OutfitPreview suggestion={null} loading={false} error={null} {...defaultActionProps} />);
+      expect(screen.getByText(MAIN_FLOW_UX_COPY.productPromiseHeadline)).toBeInTheDocument();
+      expect(screen.getByText(MAIN_FLOW_UX_COPY.productPromiseSubline)).toBeInTheDocument();
       expect(screen.getByText(MAIN_FLOW_UX_COPY.emptyPreviewHeadline)).toBeInTheDocument();
       expect(screen.getByText(MAIN_FLOW_UX_COPY.emptyPreviewSubline)).toBeInTheDocument();
     });

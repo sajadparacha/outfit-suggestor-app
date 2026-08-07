@@ -37,11 +37,12 @@ describe('NavBar', () => {
     expect(screen.queryByRole('button', { name: 'Login' })).not.toBeInTheDocument();
   });
 
-  it('still shows nav links when hideGuestAuthActions is true', () => {
+  it('still shows main nav links when hideGuestAuthActions is true', () => {
     renderNavBar({ hideGuestAuthActions: true });
 
     expect(screen.getByRole('link', { name: /^Suggest$/ })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Guide' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Wardrobe' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Guide' })).not.toBeInTheDocument();
   });
 
   it('calls onSignUp and onLogin when auth buttons are clicked', () => {

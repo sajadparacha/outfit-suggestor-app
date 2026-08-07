@@ -11,6 +11,7 @@ import ShoppingListPanel from './ShoppingListPanel';
 import WardrobeCoverageDashboard from './WardrobeCoverageDashboard';
 import WardrobeInsightsPage from './WardrobeInsightsPage';
 import { DEFAULT_FILTERS } from '../../../utils/outfitPreferences';
+import { INSIGHTS_COPY } from '../../../utils/insightsCopy';
 
 const sampleResponse: WardrobeGapAnalysisResponse = {
   occasion: 'business',
@@ -397,6 +398,8 @@ describe('WardrobeInsightsPage layout states', () => {
     );
 
     expect(screen.getByTestId('analysis-preferences-card')).toBeInTheDocument();
+    expect(screen.getByTestId('insights-empty-state')).toHaveTextContent(INSIGHTS_COPY.EMPTY_STATE);
+    expect(screen.getByRole('button', { name: /Open wardrobe/i })).toBeInTheDocument();
     expect(screen.queryByTestId('analysis-context-bar')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Shopping list/i })).not.toBeInTheDocument();
   });

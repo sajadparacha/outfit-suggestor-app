@@ -137,6 +137,20 @@ export function formatOccasionLabel(occasion: string | null | undefined): string
   return occasion.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+export function formatStyleLabel(style: string | null | undefined): string {
+  const raw = style?.trim() || DEFAULT_DAY_STYLE;
+  return formatOccasionLabel(raw);
+}
+
+/** Secondary line for week overview day cards when the day is planned. */
+export function formatDayOccasionStyleLine(
+  occasion: string | null | undefined,
+  style: string | null | undefined
+): string {
+  const occasionLabel = formatOccasionLabel(occasion) || 'Everyday';
+  return `${occasionLabel} · ${formatStyleLabel(style)}`;
+}
+
 /** Monday–Sunday date range label for the current week in a timezone. */
 export function formatWeekDateRange(
   referenceDate: Date = new Date(),

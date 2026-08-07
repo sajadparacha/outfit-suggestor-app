@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { OutfitSuggestion } from '../../../models/OutfitModels';
 import { WeekPlanOutfit } from '../../../models/WeekPlanModels';
 import { MAIN_FLOW_UX_COPY } from '../../../utils/mainFlowUxCopy';
@@ -57,6 +57,18 @@ const OutfitItem: React.FC<OutfitItemProps> = ({
   const imageAlt = displayName
     ? `${label}: ${displayName}`
     : `${label} item`;
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!viewingImage) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setViewingImage(null);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [viewingImage]);
 
   return (
     <article
@@ -65,15 +77,28 @@ const OutfitItem: React.FC<OutfitItemProps> = ({
     >
       <div className="aspect-square bg-slate-900/80">
         {thumb.imageSrc ? (
-          <img
-            src={thumb.imageSrc}
-            alt={imageAlt}
-            className="h-full w-full object-cover"
-          />
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setViewingImage(thumb.imageSrc);
+            }}
+            className="block h-full min-h-[44px] w-full min-w-[44px] cursor-pointer overflow-hidden transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue"
+            aria-label={`View ${label} full size`}
+            data-testid={`week-outfit-enlarge-${categoryKey}`}
+            title="Click to view full size"
+          >
+            <img
+              src={thumb.imageSrc}
+              alt={imageAlt}
+              className="h-full w-full object-cover"
+            />
+          </button>
         ) : (
           <div
             className="flex h-full flex-col items-center justify-center gap-1 bg-gradient-to-b from-white/[0.04] to-transparent px-2 text-center"
             aria-hidden
+            data-testid={`week-outfit-placeholder-${categoryKey}`}
           >
             <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
               {label}
@@ -112,6 +137,35 @@ const OutfitItem: React.FC<OutfitItemProps> = ({
           </button>
         )}
       </div>
+
+      {viewingImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 p-4"
+          onClick={() => setViewingImage(null)}
+          data-testid={`week-outfit-viewer-${categoryKey}`}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${label} full size`}
+        >
+          <div className="relative flex h-full w-full max-h-[90vh] max-w-7xl items-center justify-center">
+            <img
+              src={viewingImage}
+              alt="Full size view"
+              className="max-h-full max-w-full rounded-lg object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button
+              type="button"
+              onClick={() => setViewingImage(null)}
+              className="absolute right-4 top-4 rounded-full bg-black bg-opacity-50 p-3 text-2xl text-white transition-all hover:bg-opacity-70"
+              title="Close"
+              aria-label="Close"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
     </article>
   );
 };

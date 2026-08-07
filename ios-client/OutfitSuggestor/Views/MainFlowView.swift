@@ -401,6 +401,10 @@ struct MainFlowView: View {
 
     private var creationInputColumn: some View {
         VStack(spacing: 22) {
+            if !showsCompactResultLayout {
+                productPromiseHeader
+            }
+
             if let source = viewModel.sourceWardrobeItem, viewModel.inputPanelImage != nil {
                 wardrobeSourceBanner(source)
             }
@@ -848,6 +852,22 @@ struct MainFlowView: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .accessibilityIdentifier("main.wardrobeSourceBanner")
+    }
+
+    private var productPromiseHeader: some View {
+        VStack(spacing: 6) {
+            Text(MainFlowUxCopy.productPromiseHeadline)
+                .font(.title3.weight(.bold))
+                .foregroundColor(AppTheme.textPrimary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+            Text(MainFlowUxCopy.productPromiseSubline)
+                .font(.subheadline)
+                .foregroundColor(AppTheme.textSecondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+        }
+        .accessibilityIdentifier("main.productPromise")
     }
 
     private var creationHelperText: String? {

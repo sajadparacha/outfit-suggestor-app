@@ -8,6 +8,15 @@ final class WardrobeCardUxTests: XCTestCase {
         XCTAssertEqual(WardrobeCardUx.styleThisItemAccessibilityLabel, "Style this item with AI")
     }
 
+    func testWardrobeEmptyCopy() {
+        XCTAssertEqual(WardrobeEmptyCopy.title, "Your wardrobe is empty")
+        XCTAssertEqual(
+            WardrobeEmptyCopy.body,
+            "Add pieces so Suggest, Insights, and Week Planner can style from what you own."
+        )
+        XCTAssertEqual(WardrobeEmptyCopy.addFirstItemButton, "Add your first item")
+    }
+
     func testPastSuggestionsCopy() {
         XCTAssertEqual(WardrobeCardUx.pastSuggestionsTitle, "Past Suggestions")
         XCTAssertEqual(WardrobeCardUx.pastSuggestionsAccessibilityLabel, "Past Suggestions")

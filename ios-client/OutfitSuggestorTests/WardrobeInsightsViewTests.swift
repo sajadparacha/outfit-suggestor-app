@@ -220,7 +220,7 @@ final class WardrobeInsightsViewTests: XCTestCase {
     func testEmptyStateWhenNoResult() {
         XCTAssertFalse(WardrobeInsightsPresentation.shouldShowResults(hasResult: false))
         XCTAssertFalse(WardrobeInsightsPresentation.shouldShowShoppingListAction(hasResult: false))
-        XCTAssertEqual(InsightsCopy.emptyStateMessage, "Run a check to see what's missing in each part of your wardrobe.")
+        XCTAssertEqual(InsightsCopy.emptyStateMessage, "Build your wardrobe, then run a check to see gaps and what to buy next.")
         XCTAssertTrue(
             WardrobeInsightsPresentation.shouldShowAnalyzeButton(hasResult: false, isPreferencesExpanded: false, isLoading: false)
         )

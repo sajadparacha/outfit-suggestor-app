@@ -462,6 +462,39 @@ enum WeekPlanMissingAction: Equatable {
     case continueWithout(dayOfWeek: Int)
 }
 
+/// Active Week Planner → Wardrobe pick session (Change / Add empty slot).
+struct WardrobePickSession: Equatable {
+    let dayOfWeek: Int
+    /// Outfit field key: shirt, trouser, shoes, belt, blazer, etc. (`accessory` maps to belt).
+    let slotKey: String
+
+    var normalizedSlotKey: String {
+        let key = slotKey.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return key == "accessory" ? "belt" : key
+    }
+
+    var categoryFilter: String { normalizedSlotKey }
+
+    var slotLabel: String {
+        switch normalizedSlotKey {
+        case "shirt": return "Top"
+        case "trouser": return "Bottom"
+        case "shoes": return "Shoes"
+        case "belt": return "Accessory"
+        case "blazer": return "Blazer"
+        case "sweater": return "Sweater"
+        case "outerwear": return "Outerwear"
+        case "tie": return "Tie"
+        default:
+            return slotKey.prefix(1).uppercased() + slotKey.dropFirst().lowercased()
+        }
+    }
+
+    var bannerText: String {
+        WeekPlanCopy.wardrobePickBanner(slotLabel: slotLabel, dayOfWeek: dayOfWeek)
+    }
+}
+
 enum WeekPlanCopy {
     static let loading = "Loading your week…"
     static let generating = "Generating outfits…"
@@ -486,6 +519,8 @@ enum WeekPlanCopy {
     static let navTitle = "Week Planner"
     static let pageTitle = "Week Outfit Planner"
     static let pageSubtitle = "Select days, generate outfits, review each day, then save."
+    static let noOutfitsTip =
+        "Generate outfits for your week. Add wardrobe items first for closer matches."
     static let useWardrobe = "Use wardrobe"
     static let outfitDetails = "Outfit details"
     static let whyThisOutfitWorks = "Why this outfit works"
@@ -527,6 +562,11 @@ enum WeekPlanCopy {
     static let continueWithout = "Continue without"
     static let missingItemsTitle = "Missing items"
     static let missingItemsHint = "Some outfit slots are empty for this day."
+    static let wardrobePickCancel = "Cancel"
+    static let wardrobePickSelect = "Select"
+    static func wardrobePickBanner(slotLabel: String, dayOfWeek: Int) -> String {
+        "Choose \(slotLabel) for \(WeekPlanConstants.dayName(for: dayOfWeek))"
+    }
     static let weekOverview = "Week overview"
     static let dayDetail = "Selected day"
     static let savedConfigurations = "Planning templates"

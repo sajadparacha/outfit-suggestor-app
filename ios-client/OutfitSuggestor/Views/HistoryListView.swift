@@ -74,11 +74,19 @@ struct HistoryListView: View {
                     .padding()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if entries.isEmpty {
-                    Text("No outfit history yet. Get some suggestions on the main tab.")
-                        .foregroundColor(AppTheme.textSecondary)
-                        .multilineTextAlignment(.center)
-                        .padding()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    VStack(spacing: 12) {
+                        Text(HistoryCopy.emptyTitle)
+                            .font(.title3.weight(.semibold))
+                            .foregroundColor(AppTheme.textPrimary)
+                            .multilineTextAlignment(.center)
+                        Text(HistoryCopy.emptyBody)
+                            .font(.subheadline)
+                            .foregroundColor(AppTheme.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .accessibilityIdentifier("history.emptyState")
                 } else {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 14) {

@@ -34,6 +34,13 @@ enum WardrobeCardMenuAction: String, CaseIterable {
     }
 }
 
+enum WardrobeEmptyCopy {
+    static let title = "Your wardrobe is empty"
+    static let body =
+        "Add pieces so Suggest, Insights, and Week Planner can style from what you own."
+    static let addFirstItemButton = "Add your first item"
+}
+
 enum WardrobeCardUx {
     static let styleThisItemTitle = "Style this item"
     static let styleThisItemAccessibilityLabel = "Style this item with AI"

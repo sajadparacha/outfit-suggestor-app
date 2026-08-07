@@ -10,7 +10,8 @@ export const INSIGHTS_COPY = {
   STYLES_TO_TRY: 'Styles to try',
   CATEGORIES_CHECKED: 'Categories checked',
   BEST_CATEGORY_TO_SHOP_NEXT: 'Best category to shop next',
-  EMPTY_STATE: "Run a check to see what's missing in each part of your wardrobe.",
+  EMPTY_STATE:
+    'Build your wardrobe, then run a check to see gaps and what to buy next.',
 
   MODE_PICKER_TITLE: 'How would you like to check your wardrobe?',
   MODE_PICKER_SUBTITLE: 'Pick the level of detail you want from your stylist.',

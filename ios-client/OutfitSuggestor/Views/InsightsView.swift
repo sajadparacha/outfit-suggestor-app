@@ -79,12 +79,24 @@ struct InsightsView: View {
                             isAdmin: isAdmin
                         )
                     } else if !isLoading {
-                        Text(InsightsCopy.emptyStateMessage)
-                            .font(.subheadline)
-                            .foregroundColor(AppTheme.textSecondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                            .accessibilityIdentifier("insights.emptyState")
+                        VStack(spacing: 14) {
+                            Text(InsightsCopy.emptyStateMessage)
+                                .font(.subheadline)
+                                .foregroundColor(AppTheme.textSecondary)
+                                .multilineTextAlignment(.center)
+                            Button {
+                                RouteCoordinator.shared.selectedTab = .wardrobe
+                            } label: {
+                                Text(InsightsCopy.openWardrobeButton)
+                                    .font(.subheadline.weight(.semibold))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                            }
+                            .buttonStyle(.bordered)
+                            .accessibilityIdentifier("insights.openWardrobeButton")
+                        }
+                        .padding(.horizontal)
+                        .accessibilityIdentifier("insights.emptyState")
                     }
 
                     Spacer(minLength: isLoading ? 220 : 50)

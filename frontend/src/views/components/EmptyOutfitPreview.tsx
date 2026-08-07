@@ -8,6 +8,12 @@ const EmptyOutfitPreview: React.FC = () => (
   >
     <div className="relative flex min-h-[280px] flex-1 flex-col items-center justify-center bg-hero-flatlay p-6 sm:min-h-[320px] sm:p-8 md:min-h-0 lg:p-12">
       <div className="absolute inset-0 bg-brand-gradient-soft opacity-30" aria-hidden />
+      <p className="relative mb-2 text-center text-xs font-semibold uppercase tracking-widest text-brand-blue/90">
+        {MAIN_FLOW_UX_COPY.productPromiseHeadline}
+      </p>
+      <p className="relative mb-6 max-w-md text-center text-sm text-slate-400">
+        {MAIN_FLOW_UX_COPY.productPromiseSubline}
+      </p>
       <div className="relative flex flex-wrap items-center justify-center gap-4 sm:gap-6">
         <span className="text-5xl drop-shadow-lg sm:text-6xl" role="img" aria-label="Shirt">
           👔

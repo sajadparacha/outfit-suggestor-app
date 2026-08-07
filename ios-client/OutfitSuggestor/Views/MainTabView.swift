@@ -74,6 +74,7 @@ struct GuestTabPlaceholderView: View {
 
 struct MainTabView: View {
     @StateObject private var viewModel = OutfitViewModel()
+    @StateObject private var weekPlannerViewModel = WeekPlannerViewModel()
     @ObservedObject private var auth = AuthService.shared
     @ObservedObject private var routeCoordinator = RouteCoordinator.shared
     @ObservedObject private var requestActivity = AppRequestActivity.shared
@@ -98,6 +99,23 @@ struct MainTabView: View {
                     WardrobeListView(
                         initialCategoryFilter: routeCoordinator.wardrobeCategoryFilter,
                         onConsumeCategoryFilter: { routeCoordinator.wardrobeCategoryFilter = nil },
+                        wardrobePickSession: routeCoordinator.wardrobePickSession,
+                        onCancelWardrobePick: {
+                            routeCoordinator.clearWardrobePickSession()
+                        },
+                        onPickWardrobeItemForWeekPlan: { item in
+                            guard let session = routeCoordinator.wardrobePickSession else { return }
+                            let day = session.dayOfWeek
+                            let applied = weekPlannerViewModel.applyWardrobeItem(
+                                item,
+                                dayOfWeek: day,
+                                slotKey: session.slotKey
+                            )
+                            guard applied else { return }
+                            routeCoordinator.clearWardrobePickSession()
+                            weekPlannerViewModel.selectDay(day)
+                            routeCoordinator.selectedTab = .week
+                        },
                         onGetSuggestionFromItem: { item in
                             if viewModel.preloadWardrobeItemForSuggestion(item: item) {
                                 routeCoordinator.selectedTab = .suggest
@@ -129,7 +147,7 @@ struct MainTabView: View {
 
             NavigationStack {
                 if auth.isAuthenticated {
-                    WeekPlannerView()
+                    WeekPlannerView(viewModel: weekPlannerViewModel)
                 } else {
                     GuestTabPlaceholderView(
                         title: WeekPlanCopy.navTitle,
@@ -175,7 +193,10 @@ struct MainTabView: View {
             NavigationStack(path: $routeCoordinator.profilePath) {
                 SettingsView()
                     .navigationDestination(for: AppRoute.ProfileDestination.self) { destination in
-                        routeCoordinator.profileDestinationView(for: destination)
+                        routeCoordinator.profileDestinationView(
+                            for: destination,
+                            weekPlannerViewModel: weekPlannerViewModel
+                        )
                     }
             }
             .tabItem { Label("Profile", systemImage: "person.crop.circle") }
@@ -183,6 +204,7 @@ struct MainTabView: View {
             .accessibilityIdentifier("tab.profile")
         }
         .environmentObject(viewModel)
+        .environmentObject(weekPlannerViewModel)
         .tint(AppTheme.accent)
         .preferredColorScheme(.dark)
         .overlay {
@@ -198,6 +220,7 @@ struct MainTabView: View {
                 routeCoordinator.selectedTab = .suggest
             } else {
                 viewModel.resetSessionState()
+                routeCoordinator.clearWardrobePickSession()
                 Task { await viewModel.refreshGuestUsage() }
                 if routeCoordinator.selectedTab == .wardrobe
                     || routeCoordinator.selectedTab == .history
@@ -205,6 +228,11 @@ struct MainTabView: View {
                     || routeCoordinator.selectedTab == .insights {
                     routeCoordinator.selectedTab = .suggest
                 }
+            }
+        }
+        .onChange(of: routeCoordinator.selectedTab) { newTab in
+            if newTab != .wardrobe, routeCoordinator.wardrobePickSession != nil {
+                routeCoordinator.clearWardrobePickSession()
             }
         }
     }

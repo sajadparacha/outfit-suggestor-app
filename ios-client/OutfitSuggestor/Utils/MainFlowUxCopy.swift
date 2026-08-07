@@ -8,6 +8,9 @@
 import Foundation
 
 enum MainFlowUxCopy {
+    static let productPromiseHeadline = "Your personal AI men's stylist"
+    static let productPromiseSubline =
+        "Upload a piece, get a complete look — then build your wardrobe and plan your week."
     static let primaryCta = "Generate Outfit"
     static let primaryCtaAccessibility = "Get AI outfit suggestion"
     static let emptyPreviewHeadline = "Your outfit appears here"
@@ -41,4 +44,9 @@ enum MainFlowUxCopy {
     static let outerwearLabel = "Outerwear"
     static let tieLabel = "Tie"
     static let randomHistoryOnlyOneLook = "Only one saved look in your history so far."
+}
+
+enum HistoryCopy {
+    static let emptyTitle = "No saved looks yet"
+    static let emptyBody = "Generate an outfit on Suggest, then tap Save Look."
 }

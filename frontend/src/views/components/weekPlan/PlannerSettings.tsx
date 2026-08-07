@@ -28,7 +28,7 @@ const PlannerSettings: React.FC<PlannerSettingsProps> = ({
       aria-label="Week settings"
       data-testid="week-planner-settings"
     >
-      <div className="flex flex-wrap items-end gap-3">
+      <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-[8rem] flex-1">
           <label
             htmlFor="week-shared-season"

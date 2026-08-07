@@ -40,7 +40,7 @@ import ApiService from './services/ApiService';
 import WardrobeInsightsPage from './views/components/insights/WardrobeInsightsPage';
 import { WardrobeGapAnalysisResponse } from './models/WardrobeModels';
 import { resolveFilters } from './utils/outfitPreferences';
-import { LOGIN_REDIRECT_STATE, ROUTES, wardrobePath } from './navigation/routes';
+import { LOGIN_REDIRECT_STATE, ROUTES, wardrobePath, parseWardrobePickSession, weekPath } from './navigation/routes';
 import AuthGateCard from './views/components/AuthGateCard';
 import FirstOutfitPromptBanner from './views/components/FirstOutfitPromptBanner';
 import {
@@ -59,6 +59,7 @@ function App() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const wardrobeCategoryFilter = searchParams.get('category');
+  const wardrobePickSession = parseWardrobePickSession(searchParams);
 
   // Test runner should be hidden in production unless explicitly enabled.
   const testRunnerEnabled = React.useMemo(() => {
@@ -738,6 +739,19 @@ function App() {
               <Wardrobe 
                 initialCategory={wardrobeCategoryFilter}
                 isAuthenticated={isAuthenticated}
+                pickSession={wardrobePickSession}
+                onPickForWeekPlan={(item) => {
+                  if (!wardrobePickSession) return;
+                  weekPlan.applyWardrobeItemToDaySlot(
+                    wardrobePickSession.dayOfWeek,
+                    wardrobePickSession.slotKey,
+                    item
+                  );
+                  navigate(weekPath(wardrobePickSession.dayOfWeek));
+                }}
+                onCancelWeekPlanPick={() => {
+                  navigate(weekPath(wardrobePickSession?.dayOfWeek ?? null));
+                }}
                 onAnalyzeWardrobe={handleAnalyzeWardrobe}
                 analyzingWardrobe={wardrobeGapLoading}
                 onSuggestionReady={(suggestion) => {
@@ -975,6 +989,18 @@ function App() {
                     className="px-4 py-2 bg-slate-600 text-white rounded-full hover:bg-slate-500 transition-colors"
                   >
                     👔 Manage Wardrobe
+                  </button>
+                </div>
+                <div className="border-t border-white/10 pt-4">
+                  <h3 className="text-lg font-semibold text-slate-200 mb-4">Help &amp; Guide</h3>
+                  <p className="text-sm text-slate-300 mb-4">
+                    Step-by-step walkthroughs for Suggest, Wardrobe, Insights, and Week Planner.
+                  </p>
+                  <button
+                    onClick={() => navigate(ROUTES.GUIDE)}
+                    className="px-4 py-2 bg-slate-600 text-white rounded-full hover:bg-slate-500 transition-colors"
+                  >
+                    📖 Open User Guide
                   </button>
                 </div>
               </div>

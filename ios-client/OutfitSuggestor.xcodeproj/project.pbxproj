@@ -12,6 +12,7 @@
 		WP01BF0000000000000003 /* WeekPlannerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = WP01FR0000000000000003 /* WeekPlannerViewModel.swift */; };
 		WP01BF0000000000000004 /* WeekPlannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WP01FR0000000000000004 /* WeekPlannerView.swift */; };
 		WP01BF0000000000000005 /* WeekPlannerViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WP01FR0000000000000005 /* WeekPlannerViewModelTests.swift */; };
+		WPDCBF000000000000000001 /* WeekPlanDayCardDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WPDCFR000000000000000001 /* WeekPlanDayCardDisplayTests.swift */; };
 		WP01BF0000000000000006 /* WeekPlanNotificationSchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WP01FR0000000000000006 /* WeekPlanNotificationSchedulerTests.swift */; };
 		07A2F4C13B6A4D91A32E7801 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 07A2F4C13B6A4D91A32E7800 /* Assets.xcassets */; };
 		0D0FFD43456FF9B083A5AE92 /* APIServiceIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4ED51E6300690222125BE0F /* APIServiceIntegrationTests.swift */; };
@@ -71,6 +72,7 @@
 		A1V2I3S4B5I6L7I8T9Y0A03 /* AdminVisibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1V2I3S4B5I6L7I8T9Y0A04 /* AdminVisibilityTests.swift */; };
 		M4A5B6C7D8E9012345678A04 /* MicroHelpCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = M3A4B5C6D7E8F90A394A5B71 /* MicroHelpCopyTests.swift */; };
 		W2A3B4C5D6E7F809293A4B61 /* WardrobeCardUxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = W2A3B4C5D6E7F809293A4B60 /* WardrobeCardUxTests.swift */; };
+		TE01BF000000000000000001 /* ThumbnailEnlargeViewerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = TE01FR000000000000000001 /* ThumbnailEnlargeViewerTests.swift */; };
 		WCF01BF0000000000000001 /* WardrobeCategoryDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCF01FR0000000000000001 /* WardrobeCategoryDisplay.swift */; };
 		WCF01BF0000000000000002 /* WardrobeCategoryFilterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCF01FR0000000000000002 /* WardrobeCategoryFilterTests.swift */; };
 		F1R2U3N4C5O6A7C8H900001 /* FirstRunCoachLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1R2U3N4C5O6A7C8H900002 /* FirstRunCoachLogic.swift */; };
@@ -151,6 +153,7 @@
 		WP01FR0000000000000003 /* WeekPlannerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekPlannerViewModel.swift; sourceTree = "<group>"; };
 		WP01FR0000000000000004 /* WeekPlannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekPlannerView.swift; sourceTree = "<group>"; };
 		WP01FR0000000000000005 /* WeekPlannerViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekPlannerViewModelTests.swift; sourceTree = "<group>"; };
+		WPDCFR000000000000000001 /* WeekPlanDayCardDisplayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekPlanDayCardDisplayTests.swift; sourceTree = "<group>"; };
 		WP01FR0000000000000006 /* WeekPlanNotificationSchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekPlanNotificationSchedulerTests.swift; sourceTree = "<group>"; };
 		09D6378272AE2D99A215788C /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		106F6C638D7D7BC45FC53DE7 /* MainFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlowView.swift; sourceTree = "<group>"; };
@@ -214,6 +217,7 @@
 		A1V2I3S4B5I6L7I8T9Y0A04 /* AdminVisibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminVisibilityTests.swift; sourceTree = "<group>"; };
 		M3A4B5C6D7E8F90A394A5B71 /* MicroHelpCopyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MicroHelpCopyTests.swift; sourceTree = "<group>"; };
 		W2A3B4C5D6E7F809293A4B60 /* WardrobeCardUxTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCardUxTests.swift; sourceTree = "<group>"; };
+		TE01FR000000000000000001 /* ThumbnailEnlargeViewerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailEnlargeViewerTests.swift; sourceTree = "<group>"; };
 		WCF01FR0000000000000001 /* WardrobeCategoryDisplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCategoryDisplay.swift; sourceTree = "<group>"; };
 		WCF01FR0000000000000002 /* WardrobeCategoryFilterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCategoryFilterTests.swift; sourceTree = "<group>"; };
 		F1R2U3N4C5O6A7C8H900002 /* FirstRunCoachLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunCoachLogic.swift; sourceTree = "<group>"; };
@@ -276,6 +280,7 @@
 			isa = PBXGroup;
 			children = (
 				WP01FR0000000000000005 /* WeekPlannerViewModelTests.swift */,
+				WPDCFR000000000000000001 /* WeekPlanDayCardDisplayTests.swift */,
 				WP01FR0000000000000006 /* WeekPlanNotificationSchedulerTests.swift */,
 				A4ED51E6300690222125BE0F /* APIServiceIntegrationTests.swift */,
 				A1V2I3S4B5I6L7I8T9Y0A04 /* AdminVisibilityTests.swift */,
@@ -287,6 +292,7 @@
 				C3D4E5F60718293A4B5C6D7D /* AiProgressStepsTests.swift */,
 				D86343F4A060EB70A1831EAA /* OutfitViewModelIntegrationTests.swift */,
 				W2A3B4C5D6E7F809293A4B60 /* WardrobeCardUxTests.swift */,
+				TE01FR000000000000000001 /* ThumbnailEnlargeViewerTests.swift */,
 				WCF01FR0000000000000002 /* WardrobeCategoryFilterTests.swift */,
 				F1R2U3N4C5O6A7C8H90000A /* FirstRunCoachTests.swift */,
 				G1U2E3S4T5L6I7M8I900004 /* GuestLimitAuthUxTests.swift */,
@@ -722,6 +728,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				WP01BF0000000000000005 /* WeekPlannerViewModelTests.swift in Sources */,
+				WPDCBF000000000000000001 /* WeekPlanDayCardDisplayTests.swift in Sources */,
 				WP01BF0000000000000006 /* WeekPlanNotificationSchedulerTests.swift in Sources */,
 				0D0FFD43456FF9B083A5AE92 /* APIServiceIntegrationTests.swift in Sources */,
 				A1V2I3S4B5I6L7I8T9Y0A03 /* AdminVisibilityTests.swift in Sources */,
@@ -733,6 +740,7 @@
 				M4A5B6C7D8E9012345678A04 /* MicroHelpCopyTests.swift in Sources */,
 				BDC51E614A7C765FB3FA7572 /* OutfitViewModelIntegrationTests.swift in Sources */,
 				W2A3B4C5D6E7F809293A4B61 /* WardrobeCardUxTests.swift in Sources */,
+				TE01BF000000000000000001 /* ThumbnailEnlargeViewerTests.swift in Sources */,
 				WCF01BF0000000000000002 /* WardrobeCategoryFilterTests.swift in Sources */,
 				F1R2U3N4C5O6A7C8H900009 /* FirstRunCoachTests.swift in Sources */,
 				G1U2E3S4T5L6I7M8I900003 /* GuestLimitAuthUxTests.swift in Sources */,

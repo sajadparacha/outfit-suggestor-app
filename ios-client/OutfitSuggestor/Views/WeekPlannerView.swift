@@ -9,7 +9,7 @@ import SwiftUI
 import UIKit
 
 struct WeekPlannerView: View {
-    @StateObject private var viewModel = WeekPlannerViewModel()
+    @ObservedObject var viewModel: WeekPlannerViewModel
     @ObservedObject private var auth = AuthService.shared
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showClearConfirm = false
@@ -30,6 +30,7 @@ struct WeekPlannerView: View {
     @State private var showAllHistory = false
     @State private var templatesExpanded = false
     @State private var historyExpanded = false
+    @State private var fullScreenImage: UIImage?
 
     private var isRegularWidth: Bool { horizontalSizeClass == .regular }
 
@@ -179,6 +180,13 @@ struct WeekPlannerView: View {
         .onChange(of: viewModel.selectedDayOfWeek) { _ in
             whyExpanded = false
         }
+        .fullScreenCover(isPresented: Binding(get: { fullScreenImage != nil }, set: { if !$0 { fullScreenImage = nil } })) {
+            if let image = fullScreenImage {
+                FullScreenImageView(image: image) {
+                    fullScreenImage = nil
+                }
+            }
+        }
     }
 
     private var plannerContent: some View {
@@ -271,6 +279,14 @@ struct WeekPlannerView: View {
                 .font(.subheadline)
                 .foregroundColor(AppTheme.textSecondary)
 
+            if !viewModel.hasGeneratedOutfits {
+                Text(WeekPlanCopy.noOutfitsTip)
+                    .font(.caption)
+                    .foregroundColor(AppTheme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("week.noOutfitsTip")
+            }
+
             Text(viewModel.documentState.label)
                 .font(.caption.weight(.semibold))
                 .foregroundColor(viewModel.isDirty ? AppTheme.accent : AppTheme.textSecondary)
@@ -321,16 +337,10 @@ struct WeekPlannerView: View {
     // MARK: - Shared controls (compact — no Generate CTA)
 
     private var sharedControlsSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .center, spacing: 10) {
-                seasonPill
-                reminderPill
-                Spacer(minLength: 0)
-            }
-            Text("\(WeekPlanCopy.timezoneLabel): \(viewModel.plan.timezone.isEmpty ? TimeZone.current.identifier : viewModel.plan.timezone)")
-                .font(.caption2)
-                .foregroundColor(AppTheme.textSecondary)
-                .accessibilityIdentifier("week.timezone")
+        HStack(alignment: .top, spacing: 10) {
+            seasonControl
+            reminderControl
+            Spacer(minLength: 0)
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -343,8 +353,8 @@ struct WeekPlannerView: View {
         .accessibilityIdentifier("week.controls")
     }
 
-    private var seasonPill: some View {
-        HStack(spacing: 6) {
+    private var seasonControl: some View {
+        VStack(alignment: .leading, spacing: 6) {
             Text(WeekPlanCopy.sharedSeasonLabel)
                 .font(.caption.weight(.semibold))
                 .foregroundColor(AppTheme.textSecondary)
@@ -363,12 +373,12 @@ struct WeekPlannerView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(AppTheme.surface)
-        .clipShape(Capsule())
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .frame(minHeight: 44)
     }
 
-    private var reminderPill: some View {
-        HStack(spacing: 6) {
+    private var reminderControl: some View {
+        VStack(alignment: .leading, spacing: 6) {
             Text(WeekPlanCopy.reminderLabel)
                 .font(.caption.weight(.semibold))
                 .foregroundColor(AppTheme.textSecondary)
@@ -380,11 +390,15 @@ struct WeekPlannerView: View {
             .labelsHidden()
             .tint(AppTheme.gradientStart)
             .accessibilityIdentifier("week.reminderTime")
+            Text("\(WeekPlanCopy.timezoneLabel): \(viewModel.plan.timezone.isEmpty ? TimeZone.current.identifier : viewModel.plan.timezone)")
+                .font(.caption2)
+                .foregroundColor(AppTheme.textSecondary)
+                .accessibilityIdentifier("week.timezone")
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(AppTheme.surface)
-        .clipShape(Capsule())
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .frame(minHeight: 44)
     }
 
@@ -471,7 +485,11 @@ struct WeekPlannerView: View {
                     }
                 }
 
-                Text(day.enabled ? occasionDisplay(day.occasion) : "Off")
+                Text(WeekPlanDayCardDisplay.contextLine(
+                    enabled: day.enabled,
+                    occasion: day.occasion,
+                    style: day.style
+                ))
                     .font(.caption)
                     .foregroundColor(AppTheme.textSecondary)
                     .lineLimit(1)
@@ -506,7 +524,7 @@ struct WeekPlannerView: View {
         .buttonStyle(.plain)
         .frame(minHeight: 44)
         .accessibilityIdentifier("week.day.\(day.day_of_week).select")
-        .accessibilityLabel("\(WeekPlanConstants.dayName(for: day.day_of_week)), \(exceptional ?? (day.enabled ? WeekPlanCopy.planned : WeekPlanCopy.notPlanned))")
+        .accessibilityLabel(dayCardAccessibilityLabel(day: day, exceptional: exceptional))
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
@@ -721,7 +739,11 @@ struct WeekPlannerView: View {
                 VStack(spacing: 6) {
                     if slot.isPlaceholder {
                         Button {
-                            openWardrobe(category: wardrobeCategory, dayOfWeek: day.day_of_week)
+                            openWardrobe(
+                                category: wardrobeCategory,
+                                slotKey: wardrobeCategory,
+                                dayOfWeek: day.day_of_week
+                            )
                         } label: {
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
                                 .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [5]))
@@ -762,7 +784,8 @@ struct WeekPlannerView: View {
                                 label: slot.label,
                                 description: slot.description
                             ),
-                            size: isRegularWidth ? 72 : 64
+                            size: isRegularWidth ? 72 : 64,
+                            allowsEnlarge: true
                         )
                     }
                     Text(slot.isPlaceholder && slot.category == "accessory" ? "Accessory" : slot.label)
@@ -778,7 +801,11 @@ struct WeekPlannerView: View {
                     }
                     if !slot.isPlaceholder {
                         Button {
-                            openWardrobe(category: wardrobeCategory, dayOfWeek: day.day_of_week)
+                            openWardrobe(
+                                category: wardrobeCategory,
+                                slotKey: wardrobeCategory,
+                                dayOfWeek: day.day_of_week
+                            )
                         } label: {
                             Text(WeekPlanCopy.changeItem)
                                 .font(.caption.weight(.semibold))
@@ -809,10 +836,13 @@ struct WeekPlannerView: View {
         .accessibilityIdentifier("week.itemGallery")
     }
 
-    private func openWardrobe(category: String, dayOfWeek: Int) {
+    private func openWardrobe(category: String, slotKey: String, dayOfWeek: Int) {
         viewModel.chooseFromWardrobe(dayOfWeek: dayOfWeek)
-        RouteCoordinator.shared.wardrobeCategoryFilter = category
-        RouteCoordinator.shared.selectedTab = .wardrobe
+        RouteCoordinator.shared.startWardrobePick(
+            dayOfWeek: dayOfWeek,
+            slotKey: slotKey,
+            category: category
+        )
     }
 
     private func missingItemsCard(_ day: WeekPlanDayResponse) -> some View {
@@ -837,8 +867,13 @@ struct WeekPlannerView: View {
 
             VStack(spacing: 8) {
                 Button {
+                    let slotKey = viewModel.missingSlots(for: day).first?.category ?? "shirt"
                     viewModel.chooseFromWardrobe(dayOfWeek: day.day_of_week)
-                    RouteCoordinator.shared.selectedTab = .wardrobe
+                    RouteCoordinator.shared.startWardrobePick(
+                        dayOfWeek: day.day_of_week,
+                        slotKey: slotKey,
+                        category: slotKey
+                    )
                 } label: {
                     Text(WeekPlanCopy.chooseFromWardrobe)
                         .font(.subheadline.weight(.semibold))
@@ -1167,14 +1202,20 @@ struct WeekPlannerView: View {
             .clipShape(Capsule())
     }
 
-    private func slotThumb(outfit: WeekPlanOutfitResponse, slot: WeekPlanOutfitDisplay.SlotRow, size: CGFloat) -> some View {
+    @ViewBuilder
+    private func slotThumb(
+        outfit: WeekPlanOutfitResponse,
+        slot: WeekPlanOutfitDisplay.SlotRow,
+        size: CGFloat,
+        allowsEnlarge: Bool = false
+    ) -> some View {
         let suggestion = WeekPlanOutfitDisplay.asOutfitSuggestion(outfit)
         let thumb = OutfitItemThumbnail.thumbnailImage(
             suggestion: suggestion,
             category: slot.category,
             uploadImage: nil
         )
-        return ZStack {
+        let visual = ZStack {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(Color.white.opacity(0.06))
                 .frame(width: size, height: size)
@@ -1194,6 +1235,20 @@ struct WeekPlannerView: View {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .stroke(AppTheme.border, lineWidth: 1)
         )
+
+        if allowsEnlarge, ThumbnailEnlargeUx.canOpen(image: thumb), let thumb {
+            Button {
+                fullScreenImage = thumb
+            } label: {
+                visual
+            }
+            .buttonStyle(.plain)
+            .frame(minWidth: max(size, 44), minHeight: max(size, 44))
+            .accessibilityLabel(ThumbnailEnlargeUx.accessibilityLabel(forName: slot.label))
+            .accessibilityIdentifier(ThumbnailEnlargeUx.weekSlotAccessibilityId(category: slot.category))
+        } else {
+            visual
+        }
     }
 
     private func historySubtitle(_ item: WeekPlanHistoryItem) -> String {
@@ -1214,8 +1269,19 @@ struct WeekPlannerView: View {
         return Calendar.current.date(from: comps) ?? Date()
     }
 
+    private func dayCardAccessibilityLabel(day: WeekPlanDayResponse, exceptional: String?) -> String {
+        let dayName = WeekPlanConstants.dayName(for: day.day_of_week)
+        let status = exceptional ?? (day.enabled ? WeekPlanCopy.planned : WeekPlanCopy.notPlanned)
+        let context = WeekPlanDayCardDisplay.contextLine(
+            enabled: day.enabled,
+            occasion: day.occasion,
+            style: day.style
+        )
+        return "\(dayName), \(context), \(status)"
+    }
+
     private func occasionDisplay(_ apiValue: String) -> String {
-        Occasion.allCases.first { $0.apiValue == apiValue }?.rawValue ?? apiValue.capitalized
+        WeekPlanDayCardDisplay.occasionDisplay(apiValue)
     }
 
     /// Monday-based week dates relative to today.
@@ -1230,6 +1296,29 @@ struct WeekPlannerView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "d MMM"
         return formatter.string(from: date)
+    }
+}
+
+// MARK: - Week overview day card display
+
+enum WeekPlanDayCardDisplay {
+    static func contextLine(enabled: Bool, occasion: String, style: String) -> String {
+        guard enabled else { return "Off" }
+        let occasionLabel = {
+            let label = occasionDisplay(occasion)
+            return label.isEmpty ? "Everyday" : label
+        }()
+        return "\(occasionLabel) · \(styleDisplay(style))"
+    }
+
+    static func occasionDisplay(_ apiValue: String) -> String {
+        Occasion.allCases.first { $0.apiValue == apiValue }?.rawValue ?? apiValue.capitalized
+    }
+
+    static func styleDisplay(_ apiValue: String) -> String {
+        let trimmed = apiValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolved = trimmed.isEmpty ? Style.classic.apiValue : trimmed
+        return Style.allCases.first { $0.apiValue == resolved }?.rawValue ?? resolved.capitalized
     }
 }
 
@@ -1325,5 +1414,46 @@ private struct WeekPlanOutfitAdminDiagnosticsView: View {
             .overlay(RoundedRectangle(cornerRadius: 8).stroke(AppTheme.border, lineWidth: 1))
         }
         .accessibilityIdentifier(accessibilityIdentifier)
+    }
+}
+
+// MARK: - Thumbnail enlarge (Week Planner + Wardrobe)
+
+enum ThumbnailEnlargeUx {
+    static func canOpen(image: UIImage?) -> Bool {
+        image != nil
+    }
+
+    static func accessibilityLabel(forName name: String) -> String {
+        "View \(name) full size"
+    }
+
+    static func weekSlotAccessibilityId(category: String) -> String {
+        "week.slot.\(category).enlarge"
+    }
+
+    static func wardrobeThumbAccessibilityId(itemId: Int) -> String {
+        "wardrobe.thumb.\(itemId).enlarge"
+    }
+
+    /// Change / Select stay on separate controls — enlarge must not invoke them.
+    static func enlargeDoesNotTriggerChange(changeFired: Bool) -> Bool {
+        !changeFired
+    }
+}
+
+/// Testable open/dismiss gate matching Wardrobe / Week Planner `fullScreenCover` state.
+struct ThumbnailEnlargePresentation {
+    private(set) var image: UIImage?
+
+    var isOpen: Bool { image != nil }
+
+    mutating func open(_ image: UIImage?) {
+        guard ThumbnailEnlargeUx.canOpen(image: image), let image else { return }
+        self.image = image
+    }
+
+    mutating func dismiss() {
+        image = nil
     }
 }

@@ -21,8 +21,12 @@ struct UserGuideView: View {
                     Text("User Guide")
                         .font(.title)
                         .fontWeight(.bold)
-                    Text("Learn how to get the most out of AI Outfit Suggestor")
+                    Text("Your men's stylist in three steps: Suggest a look, build your wardrobe, then plan your week and close gaps with Insights.")
                         .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                    Text("Find this guide anytime under Profile → Guide — it is not a main tab.")
+                        .font(.caption)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                 }
@@ -37,7 +41,7 @@ struct UserGuideView: View {
                         "Tap the photo area or the camera icon to upload a clothing image.",
                         "Optionally set your occasion, season, and style preferences using the pickers. In summer, suggestions lean lighter and skip heavy coats or wool blazers unless you ask for them.",
                         "Add any free-text notes about your preferences.",
-                        "Tap \"Get Outfit Suggestion\" to receive AI-powered recommendations.",
+                        "Tap \"Generate Outfit\" to receive AI-powered recommendations.",
                         "View the five core pieces (shirt, trousers, blazer, shoes, belt). Blazer is your structured layer; jackets and coats are separate categories and may appear as optional outerwear in Also wear when the season fits.",
                         "Read the AI's reasoning in Why this works."
                     ],
@@ -155,6 +159,7 @@ struct UserGuideView: View {
                         "Pick a shared Season and Reminder time (device timezone).",
                         "Tap Generate outfits (primary). After outfits exist, Save plan appears when you have unsaved changes.",
                         "Review the selected day — four slots (top, bottom, shoes, accessory), Why this outfit works, and Regenerate this day.",
+                        "Change or Add on a day opens Wardrobe to pick an item for that slot, then returns to that day.",
                         "Planning templates store prefs only (no outfits). Plan history keeps past weekly outfits — both stay collapsed until you expand them.",
                         "Clear plan saves a copy under Plan history. Day cards show Needs outfit / Not planned only when exceptional — not Ready on every day.",
                         "On iOS, local notifications remind you at the reminder time."

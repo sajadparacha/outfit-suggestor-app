@@ -3,7 +3,7 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   DayOfWeek,
   WeekPlan,
@@ -15,7 +15,7 @@ import {
   formatOccasionLabel,
   planHasGeneratedOutfits,
 } from '../models/WeekPlanModels';
-import { ROUTES, wardrobePath } from '../navigation/routes';
+import { ROUTES, wardrobePickPath } from '../navigation/routes';
 import WeekPlannerHeader from './components/weekPlan/WeekPlannerHeader';
 import PlannerSettings from './components/weekPlan/PlannerSettings';
 import WeekDaySelector from './components/weekPlan/WeekDaySelector';
@@ -173,6 +173,8 @@ const WeekPlanner: React.FC<WeekPlannerProps> = ({
   showAiPromptResponse = false,
 }) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const dayFromQuery = searchParams.get('day');
   const [selectedDay, setSelectedDay] = useState(0);
   const [dismissedMissingDays, setDismissedMissingDays] = useState<Set<number>>(
     () => new Set()
@@ -181,6 +183,13 @@ const WeekPlanner: React.FC<WeekPlannerProps> = ({
   const [historyMenuId, setHistoryMenuId] = useState<number | null>(null);
 
   useEffect(() => {
+    if (dayFromQuery != null) {
+      const d = Number(dayFromQuery);
+      if (Number.isInteger(d) && d >= 0 && d <= 6) {
+        setSelectedDay(d);
+        return;
+      }
+    }
     if (!plan) return;
     if (today?.day_of_week != null) {
       setSelectedDay(today.day_of_week);
@@ -188,7 +197,7 @@ const WeekPlanner: React.FC<WeekPlannerProps> = ({
     }
     const firstEnabled = plan.days.find((d) => d.enabled);
     if (firstEnabled) setSelectedDay(firstEnabled.day_of_week);
-  }, [plan?.days?.length, today?.day_of_week]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [plan?.days?.length, today?.day_of_week, dayFromQuery]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!isDirty) return;
@@ -230,8 +239,15 @@ const WeekPlanner: React.FC<WeekPlannerProps> = ({
   };
 
   const handleChooseFromWardrobe = (slots: Array<{ key: string; label: string }>) => {
-    const category = slots[0]?.key;
-    navigate(wardrobePath(category));
+    const slot = slots[0];
+    if (!slot) return;
+    navigate(
+      wardrobePickPath({
+        dayOfWeek: selectedDay,
+        slotKey: slot.key,
+        category: slot.key,
+      })
+    );
   };
 
   const handleFindAlternative = (dayOfWeek: number) => {
@@ -314,6 +330,15 @@ const WeekPlanner: React.FC<WeekPlannerProps> = ({
         onSetSharedSeason={onSetSharedSeason}
         onSetReminderTime={onSetReminderTime}
       />
+
+      {!hasGeneratedOutfits && (
+        <p
+          className="text-sm text-slate-400"
+          data-testid="week-planner-empty-tip"
+        >
+          Generate outfits for your week. Add wardrobe items first for closer matches.
+        </p>
+      )}
 
       <WeekDaySelector
         days={plan.days}

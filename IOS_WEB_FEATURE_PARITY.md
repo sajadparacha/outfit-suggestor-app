@@ -2,7 +2,7 @@
 
 This document tracks feature parity between the **web app** and the **iOS app** so both offer the same functionality. Use it as a checklist when implementing or syncing features.
 
-**Branch**: `feature/main-page-ui-improvements`
+**Branch**: `fix/weekly-planner-gui`
 
 ---
 
@@ -11,7 +11,8 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 | Area | Web | iOS | Notes |
 |------|-----|-----|--------|
 | **Auth** | ✅ | ✅ | Register, login, logout, change password (Settings) |
-| **Main flow simplified UX** | ✅ | ✅ | Shared contract `docs/main-flow-ux-contract.md`; creation → result; 3 actions (Generate Another, Save Look, Refine); advanced options input-side only |
+| **UX coherence (product story)** | ✅ | ✅ | Men's stylist promise on Suggest; three-ring empty states (Wardrobe → Insights/Week; History → Suggest); Guide demoted from web primary nav (footer/Settings); iOS Guide stays under Profile; About story-first on both |
+| **Main flow simplified UX** | ✅ | ✅ | Shared contract `docs/main-flow-ux-contract.md`; creation → result; 3 actions (Generate Another, Save Look, Refine); advanced options input-side only; `productPromiseHeadline` / `productPromiseSubline` on empty creation |
 | **Random picks thumbnails + input sync** | ✅ | ✅ | Item card thumbs from `matching_wardrobe_items`; left preview replaces stale upload; wardrobe-only **checkbox** (not switch) |
 | **Random pick result: regenerate + upload** | ✅ | ✅ | Compact result shows upload new item + Generate Another; shared `mainFlowResultRegenerate` / `MainFlowResultRegenerateLogic` |
 | **Preferences layout** | ✅ | ✅ | Occasion, season, style, notes; **Use my wardrobe only** last (auth); Colors removed from UI |
@@ -26,7 +27,7 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 | **Duplicate detection** | ✅ | ✅ | Check before suggestion; use cached or force new |
 | **Next / Alternate outfit** | ✅ | ✅ | Button after suggestion; requests a different outfit |
 | **Wardrobe Insights** | ✅ | ✅ | Main nav: web **Insights**; iOS **Insights** tab (page title Wardrobe Insights; `/insights` selects tab). Premium summary-first redesign: gap score + label, top 3 priorities, **Top items to add** cards (tap **Best colors** → Google Shopping; **Shop similar** per item), **Shopping list** (collapsed by default; Buy / Look for / Search online; priority badges; **canonical category labels** via `cleanShoppingItemLabel`—dedupes AI junk names, prefers taxonomy label when name mismatches), per style+color Google Shopping chips + Search all using **`men's` + category phrase** queries (e.g. men's sweater, men's jacket, men's tie; gender prefix hardcoded this iteration—future `REACT_APP_SHOPPING_GENDER` / `AppConfig` documented in spec), Copy list; WhatsApp/PDF export), **Wardrobe coverage** dashboard (7 core clothing categories—shirt, trouser, blazer, sweater, jacket, shoes, belt—plus **tie** when occasion is business/formal/office; then Colors + Styles aggregates), collapsible **Detailed category analysis** with owned/missing color & style counts, quick tip; **jacket wardrobe items count under jacket row, not blazer**; no outfit-generation CTAs from insights; preferences collapse to context bar after analysis; admin/debug gated; modes **Quick Wardrobe Check** (free) and **AI Stylist Review** (premium) in expanded preferences |
-| **User Guide** | ✅ | ✅ | In-app documentation with feature walkthroughs |
+| **User Guide** | ✅ | ✅ | In-app docs; web: footer/Settings (not primary nav); iOS: Profile → Guide |
 | **Integration Tests (Admin)** | ✅ | ✅ | Admin-only test runner (list/run/run-all) |
 | **Settings** | ✅ | ✅ | Change password, account info, logout |
 | **About** | ✅ | ✅ | App info, links |

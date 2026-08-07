@@ -2,6 +2,12 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useWardrobeController } from '../../controllers/useWardrobeController';
 import { WardrobeItem, WardrobeItemCreate, WardrobeItemUpdate } from '../../models/WardrobeModels';
 import { Filters, OutfitHistoryEntry, SourceWardrobeItem } from '../../models/OutfitModels';
+import {
+  DayOfWeek,
+  WEEK_DAY_LABELS,
+  WEEK_PLAN_CORE_SLOTS,
+} from '../../models/WeekPlanModels';
+import type { WardrobePickSession } from '../../navigation/routes';
 import ApiService from '../../services/ApiService';
 import { isValidImageSize, formatFileSize } from '../../utils/imageUtils';
 import { WARDROBE_MAX_SIZE_MB } from '../../constants/imageLimits';
@@ -29,9 +35,20 @@ import {
 
 const CLIENT_SIDE_FILTER_LOAD_LIMIT = 100;
 
+const PICK_SLOT_LABELS: Record<string, string> = {
+  ...Object.fromEntries(WEEK_PLAN_CORE_SLOTS.map((s) => [s.key, s.label])),
+  sweater: MAIN_FLOW_UX_COPY.layerLabel,
+  outerwear: MAIN_FLOW_UX_COPY.outerwearLabel,
+  tie: MAIN_FLOW_UX_COPY.tieLabel,
+};
+
 interface WardrobeProps {
   initialCategory?: string | null;
   isAuthenticated?: boolean;
+  /** Week Planner pick session — tap item selects for that day/slot. */
+  pickSession?: WardrobePickSession | null;
+  onPickForWeekPlan?: (item: WardrobeItem) => void;
+  onCancelWeekPlanPick?: () => void;
   onSuggestionReady?: (suggestion: any) => void; // Callback when outfit suggestion is ready
   onNavigateToMain?: () => void; // Callback to navigate to main view
   onSourceImageLoaded?: () => void; // Callback after source wardrobe image is preloaded in main flow
@@ -63,6 +80,9 @@ interface WardrobeProps {
 const Wardrobe: React.FC<WardrobeProps> = ({ 
   initialCategory = null,
   isAuthenticated = false,
+  pickSession = null,
+  onPickForWeekPlan,
+  onCancelWeekPlanPick,
   onSuggestionReady,
   onNavigateToMain,
   onSourceImageLoaded,
@@ -70,6 +90,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
   onAnalyzeWardrobe,
   analyzingWardrobe = false,
 }) => {
+  const isWeekPlanPickMode = !!pickSession;
   const {
     wardrobeItems,
     summary,
@@ -121,6 +142,17 @@ const Wardrobe: React.FC<WardrobeProps> = ({
   
   // Image viewer state
   const [viewingImage, setViewingImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!viewingImage) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setViewingImage(null);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [viewingImage]);
   
   // State for outfit suggestion from wardrobe item
   const [suggestionLoading, setSuggestionLoading] = useState<number | null>(null); // Store item ID being processed
@@ -766,18 +798,48 @@ const Wardrobe: React.FC<WardrobeProps> = ({
     })
     .join(', ');
 
+  const pickSlotLabel = pickSession
+    ? PICK_SLOT_LABELS[pickSession.slotKey] ?? pickSession.slotKey
+    : '';
+  const pickDayLabel = pickSession
+    ? WEEK_DAY_LABELS[pickSession.dayOfWeek as DayOfWeek] ?? `Day ${pickSession.dayOfWeek}`
+    : '';
+
   return (
     <div className="overflow-x-hidden py-4 px-3 sm:py-8 sm:px-4">
       <div className="mx-auto w-full max-w-4xl">
+        {isWeekPlanPickMode && pickSession && (
+          <div
+            className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand-blue/40 bg-brand-blue/15 px-4 py-3"
+            role="status"
+            data-testid="wardrobe-week-pick-banner"
+          >
+            <p className="text-sm font-semibold text-white sm:text-base">
+              Choose {pickSlotLabel} for {pickDayLabel}
+            </p>
+            <button
+              type="button"
+              onClick={() => onCancelWeekPlanPick?.()}
+              className="min-h-[44px] rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/20"
+              data-testid="wardrobe-week-pick-cancel"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
         {/* Header */}
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 shadow-xl backdrop-blur sm:mb-6 sm:p-6">
           <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <h1 className="mb-2 text-2xl font-bold text-white sm:text-3xl">👔 My Wardrobe</h1>
               <p className="text-sm text-slate-300 sm:text-base">
-                Pick a saved piece, build an outfit on Suggest, then generate with your preferences.
+                {isWeekPlanPickMode
+                  ? `Tap an item to use it as ${pickSlotLabel} on ${pickDayLabel}.`
+                  : 'Pick a saved piece, build an outfit on Suggest, then generate with your preferences.'}
               </p>
             </div>
+            {!isWeekPlanPickMode && (
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:flex-shrink-0">
               {onAnalyzeWardrobe && (
                 <button
@@ -807,9 +869,10 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                 + Add Item
               </button>
             </div>
+            )}
           </div>
 
-          {!flowTipDismissed && wardrobeItems && wardrobeItems.length > 0 && (
+          {!isWeekPlanPickMode && !flowTipDismissed && wardrobeItems && wardrobeItems.length > 0 && (
             <div className="mt-4 rounded-xl border border-brand-blue/30 bg-brand-gradient-soft p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -898,7 +961,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
         </div>
 
         {/* Complete Outfit Multi-Select */}
-        {!loading && wardrobeItems && wardrobeItems.length > 0 && (
+        {!isWeekPlanPickMode && !loading && wardrobeItems && wardrobeItems.length > 0 && (
           <div
             className="mb-4 rounded-2xl border border-brand-blue/25 bg-brand-gradient-soft p-4 shadow-xl backdrop-blur sm:mb-6 sm:p-5"
             data-testid="wardrobe-completion-panel"
@@ -1046,12 +1109,14 @@ const Wardrobe: React.FC<WardrobeProps> = ({
           <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-12 text-center">
             <div className="text-6xl mb-4">👔</div>
             <h3 className="text-2xl font-bold text-white mb-2">Your wardrobe is empty</h3>
-            <p className="text-slate-300 mb-6">Add items to get personalized outfit suggestions!</p>
+            <p className="text-slate-300 mb-6">
+              Add pieces so Suggest, Insights, and Week Planner can style from what you own.
+            </p>
             <button
               onClick={() => setShowAddModal(true)}
               className="px-6 py-3 btn-brand rounded-xl font-semibold transition-all"
             >
-              Add Your First Item
+              Add your first item
             </button>
           </div>
         ) : (
@@ -1093,15 +1158,28 @@ const Wardrobe: React.FC<WardrobeProps> = ({
               >
                 <div className="flex gap-3 sm:gap-4">
                   {item.image_data ? (
-                    <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl border border-white/10 bg-slate-800/80 sm:h-32 sm:w-32">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewImage(item.image_data!);
+                      }}
+                      className="h-20 w-20 min-h-[44px] min-w-[44px] flex-shrink-0 overflow-hidden rounded-xl border border-white/10 bg-slate-800/80 transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue sm:h-32 sm:w-32"
+                      aria-label={`View ${wardrobeCategoryLabel(item.category)} full size`}
+                      title="Click to view full size"
+                      data-testid={`wardrobe-item-enlarge-${item.id}`}
+                    >
                       <img
                         src={`data:image/jpeg;base64,${item.image_data}`}
                         alt={item.category}
                         className="h-full w-full object-cover"
                       />
-                    </div>
+                    </button>
                   ) : (
-                    <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-slate-800/80 sm:h-32 sm:w-32">
+                    <div
+                      className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-slate-800/80 sm:h-32 sm:w-32"
+                      data-testid={`wardrobe-item-placeholder-${item.id}`}
+                    >
                       <span className="text-3xl text-slate-400 sm:text-4xl">📷</span>
                     </div>
                   )}
@@ -1131,6 +1209,19 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                         {searchQuery ? highlightSearchTerm(item.name, searchQuery) : item.name}
                       </p>
                     )}
+                    {isWeekPlanPickMode ? (
+                      <div className="mt-3">
+                        <button
+                          type="button"
+                          onClick={() => onPickForWeekPlan?.(item)}
+                          className="min-h-[44px] w-full rounded-xl border border-brand-blue/40 bg-brand-blue/20 px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-blue/30 sm:w-auto"
+                          data-testid={`wardrobe-week-pick-select-${item.id}`}
+                          aria-label={`Select ${wardrobeCategoryLabel(item.category)} for week plan`}
+                        >
+                          Select for week plan
+                        </button>
+                      </div>
+                    ) : (
                     <div className="mt-3">
                       <button
                         type="button"
@@ -1158,9 +1249,11 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                         {completeOutfitSelectionCopy}
                       </button>
                     </div>
+                    )}
                   </div>
                 </div>
 
+                {!isWeekPlanPickMode && (
                 <div className="mt-3 border-t border-white/10 pt-3 sm:mt-4">
                   <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
                     Single-item styling
@@ -1271,6 +1364,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                     </div>
                   </div>
                 </div>
+                )}
               </div>
               );
             })}
@@ -1838,6 +1932,10 @@ const Wardrobe: React.FC<WardrobeProps> = ({
           <div 
             className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4"
             onClick={() => setViewingImage(null)}
+            data-testid="wardrobe-image-viewer"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Full size image"
           >
             <div className="relative max-w-7xl max-h-[90vh] w-full h-full flex items-center justify-center">
               <img
@@ -1847,9 +1945,11 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                 onClick={(e) => e.stopPropagation()}
               />
               <button
+                type="button"
                 onClick={() => setViewingImage(null)}
                 className="absolute top-4 right-4 text-white bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full p-3 text-2xl transition-all"
                 title="Close"
+                aria-label="Close"
               >
                 ✕
               </button>

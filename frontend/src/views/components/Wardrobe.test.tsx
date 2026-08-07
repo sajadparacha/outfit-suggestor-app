@@ -116,7 +116,10 @@ describe('Wardrobe page', () => {
   it('shows empty list state when there are no wardrobe items', () => {
     render(<Wardrobe />);
     expect(screen.getByText(/Your wardrobe is empty/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Add Your First Item/i })).toBeInTheDocument();
+    expect(
+      screen.getByText(/Add pieces so Suggest, Insights, and Week Planner can style from what you own/i)
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Add your first item/i })).toBeInTheDocument();
   });
 
   it('shows wardrobe item list when items exist', () => {
@@ -456,7 +459,7 @@ describe('Wardrobe page', () => {
 
   it('Add modal displays image size limit and accept attribute', () => {
     render(<Wardrobe />);
-    fireEvent.click(screen.getByRole('button', { name: 'Add Your First Item' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add your first item' }));
     expect(screen.getByText(/JPG, PNG, WebP up to 10MB/i)).toBeInTheDocument();
     const inputs = document.querySelectorAll('input[type="file"]');
     expect(inputs.length).toBeGreaterThan(0);

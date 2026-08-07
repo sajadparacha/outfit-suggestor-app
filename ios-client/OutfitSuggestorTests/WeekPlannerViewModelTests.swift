@@ -857,6 +857,13 @@ final class WeekPlannerViewModelTests: XCTestCase {
         XCTAssertEqual(WeekPlanCopy.savePlan, "Save plan")
     }
 
+    func testNoOutfitsTipCopy() {
+        XCTAssertEqual(
+            WeekPlanCopy.noOutfitsTip,
+            "Generate outfits for your week. Add wardrobe items first for closer matches."
+        )
+    }
+
     func testHumanReadableHistoryDateHelper() {
         let formatted = WeekPlanDateFormatting.humanReadable("2026-07-18T10:00:00Z")
         XCTAssertFalse(formatted.isEmpty)
@@ -884,6 +891,100 @@ final class WeekPlannerViewModelTests: XCTestCase {
 
         XCTAssertEqual(vm.toastMessage, WeekPlanCopy.planRestored)
         XCTAssertEqual(vm.infoMessage, WeekPlanCopy.planRestored)
+    }
+
+    // MARK: - Wardrobe slot pick (Change / Add)
+
+    func testApplyWardrobeItemUpdatesSlotSelectsDayAndMarksDirty() async {
+        let api = MockAPI()
+        api.plan.days[2].enabled = true
+        api.plan.days[2].outfit = WeekPlanOutfitResponse(
+            summary: "Wednesday look",
+            shirt: "Old shirt",
+            trouser: "Trousers",
+            shoes: "Shoes",
+            belt: "Belt"
+        )
+        let vm = WeekPlannerViewModel(api: api, notifier: MockNotifier(), timezoneProvider: { "UTC" })
+        await vm.load()
+        vm.selectDay(0)
+        XCTAssertFalse(vm.isDirty)
+
+        let coordinator = RouteCoordinator.shared
+        coordinator.clearWardrobePickSession()
+        coordinator.startWardrobePick(dayOfWeek: 2, slotKey: "shirt", category: "shirt")
+        XCTAssertEqual(coordinator.wardrobePickSession?.dayOfWeek, 2)
+        XCTAssertEqual(coordinator.wardrobePickSession?.slotKey, "shirt")
+        XCTAssertEqual(coordinator.selectedTab, .wardrobe)
+
+        let item = WardrobeItem(
+            id: 42,
+            category: "shirt",
+            name: "Blue Oxford",
+            description: "Light blue oxford shirt",
+            color: "blue",
+            brand: nil,
+            size: nil,
+            image_data: "abc123",
+            tags: nil,
+            condition: nil,
+            wear_count: 0,
+            created_at: "2026-01-01",
+            updated_at: "2026-01-01"
+        )
+
+        let applied = vm.applyWardrobeItem(item, dayOfWeek: 2, slotKey: "shirt")
+        XCTAssertTrue(applied)
+        XCTAssertEqual(vm.selectedDayOfWeek, 2)
+        XCTAssertEqual(vm.plan.days[2].outfit?.shirt, "Light blue oxford shirt")
+        XCTAssertEqual(vm.plan.days[2].outfit?.shirt_id, 42)
+        XCTAssertEqual(vm.plan.days[2].outfit?.matching_wardrobe_items?.shirt?.first?.id, 42)
+        XCTAssertTrue(vm.plan.days[2].outfit?.wardrobe_item_ids.contains(42) ?? false)
+        XCTAssertTrue(vm.isDirty)
+        XCTAssertEqual(vm.lastMissingAction, .chooseFromWardrobe(dayOfWeek: 2))
+
+        // Simulate return to Week + clear session after pick (T1).
+        vm.selectDay(2)
+        coordinator.clearWardrobePickSession()
+        coordinator.selectedTab = .week
+        XCTAssertNil(coordinator.wardrobePickSession)
+        XCTAssertNil(coordinator.wardrobeCategoryFilter)
+        XCTAssertEqual(vm.selectedDayOfWeek, 2)
+        XCTAssertEqual(coordinator.selectedTab, .week)
+    }
+
+    func testCancelWardrobePickLeavesPlanUnchangedAndClearsSession() async {
+        let api = MockAPI()
+        api.plan.days[1].enabled = true
+        api.plan.days[1].outfit = WeekPlanOutfitResponse(
+            summary: "Tuesday look",
+            shirt: "Keep me",
+            trouser: "Trousers",
+            shoes: "Shoes",
+            belt: ""
+        )
+        let vm = WeekPlannerViewModel(api: api, notifier: MockNotifier(), timezoneProvider: { "UTC" })
+        await vm.load()
+        vm.selectDay(1)
+        let shirtBefore = vm.plan.days[1].outfit?.shirt
+        XCTAssertFalse(vm.isDirty)
+
+        let coordinator = RouteCoordinator.shared
+        coordinator.clearWardrobePickSession()
+        coordinator.startWardrobePick(dayOfWeek: 1, slotKey: "shirt", category: "shirt")
+        XCTAssertNotNil(coordinator.wardrobePickSession)
+        XCTAssertEqual(
+            coordinator.wardrobePickSession?.bannerText,
+            "Choose Top for Tuesday"
+        )
+
+        // Cancel / Back without pick (T2).
+        coordinator.clearWardrobePickSession()
+        XCTAssertNil(coordinator.wardrobePickSession)
+        XCTAssertNil(coordinator.wardrobeCategoryFilter)
+        XCTAssertEqual(vm.plan.days[1].outfit?.shirt, shirtBefore)
+        XCTAssertFalse(vm.isDirty)
+        XCTAssertEqual(vm.selectedDayOfWeek, 1)
     }
 }
 

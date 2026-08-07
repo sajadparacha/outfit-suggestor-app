@@ -2,6 +2,9 @@
  * Shared main-flow UX labels — keep in sync with MainFlowUxCopy.swift and docs/main-flow-ux-contract.md
  */
 export const MAIN_FLOW_UX_COPY = {
+  productPromiseHeadline: "Your personal AI men's stylist",
+  productPromiseSubline:
+    'Upload a piece, get a complete look — then build your wardrobe and plan your week.',
   primaryCta: 'Generate Outfit',
   primaryCtaAria: 'Get AI outfit suggestion',
   emptyPreviewHeadline: 'Your outfit appears here',

@@ -18,24 +18,34 @@ describe('Guide and footer navigation (App)', () => {
     expect(weekLink).toHaveAttribute('href', ROUTES.WEEK);
   });
 
-  it('shows User guide when Guide tab is clicked', async () => {
+  it('does not show Guide in primary nav', async () => {
     renderApp();
 
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: 'Guide' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /^Suggest$/ })).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('link', { name: 'Guide' })).not.toBeInTheDocument();
+  });
+
+  it('opens User guide from footer link', async () => {
+    renderApp();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /More options/i })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('link', { name: 'Guide' }));
+    fireEvent.click(screen.getByRole('button', { name: /More options/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Open user guide/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Open user guide/i }));
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /How to use/i })).toBeInTheDocument();
     });
-    expect(screen.getByText(/Jump to a section/i)).toBeInTheDocument();
-    expect(screen.getByText(/Add to outfit completion/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/Complete outfit with AI/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Choose one item per outfit slot/i)).toBeInTheDocument();
-    expect(screen.getByText(/Tap Shopping list to open a market-ready table/i)).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Week Outfit Planner/i })).toBeInTheDocument();
+    expect(screen.getByText(/Suggest a look from a photo/i)).toBeInTheDocument();
   });
 
   it('opens About from footer', async () => {
@@ -57,30 +67,8 @@ describe('Guide and footer navigation (App)', () => {
       expect(screen.getByRole('heading', { name: /^AI Outfit Suggestor$/i })).toBeInTheDocument();
     });
     expect(screen.getByText(/Developed by Sajjad Ahmed Paracha/i)).toBeInTheDocument();
-    expect(screen.getByText(/select one or more saved pieces/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/market-ready shopping list/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Week Outfit Planner/i)).toBeInTheDocument();
-    expect(screen.getByText(/Planning templates/i)).toBeInTheDocument();
-    expect(screen.getByText(/Plan history/i)).toBeInTheDocument();
-  });
-
-  it('opens User guide from footer link', async () => {
-    renderApp();
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /More options/i })).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: /More options/i }));
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Open user guide/i })).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: /Open user guide/i }));
-
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /How to use/i })).toBeInTheDocument();
-    });
+    expect(screen.getByText(/Your personal AI men's stylist/i)).toBeInTheDocument();
+    expect(screen.getByText(/How it fits together/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Week Planner' })).toBeInTheDocument();
   });
 });

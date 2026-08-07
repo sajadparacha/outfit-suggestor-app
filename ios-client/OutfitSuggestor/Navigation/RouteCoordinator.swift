@@ -15,8 +15,23 @@ final class RouteCoordinator: ObservableObject {
     @Published var selectedTab: AppRoute.TabIndex = .suggest
     @Published var profilePath = NavigationPath()
     @Published var wardrobeCategoryFilter: String?
+    /// When set, Wardrobe is in week-plan slot pick mode.
+    @Published var wardrobePickSession: WardrobePickSession?
 
     private init() {}
+
+    /// Start Change/Add pick: filter Wardrobe and switch to the Wardrobe tab.
+    func startWardrobePick(dayOfWeek: Int, slotKey: String, category: String? = nil) {
+        let session = WardrobePickSession(dayOfWeek: dayOfWeek, slotKey: slotKey)
+        wardrobePickSession = session
+        wardrobeCategoryFilter = category ?? session.categoryFilter
+        selectedTab = .wardrobe
+    }
+
+    func clearWardrobePickSession() {
+        wardrobePickSession = nil
+        wardrobeCategoryFilter = nil
+    }
 
     func handleOpenURL(_ url: URL) {
         handleIncomingRoute(AppRoute.pathFromURL(url))
@@ -90,12 +105,15 @@ final class RouteCoordinator: ObservableObject {
     }
 
     @ViewBuilder
-    func profileDestinationView(for destination: AppRoute.ProfileDestination) -> some View {
+    func profileDestinationView(
+        for destination: AppRoute.ProfileDestination,
+        weekPlannerViewModel: WeekPlannerViewModel
+    ) -> some View {
         switch destination {
         case .insights:
             InsightsView()
         case .week:
-            WeekPlannerView()
+            WeekPlannerView(viewModel: weekPlannerViewModel)
         case .guide:
             UserGuideView(isAdmin: AdminVisibility.isAdmin(user: AuthService.shared.currentUser))
         case .about:

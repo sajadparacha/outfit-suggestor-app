@@ -35,7 +35,7 @@ const InsightsHeader: React.FC<InsightsHeaderProps> = ({
             onClick={onOpenWardrobe}
             className="rounded-xl border border-white/15 bg-white/10 px-4 py-2.5 text-sm font-medium text-slate-200 transition-colors hover:bg-white/20"
           >
-            Open Wardrobe
+            Open wardrobe
           </button>
         )}
       </div>

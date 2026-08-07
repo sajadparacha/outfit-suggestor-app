@@ -65,7 +65,6 @@ const NavBar: React.FC<NavBarProps> = ({
     { view: 'week', label: 'Week Planner' },
     { view: 'history', label: 'History' },
     { view: 'insights', label: 'Insights' },
-    { view: 'guide', label: 'Guide' },
   ];
 
   return (

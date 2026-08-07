@@ -1007,4 +1007,183 @@ describe('Week Outfit Planner', () => {
       /No plan history yet.*Clear plan or regenerate/i
     );
   });
+
+  it('T1: Change → pick wardrobe item updates that day slot and returns to Week on that day', async () => {
+    localStorage.setItem('auth_token', 'test-token');
+
+    const days = emptyDays().map((d, i) =>
+      i === 2
+        ? {
+            ...d,
+            enabled: true,
+            occasion: 'work',
+            outfit: {
+              summary: 'Wednesday look',
+              shirt: 'White oxford',
+              trouser: 'Navy trousers',
+              blazer: '',
+              shoes: 'Brown shoes',
+              belt: 'Brown belt',
+              reasoning: 'Clean',
+              shirt_id: 99,
+            },
+          }
+        : d
+    );
+
+    server.use(
+      authMe(),
+      rest.get(`${API_BASE}/api/week-plan`, (_req, res, ctx) =>
+        res(
+          ctx.json({
+            reminder_time: '07:30',
+            timezone: 'UTC',
+            shared_style: 'classic',
+            shared_season: 'all-season',
+            days,
+            wardrobe_empty: false,
+            message: null,
+          })
+        )
+      ),
+      rest.get(`${API_BASE}/api/week-plan/today`, (_req, res, ctx) =>
+        res(
+          ctx.json({
+            day_of_week: 2,
+            enabled: true,
+            occasion: 'work',
+            use_wardrobe_only: true,
+            outfit: days[2].outfit,
+            reminder_time: '07:30',
+            timezone: 'UTC',
+            has_plan: true,
+            message: null,
+          })
+        )
+      ),
+      rest.get(`${API_BASE}/api/wardrobe`, (_req, res, ctx) =>
+        res(
+          ctx.json({
+            items: [
+              {
+                id: 42,
+                category: 'shirt',
+                color: 'Blue',
+                description: 'Integration test shirt',
+                image_data: null,
+                name: null,
+              },
+            ],
+            total: 1,
+            limit: 10,
+            offset: 0,
+          })
+        )
+      )
+    );
+
+    renderApp({ routerProps: { initialEntries: [`${ROUTES.WEEK}?day=2`] } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('week-planner')).toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('week-day-detail')).toHaveAttribute('data-day', '2');
+    });
+    expect(screen.getByText(/White oxford/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('week-outfit-change-shirt'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wardrobe-week-pick-banner')).toHaveTextContent(
+        /Choose Shirt for Wednesday/i
+      );
+    });
+    expect(screen.queryByRole('button', { name: /Style this item/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('wardrobe-week-pick-select-42'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('week-planner')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('week-day-detail')).toHaveAttribute('data-day', '2');
+    expect(screen.getByText(/Blue Integration test shirt/i)).toBeInTheDocument();
+    expect(screen.queryByTestId('wardrobe-week-pick-banner')).not.toBeInTheDocument();
+  });
+
+  it('T2: Cancel pick leaves plan unchanged and clears session', async () => {
+    localStorage.setItem('auth_token', 'test-token');
+
+    const days = emptyDays().map((d, i) =>
+      i === 0
+        ? {
+            ...d,
+            enabled: true,
+            occasion: 'work',
+            outfit: {
+              summary: 'Monday look',
+              shirt: 'Original shirt',
+              trouser: 'Navy trousers',
+              blazer: '',
+              shoes: 'Brown shoes',
+              belt: '',
+              reasoning: 'Clean',
+            },
+          }
+        : d
+    );
+
+    server.use(
+      authMe(),
+      rest.get(`${API_BASE}/api/week-plan`, (_req, res, ctx) =>
+        res(
+          ctx.json({
+            reminder_time: '07:30',
+            timezone: 'UTC',
+            shared_style: 'classic',
+            shared_season: 'all-season',
+            days,
+            wardrobe_empty: false,
+            message: null,
+          })
+        )
+      ),
+      rest.get(`${API_BASE}/api/week-plan/today`, (_req, res, ctx) =>
+        res(
+          ctx.json({
+            day_of_week: 0,
+            enabled: true,
+            occasion: 'work',
+            use_wardrobe_only: true,
+            outfit: days[0].outfit,
+            reminder_time: '07:30',
+            timezone: 'UTC',
+            has_plan: true,
+            message: null,
+          })
+        )
+      )
+    );
+
+    renderApp({ routerProps: { initialEntries: [ROUTES.WEEK] } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('week-outfit-change-shirt')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('week-outfit-change-shirt'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wardrobe-week-pick-banner')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('wardrobe-week-pick-cancel'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('week-planner')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('week-day-detail')).toHaveAttribute('data-day', '0');
+    expect(screen.getByText(/Original shirt/i)).toBeInTheDocument();
+    expect(screen.queryByTestId('wardrobe-week-pick-banner')).not.toBeInTheDocument();
+  });
 });

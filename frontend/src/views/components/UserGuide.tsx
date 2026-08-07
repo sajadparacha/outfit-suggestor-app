@@ -128,13 +128,15 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
             </span>
           </h1>
           <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
-            Everything you need in plain language—upload a photo, tweak preferences, and let the AI style you. Jump
-            to any topic below, or scroll at your own pace.
+            Suggest a look from a photo, build your wardrobe, then plan your week and close gaps with
+            Insights — everything in plain language below.
           </p>
           <p className="mt-6 text-sm text-slate-500">
-            Tip: use the <strong className="text-slate-400 font-semibold">tabs at the top</strong> for Get Suggestion,
-            Guide, History, Wardrobe, and Insights. <strong className="text-slate-400 font-semibold">About</strong> (app story &
-            creator links) lives in the <strong className="text-slate-400 font-semibold">footer</strong>.
+            Use the <strong className="text-slate-400 font-semibold">tabs at the top</strong> for Suggest,
+            Wardrobe, Week Planner, History, and Insights. The{' '}
+            <strong className="text-slate-400 font-semibold">User guide</strong> lives under{' '}
+            <strong className="text-slate-400 font-semibold">More options</strong> in the footer (not in the
+            main nav). <strong className="text-slate-400 font-semibold">About</strong> is there too.
           </p>
         </div>
       </div>
@@ -327,6 +329,7 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               'Planning templates (prefs only): use Save as… to store your week setup; Load applies it and clears outfits—tap Generate outfits when ready.',
               'Today at the top shows today’s occasion and outfit summary (with wardrobe preview thumbnails when available).',
               'Per day: toggle Use wardrobe (default on), then open the day detail for item images, a collapsed Why this outfit works section, and missing-item actions (Choose from wardrobe / Find an alternative / Continue without).',
+              'Change or Add on a week day opens Wardrobe to pick an item for that slot, then returns to that day.',
             ]}
           />
           <TipBox>

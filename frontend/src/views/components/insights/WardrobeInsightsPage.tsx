@@ -13,6 +13,7 @@ import QuickTipCard from './QuickTipCard';
 import ShoppingListPanel from './ShoppingListPanel';
 import TopMissingItemsSection from './TopMissingItemsSection';
 import WardrobeCoverageDashboard from './WardrobeCoverageDashboard';
+import { INSIGHTS_COPY } from '../../../utils/insightsCopy';
 
 export interface WardrobeInsightsPageProps {
   result: WardrobeGapAnalysisResponse | null;
@@ -83,6 +84,15 @@ const WardrobeInsightsPage: React.FC<WardrobeInsightsPageProps> = ({
         <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-100">
           {error}
         </div>
+      )}
+
+      {!loading && !error && !insight && (
+        <p
+          className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-300"
+          data-testid="insights-empty-state"
+        >
+          {INSIGHTS_COPY.EMPTY_STATE}
+        </p>
       )}
 
       {!loading && !error && !insight && (

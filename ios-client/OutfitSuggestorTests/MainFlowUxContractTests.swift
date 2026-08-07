@@ -17,6 +17,19 @@ final class MainFlowUxContractTests: XCTestCase {
         )
     }
 
+    func testProductPromiseCopy() {
+        XCTAssertEqual(MainFlowUxCopy.productPromiseHeadline, "Your personal AI men's stylist")
+        XCTAssertEqual(
+            MainFlowUxCopy.productPromiseSubline,
+            "Upload a piece, get a complete look — then build your wardrobe and plan your week."
+        )
+    }
+
+    func testHistoryEmptyCopy() {
+        XCTAssertEqual(HistoryCopy.emptyTitle, "No saved looks yet")
+        XCTAssertEqual(HistoryCopy.emptyBody, "Generate an outfit on Suggest, then tap Save Look.")
+    }
+
     func testResultCopy() {
         XCTAssertEqual(MainFlowUxCopy.resultTitle, "Your Styled Look")
         XCTAssertEqual(MainFlowUxCopy.whyThisWorks, "Why this works")

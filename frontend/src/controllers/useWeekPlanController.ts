@@ -4,10 +4,13 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import apiService from '../services/ApiService';
+import { MatchingWardrobeItems } from '../models/OutfitModels';
+import { WardrobeItem } from '../models/WardrobeModels';
 import {
   WeekPlan,
   WeekPlanDay,
   WeekPlanHistoryItem,
+  WeekPlanOutfit,
   WeekPlanPresetItem,
   WeekPlanToday,
   createEmptyWeekPlan,
@@ -18,6 +21,61 @@ import {
   toUpsertPayload,
   WEEK_PLAN_PRESET_NAME_MAX,
 } from '../models/WeekPlanModels';
+
+const SLOT_TEXT_FIELDS = {
+  shirt: 'shirt',
+  trouser: 'trouser',
+  blazer: 'blazer',
+  shoes: 'shoes',
+  belt: 'belt',
+  sweater: 'sweater',
+  outerwear: 'outerwear',
+  tie: 'tie',
+} as const;
+
+const SLOT_ID_FIELDS = {
+  shirt: 'shirt_id',
+  trouser: 'trouser_id',
+  blazer: 'blazer_id',
+  shoes: 'shoes_id',
+  belt: 'belt_id',
+  sweater: 'sweater_id',
+  outerwear: 'outerwear_id',
+  tie: 'tie_id',
+} as const;
+
+type SlotKey = keyof typeof SLOT_TEXT_FIELDS;
+
+function emptyOutfitShell(): WeekPlanOutfit {
+  return {
+    summary: '',
+    shirt: '',
+    trouser: '',
+    blazer: '',
+    shoes: '',
+    belt: '',
+    reasoning: '',
+  };
+}
+
+function emptyMatching(): MatchingWardrobeItems {
+  return {
+    shirt: [],
+    trouser: [],
+    blazer: [],
+    shoes: [],
+    belt: [],
+  };
+}
+
+function wardrobeItemSlotText(item: WardrobeItem): string {
+  const color = item.color?.trim();
+  const detail = (item.description || item.name || '').trim();
+  if (color && detail) return `${color} ${detail}`;
+  if (detail) return detail;
+  if (color) return color;
+  return item.category;
+}
 
 interface UseWeekPlanControllerOptions {
   isAuthenticated?: boolean;
@@ -167,6 +225,64 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
           days: prev.days.map((d) =>
             d.day_of_week === dayOfWeek ? { ...d, ...patch } : d
           ),
+        };
+        planRef.current = next;
+        markDirtyFromPlan(next);
+        return next;
+      });
+    },
+    [markDirtyFromPlan]
+  );
+
+  /** Apply a wardrobe item into a day's outfit slot (local dirty edit; no new API). */
+  const applyWardrobeItemToDaySlot = useCallback(
+    (dayOfWeek: number, slotKey: string, item: WardrobeItem) => {
+      const key = slotKey as SlotKey;
+      const textField = SLOT_TEXT_FIELDS[key];
+      const idField = SLOT_ID_FIELDS[key];
+      if (!textField || !idField) return;
+
+      setPlan((prev) => {
+        if (!prev) return prev;
+        const next: WeekPlan = {
+          ...prev,
+          days: prev.days.map((d) => {
+            if (d.day_of_week !== dayOfWeek) return d;
+            const base = d.outfit ? { ...d.outfit } : emptyOutfitShell();
+            const prevId = base[idField] as number | null | undefined;
+            const matching: MatchingWardrobeItems = {
+              ...emptyMatching(),
+              ...(base.matching_wardrobe_items ?? {}),
+            };
+            matching[key] = [
+              {
+                id: item.id,
+                category: item.category,
+                color: item.color,
+                description: item.description,
+                image_data: item.image_data,
+              },
+            ];
+
+            let wardrobe_item_ids = [...(base.wardrobe_item_ids ?? [])];
+            if (prevId != null) {
+              wardrobe_item_ids = wardrobe_item_ids.filter((id) => id !== prevId);
+            }
+            if (!wardrobe_item_ids.includes(item.id)) {
+              wardrobe_item_ids.push(item.id);
+            }
+
+            return {
+              ...d,
+              outfit: {
+                ...base,
+                [textField]: wardrobeItemSlotText(item),
+                [idField]: item.id,
+                matching_wardrobe_items: matching,
+                wardrobe_item_ids,
+              },
+            };
+          }),
         };
         planRef.current = next;
         markDirtyFromPlan(next);
@@ -520,6 +636,7 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
     loadHistory,
     loadPresets,
     updateDay,
+    applyWardrobeItemToDaySlot,
     setReminderTime,
     setSharedStyle,
     setSharedSeason,

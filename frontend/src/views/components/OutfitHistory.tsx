@@ -222,9 +222,9 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
         <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-8">
           <div className="text-center">
             <div className="text-slate-400 text-6xl mb-4">📋</div>
-            <h3 className="text-xl font-semibold text-white mb-2">No History Yet</h3>
+            <h3 className="text-xl font-semibold text-white mb-2">No saved looks yet</h3>
             <p className="text-slate-200 mb-4">
-              Your outfit suggestions will appear here once you start using the app.
+              Generate an outfit on Suggest, then tap Save Look.
             </p>
           </div>
         </div>

@@ -28,6 +28,8 @@ Both clients implement this contract natively. Labels and behavior must match ex
 |-----|-------|
 | `primaryCta` | Generate Outfit |
 | `primaryCtaAria` | Get AI outfit suggestion |
+| `productPromiseHeadline` | Your personal AI men's stylist |
+| `productPromiseSubline` | Upload a piece, get a complete look — then build your wardrobe and plan your week. |
 | `emptyPreviewHeadline` | Your outfit appears here |
 | `emptyPreviewSubline` | Upload a photo, set preferences, then tap Generate Outfit |
 | `resultTitle` | Your Styled Look |

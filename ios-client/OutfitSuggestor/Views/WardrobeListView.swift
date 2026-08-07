@@ -25,6 +25,10 @@ struct WardrobeListView: View {
     @State private var pendingDeleteTask: Task<Void, Never>?
     var initialCategoryFilter: String?
     var onConsumeCategoryFilter: (() -> Void)?
+    /// Week Planner Change/Add pick session (nil = normal Wardrobe).
+    var wardrobePickSession: WardrobePickSession?
+    var onCancelWardrobePick: (() -> Void)?
+    var onPickWardrobeItemForWeekPlan: ((WardrobeItem) -> Void)?
     var onGetSuggestionFromItem: ((WardrobeItem) -> Void)?
     var onCompleteOutfitFromSelection: (([WardrobeItem]) -> Void)?
     var onSelectHistorySuggestion: ((OutfitHistoryEntry) -> Void)?
@@ -41,7 +45,10 @@ struct WardrobeListView: View {
     @State private var completionSelectionMessage: String?
     @State private var completionPreferencesExpanded = true
     @State private var categoryFiltersExpanded = true
-    
+
+    private var isWeekPlanPickMode: Bool {
+        wardrobePickSession != nil && onPickWardrobeItemForWeekPlan != nil
+    }    
     private var categoryVisibleItems: [WardrobeItem] {
         if categoryFilter == "All" {
             return allWardrobeItems
@@ -142,18 +149,33 @@ struct WardrobeListView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if allWardrobeItems.isEmpty {
                 VStack(spacing: 16) {
-                    Text("No wardrobe items yet.")
-                        .foregroundColor(.secondary)
+                    Text(WardrobeEmptyCopy.title)
+                        .font(.title3.weight(.semibold))
+                        .foregroundColor(AppTheme.textPrimary)
                         .multilineTextAlignment(.center)
-                    Button("Add item") { showAddSheet = true }
+                    Text(WardrobeEmptyCopy.body)
+                        .font(.subheadline)
+                        .foregroundColor(AppTheme.textSecondary)
+                        .multilineTextAlignment(.center)
+                    Button(WardrobeEmptyCopy.addFirstItemButton) { showAddSheet = true }
+                        .buttonStyle(GradientButtonStyle())
+                        .accessibilityIdentifier("wardrobe.emptyAddButton")
                 }
                 .padding()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .accessibilityIdentifier("wardrobe.emptyState")
             } else if response != nil {
                 VStack(spacing: 0) {
-                    wardrobeFlowTip
-                        .padding(.horizontal)
-                        .padding(.top, 8)
+                    if let session = wardrobePickSession, isWeekPlanPickMode {
+                        weekPlanPickBanner(session)
+                            .padding(.horizontal)
+                            .padding(.top, 8)
+                            .padding(.bottom, 6)
+                    } else {
+                        wardrobeFlowTip
+                            .padding(.horizontal)
+                            .padding(.top, 8)
+                    }
 
                     categoryFilterChips
                         .padding(.horizontal)
@@ -182,9 +204,11 @@ struct WardrobeListView: View {
                         .padding(.vertical, 8)
                         .accessibilityIdentifier("wardrobe.searchField")
 
-                    completionSelectionPanel
-                        .padding(.horizontal)
-                        .padding(.bottom, 8)
+                    if !isWeekPlanPickMode {
+                        completionSelectionPanel
+                            .padding(.horizontal)
+                            .padding(.bottom, 8)
+                    }
                     
                     ScrollView {
                         // Native Menu popover stacks above LazyVStack siblings (no web z-index fix needed).
@@ -194,17 +218,23 @@ struct WardrobeListView: View {
                                 WardrobeCardView(
                                     item: item,
                                     image: WardrobeImageData.decodeUIImage(from: item.image_data),
-                                    onGetSuggestion: onGetSuggestionFromItem == nil ? nil : { onGetSuggestionFromItem?(item) },
+                                    onGetSuggestion: isWeekPlanPickMode
+                                        ? nil
+                                        : (onGetSuggestionFromItem == nil ? nil : { onGetSuggestionFromItem?(item) }),
                                     onPastSuggestions: { Task { await pastSuggestionsLoader.open(for: item) } },
                                     isPastSuggestionsLoading: pastSuggestionsLoader.loadingItemId == item.id,
                                     onEdit: { editingItem = item },
                                     onDelete: { scheduleDelete(item: item) },
                                     onShowImage: { image in fullScreenImage = image },
-                                    isCompletionSelectionMode: isCompletionSelectionMode,
+                                    isCompletionSelectionMode: isCompletionSelectionMode && !isWeekPlanPickMode,
                                     isSelectedForCompletion: isSelected,
                                     isCompletionEligible: completionSelection.isEligible(item),
                                     completionSlotLabel: completionSelection.slot(for: item)?.displayName,
-                                    onToggleCompletionSelection: { toggleCompletionSelection(for: item) }
+                                    onToggleCompletionSelection: { toggleCompletionSelection(for: item) },
+                                    isWeekPlanPickMode: isWeekPlanPickMode,
+                                    onPickForWeekPlan: isWeekPlanPickMode
+                                        ? { onPickWardrobeItemForWeekPlan?(item) }
+                                        : nil
                                 )
                                 .accessibilityIdentifier("wardrobe.row.\(item.id)")
                             }
@@ -269,20 +299,41 @@ struct WardrobeListView: View {
         }
         .navigationTitle("Wardrobe")
         .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                if isWeekPlanPickMode {
+                    Button(WeekPlanCopy.wardrobePickCancel) {
+                        onCancelWardrobePick?()
+                    }
+                    .accessibilityIdentifier("wardrobe.weekPick.cancel")
+                }
+            }
             ToolbarItem(placement: .primaryAction) {
-                Button(action: { showAddSheet = true }) {
-                    Image(systemName: "plus")
+                if !isWeekPlanPickMode {
+                    Button(action: { showAddSheet = true }) {
+                        Image(systemName: "plus")
+                    }
                 }
             }
         }
         .onAppear {
             applyInitialCategoryFilterIfNeeded()
+            if isWeekPlanPickMode {
+                isCompletionSelectionMode = false
+                completionSelection = WardrobeMultiSelectState()
+            }
             guard !hasLoaded else { return }
             hasLoaded = true
             Task { await load() }
         }
         .onChange(of: initialCategoryFilter) { _ in
             applyInitialCategoryFilterIfNeeded()
+        }
+        .onChange(of: wardrobePickSession?.dayOfWeek) { _ in
+            if isWeekPlanPickMode {
+                isCompletionSelectionMode = false
+                completionSelection = WardrobeMultiSelectState()
+                applyInitialCategoryFilterIfNeeded()
+            }
         }
         .onDisappear {
             categoryInfoDismissTask?.cancel()
@@ -311,6 +362,34 @@ struct WardrobeListView: View {
         }
     }
     
+    private func weekPlanPickBanner(_ session: WardrobePickSession) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: "hand.tap.fill")
+                .foregroundColor(AppTheme.accent)
+            Text(session.bannerText)
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(AppTheme.textPrimary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier("wardrobe.weekPick.bannerText")
+            Button(WeekPlanCopy.wardrobePickCancel) {
+                onCancelWardrobePick?()
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundColor(AppTheme.accent)
+            .frame(minHeight: 44)
+            .accessibilityIdentifier("wardrobe.weekPick.cancelBanner")
+        }
+        .padding(12)
+        .background(AppTheme.accentSoft)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(AppTheme.accent.opacity(0.35), lineWidth: 1)
+        )
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("wardrobe.weekPick.banner")
+    }
+
     @ViewBuilder
     private var wardrobeFlowTip: some View {
         if !flowTipDismissed {
@@ -871,6 +950,8 @@ struct WardrobeCardView: View {
     var isCompletionEligible: Bool = true
     var completionSlotLabel: String? = nil
     var onToggleCompletionSelection: (() -> Void)? = nil
+    var isWeekPlanPickMode: Bool = false
+    var onPickForWeekPlan: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -895,7 +976,21 @@ struct WardrobeCardView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            if isCompletionSelectionMode {
+            if isWeekPlanPickMode {
+                Button {
+                    onPickForWeekPlan?()
+                } label: {
+                    Text(WeekPlanCopy.wardrobePickSelect)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .background(AppTheme.accent)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(WeekPlanCopy.wardrobePickSelect)
+                .accessibilityIdentifier("wardrobe.weekPick.select.\(item.id)")
+            } else if isCompletionSelectionMode {
                 completionSelectionRow
             } else {
                 HStack(spacing: 10) {
@@ -1039,17 +1134,28 @@ struct WardrobeCardView: View {
     private var imageBlock: some View {
         Group {
             if let image {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 130, height: 130)
-                    .clipped()
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(AppTheme.accent, lineWidth: 2)
+                Button {
+                    onShowImage(image)
+                } label: {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 130, height: 130)
+                        .clipped()
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(AppTheme.accent, lineWidth: 2)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .frame(minWidth: 44, minHeight: 44)
+                .accessibilityLabel(
+                    ThumbnailEnlargeUx.accessibilityLabel(
+                        forName: WardrobeCategoryDisplay.wardrobeCategoryLabel(item.category)
                     )
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .accessibilityHidden(true)
+                )
+                .accessibilityIdentifier(ThumbnailEnlargeUx.wardrobeThumbAccessibilityId(itemId: item.id))
             } else {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(Color.white.opacity(0.06))

@@ -70,8 +70,9 @@ final class InsightsCopyTests: XCTestCase {
     func testEmptyStateAndReadyToastMatchSpec() {
         XCTAssertEqual(
             InsightsCopy.emptyStateMessage,
-            "Run a check to see what's missing in each part of your wardrobe."
+            "Build your wardrobe, then run a check to see gaps and what to buy next."
         )
+        XCTAssertEqual(InsightsCopy.openWardrobeButton, "Open wardrobe")
         XCTAssertEqual(InsightsCopy.aiStylistReadyToast, "Your AI Stylist Review is ready. ✅")
     }
 }

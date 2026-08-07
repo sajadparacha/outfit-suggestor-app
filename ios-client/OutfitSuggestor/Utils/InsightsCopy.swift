@@ -96,7 +96,9 @@ enum InsightsCopy {
 
     // MARK: - Empty / error
 
-    static let emptyStateMessage = "Run a check to see what's missing in each part of your wardrobe."
+    static let emptyStateMessage =
+        "Build your wardrobe, then run a check to see gaps and what to buy next."
+    static let openWardrobeButton = "Open wardrobe"
     static let genericErrorMessage = "We couldn't complete your wardrobe analysis. Please try again."
 
     // MARK: - Admin

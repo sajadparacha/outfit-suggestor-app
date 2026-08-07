@@ -53,21 +53,34 @@ enum GuideCopy {
 }
 
 enum AboutCopy {
+    static let tagline = "Your personal AI men's stylist"
+    static let threeRingsStory =
+        "Suggest a look from a photo, build your wardrobe, then plan your week and close gaps with Insights."
     static let generalTechStack =
-        "Built with React (web), SwiftUI (iOS), FastAPI, OpenAI GPT-4 Vision, and more."
+        "Built with React (web), SwiftUI (iOS), FastAPI, and OpenAI GPT-4 Vision."
+    static let outfitSuggestionsFeature =
+        "• Suggest — upload a photo and get a complete men's outfit with occasion, season, and style filters."
+    static let wardrobeFeature =
+        "• Wardrobe — save pieces, style one item, or complete an outfit from what you own."
+    static let historyFeature =
+        "• Looks — revisit saved outfits and load them back into Suggest."
+    static let insightsFeature =
+        "• Insights — gap analysis, coverage dashboard, and a shopping list for what to buy next."
+    static let weekPlannerFeature =
+        "• Week Planner — generate outfits for selected days, Change/Add opens Wardrobe to pick a slot item then returns to that day, save your plan, and get local reminders on iOS."
+    static let guideLocationNote =
+        "Open the step-by-step Guide from Profile → Guide (not a main tab)."
+    static let adminDiagnosticsSuffix = " Includes transparent admin diagnostics for administrators."
+
+    static func techStackDescription(isAdmin: Bool) -> String {
+        isAdmin ? generalTechStack + adminDiagnosticsSuffix : generalTechStack
+    }
+
+    // Legacy strings kept for tests / backward refs
     static let wardrobeFilterFeature =
         "• Digital wardrobe with AI item recognition—filter by core slots (shirts, trousers, blazers, shoes, belts) plus specific types when you own them (polo, T-shirt, jeans, shorts, sweater, jacket, tie, and more). Outfit completion still uses the same five core slots."
     static let wardrobeCompletionFeature =
         "• Complete outfits from selected wardrobe pieces—set occasion, season, style, and notes inline on Wardrobe before tapping Complete outfit with AI (one item per slot)."
     static let wardrobeInsightsFeature =
         "• Wardrobe Insights — AI-powered gap analysis with a summary score, top priorities, coverage dashboard (including sweaters, jackets, and ties for formal occasions), and a market-ready shopping list with Buy, Look for, and Search online columns, per style/color Google Shopping searches, Copy list, and WhatsApp or PDF export. Outfit suggestions still use the same five core slots."
-    static let outfitSuggestionsFeature =
-        "• Outfit suggestions with occasion, season, and style filters. Results show five core pieces; the AI may also suggest optional layering (sweater, coat/jacket, or tie) when relevant."
-    static let weekPlannerFeature =
-        "• Week Outfit Planner — Generate outfits then Save plan when dirty; day cards show exceptional status only (Needs outfit / Not planned). Planning templates store prefs; Plan history keeps past weekly outfits. On iOS, daily wake-up reminders use local notifications; on web, Today is shown in-app only."
-    static let adminDiagnosticsSuffix = " Includes transparent admin diagnostics for administrators."
-
-    static func techStackDescription(isAdmin: Bool) -> String {
-        isAdmin ? generalTechStack + adminDiagnosticsSuffix : generalTechStack
-    }
 }

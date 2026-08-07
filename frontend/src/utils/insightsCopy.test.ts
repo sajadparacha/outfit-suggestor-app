@@ -14,7 +14,7 @@ describe('insightsCopy', () => {
     expect(INSIGHTS_COPY.CATEGORIES_CHECKED).toBe('Categories checked');
     expect(INSIGHTS_COPY.BEST_CATEGORY_TO_SHOP_NEXT).toBe('Best category to shop next');
     expect(INSIGHTS_COPY.EMPTY_STATE).toBe(
-      "Run a check to see what's missing in each part of your wardrobe."
+      'Build your wardrobe, then run a check to see gaps and what to buy next.'
     );
     expect(INSIGHTS_COPY.MODE_PICKER_TITLE).toBe('How would you like to check your wardrobe?');
     expect(INSIGHTS_COPY.LOADING_QUICK).toBe('Running your Quick Wardrobe Check...');
