@@ -751,8 +751,9 @@ describe('Wardrobe page', () => {
       expect(screen.getByTestId('wardrobe-selection-thumb-2')).toBeInTheDocument();
       expect(screen.getByTestId('wardrobe-selection-remove-1')).toBeInTheDocument();
       expect(screen.getByTestId('wardrobe-selection-remove-2')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /View shirt/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /View trousers/i })).toBeInTheDocument();
+      // Thumbnail row uses exact "View shirt" / "View trousers"; card enlarge uses "… full size".
+      expect(within(row).getByRole('button', { name: /^View shirt$/i })).toBeInTheDocument();
+      expect(within(row).getByRole('button', { name: /^View trousers$/i })).toBeInTheDocument();
     });
 
     it('opens the full-size image viewer when a selection thumbnail is clicked', () => {
@@ -871,7 +872,7 @@ describe('Wardrobe page', () => {
     render(<Wardrobe />);
 
     expect(screen.getByRole('button', { name: /^Polo\b/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /T-shirt/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /T-shirt \(1\)/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Jeans\b/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Other\b/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Shorts\b/i })).not.toBeInTheDocument();

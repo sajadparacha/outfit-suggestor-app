@@ -339,9 +339,11 @@ struct WeekPlannerView: View {
     private var sharedControlsSection: some View {
         HStack(alignment: .top, spacing: 10) {
             seasonControl
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             reminderControl
-            Spacer(minLength: 0)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
+        .fixedSize(horizontal: false, vertical: true)
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Self.elevatedCard)
@@ -350,7 +352,7 @@ struct WeekPlannerView: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(AppTheme.border, lineWidth: 1)
         )
-        .accessibilityIdentifier("week.controls")
+        .accessibilityIdentifier(WeekPlanSharedControlsLayout.controlsAccessibilityId)
     }
 
     private var seasonControl: some View {
@@ -368,13 +370,14 @@ struct WeekPlannerView: View {
             }
             .pickerStyle(.menu)
             .tint(AppTheme.gradientStart)
-            .accessibilityIdentifier("week.sharedSeason")
+            .accessibilityIdentifier(WeekPlanSharedControlsLayout.seasonAccessibilityId)
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, minHeight: WeekPlanSharedControlsLayout.controlMinHeight, alignment: .topLeading)
         .background(AppTheme.surface)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .frame(minHeight: 44)
     }
 
     private var reminderControl: some View {
@@ -389,17 +392,20 @@ struct WeekPlannerView: View {
             )
             .labelsHidden()
             .tint(AppTheme.gradientStart)
-            .accessibilityIdentifier("week.reminderTime")
+            .accessibilityIdentifier(WeekPlanSharedControlsLayout.reminderAccessibilityId)
             Text("\(WeekPlanCopy.timezoneLabel): \(viewModel.plan.timezone.isEmpty ? TimeZone.current.identifier : viewModel.plan.timezone)")
                 .font(.caption2)
                 .foregroundColor(AppTheme.textSecondary)
-                .accessibilityIdentifier("week.timezone")
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
+                .accessibilityIdentifier(WeekPlanSharedControlsLayout.timezoneAccessibilityId)
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, minHeight: WeekPlanSharedControlsLayout.controlMinHeight, alignment: .topLeading)
         .background(AppTheme.surface)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .frame(minHeight: 44)
     }
 
     private var reminderBinding: Binding<Date> {
@@ -431,16 +437,39 @@ struct WeekPlannerView: View {
                     .accessibilityIdentifier("week.emptyDays")
             }
 
-            ScrollView(.horizontal, showsIndicators: isRegularWidth) {
-                HStack(spacing: isRegularWidth ? 12 : 8) {
-                    ForEach(viewModel.plan.days) { day in
-                        dayCard(day)
+            ZStack(alignment: .trailing) {
+                ScrollView(.horizontal, showsIndicators: true) {
+                    HStack(spacing: isRegularWidth ? 12 : 8) {
+                        ForEach(viewModel.plan.days) { day in
+                            dayCard(day)
+                        }
                     }
+                    .padding(.vertical, 4)
+                    .padding(.leading, 2)
+                    .padding(.trailing, WeekPlanOverviewScrollHint.trailingContentPadding)
                 }
-                .padding(.vertical, 4)
-                .padding(.horizontal, 2)
+                .accessibilityIdentifier(WeekPlanOverviewScrollHint.overviewAccessibilityId)
+
+                // Peek fade — hints more days scroll horizontally.
+                if WeekPlanOverviewScrollHint.shouldShowScrollHint(dayCount: viewModel.plan.days.count) {
+                    LinearGradient(
+                        colors: [Color.clear, AppTheme.bgPrimary.opacity(0.92)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                    .frame(width: WeekPlanOverviewScrollHint.trailingFadeWidth)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundColor(AppTheme.textSecondary)
+                        .padding(.trailing, 4)
+                        .allowsHitTesting(false)
+                        .accessibilityIdentifier(WeekPlanOverviewScrollHint.scrollHintAccessibilityId)
+                }
             }
-            .accessibilityIdentifier("week.overview")
+            .accessibilityHint(WeekPlanOverviewScrollHint.accessibilityHint)
         }
     }
 

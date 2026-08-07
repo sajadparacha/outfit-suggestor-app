@@ -352,7 +352,7 @@ describe('Wardrobe multi-select complete outfit integration', () => {
     expect(screen.getByRole('button', { name: /^Shirt\b/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Trousers\b/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Polo\b/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /T-shirt/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^T-shirt\b/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Jeans\b/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Other\b/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Shorts\b/i })).not.toBeInTheDocument();

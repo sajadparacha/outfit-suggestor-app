@@ -279,6 +279,56 @@ final class APIServiceIntegrationTests: XCTestCase {
         XCTAssertEqual(suggestion.reasoning, "completed around selected pieces")
     }
 
+    func testGetOutfitHistoryDecodesMatchingWardrobeThumbnails() async throws {
+        let service = makeService { request in
+            XCTAssertEqual(request.url?.path, "/api/outfit-history")
+            XCTAssertEqual(request.httpMethod, "GET")
+            XCTAssertTrue(request.url?.query?.contains("limit=4") == true)
+            return (
+                HTTPURLResponse(
+                    url: request.url!,
+                    statusCode: 200,
+                    httpVersion: nil,
+                    headerFields: nil
+                )!,
+                """
+                [
+                  {
+                    "id": 101,
+                    "created_at": "2026-08-07T13:00:00",
+                    "shirt": "Sky blue shirt",
+                    "trouser": "Jeans",
+                    "blazer": "Jacket",
+                    "shoes": "Sneakers",
+                    "belt": "Belt",
+                    "reasoning": "Casual Friday",
+                    "model_image": null,
+                    "image_data": null,
+                    "shirt_id": 11,
+                    "matching_wardrobe_items": {
+                      "shirt": [
+                        {
+                          "id": 11,
+                          "category": "shirt",
+                          "color": "Sky blue",
+                          "description": "Oxford",
+                          "image_data": "shirt-from-api"
+                        }
+                      ]
+                    }
+                  }
+                ]
+                """.data(using: .utf8)!
+            )
+        }
+
+        let entries = try await service.getOutfitHistory(limit: 4)
+        XCTAssertEqual(entries.count, 1)
+        XCTAssertEqual(entries[0].id, 101)
+        XCTAssertEqual(entries[0].recentLookThumbnailData, "shirt-from-api")
+        XCTAssertEqual(entries[0].toOutfitSuggestion().matching_wardrobe_items?.shirt?.first?.id, 11)
+    }
+
     private func makeService(
         requestHandler: @escaping MockURLProtocol.RequestHandler
     ) -> APIService {

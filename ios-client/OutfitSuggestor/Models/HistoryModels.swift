@@ -34,6 +34,7 @@ struct OutfitHistoryEntry: Codable, Identifiable {
     let sweater_id: Int?
     let outerwear_id: Int?
     let tie_id: Int?
+    let matching_wardrobe_items: MatchingWardrobeItems?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -62,6 +63,7 @@ struct OutfitHistoryEntry: Codable, Identifiable {
         case sweater_id
         case outerwear_id
         case tie_id
+        case matching_wardrobe_items
     }
 
     init(from decoder: Decoder) throws {
@@ -92,6 +94,7 @@ struct OutfitHistoryEntry: Codable, Identifiable {
         sweater_id = try c.decodeIfPresent(Int.self, forKey: .sweater_id)
         outerwear_id = try c.decodeIfPresent(Int.self, forKey: .outerwear_id)
         tie_id = try c.decodeIfPresent(Int.self, forKey: .tie_id)
+        matching_wardrobe_items = try c.decodeIfPresent(MatchingWardrobeItems.self, forKey: .matching_wardrobe_items)
     }
 
     init(
@@ -120,7 +123,8 @@ struct OutfitHistoryEntry: Codable, Identifiable {
         tie: String? = nil,
         sweater_id: Int? = nil,
         outerwear_id: Int? = nil,
-        tie_id: Int? = nil
+        tie_id: Int? = nil,
+        matching_wardrobe_items: MatchingWardrobeItems? = nil
     ) {
         self.id = id
         self.created_at = created_at
@@ -148,10 +152,26 @@ struct OutfitHistoryEntry: Codable, Identifiable {
         self.sweater_id = sweater_id
         self.outerwear_id = outerwear_id
         self.tie_id = tie_id
+        self.matching_wardrobe_items = matching_wardrobe_items
     }
 }
 
 extension OutfitHistoryEntry {
+    /// Prefer generated model image, then upload, then shirt wardrobe thumbnail.
+    var recentLookThumbnailData: String? {
+        if let model_image, !model_image.isEmpty { return model_image }
+        if let image_data, !image_data.isEmpty { return image_data }
+        if let shirtThumb = matching_wardrobe_items?.shirt?.first?.image_data, !shirtThumb.isEmpty {
+            return shirtThumb
+        }
+        if let sourceId = source_wardrobe_item_id,
+           let match = matching_wardrobe_items?.firstItem(withId: sourceId)?.image_data,
+           !match.isEmpty {
+            return match
+        }
+        return nil
+    }
+
     /// Map to OutfitSuggestion for display in main suggestion view
     func toOutfitSuggestion() -> OutfitSuggestion {
         OutfitSuggestion(
@@ -164,6 +184,7 @@ extension OutfitHistoryEntry {
             reasoning: reasoning,
             imageData: image_data.flatMap { Data(base64Encoded: $0) },
             model_image: model_image,
+            matching_wardrobe_items: matching_wardrobe_items,
             sweater: sweater,
             outerwear: outerwear,
             tie: tie,
@@ -177,5 +198,17 @@ extension OutfitHistoryEntry {
             tie_id: tie_id,
             source_wardrobe_item_id: source_wardrobe_item_id
         )
+    }
+}
+
+extension MatchingWardrobeItems {
+    func firstItem(withId id: Int) -> MatchingWardrobeItem? {
+        let groups = [shirt, trouser, blazer, shoes, belt, sweater, outerwear, tie]
+        for group in groups {
+            if let item = group?.first(where: { $0.id == id }) {
+                return item
+            }
+        }
+        return nil
     }
 }

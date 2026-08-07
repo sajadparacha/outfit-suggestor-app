@@ -43,7 +43,11 @@ enum WardrobeEmptyCopy {
 
 enum WardrobeCardUx {
     static let styleThisItemTitle = "Style this item"
+    static let styleThisItemSubtitle = "Single-item Suggest flow"
     static let styleThisItemAccessibilityLabel = "Style this item with AI"
+    static let singleItemStylingSection = "Single-item styling"
+    static let addToOutfitCompletion = "Add to outfit completion"
+    static let removeFromOutfitCompletion = "Remove from outfit completion"
     static let pastSuggestionsTitle = "Past Suggestions"
     static let pastSuggestionsAccessibilityLabel = "Past Suggestions"
     static let pastSuggestionsLoadingAccessibilityLabel = "Loading…"
@@ -81,6 +85,10 @@ enum WardrobeCardUx {
 
     static func historyUseThisIdentifier(entryId: Int) -> String {
         "wardrobe.history.useThis.\(entryId)"
+    }
+
+    static func completeOutfitActionIdentifier(itemId: Int) -> String {
+        "wardrobe.completeOutfit.\(itemId)"
     }
 }
 

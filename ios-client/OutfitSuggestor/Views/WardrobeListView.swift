@@ -230,12 +230,18 @@ struct WardrobeListView: View {
                                     isSelectedForCompletion: isSelected,
                                     isCompletionEligible: completionSelection.isEligible(item),
                                     completionSlotLabel: completionSelection.slot(for: item)?.displayName,
-                                    onToggleCompletionSelection: { toggleCompletionSelection(for: item) },
+                                    onToggleCompletionSelection: WardrobeCompleteOutfitCardAction.shouldShowCompleteOutfitButton(
+                                        hasCompletionHandler: onCompleteOutfitFromSelection != nil,
+                                        isWeekPlanPickMode: isWeekPlanPickMode
+                                    )
+                                        ? { toggleCompletionSelection(for: item) }
+                                        : nil,
                                     isWeekPlanPickMode: isWeekPlanPickMode,
                                     onPickForWeekPlan: isWeekPlanPickMode
                                         ? { onPickWardrobeItemForWeekPlan?(item) }
                                         : nil
                                 )
+                                .accessibilityElement(children: .contain)
                                 .accessibilityIdentifier("wardrobe.row.\(item.id)")
                             }
                         }
@@ -297,7 +303,8 @@ struct WardrobeListView: View {
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .navigationTitle("Wardrobe")
+        .navigationTitle(WardrobeNavigationPresentation.title)
+        .navigationBarTitleDisplayMode(WardrobeNavigationPresentation.usesInlineTitle ? .inline : .large)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 if isWeekPlanPickMode {
@@ -638,7 +645,14 @@ struct WardrobeListView: View {
     }
 
     private func toggleCompletionSelection(for item: WardrobeItem) {
-        guard isCompletionSelectionMode else { return }
+        if WardrobeCompleteOutfitCardAction.shouldEnterSelectionMode(isCurrentlyInMode: isCompletionSelectionMode) {
+            withAnimation {
+                isCompletionSelectionMode = true
+                completionPreferencesExpanded = true
+                completionSelection.clear()
+                completionSelectionMessage = nil
+            }
+        }
         let result = completionSelection.toggle(item)
         completionSelectionMessage = result.message
         if result == .selected || result == .deselected {
@@ -676,6 +690,9 @@ struct WardrobeListView: View {
                 useWardrobeOnly: $useWardrobeOnly,
                 showWardrobeOnly: isAuthenticated,
                 showSharedHint: true,
+                showSectionTitle: FiltersView.GridContract.shouldShowEmbeddedSectionTitle(
+                    parentShowsPreferencesHeading: true
+                ),
                 gridColumnCount: completionPreferencesGridColumns,
                 filterAccessibilityPrefix: "wardrobe.completion",
                 wardrobeOnlyCheckboxAccessibilityId: WardrobeCompletionCopy.wardrobeOnlyCheckboxAccessibilityId
@@ -964,14 +981,16 @@ struct WardrobeCardView: View {
                         .foregroundColor(AppTheme.textPrimary)
                         .accessibilityIdentifier("wardrobe.row.category.\(item.id)")
 
-                    Text("Color: \(item.color?.isEmpty == false ? item.color! : "—")")
-                        .font(.title3.weight(.semibold))
-                        .foregroundColor(AppTheme.textPrimary)
+                    if let color = item.color, !color.isEmpty {
+                        (Text("Color: ").font(.subheadline.weight(.medium)).foregroundColor(AppTheme.textSecondary)
+                         + Text(color).font(.subheadline).foregroundColor(AppTheme.textPrimary))
+                    }
 
                     Text(item.description?.isEmpty == false ? item.description! : "No description available.")
-                        .font(.title3)
+                        .font(.subheadline)
                         .foregroundColor(AppTheme.textSecondary)
                         .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -990,23 +1009,65 @@ struct WardrobeCardView: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(WeekPlanCopy.wardrobePickSelect)
                 .accessibilityIdentifier("wardrobe.weekPick.select.\(item.id)")
-            } else if isCompletionSelectionMode {
-                completionSelectionRow
             } else {
-                HStack(spacing: 10) {
-                    if let onGetSuggestion {
-                        WardrobeTopActionButton(
-                            title: WardrobeCardUx.styleThisItemTitle,
-                            systemImage: "sparkles",
-                            isPrimary: true,
-                            accessibilityLabel: WardrobeCardUx.styleThisItemAccessibilityLabel,
-                            accessibilityIdentifier: WardrobeCardUx.heroButtonIdentifier(itemId: item.id),
-                            action: onGetSuggestion
-                        )
-                        .frame(maxWidth: .infinity, minHeight: 48)
-                    }
+                if onToggleCompletionSelection != nil {
+                    completeOutfitActionButton
+                }
 
-                    wardrobeOverflowMenu
+                if let onGetSuggestion {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(WardrobeCardUx.singleItemStylingSection.uppercased())
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(AppTheme.textSecondary)
+                            .tracking(0.6)
+
+                        HStack(spacing: 10) {
+                            Button(action: onGetSuggestion) {
+                                VStack(spacing: 2) {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "sparkles")
+                                        Text(WardrobeCardUx.styleThisItemTitle)
+                                            .fontWeight(.semibold)
+                                    }
+                                    Text(WardrobeCardUx.styleThisItemSubtitle)
+                                        .font(.caption)
+                                        .fontWeight(.regular)
+                                        .opacity(0.85)
+                                }
+                                .font(.subheadline)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity, minHeight: 48)
+                                .padding(.vertical, 4)
+                                .background(AppTheme.accent.opacity(0.85))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .stroke(AppTheme.accent.opacity(0.35), lineWidth: 1)
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier(WardrobeCardUx.heroButtonIdentifier(itemId: item.id))
+                            .accessibilityLabel(WardrobeCardUx.styleThisItemAccessibilityLabel)
+                            .accessibilityHint(WardrobeCardUx.styleThisItemSubtitle)
+
+                            wardrobeOverflowMenu
+                        }
+                    }
+                    .padding(.top, 4)
+                    .overlay(alignment: .top) {
+                        Rectangle()
+                            .fill(AppTheme.border)
+                            .frame(height: 1)
+                    }
+                    .padding(.top, 4)
+                } else if isCompletionSelectionMode {
+                    completionSelectionRow
+                } else {
+                    HStack {
+                        Spacer(minLength: 0)
+                        wardrobeOverflowMenu
+                    }
                 }
             }
         }
@@ -1019,6 +1080,43 @@ struct WardrobeCardView: View {
         // Rounds card chrome only. SwiftUI Menu below uses native popover presentation
         // outside this view's bounds, so overflow items are not clipped (unlike web).
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private var completeOutfitActionButton: some View {
+        let action = WardrobeCompleteOutfitCardAction.resolve(
+            isEligible: isCompletionEligible,
+            isSelected: isSelectedForCompletion
+        )
+        return Button {
+            onToggleCompletionSelection?()
+        } label: {
+            Text(action.title)
+            .font(.subheadline.weight(.semibold))
+            .foregroundColor(
+                action == .unavailable
+                    ? AppTheme.textSecondary
+                    : (action == .remove ? .white : AppTheme.textPrimary)
+            )
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .padding(.horizontal, 12)
+            .background(
+                action == .remove
+                    ? AppTheme.accent.opacity(0.85)
+                    : (action == .add ? AppTheme.accentSoft : AppTheme.bgSecondary.opacity(0.7))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(
+                        action == .remove ? AppTheme.accent.opacity(0.4) : AppTheme.border,
+                        lineWidth: 1
+                    )
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(action == .unavailable)
+        .accessibilityLabel(action.title)
+        .accessibilityIdentifier(WardrobeCardUx.completeOutfitActionIdentifier(itemId: item.id))
     }
 
     private var completionSelectionRow: some View {
@@ -1124,11 +1222,10 @@ struct WardrobeCardView: View {
                 .font(.title2)
                 .foregroundColor(AppTheme.textPrimary)
                 .frame(width: 48, height: 48)
-                .accessibilityElement(children: .ignore)
-                .accessibilityAddTraits(.isButton)
-                .accessibilityLabel(WardrobeCardUx.menuTriggerAccessibilityLabel)
-                .accessibilityIdentifier(WardrobeCardUx.menuTriggerIdentifier(itemId: item.id))
+                .accessibilityHidden(true)
         }
+        .accessibilityLabel(WardrobeCardUx.menuTriggerAccessibilityLabel)
+        .accessibilityIdentifier(WardrobeCardUx.menuTriggerIdentifier(itemId: item.id))
     }
 
     private var imageBlock: some View {

@@ -1,4 +1,5 @@
 import XCTest
+import SwiftUI
 @testable import OutfitSuggestor
 
 final class FiltersViewTests: XCTestCase {
@@ -140,6 +141,29 @@ final class FiltersViewTests: XCTestCase {
         XCTAssertEqual(
             FiltersView.GridContract.filterAccessibilityId(for: "Season", prefix: "wardrobe.completion"),
             "wardrobe.completion.filter.season"
+        )
+    }
+
+    @MainActor
+    func testShowSectionTitleDefaultsToTrueToKeepStandaloneUsage() {
+        // Parents that already render "Preferences" pass showSectionTitle: false.
+        // Default remains true so standalone FiltersView still has a section heading.
+        var filters = OutfitFilters()
+        var preferenceText = ""
+        let view = FiltersView(
+            filters: Binding(get: { filters }, set: { filters = $0 }),
+            preferenceText: Binding(get: { preferenceText }, set: { preferenceText = $0 }),
+            layout: .grid
+        )
+        XCTAssertTrue(view.showSectionTitle)
+    }
+
+    func testEmbeddedSectionTitleHiddenWhenParentShowsPreferences() {
+        XCTAssertFalse(
+            FiltersView.GridContract.shouldShowEmbeddedSectionTitle(parentShowsPreferencesHeading: true)
+        )
+        XCTAssertTrue(
+            FiltersView.GridContract.shouldShowEmbeddedSectionTitle(parentShowsPreferencesHeading: false)
         )
     }
 }

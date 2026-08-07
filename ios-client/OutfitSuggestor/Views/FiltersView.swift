@@ -19,6 +19,8 @@ struct FiltersView: View {
     var useWardrobeOnly: Binding<Bool>? = nil
     var showWardrobeOnly: Bool = false
     var showSharedHint: Bool = false
+    /// When false, omit the in-view "Preferences" headline (parent already shows one).
+    var showSectionTitle: Bool = true
     var gridColumnCount: Int = 2
     var filterAccessibilityPrefix: String = "home"
     var wardrobeOnlyCheckboxAccessibilityId: String = GridContract.wardrobeOnlyCheckboxAccessibilityId
@@ -58,10 +60,12 @@ struct FiltersView: View {
 
     private var formLayout: some View {
         VStack(spacing: 16) {
-            Text("Preferences")
-                .font(.headline)
-                .foregroundColor(AppTheme.textPrimary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if showSectionTitle {
+                Text("Preferences")
+                    .font(.headline)
+                    .foregroundColor(AppTheme.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Describe your style")
@@ -91,9 +95,11 @@ struct FiltersView: View {
 
     private var gridLayout: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Preferences")
-                .font(.headline)
-                .foregroundColor(AppTheme.textPrimary)
+            if showSectionTitle {
+                Text("Preferences")
+                    .font(.headline)
+                    .foregroundColor(AppTheme.textPrimary)
+            }
 
             if showSharedHint {
                 Text(InsightsCopy.sharedPreferencesNote)

@@ -5,7 +5,12 @@ import UIKit
 final class WardrobeCardUxTests: XCTestCase {
     func testStyleThisItemCopy() {
         XCTAssertEqual(WardrobeCardUx.styleThisItemTitle, "Style this item")
+        XCTAssertEqual(WardrobeCardUx.styleThisItemSubtitle, "Single-item Suggest flow")
         XCTAssertEqual(WardrobeCardUx.styleThisItemAccessibilityLabel, "Style this item with AI")
+        XCTAssertEqual(WardrobeCardUx.singleItemStylingSection, "Single-item styling")
+        XCTAssertEqual(WardrobeCardUx.addToOutfitCompletion, "Add to outfit completion")
+        XCTAssertEqual(WardrobeCardUx.removeFromOutfitCompletion, "Remove from outfit completion")
+        XCTAssertEqual(WardrobeCardUx.completeOutfitActionIdentifier(itemId: 7), "wardrobe.completeOutfit.7")
     }
 
     func testWardrobeEmptyCopy() {

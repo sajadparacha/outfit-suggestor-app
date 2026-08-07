@@ -451,7 +451,10 @@ struct MainFlowView: View {
                         preferenceText: $viewModel.preferenceText,
                         layout: .grid,
                         useWardrobeOnly: $viewModel.useWardrobeOnly,
-                        showWardrobeOnly: auth.isAuthenticated
+                        showWardrobeOnly: auth.isAuthenticated,
+                        showSectionTitle: FiltersView.GridContract.shouldShowEmbeddedSectionTitle(
+                            parentShowsPreferencesHeading: true
+                        )
                     )
                 }
             }
@@ -572,43 +575,69 @@ struct MainFlowView: View {
         VStack(spacing: 0) {
             Divider()
                 .background(AppTheme.border)
-            HStack(spacing: 10) {
-                Button {
-                    viewModel.startGenerateAnotherLook()
-                } label: {
-                    Label(MainFlowUxCopy.generateAnother, systemImage: "arrow.triangle.2.circlepath")
-                        .font(.caption.weight(.semibold))
-                        .frame(maxWidth: .infinity)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) {
+                    generateAnotherActionButton
+                    saveLookActionButton
+                    refineActionButton
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(AppTheme.accent)
-                .disabled(viewModel.isLoading || !canGenerateAnotherFromResult || viewModel.isGuestBlocked)
-                .accessibilityIdentifier("main.generateAnotherButton")
-
-                Button(action: handleSaveLookTap) {
-                    Label(MainFlowUxCopy.saveLook, systemImage: "heart")
-                        .font(.caption.weight(.semibold))
-                        .frame(maxWidth: .infinity)
+                VStack(spacing: 10) {
+                    generateAnotherActionButton
+                    HStack(spacing: 10) {
+                        saveLookActionButton
+                        refineActionButton
+                    }
                 }
-                .buttonStyle(.bordered)
-                .disabled(viewModel.isLoading)
-                .accessibilityIdentifier("main.saveLookButton")
-
-                Button {
-                    showRefineSheet = true
-                } label: {
-                    Label(MainFlowUxCopy.refine, systemImage: "slider.horizontal.3")
-                        .font(.caption.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-                .disabled(viewModel.isLoading)
-                .accessibilityIdentifier("main.refineButton")
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .background(.ultraThinMaterial)
         }
+    }
+
+    private var generateAnotherActionButton: some View {
+        Button {
+            viewModel.startGenerateAnotherLook()
+        } label: {
+            Label(MainFlowUxCopy.generateAnother, systemImage: "arrow.triangle.2.circlepath")
+                .font(.caption.weight(.semibold))
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
+                .frame(maxWidth: .infinity, minHeight: MainFlowResultActionsLayout.buttonMinHeight)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(AppTheme.accent)
+        .disabled(viewModel.isLoading || !canGenerateAnotherFromResult || viewModel.isGuestBlocked)
+        .accessibilityIdentifier(MainFlowResultActionsLayout.generateAnotherAccessibilityId)
+    }
+
+    private var saveLookActionButton: some View {
+        Button(action: handleSaveLookTap) {
+            Label(MainFlowUxCopy.saveLook, systemImage: "heart")
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .frame(maxWidth: .infinity, minHeight: MainFlowResultActionsLayout.buttonMinHeight)
+        }
+        .buttonStyle(.bordered)
+        .disabled(viewModel.isLoading)
+        .accessibilityIdentifier(MainFlowResultActionsLayout.saveLookAccessibilityId)
+    }
+
+    private var refineActionButton: some View {
+        Button {
+            showRefineSheet = true
+        } label: {
+            Label(MainFlowUxCopy.refine, systemImage: "slider.horizontal.3")
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .frame(maxWidth: .infinity, minHeight: MainFlowResultActionsLayout.buttonMinHeight)
+        }
+        .buttonStyle(.bordered)
+        .disabled(viewModel.isLoading)
+        .accessibilityIdentifier(MainFlowResultActionsLayout.refineAccessibilityId)
     }
 
     private var compactResultInputColumn: some View {
@@ -639,7 +668,10 @@ struct MainFlowView: View {
                     preferenceText: $viewModel.preferenceText,
                     layout: .grid,
                     useWardrobeOnly: $viewModel.useWardrobeOnly,
-                    showWardrobeOnly: auth.isAuthenticated
+                    showWardrobeOnly: auth.isAuthenticated,
+                    showSectionTitle: FiltersView.GridContract.shouldShowEmbeddedSectionTitle(
+                        parentShowsPreferencesHeading: true
+                    )
                 )
             }
 

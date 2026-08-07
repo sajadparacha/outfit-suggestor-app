@@ -73,7 +73,7 @@ struct RecentLooksSection: View {
         Button {
             onSelectEntry(entry)
         } label: {
-            HStack(spacing: 12) {
+            HStack(alignment: .center, spacing: 12) {
                 recentLookThumbnail(entry)
                     .frame(width: 64, height: 64)
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -82,18 +82,19 @@ struct RecentLooksSection: View {
                             .stroke(AppTheme.border, lineWidth: 1)
                     )
 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(lookTitle(for: entry))
                         .font(.subheadline.weight(.semibold))
                         .foregroundColor(AppTheme.textPrimary)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
                     Text(formattedDate(entry.created_at))
                         .font(.caption)
                         .foregroundColor(AppTheme.textSecondary)
+                        .lineLimit(1)
                 }
-
-                Spacer(minLength: 0)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 Button {
                     toggleBookmark(entry.id)
@@ -101,6 +102,7 @@ struct RecentLooksSection: View {
                     Image(systemName: bookmarkedIDs.contains(entry.id) ? "bookmark.fill" : "bookmark")
                         .font(.body.weight(.semibold))
                         .foregroundColor(AppTheme.gradientStart)
+                        .frame(minWidth: 44, minHeight: 44)
                 }
                 .buttonStyle(.plain)
             }
@@ -113,16 +115,18 @@ struct RecentLooksSection: View {
 
     @ViewBuilder
     private func recentLookThumbnail(_ entry: OutfitHistoryEntry) -> some View {
-        if let image = decodeBase64Image(entry.model_image) ?? decodeBase64Image(entry.image_data) {
+        if let image = decodeBase64Image(entry.recentLookThumbnailData) {
             Image(uiImage: image)
                 .resizable()
                 .scaledToFill()
+                .accessibilityIdentifier("home.recentLook.thumb.\(entry.id)")
         } else {
             ZStack {
                 AppTheme.surface
                 Image(systemName: "tshirt.fill")
                     .foregroundColor(AppTheme.gradientStart)
             }
+            .accessibilityIdentifier("home.recentLook.thumbPlaceholder.\(entry.id)")
         }
     }
 
@@ -159,11 +163,7 @@ struct RecentLooksSection: View {
     }
 
     private func decodeBase64Image(_ value: String?) -> UIImage? {
-        guard let raw = value, !raw.isEmpty else { return nil }
-        let payload = raw.contains("base64,") ? String(raw.split(separator: ",").last ?? "") : raw
-        let cleaned = payload.replacingOccurrences(of: "\\s", with: "", options: .regularExpression)
-        guard let data = Data(base64Encoded: cleaned), let image = UIImage(data: data) else { return nil }
-        return image
+        WardrobeImageData.decodeUIImage(from: value)
     }
 
     private func toggleBookmark(_ id: Int) {

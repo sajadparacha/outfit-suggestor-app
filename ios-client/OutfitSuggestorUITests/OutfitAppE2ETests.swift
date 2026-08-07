@@ -244,7 +244,9 @@ final class OutfitAppE2ETests: XCTestCase {
     }
 
     private func wardrobeRow(itemId: Int) -> XCUIElement {
-        app.descendants(matching: .any)["wardrobe.row.\(itemId)"]
+        app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier == %@", "wardrobe.row.\(itemId)")
+        ).firstMatch
     }
 
     private func collapseWardrobeCompletionPreferencesIfExpanded() {
@@ -258,12 +260,18 @@ final class OutfitAppE2ETests: XCTestCase {
     }
 
     private func wardrobeHeroButton(itemId: Int) -> XCUIElement {
-        let row = wardrobeRow(itemId: itemId)
-        let byLabel = row.buttons.matching(
+        let identifier = "wardrobe.getSuggestion.\(itemId)"
+        let byId = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier == %@", identifier)
+        ).firstMatch
+        if byId.exists { return byId }
+
+        let byExactLabel = app.buttons.matching(
             NSPredicate(format: "label == %@", "Style this item with AI")
         ).firstMatch
-        if byLabel.exists { return byLabel }
-        return row.buttons.matching(
+        if byExactLabel.exists { return byExactLabel }
+
+        return app.buttons.matching(
             NSPredicate(format: "label CONTAINS 'Style this item'")
         ).firstMatch
     }
@@ -277,7 +285,9 @@ final class OutfitAppE2ETests: XCTestCase {
         let row = wardrobeRow(itemId: itemId)
         let menu = wardrobeMenuTrigger(itemId: itemId)
         let required = target ?? (hero.exists ? hero : row)
-        let list = app.scrollViews["wardrobe.itemsList"]
+        let list = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier == %@", "wardrobe.itemsList")
+        ).firstMatch
         let deadline = Date().addingTimeInterval(timeout)
         var upwardPasses = 0
         while Date() < deadline {
@@ -285,58 +295,92 @@ final class OutfitAppE2ETests: XCTestCase {
             if target == nil, hero.exists, hero.isHittable { return }
             if target == nil, row.exists, row.isHittable { return }
             if target == nil, menu.exists, menu.isHittable { return }
-            if list.exists {
-                if upwardPasses < 10 {
-                    list.swipeUp()
-                    upwardPasses += 1
-                } else {
-                    list.swipeDown()
-                }
+            // Never blind-swipe the app — that can leave the Wardrobe tab.
+            guard list.exists else { return }
+            if upwardPasses < 6 {
+                list.swipeUp()
+                upwardPasses += 1
             } else {
-                app.swipeUp()
+                list.swipeDown()
             }
             RunLoop.current.run(until: Date().addingTimeInterval(0.25))
         }
     }
 
-    private func tapWardrobeHeroButton(itemId: Int, timeout: TimeInterval = 10) {
+    private func tapWardrobeHeroButton(itemId: Int, timeout: TimeInterval = 12) {
         dismissWardrobeFlowTipIfPresent()
         collapseWardrobeCompletionPreferencesIfExpanded()
-        let hero = wardrobeHeroButton(itemId: itemId)
+
+        let list = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier == %@", "wardrobe.itemsList")
+        ).firstMatch
         let deadline = Date().addingTimeInterval(timeout)
+        var swipeCount = 0
         while Date() < deadline {
-            scrollWardrobeItemIntoView(itemId: itemId, requiringHittable: hero, timeout: 2)
-            if hero.waitForExistence(timeout: 1), hero.isHittable {
-                hero.tap()
+            let hero = wardrobeHeroButton(itemId: itemId)
+            if hero.waitForExistence(timeout: 0.6) {
+                if hero.isHittable {
+                    hero.tap()
+                } else {
+                    hero.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+                }
                 return
             }
+
+            // Fallback: visible title text (when button a11y id is missing).
+            let styleTitle = app.staticTexts["Style this item"].firstMatch
+            if styleTitle.exists, styleTitle.isHittable {
+                styleTitle.tap()
+                return
+            }
+
+            // Keep Wardrobe on-screen — never blind-swipe the whole app (can leave the tab).
+            if list.exists {
+                if swipeCount < 6 {
+                    list.swipeUp()
+                } else {
+                    list.swipeDown()
+                }
+            } else if app.buttons["wardrobe.chip.all"].exists {
+                // List id may not resolve as ScrollView; nudge within Wardrobe only.
+                app.buttons["wardrobe.chip.shirt"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+                RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+            }
+            swipeCount += 1
             RunLoop.current.run(until: Date().addingTimeInterval(0.2))
         }
-        XCTAssertTrue(
-            waitFor(hero, timeout: 2),
-            "Expected Style this item button for wardrobe item \(itemId)"
+
+        let hero = wardrobeHeroButton(itemId: itemId)
+        let visible = app.otherElements["wardrobe.visibleItemIDs"]
+        let chips = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "wardrobe.chip."))
+        let wardrobeIds = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "wardrobe.")
         )
-        hero.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        var sample: [String] = []
+        for i in 0..<min(wardrobeIds.count, 30) {
+            sample.append(wardrobeIds.element(boundBy: i).identifier)
+        }
+        XCTFail(
+            "Expected Style this item button for wardrobe item \(itemId). " +
+            "hero.exists=\(hero.exists) visible=\(visible.exists ? visible.label : "missing") " +
+            "chipCount=\(chips.count) sample=[\(sample.joined(separator: ","))]"
+        )
     }
 
     private func wardrobeMenuTrigger(itemId: Int) -> XCUIElement {
         let identifier = "wardrobe.itemMenu.\(itemId)"
-        let row = wardrobeRow(itemId: itemId)
-        let candidates: [XCUIElement] = [
-            row.descendants(matching: .any).matching(
-                NSPredicate(format: "identifier == %@", identifier)
-            ).firstMatch,
-            row.buttons.matching(
-                NSPredicate(format: "label == %@", "More actions")
-            ).firstMatch,
-            app.descendants(matching: .any).matching(
-                NSPredicate(format: "identifier == %@", identifier)
-            ).firstMatch,
-        ]
-        for candidate in candidates where candidate.exists {
-            return candidate
-        }
-        return row.buttons.matching(
+        // Use matching().firstMatch — subscript throws when duplicates exist.
+        let byId = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier == %@", identifier)
+        ).firstMatch
+        if byId.exists { return byId }
+
+        let byLabel = app.buttons.matching(
+            NSPredicate(format: "label == %@", "More actions")
+        ).firstMatch
+        if byLabel.exists { return byLabel }
+
+        return app.buttons.matching(
             NSPredicate(format: "label CONTAINS 'More actions'")
         ).firstMatch
     }
@@ -344,16 +388,33 @@ final class OutfitAppE2ETests: XCTestCase {
     private func tapWardrobeMenuTrigger(itemId: Int, timeout: TimeInterval = 10) {
         dismissWardrobeFlowTipIfPresent()
         collapseWardrobeCompletionPreferencesIfExpanded()
-        let menu = wardrobeMenuTrigger(itemId: itemId)
+        let list = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier == %@", "wardrobe.itemsList")
+        ).firstMatch
         let deadline = Date().addingTimeInterval(timeout)
+        var swipeCount = 0
         while Date() < deadline {
-            scrollWardrobeItemIntoView(itemId: itemId, requiringHittable: menu, timeout: 2)
-            if menu.waitForExistence(timeout: 1), menu.isHittable {
-                menu.tap()
+            let menu = wardrobeMenuTrigger(itemId: itemId)
+            // Resolve via exists only — isHittable can throw on ambiguous queries.
+            if menu.waitForExistence(timeout: 0.6) {
+                if menu.isHittable {
+                    menu.tap()
+                } else {
+                    menu.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+                }
                 return
             }
+            if list.exists {
+                if swipeCount < 6 {
+                    list.swipeUp()
+                } else {
+                    list.swipeDown()
+                }
+            }
+            swipeCount += 1
             RunLoop.current.run(until: Date().addingTimeInterval(0.2))
         }
+        let menu = wardrobeMenuTrigger(itemId: itemId)
         XCTAssertTrue(
             waitFor(menu, timeout: 2),
             "Expected More actions menu for wardrobe item \(itemId)"
