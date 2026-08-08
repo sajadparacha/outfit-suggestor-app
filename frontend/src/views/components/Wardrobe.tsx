@@ -202,14 +202,6 @@ const Wardrobe: React.FC<WardrobeProps> = ({
     [selectedCompleteOutfitItems]
   );
 
-  const clearPendingDeleteUi = useCallback(() => {
-    if (pendingDeleteRef.current) {
-      clearTimeout(pendingDeleteRef.current.timeoutId);
-      pendingDeleteRef.current = null;
-    }
-    setShowDeleteUndoToast(false);
-  }, []);
-
   const commitPendingDelete = useCallback(async () => {
     const pending = pendingDeleteRef.current;
     if (!pending) return;

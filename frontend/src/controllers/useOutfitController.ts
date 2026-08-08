@@ -537,9 +537,7 @@ export const useOutfitController = (options?: {
       abortControllerRef.current = null;
     }
   }, [
-    filters.occasion,
-    filters.season,
-    filters.style,
+    filters,
     preferenceText,
     options,
     clearInputPanelSummary,

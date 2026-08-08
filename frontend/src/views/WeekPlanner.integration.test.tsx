@@ -1101,6 +1101,9 @@ describe('Week Outfit Planner', () => {
     });
     expect(screen.queryByRole('button', { name: /Style this item/i })).not.toBeInTheDocument();
 
+    await waitFor(() => {
+      expect(screen.getByTestId('wardrobe-week-pick-select-42')).toBeInTheDocument();
+    });
     fireEvent.click(screen.getByTestId('wardrobe-week-pick-select-42'));
 
     await waitFor(() => {
