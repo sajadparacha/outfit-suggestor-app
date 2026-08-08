@@ -9,7 +9,6 @@ export interface PlannerSettingsProps {
   enabledDayCount: number;
   generating?: boolean;
   onSetSharedSeason: (season: string) => void;
-  onSetReminderTime: (time: string) => void;
   /** @deprecated Generate lives on the page header primary CTA */
   onGenerateWeek?: () => void;
 }
@@ -18,7 +17,6 @@ const PlannerSettings: React.FC<PlannerSettingsProps> = ({
   plan,
   busy,
   onSetSharedSeason,
-  onSetReminderTime,
 }) => {
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
@@ -28,49 +26,27 @@ const PlannerSettings: React.FC<PlannerSettingsProps> = ({
       aria-label="Week settings"
       data-testid="week-planner-settings"
     >
-      <div className="flex flex-wrap items-start gap-3">
-        <div className="min-w-[8rem] flex-1">
-          <label
-            htmlFor="week-shared-season"
-            className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-300"
-          >
-            Season
-          </label>
-          <select
-            id="week-shared-season"
-            value={plan.shared_season}
-            onChange={(e) => onSetSharedSeason(e.target.value)}
-            className={selectClass}
-            disabled={busy}
-            aria-label="Shared season"
-          >
-            {FILTER_OPTIONS.seasons.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="min-w-[8rem] flex-1">
-          <label
-            htmlFor="week-reminder-time"
-            className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-300"
-          >
-            Reminder
-          </label>
-          <input
-            id="week-reminder-time"
-            type="time"
-            value={plan.reminder_time}
-            onChange={(e) => onSetReminderTime(e.target.value)}
-            className={selectClass}
-            disabled={busy}
-            aria-label="Reminder time"
-          />
-          <p className="mt-1 text-xs text-slate-400" data-testid="week-planner-timezone">
-            Timezone: {plan.timezone}
-          </p>
-        </div>
+      <div className="min-w-0 w-full">
+        <label
+          htmlFor="week-shared-season"
+          className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-300"
+        >
+          Season
+        </label>
+        <select
+          id="week-shared-season"
+          value={plan.shared_season}
+          onChange={(e) => onSetSharedSeason(e.target.value)}
+          className={selectClass}
+          disabled={busy}
+          aria-label="Shared season"
+        >
+          {FILTER_OPTIONS.seasons.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div>
@@ -86,7 +62,6 @@ const PlannerSettings: React.FC<PlannerSettingsProps> = ({
         {advancedOpen && (
           <p className="mt-2 text-xs text-slate-500" data-testid="week-planner-advanced">
             Per-day occasion, style, and wardrobe options are in the selected-day editor below.
-            Daily wake-up reminders are available on iOS.
           </p>
         )}
       </div>

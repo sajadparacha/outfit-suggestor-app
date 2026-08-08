@@ -50,7 +50,6 @@ export interface WeekPlannerProps {
       use_wardrobe_only?: boolean;
     }
   ) => void;
-  onSetReminderTime: (time: string) => void;
   onSetSharedStyle: (style: string) => void;
   onSetSharedSeason: (season: string) => void;
   onSave: () => void;
@@ -150,7 +149,6 @@ const WeekPlanner: React.FC<WeekPlannerProps> = ({
   hasGeneratedOutfits: hasGeneratedProp,
   enabledDayCount,
   onUpdateDay,
-  onSetReminderTime,
   onSetSharedStyle: _onSetSharedStyle,
   onSetSharedSeason,
   onSave,
@@ -328,7 +326,6 @@ const WeekPlanner: React.FC<WeekPlannerProps> = ({
         enabledDayCount={enabledDayCount}
         generating={generating}
         onSetSharedSeason={onSetSharedSeason}
-        onSetReminderTime={onSetReminderTime}
       />
 
       {!hasGeneratedOutfits && (

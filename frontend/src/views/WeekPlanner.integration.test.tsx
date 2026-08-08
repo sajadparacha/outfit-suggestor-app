@@ -155,8 +155,8 @@ describe('Week Outfit Planner', () => {
 
     expect(screen.getByLabelText(/Shared season/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/Shared style/i)).not.toBeInTheDocument();
-    expect(screen.getByLabelText(/Reminder time/i)).toBeInTheDocument();
-    expect(screen.getByTestId('week-planner-timezone')).toHaveTextContent(/Timezone:/i);
+    expect(screen.queryByLabelText(/Reminder time/i)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('week-planner-timezone')).not.toBeInTheDocument();
     expect(screen.getByTestId('week-empty-days')).toHaveTextContent(
       /Turn on the days you want to plan/i
     );
@@ -903,7 +903,7 @@ describe('Week Outfit Planner', () => {
         /Restored outfit day 0/i
       );
     });
-    expect(screen.getByLabelText(/Reminder time/i)).toHaveValue('08:00');
+    expect(screen.queryByLabelText(/Reminder time/i)).not.toBeInTheDocument();
     await waitFor(() => {
       const toast = screen.getByTestId('week-plan-message');
       expect(toast).toHaveTextContent(/Plan loaded/i);

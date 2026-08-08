@@ -316,13 +316,13 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
           id="week-planner"
           icon="📅"
           title="Week Outfit Planner"
-          subtitle="Plan looks for the days you need them—wake up knowing what to wear."
+          subtitle="Plan looks for the days you need them."
           accent="blue"
         >
           <StepList
             items={[
               'Open the Week Planner tab (sign in required). Turn on the days you want to plan and pick an occasion and style for each.',
-              'Set a shared season for the week, plus a reminder time. Your device timezone is saved with the plan.',
+              'Set a shared season for the week.',
               'The primary button is Generate outfits before looks exist, or Save plan when you have unsaved changes after generating. Use Regenerate this day anytime.',
               'Clear plan asks for confirmation, then clears the current week (a snapshot is kept under Plan history).',
               'Under Plan history (collapsed by default), tap Load to restore an earlier week as your current plan.',
@@ -333,10 +333,8 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
             ]}
           />
           <TipBox>
-            <strong className="text-white">Reminders:</strong> daily wake-up notifications are{' '}
-            <span className="text-white font-medium">iOS-first</span> (local notifications on your phone). On the web,
-            use the <span className="text-white font-medium">Today</span> section in the app—no OS push required for v1.
-            Add items to your wardrobe first so Generate outfits can fill looks without calling open-ended AI.
+            Use the <span className="text-white font-medium">Today</span> section for today’s occasion and outfit
+            summary. Add items to your wardrobe first so Generate outfits can fill looks without calling open-ended AI.
             Day cards show exceptional status only (Needs outfit, Not planned, Generating, Edited)—not Ready on every day.
             {isAdmin && (
               <>

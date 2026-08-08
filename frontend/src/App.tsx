@@ -870,7 +870,6 @@ function App() {
                 hasGeneratedOutfits={weekPlan.hasGeneratedOutfits}
                 enabledDayCount={weekPlan.enabledDayCount}
                 onUpdateDay={weekPlan.updateDay}
-                onSetReminderTime={weekPlan.setReminderTime}
                 onSetSharedStyle={weekPlan.setSharedStyle}
                 onSetSharedSeason={weekPlan.setSharedSeason}
                 onSave={() => {

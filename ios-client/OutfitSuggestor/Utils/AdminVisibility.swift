@@ -67,7 +67,7 @@ enum AboutCopy {
     static let insightsFeature =
         "• Insights — gap analysis, coverage dashboard, and a shopping list for what to buy next."
     static let weekPlannerFeature =
-        "• Week Planner — generate outfits for selected days, Change/Add opens Wardrobe to pick a slot item then returns to that day, save your plan, and get local reminders on iOS."
+        "• Week Planner — generate outfits for selected days, Change/Add opens Wardrobe to pick a slot item then returns to that day, and save your plan."
     static let guideLocationNote =
         "Open the step-by-step Guide from Profile → Guide (not a main tab)."
     static let adminDiagnosticsSuffix = " Includes transparent admin diagnostics for administrators."

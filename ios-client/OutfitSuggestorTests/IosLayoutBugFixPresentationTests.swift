@@ -11,13 +11,22 @@ final class IosLayoutBugFixPresentationTests: XCTestCase {
 
     // MARK: - Week Planner shared controls
 
-    func testSeasonAndReminderShareEqualLayoutContract() {
+    func testSeasonOnlySharedControlsLayoutContract() {
         XCTAssertEqual(WeekPlanSharedControlsLayout.controlMinHeight, 88)
-        XCTAssertEqual(WeekPlanSharedControlsLayout.equalWidthPairCount(), 2)
+        XCTAssertEqual(WeekPlanSharedControlsLayout.seasonOnlyControlCount(), 1)
         XCTAssertEqual(WeekPlanSharedControlsLayout.controlsAccessibilityId, "week.controls")
         XCTAssertEqual(WeekPlanSharedControlsLayout.seasonAccessibilityId, "week.sharedSeason")
-        XCTAssertEqual(WeekPlanSharedControlsLayout.reminderAccessibilityId, "week.reminderTime")
-        XCTAssertEqual(WeekPlanSharedControlsLayout.timezoneAccessibilityId, "week.timezone")
+    }
+
+    func testWeekPlannerCopyDropsReminderMarketing() {
+        XCTAssertFalse(MicroHelpCopy.weekPlanner.localizedCaseInsensitiveContains("reminder"))
+        XCTAssertFalse(
+            AuthPromptCopy.content(for: .week).subheadline?
+                .localizedCaseInsensitiveContains("reminder") ?? true
+        )
+        XCTAssertFalse(
+            AboutCopy.weekPlannerFeature.localizedCaseInsensitiveContains("reminder")
+        )
     }
 
     // MARK: - Week overview scroll hint

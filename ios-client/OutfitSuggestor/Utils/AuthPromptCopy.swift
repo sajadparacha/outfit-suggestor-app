@@ -63,7 +63,7 @@ enum AuthPromptCopy {
         case .week:
             return AuthPromptContent(
                 headline: "Plan outfits for your whole week.",
-                subheadline: "Sign in to enable days, generate looks, and get morning reminders.",
+                subheadline: "Sign in to enable days and generate looks for your week.",
                 primaryCTA: "Sign in"
             )
         case .settings:

@@ -572,7 +572,7 @@ enum WeekPlanCopy {
     static let savedConfigurations = "Planning templates"
     static let planningTemplates = "Planning templates"
     static let savedConfigurationsHint =
-        "Prefs only (days, occasions, reminder) — no outfits. Load one, then Generate outfits. Not the same as Plan history."
+        "Prefs only (days, occasions, season) — no outfits. Load one, then Generate outfits. Not the same as Plan history."
     static let saveConfiguration = "Save template…"
     static let updateConfiguration = "Update"
     static let renameConfiguration = "Rename"

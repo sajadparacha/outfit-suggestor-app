@@ -14,16 +14,14 @@ enum WardrobeNavigationPresentation {
     static let usesInlineTitle = true
 }
 
-/// Week Planner shared Season / Reminder control sizing.
+/// Week Planner shared Season control sizing (Season-only settings card).
 enum WeekPlanSharedControlsLayout {
     static let controlMinHeight: CGFloat = 88
     static let controlsAccessibilityId = "week.controls"
     static let seasonAccessibilityId = "week.sharedSeason"
-    static let reminderAccessibilityId = "week.reminderTime"
-    static let timezoneAccessibilityId = "week.timezone"
 
-    /// Both controls share equal width in an HStack.
-    static func equalWidthPairCount() -> Int { 2 }
+    /// Season is the sole shared control (full width).
+    static func seasonOnlyControlCount() -> Int { 1 }
 }
 
 /// Week overview horizontal scroll affordance.

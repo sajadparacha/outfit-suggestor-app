@@ -2,7 +2,7 @@
 //  WeekPlannerView.swift
 //  OutfitSuggestor
 //
-//  Week Outfit Planner — plan days, generate outfits, local reminders.
+//  Week Outfit Planner — plan days, generate outfits.
 //
 
 import SwiftUI
@@ -337,22 +337,16 @@ struct WeekPlannerView: View {
     // MARK: - Shared controls (compact — no Generate CTA)
 
     private var sharedControlsSection: some View {
-        HStack(alignment: .top, spacing: 10) {
-            seasonControl
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            reminderControl
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        }
-        .fixedSize(horizontal: false, vertical: true)
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Self.elevatedCard)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(AppTheme.border, lineWidth: 1)
-        )
-        .accessibilityIdentifier(WeekPlanSharedControlsLayout.controlsAccessibilityId)
+        seasonControl
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Self.elevatedCard)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(AppTheme.border, lineWidth: 1)
+            )
+            .accessibilityIdentifier(WeekPlanSharedControlsLayout.controlsAccessibilityId)
     }
 
     private var seasonControl: some View {
@@ -371,55 +365,12 @@ struct WeekPlannerView: View {
             .pickerStyle(.menu)
             .tint(AppTheme.gradientStart)
             .accessibilityIdentifier(WeekPlanSharedControlsLayout.seasonAccessibilityId)
-            Spacer(minLength: 0)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity, minHeight: WeekPlanSharedControlsLayout.controlMinHeight, alignment: .topLeading)
         .background(AppTheme.surface)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-    }
-
-    private var reminderControl: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(WeekPlanCopy.reminderLabel)
-                .font(.caption.weight(.semibold))
-                .foregroundColor(AppTheme.textSecondary)
-            DatePicker(
-                "Reminder time",
-                selection: reminderBinding,
-                displayedComponents: .hourAndMinute
-            )
-            .labelsHidden()
-            .tint(AppTheme.gradientStart)
-            .accessibilityIdentifier(WeekPlanSharedControlsLayout.reminderAccessibilityId)
-            Text("\(WeekPlanCopy.timezoneLabel): \(viewModel.plan.timezone.isEmpty ? TimeZone.current.identifier : viewModel.plan.timezone)")
-                .font(.caption2)
-                .foregroundColor(AppTheme.textSecondary)
-                .lineLimit(2)
-                .minimumScaleFactor(0.85)
-                .accessibilityIdentifier(WeekPlanSharedControlsLayout.timezoneAccessibilityId)
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, minHeight: WeekPlanSharedControlsLayout.controlMinHeight, alignment: .topLeading)
-        .background(AppTheme.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-    }
-
-    private var reminderBinding: Binding<Date> {
-        Binding(
-            get: {
-                reminderDate(from: viewModel.plan.reminder_time)
-            },
-            set: { date in
-                let comps = Calendar.current.dateComponents([.hour, .minute], from: date)
-                let hour = comps.hour ?? 7
-                let minute = comps.minute ?? 30
-                viewModel.setReminderTime(String(format: "%02d:%02d", hour, minute))
-            }
-        )
     }
 
     // MARK: - Week overview
@@ -1287,15 +1238,6 @@ struct WeekPlannerView: View {
         let date = WeekPlanDateFormatting.humanReadable(item.created_at)
         if date.isEmpty { return days }
         return "\(days) · \(date)"
-    }
-
-    private func reminderDate(from time: String) -> Date {
-        let parts = WeekPlanNotificationScheduler.parseReminderTime(time)
-            ?? (hour: 7, minute: 30)
-        var comps = Calendar.current.dateComponents([.year, .month, .day], from: Date())
-        comps.hour = parts.hour
-        comps.minute = parts.minute
-        return Calendar.current.date(from: comps) ?? Date()
     }
 
     private func dayCardAccessibilityLabel(day: WeekPlanDayResponse, exceptional: String?) -> String {

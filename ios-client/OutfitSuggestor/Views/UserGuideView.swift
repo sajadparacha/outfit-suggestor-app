@@ -156,13 +156,12 @@ struct UserGuideView: View {
                     steps: [
                         "Open the Week tab (sign in required), or Week Planner from Profile.",
                         "Turn on the days you want to plan and set Occasion, Style, and Use wardrobe for each selected day.",
-                        "Pick a shared Season and Reminder time (device timezone).",
+                        "Pick a shared Season for the week.",
                         "Tap Generate outfits (primary). After outfits exist, Save plan appears when you have unsaved changes.",
                         "Review the selected day — four slots (top, bottom, shoes, accessory), Why this outfit works, and Regenerate this day.",
                         "Change or Add on a day opens Wardrobe to pick an item for that slot, then returns to that day.",
                         "Planning templates store prefs only (no outfits). Plan history keeps past weekly outfits — both stay collapsed until you expand them.",
-                        "Clear plan saves a copy under Plan history. Day cards show Needs outfit / Not planned only when exceptional — not Ready on every day.",
-                        "On iOS, local notifications remind you at the reminder time."
+                        "Clear plan saves a copy under Plan history. Day cards show Needs outfit / Not planned only when exceptional — not Ready on every day."
                     ],
                     tip: isAdmin
                         ? "Add wardrobe items first — generate prefers your closet. Admins: expand Admin diagnostics on a day after generate to see prompt, response, and API cost."
@@ -190,7 +189,7 @@ struct UserGuideView: View {
                             "Week — Week Outfit Planner (sign in required).",
                             "Looks — Your saved outfit history.",
                             "Settings — Email, name, password, and shortcuts to Week Planner, Insights, and Guide.",
-                            "Week Planner — Also available from the Week tab; plan outfits for selected days with daily local reminder notifications.",
+                            "Week Planner — Also available from the Week tab; plan outfits for selected days.",
                             "Insights — Action-focused wardrobe analysis with gap score, coverage dashboard, and buy-next guidance.",
                             "Guide — Step-by-step help and tips (this page).",
                             "About — Product story, features, and creator links.",
