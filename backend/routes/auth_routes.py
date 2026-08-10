@@ -44,6 +44,11 @@ class ChangePasswordRequest(BaseModel):
     new_password: str
 
 
+class OAuthLoginRequest(BaseModel):
+    provider: str  # "google" | "apple"
+    id_token: str
+
+
 @router.post("/register", response_model=Token)
 async def register(
     user_data: UserRegister,
@@ -116,6 +121,22 @@ async def login(
         HTTPException: If credentials are invalid
     """
     return await auth_controller.login(form_data=form_data, db=db)
+
+
+@router.post("/oauth", response_model=Token)
+async def oauth_login(
+    body: OAuthLoginRequest,
+    auth_controller: AuthController = Depends(get_auth_controller),
+    db: Session = Depends(get_db),
+):
+    """
+    Sign in with Google or Apple ID token. Returns the same Token as password login.
+    """
+    return await auth_controller.oauth_login(
+        provider=body.provider,
+        id_token=body.id_token,
+        db=db,
+    )
 
 
 @router.get("/me", response_model=UserResponse)

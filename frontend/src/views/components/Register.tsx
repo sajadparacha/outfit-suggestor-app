@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { RegisterRequest } from '../../models/AuthModels';
+import { RegisterRequest, OAuthProvider } from '../../models/AuthModels';
+import OAuthButtons from './OAuthButtons';
 
 interface RegisterProps {
   onRegister: (data: RegisterRequest) => Promise<void>;
+  onOAuthLogin?: (provider: OAuthProvider, idToken: string) => Promise<void>;
   onSwitchToLogin: () => void;
   loading: boolean;
   error: string | null;
@@ -12,6 +14,7 @@ interface RegisterProps {
 
 const Register: React.FC<RegisterProps> = ({
   onRegister,
+  onOAuthLogin,
   onSwitchToLogin,
   loading,
   error,
@@ -123,6 +126,10 @@ const Register: React.FC<RegisterProps> = ({
           >
             {loading ? 'Creating account...' : 'Create account'}
           </button>
+
+          {onOAuthLogin ? (
+            <OAuthButtons onOAuthLogin={onOAuthLogin} loading={loading} />
+          ) : null}
         </form>
       </div>
     </div>

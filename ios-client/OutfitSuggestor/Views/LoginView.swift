@@ -92,6 +92,12 @@ struct LoginView: View {
                 .disabled(!canSubmit)
                 .accessibilityIdentifier("auth.login.submit")
 
+                OAuthSignInSectionView(
+                    auth: auth,
+                    isBusy: $isLoading,
+                    errorMessage: $errorMessage
+                )
+
 #if DEBUG
                 Text("API: \(AppConfig.apiBaseURL)")
                     .font(.caption2)

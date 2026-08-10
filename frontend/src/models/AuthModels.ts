@@ -24,6 +24,13 @@ export interface LoginRequest {
   password: string;
 }
 
+export type OAuthProvider = 'google' | 'apple';
+
+export interface OAuthLoginRequest {
+  provider: OAuthProvider;
+  id_token: string;
+}
+
 export interface TokenResponse {
   access_token: string;
   token_type: string;

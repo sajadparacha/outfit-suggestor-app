@@ -32,6 +32,22 @@ struct RegisterRequest: Codable {
     let full_name: String?
 }
 
+// MARK: - OAuth login request
+enum OAuthProvider: String, Codable, CaseIterable {
+    case google
+    case apple
+}
+
+struct OAuthLoginRequest: Codable, Equatable {
+    let provider: String
+    let id_token: String
+
+    init(provider: OAuthProvider, idToken: String) {
+        self.provider = provider.rawValue
+        self.id_token = idToken
+    }
+}
+
 // MARK: - Change password request
 struct ChangePasswordRequest: Codable {
     let current_password: String

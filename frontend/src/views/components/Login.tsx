@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { LoginRequest } from '../../models/AuthModels';
+import { LoginRequest, OAuthProvider } from '../../models/AuthModels';
+import OAuthButtons from './OAuthButtons';
 
 interface LoginProps {
   onLogin: (credentials: LoginRequest) => Promise<void>;
+  onOAuthLogin?: (provider: OAuthProvider, idToken: string) => Promise<void>;
   onSwitchToRegister: () => void;
   loading: boolean;
   error: string | null;
@@ -12,6 +14,7 @@ interface LoginProps {
 
 const Login: React.FC<LoginProps> = ({
   onLogin,
+  onOAuthLogin,
   onSwitchToRegister,
   loading,
   error,
@@ -101,6 +104,10 @@ const Login: React.FC<LoginProps> = ({
           >
             {loading ? 'Signing in...' : 'Sign in'}
           </button>
+
+          {onOAuthLogin ? (
+            <OAuthButtons onOAuthLogin={onOAuthLogin} loading={loading} />
+          ) : null}
         </form>
       </div>
     </div>

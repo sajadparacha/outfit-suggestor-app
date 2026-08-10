@@ -39,6 +39,31 @@ export const handlers = [
     );
   }),
 
+  rest.post(`${API_BASE}/api/auth/oauth`, async (req, res, ctx) => {
+    const body = await req.json();
+    const provider = body?.provider;
+    if (provider !== 'google' && provider !== 'apple') {
+      return res(ctx.status(400), ctx.json({ detail: 'Unsupported OAuth provider' }));
+    }
+    if (!body?.id_token) {
+      return res(ctx.status(401), ctx.json({ detail: 'Invalid OAuth token' }));
+    }
+    return res(
+      ctx.json({
+        access_token: `oauth-test-token-${provider}`,
+        token_type: 'bearer',
+        user: {
+          id: 42,
+          email: `${provider}@example.com`,
+          full_name: `${provider} User`,
+          is_active: true,
+          email_verified: true,
+          created_at: '2026-01-01T00:00:00Z',
+        },
+      })
+    );
+  }),
+
   rest.get(`${API_BASE}/api/wardrobe/summary`, (_req, res, ctx) => {
     return res(
       ctx.json({

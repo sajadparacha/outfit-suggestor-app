@@ -51,6 +51,8 @@ class AuthService:
             email=email,
             hashed_password=hashed_password,
             full_name=full_name,
+            auth_provider="password",
+            provider_user_id=None,
             is_active=True,
             email_verified=True,  # Auto-verify on registration
             activation_token=None,
@@ -61,6 +63,102 @@ class AuthService:
         db.commit()
         db.refresh(new_user)
         return new_user
+
+    def get_user_by_provider(
+        self,
+        db: Session,
+        provider: str,
+        provider_user_id: str,
+    ) -> Optional[User]:
+        return (
+            db.query(User)
+            .filter(
+                User.auth_provider == provider,
+                User.provider_user_id == provider_user_id,
+            )
+            .first()
+        )
+
+    def create_oauth_user(
+        self,
+        db: Session,
+        *,
+        email: str,
+        provider: str,
+        provider_user_id: str,
+        full_name: Optional[str] = None,
+    ) -> User:
+        new_user = User(
+            email=email,
+            hashed_password=None,
+            full_name=full_name,
+            auth_provider=provider,
+            provider_user_id=provider_user_id,
+            is_active=True,
+            email_verified=True,
+            activation_token=None,
+            activation_token_expires=None,
+        )
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        return new_user
+
+    def link_oauth_identity(
+        self,
+        db: Session,
+        user: User,
+        *,
+        provider: str,
+        provider_user_id: str,
+        full_name: Optional[str] = None,
+    ) -> User:
+        user.auth_provider = provider
+        user.provider_user_id = provider_user_id
+        user.email_verified = True
+        if full_name and not user.full_name:
+            user.full_name = full_name
+        db.commit()
+        db.refresh(user)
+        return user
+
+    def find_or_create_oauth_user(
+        self,
+        db: Session,
+        *,
+        provider: str,
+        provider_user_id: str,
+        email: Optional[str],
+        full_name: Optional[str] = None,
+    ) -> User:
+        existing = self.get_user_by_provider(db, provider, provider_user_id)
+        if existing:
+            return existing
+
+        if email:
+            by_email = self.get_user_by_email(db, email)
+            if by_email:
+                return self.link_oauth_identity(
+                    db,
+                    by_email,
+                    provider=provider,
+                    provider_user_id=provider_user_id,
+                    full_name=full_name,
+                )
+
+        if not email:
+            raise ValueError(
+                "Email is required to create an account. "
+                "Share your email with the provider and try again."
+            )
+
+        return self.create_oauth_user(
+            db,
+            email=email,
+            provider=provider,
+            provider_user_id=provider_user_id,
+            full_name=full_name,
+        )
     
     def authenticate_user(
         self,
@@ -82,6 +180,9 @@ class AuthService:
         user = self.get_user_by_email(db, email)
         
         if not user:
+            return None
+
+        if not user.hashed_password:
             return None
         
         if not verify_password(password, user.hashed_password):
@@ -130,12 +231,13 @@ class AuthService:
         if len(new_password) < 6:
             raise ValueError("New password must be at least 6 characters long")
         
-        # Check if new password is different from current password
-        if verify_password(new_password, user.hashed_password):
+        if user.hashed_password and verify_password(new_password, user.hashed_password):
             raise ValueError("New password must be different from current password")
         
-        # Update password
+        # Update password (also enables password login for former OAuth-only users)
         user.hashed_password = get_password_hash(new_password)
+        if not user.auth_provider:
+            user.auth_provider = "password"
         db.commit()
         db.refresh(user)
     

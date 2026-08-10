@@ -186,6 +186,7 @@ struct UserGuideView: View {
                         title: "Account & Navigation",
                         color: .gray,
                         steps: [
+                            "Sign in from Profile → Settings (or any auth prompt) with email and password, Continue with Google, or Continue with Apple.",
                             "Week — Week Outfit Planner (sign in required).",
                             "Looks — Your saved outfit history.",
                             "Settings — Email, name, password, and shortcuts to Week Planner, Insights, and Guide.",

@@ -33,6 +33,9 @@
 		7248256EB6986D8D67B77C40 /* OutfitSuggestorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE08B45FCDDE652CA1907D91 /* OutfitSuggestorApp.swift */; };
 		7779D09FCF0EEFFC28A2259E /* LocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79B25D4D09B5BB781246B0DF /* LocationService.swift */; };
 		96A83F2AAE2ED65AD4E24997 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62893A1B15D2311F3AEBA721 /* AuthService.swift */; };
+		OAU01BF0000000000000001 /* OAuthSignInSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = OAU01FR0000000000000001 /* OAuthSignInSupport.swift */; };
+		OAU02BF0000000000000001 /* OAuthSignInSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = OAU02FR0000000000000001 /* OAuthSignInSectionView.swift */; };
+		OAU03BF0000000000000001 /* OAuthAuthServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = OAU03FR0000000000000001 /* OAuthAuthServiceTests.swift */; };
 		9BE1667E64CA0C40EDF6B0C1 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E0DF875D431141A2F841D3F /* LoginView.swift */; };
 		A963F0085A29335578FB7847 /* ImagePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3016CC9235E918186E85387 /* ImagePicker.swift */; };
 		A1B2C3D4E5F60718293A4B5D /* AiProgressSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5C /* AiProgressSteps.swift */; };
@@ -185,6 +188,11 @@
 		C3D4E5F60718293A4B5C6D7D /* AiProgressStepsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AiProgressStepsTests.swift; sourceTree = "<group>"; };
 		60FB09DAD00AB05C5F220D23 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		62893A1B15D2311F3AEBA721 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
+		OAU01FR0000000000000001 /* OAuthSignInSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuthSignInSupport.swift; sourceTree = "<group>"; };
+		OAU02FR0000000000000001 /* OAuthSignInSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuthSignInSectionView.swift; sourceTree = "<group>"; };
+		OAU03FR0000000000000001 /* OAuthAuthServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuthAuthServiceTests.swift; sourceTree = "<group>"; };
+		OAU05FR0000000000000001 /* OAuth.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = OAuth.xcconfig; sourceTree = "<group>"; };
+		OAU06FR0000000000000001 /* OutfitSuggestor.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = OutfitSuggestor.entitlements; sourceTree = "<group>"; };
 		65F83DC80A17A5A7B6CC15D0 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		66828E50349EE49EE62FFFFD /* WardrobeListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeListView.swift; sourceTree = "<group>"; };
 		777166D6A9515B3BA3538439 /* InsightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsView.swift; sourceTree = "<group>"; };
@@ -310,6 +318,7 @@
 				WCF01FR0000000000000002 /* WardrobeCategoryFilterTests.swift */,
 				F1R2U3N4C5O6A7C8H90000A /* FirstRunCoachTests.swift */,
 				G1U2E3S4T5L6I7M8I900004 /* GuestLimitAuthUxTests.swift */,
+				OAU03FR0000000000000001 /* OAuthAuthServiceTests.swift */,
 				A1R2E3P4O5R6T7M8O9D0E05 /* ReportsViewModelTests.swift */,
 				M1F2L3O4W5U6X7C8O9P0Y10 /* MainFlowUxContractTests.swift */,
 				R1E2G3E4N5L6O7G8I9C004 /* MainFlowResultRegenerateLogicTests.swift */,
@@ -382,6 +391,7 @@
 				977BD13092DD8A2D98C4471D /* ImageUploadView.swift */,
 				777166D6A9515B3BA3538439 /* InsightsView.swift */,
 				1E0DF875D431141A2F841D3F /* LoginView.swift */,
+				OAU02FR0000000000000001 /* OAuthSignInSectionView.swift */,
 				106F6C638D7D7BC45FC53DE7 /* MainFlowView.swift */,
 				F1R2U3N4C5O6A7C8H900004 /* FirstRunCoachView.swift */,
 				F1R2U3N4C5O6A7C8H900006 /* EmptyOutfitPreviewView.swift */,
@@ -474,6 +484,7 @@
 			isa = PBXGroup;
 			children = (
 				DE08B45FCDDE652CA1907D91 /* OutfitSuggestorApp.swift */,
+				OAU06FR0000000000000001 /* OutfitSuggestor.entitlements */,
 				N1A2B3C4D5E6F708192A3B4C7 /* Navigation */,
 				C70E62A8CE7289CD4E56579C /* Models */,
 				C6C2893F741D63D483F9F16A /* Resources */,
@@ -491,6 +502,7 @@
 			children = (
 				D805DBEB8393D1EF9B9EAD33 /* APIService.swift */,
 				62893A1B15D2311F3AEBA721 /* AuthService.swift */,
+				OAU01FR0000000000000001 /* OAuthSignInSupport.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -500,6 +512,7 @@
 			children = (
 				07A2F4C13B6A4D91A32E7800 /* Assets.xcassets */,
 				320B1BD2DA38C4879F46C68C /* Info.plist */,
+				OAU05FR0000000000000001 /* OAuth.xcconfig */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -562,6 +575,7 @@
 			);
 			name = OutfitSuggestor;
 			packageProductDependencies = (
+				OAU04PD0000000000000001 /* GoogleSignIn */,
 			);
 			productName = OutfitSuggestor;
 			productReference = 4FDE60751389D95FDB822F3E /* OutfitSuggestor.app */;
@@ -599,6 +613,11 @@
 					};
 					73E8DE2A1D94825B55F8B785 = {
 						ProvisioningStyle = Automatic;
+						SystemCapabilities = {
+							com.apple.SignInWithApple = {
+								enabled = 1;
+							};
+						};
 					};
 					EA3252C02C75444A81E2E791 = {
 						ProvisioningStyle = Automatic;
@@ -615,6 +634,9 @@
 			);
 			mainGroup = EA6E8BACDE36EF0E96554151;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				OAU04PR0000000000000001 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 938BA973EF7395BC418FD86B /* Products */;
 			projectDirPath = "";
@@ -659,6 +681,8 @@
 				C9F8C11DE63D85713E22F929 /* AppTheme.swift in Sources */,
 				B030C4AADF57B3488189CD98 /* AuthModels.swift in Sources */,
 				96A83F2AAE2ED65AD4E24997 /* AuthService.swift in Sources */,
+				OAU01BF0000000000000001 /* OAuthSignInSupport.swift in Sources */,
+				OAU02BF0000000000000001 /* OAuthSignInSectionView.swift in Sources */,
 				219CC1A4A5BDD78FC15E6D32 /* ContentView.swift in Sources */,
 				383DA19CACB3651B2D0FC6C9 /* FiltersView.swift in Sources */,
 				E5F60718293A4B5C6D7E8F3 /* GuestAuthSheetView.swift in Sources */,
@@ -764,6 +788,7 @@
 				WCF01BF0000000000000002 /* WardrobeCategoryFilterTests.swift in Sources */,
 				F1R2U3N4C5O6A7C8H900009 /* FirstRunCoachTests.swift in Sources */,
 				G1U2E3S4T5L6I7M8I900003 /* GuestLimitAuthUxTests.swift in Sources */,
+				OAU03BF0000000000000001 /* OAuthAuthServiceTests.swift in Sources */,
 				A1R2E3P4O5R6T7M8O9D0E06 /* ReportsViewModelTests.swift in Sources */,
 				M1F2L3O4W5U6X7C8O9P0Y0F /* MainFlowUxContractTests.swift in Sources */,
 				R1E2G3E4N5L6O7G8I9C003 /* MainFlowResultRegenerateLogicTests.swift in Sources */,
@@ -826,8 +851,10 @@
 		};
 		8AF716E39165F803FEA10065 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = OAU05FR0000000000000001 /* OAuth.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = OutfitSuggestor/OutfitSuggestor.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 7UVB6XM3R7;
@@ -909,8 +936,10 @@
 		};
 		BAFA96525811FD47E5613183 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = OAU05FR0000000000000001 /* OAuth.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = OutfitSuggestor/OutfitSuggestor.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 7UVB6XM3R7;
@@ -1076,6 +1105,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		OAU04PR0000000000000001 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		OAU04PD0000000000000001 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = OAU04PR0000000000000001 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 09B3882A3A47F24FA108F183 /* Project object */;
 }

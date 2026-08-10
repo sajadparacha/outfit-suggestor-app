@@ -72,7 +72,7 @@ function App() {
   }, []);
 
   // Authentication
-  const { user, isAuthenticated, isLoading: authLoading, login, register, logout, error: authError, clearError } = useAuthController();
+  const { user, isAuthenticated, isLoading: authLoading, login, loginWithOAuth, register, logout, error: authError, clearError } = useAuthController();
   const modelGenerationEnabled = !!user?.is_admin;
   const [showRegister, setShowRegister] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -508,6 +508,21 @@ function App() {
       await register(data);
       // Auto-login happens in the controller
       showToast('Registration successful! Welcome! 👋', 'success');
+      if (!localStorage.getItem('intro_hero_seen')) {
+        localStorage.setItem('intro_hero_seen', 'true');
+        setShowIntroOverlay(true);
+      }
+      return true;
+    } catch (err) {
+      // Error is handled by auth controller
+      return false;
+    }
+  };
+
+  const handleOAuthLogin = async (provider: 'google' | 'apple', idToken: string): Promise<boolean> => {
+    try {
+      await loginWithOAuth(provider, idToken);
+      showToast('Welcome! 👋', 'success');
       if (!localStorage.getItem('intro_hero_seen')) {
         localStorage.setItem('intro_hero_seen', 'true');
         setShowIntroOverlay(true);
@@ -1062,6 +1077,13 @@ function App() {
                       setShowFirstOutfitBanner(false);
                     }
                   }}
+                  onOAuthLogin={async (provider, idToken) => {
+                    const success = await handleOAuthLogin(provider, idToken);
+                    if (success) {
+                      closeAuthModal();
+                      setShowFirstOutfitBanner(false);
+                    }
+                  }}
                   onSwitchToLogin={() => {
                     setShowRegister(false);
                     setShowLoginModal(true);
@@ -1076,6 +1098,13 @@ function App() {
                   subheadline={authModalCopy?.subheadline}
                   onLogin={async (credentials) => {
                     const success = await handleLogin(credentials);
+                    if (success) {
+                      closeAuthModal();
+                      setShowFirstOutfitBanner(false);
+                    }
+                  }}
+                  onOAuthLogin={async (provider, idToken) => {
+                    const success = await handleOAuthLogin(provider, idToken);
                     if (success) {
                       closeAuthModal();
                       setShowFirstOutfitBanner(false);

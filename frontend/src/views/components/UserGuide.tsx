@@ -176,7 +176,9 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
             <div className="rounded-2xl border border-brand-purple/20 bg-brand-purple/10 p-5 ring-1 ring-brand-purple/10">
               <p className="text-xs font-bold uppercase tracking-wider text-brand-purple mb-2">With a free account</p>
               <p className="text-slate-200">
-                Save a <span className="text-white font-medium">wardrobe</span>, browse{' '}
+                Sign in with email, <span className="text-white font-medium">Google</span>, or{' '}
+                <span className="text-white font-medium">Apple</span>, then save a{' '}
+                <span className="text-white font-medium">wardrobe</span>, browse{' '}
                 <span className="text-white font-medium">history</span>, use{' '}
                 <span className="text-white font-medium">wardrobe-only</span> mode, random picks, and settings.
               </p>

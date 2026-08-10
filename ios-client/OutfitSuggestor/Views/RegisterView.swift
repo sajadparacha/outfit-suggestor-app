@@ -60,6 +60,15 @@ struct RegisterView: View {
                 }
                 .disabled(email.isEmpty || password.isEmpty || isLoading)
             }
+            Section {
+                OAuthSignInSectionView(
+                    auth: auth,
+                    isBusy: $isLoading,
+                    errorMessage: $errorMessage
+                )
+                .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                .listRowBackground(Color.clear)
+            }
         }
         .navigationTitle(headline == nil ? "Sign Up" : resolvedHeadline)
         .navigationBarTitleDisplayMode(headline == nil ? .automatic : .inline)

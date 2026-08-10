@@ -68,6 +68,8 @@ enum AboutCopy {
         "• Insights — gap analysis, coverage dashboard, and a shopping list for what to buy next."
     static let weekPlannerFeature =
         "• Week Planner — generate outfits for selected days, Change/Add opens Wardrobe to pick a slot item then returns to that day, and save your plan."
+    static let accountFeature =
+        "• Account — sign in with email and password, Continue with Google, or Continue with Apple to sync wardrobe, history, Week Planner, and Insights."
     static let guideLocationNote =
         "Open the step-by-step Guide from Profile → Guide (not a main tab)."
     static let adminDiagnosticsSuffix = " Includes transparent admin diagnostics for administrators."

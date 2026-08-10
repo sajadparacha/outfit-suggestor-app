@@ -2,7 +2,7 @@
 
 This document tracks feature parity between the **web app** and the **iOS app** so both offer the same functionality. Use it as a checklist when implementing or syncing features.
 
-**Branch**: `fix/weekly-planner-gui`
+**Branch**: `oauth-google-apple`
 
 ---
 
@@ -10,7 +10,7 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 
 | Area | Web | iOS | Notes |
 |------|-----|-----|--------|
-| **Auth** | ✅ | ✅ | Register, login, logout, change password (Settings) |
+| **Auth** | ✅ | ✅ | Register, login, logout, change password (Settings); **Google + Sign in with Apple** via `POST /api/auth/oauth` (Facebook skipped) |
 | **UX coherence (product story)** | ✅ | ✅ | Men's stylist promise on Suggest; three-ring empty states (Wardrobe → Insights/Week; History → Suggest); Guide demoted from web primary nav (footer/Settings); iOS Guide stays under Profile; About story-first on both |
 | **Main flow simplified UX** | ✅ | ✅ | Shared contract `docs/main-flow-ux-contract.md`; creation → result; 3 actions (Generate Another, Save Look, Refine); advanced options input-side only; `productPromiseHeadline` / `productPromiseSubline` on empty creation |
 | **Random picks thumbnails + input sync** | ✅ | ✅ | Item card thumbs from `matching_wardrobe_items`; left preview replaces stale upload; wardrobe-only **checkbox** (not switch) |
@@ -42,24 +42,26 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 
 ## 1. Authentication
 
-**Web**: Register, login, logout, change password, email activation (optional), JWT in localStorage.
+**Web**: Register, login, logout, change password, email activation (optional), JWT in localStorage. OAuth: **Continue with Google** / **Continue with Apple** on login & register → `POST /api/auth/oauth` → same JWT.
 
-**iOS status**: Not implemented.
+**iOS**: Same email/password flows + Apple Sign In (AuthenticationServices). Google button present; Google Sign-In SDK hookup pending (`GoogleSignInProviding` seam). JWT stored like password login.
 
 **API endpoints** (see API_DOCUMENTATION.md):
 
 - `POST /api/auth/register`
 - `POST /api/auth/login`
+- `POST /api/auth/oauth` — `{ provider: "google"|"apple", id_token }` → Token
 - `GET /api/auth/me`
 - `POST /api/auth/change-password`
 - `GET /api/auth/activate/{token}`
 
-**iOS work**:
+**Env**: `GOOGLE_CLIENT_IDS`, `APPLE_CLIENT_IDS` (backend); `REACT_APP_GOOGLE_CLIENT_ID`, `REACT_APP_APPLE_CLIENT_ID` (web).
 
-- [ ] Add auth service (login, register, logout, me, change password).
-- [ ] Store JWT securely (e.g. Keychain).
-- [ ] Add Login / Register / Settings (change password) screens.
-- [ ] Send `Authorization: Bearer <token>` on requests that require auth.
+**Remaining**:
+
+- [x] Enable Sign in with Apple capability (entitlements + target SystemCapabilities).
+- [x] Add Google Sign-In SDK on iOS and wire `GoogleSignInProvider`.
+- [ ] Configure production client IDs: `GOOGLE_CLIENT_IDS` / `APPLE_CLIENT_IDS` (backend), `REACT_APP_*` (web), `OAuth.xcconfig` (iOS). Apple Developer: enable Sign in with Apple for App ID `com.sajad.outfitsuggestor`.
 
 ---
 

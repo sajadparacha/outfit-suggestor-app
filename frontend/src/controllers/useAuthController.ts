@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { User, RegisterRequest, LoginRequest } from '../models/AuthModels';
+import { User, RegisterRequest, LoginRequest, OAuthProvider } from '../models/AuthModels';
 import ApiService from '../services/ApiService';
 
 interface UseAuthControllerReturn {
@@ -16,6 +16,7 @@ interface UseAuthControllerReturn {
   
   // Actions
   login: (credentials: LoginRequest) => Promise<void>;
+  loginWithOAuth: (provider: OAuthProvider, idToken: string) => Promise<void>;
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => void;
   clearError: () => void;
@@ -61,6 +62,25 @@ export const useAuthController = (): UseAuthControllerReturn => {
       setUser(response.user);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Login failed';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  /**
+   * Sign in with Google or Apple OAuth id_token
+   */
+  const loginWithOAuth = useCallback(async (provider: OAuthProvider, idToken: string) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await ApiService.oauthLogin({ provider, id_token: idToken });
+      setUser(response.user);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'OAuth sign-in failed';
       setError(errorMessage);
       throw err;
     } finally {
@@ -118,6 +138,7 @@ export const useAuthController = (): UseAuthControllerReturn => {
     
     // Actions
     login,
+    loginWithOAuth,
     register,
     logout,
     clearError,

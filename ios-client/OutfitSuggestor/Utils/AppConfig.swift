@@ -54,6 +54,24 @@ enum AppConfig {
         let processInfo = ProcessInfo.processInfo
         return processInfo.arguments.contains(uiTestFlag) || processInfo.environment[uiTestFlag] == "1"
     }
+
+    /// Google iOS OAuth client ID (`GIDClientID` in Info.plist / OAuth.xcconfig).
+    static var googleClientID: String {
+        let fromPlist = (Bundle.main.object(forInfoDictionaryKey: "GIDClientID") as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return fromPlist
+    }
+
+    /// Web/server client ID for ID tokens verified by the backend (`GIDServerClientID`).
+    static var googleServerClientID: String? {
+        let value = (Bundle.main.object(forInfoDictionaryKey: "GIDServerClientID") as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return value.isEmpty ? nil : value
+    }
+
+    static var isGoogleSignInConfigured: Bool {
+        !googleClientID.isEmpty
+    }
 }
 
 @MainActor

@@ -74,6 +74,59 @@ class AuthController:
             "user": self._format_user_response(new_user)
         }
     
+    async def oauth_login(
+        self,
+        provider: str,
+        id_token: str,
+        db: Session,
+    ) -> Dict:
+        """
+        Verify a Google/Apple ID token and return the same Token shape as password login.
+        """
+        from utils.oauth_verify import OAuthVerificationError, verify_oauth_id_token
+
+        try:
+            identity = verify_oauth_id_token(provider, id_token)
+        except OAuthVerificationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=str(exc),
+                headers={"WWW-Authenticate": "Bearer"},
+            ) from exc
+
+        try:
+            user = self.auth_service.find_or_create_oauth_user(
+                db,
+                provider=identity.provider,
+                provider_user_id=identity.provider_user_id,
+                email=identity.email,
+                full_name=identity.full_name,
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
+
+        if not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User account is inactive",
+            )
+
+        from config import Config
+
+        access_token_expires = timedelta(minutes=Config.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = self.auth_service.create_access_token(
+            user_id=user.id,
+            expires_delta=access_token_expires,
+        )
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": self._format_user_response(user),
+        }
+
     async def login(
         self,
         form_data: OAuth2PasswordRequestForm,
@@ -160,8 +213,12 @@ class AuthController:
         Raises:
             HTTPException: If current password is incorrect or new password is invalid
         """
-        # Verify current password
         from utils.auth import verify_password
+        if not current_user.hashed_password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This account uses social sign-in and has no password set",
+            )
         if not verify_password(current_password, current_user.hashed_password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

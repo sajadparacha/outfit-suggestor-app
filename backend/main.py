@@ -86,6 +86,13 @@ try:
 except Exception as exc:  # pragma: no cover — never block boot on alter edge cases
     print(f"⚠️  Week plan schema ensure skipped: {exc}")
 
+try:
+    from utils.ensure_oauth_user_schema import ensure_oauth_user_schema
+
+    ensure_oauth_user_schema(engine)
+except Exception as exc:  # pragma: no cover — never block boot on alter edge cases
+    print(f"⚠️  OAuth user schema ensure skipped: {exc}")
+
 
 @app.exception_handler(GuestLimitReachedException)
 async def guest_limit_reached_handler(_request: Request, _exc: GuestLimitReachedException):

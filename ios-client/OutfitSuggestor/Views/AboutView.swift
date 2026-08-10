@@ -26,6 +26,7 @@ struct AboutView: View {
                     Text(AboutCopy.historyFeature)
                     Text(AboutCopy.insightsFeature)
                     Text(AboutCopy.weekPlannerFeature)
+                    Text(AboutCopy.accountFeature)
                 }
                 .font(.subheadline)
                 .foregroundColor(.secondary)

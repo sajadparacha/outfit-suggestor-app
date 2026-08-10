@@ -86,6 +86,10 @@ class Config:
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
     JWT_ALGORITHM = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
+
+    # OAuth (comma-separated client / audience IDs for web + iOS)
+    GOOGLE_CLIENT_IDS = os.getenv("GOOGLE_CLIENT_IDS", "")
+    APPLE_CLIENT_IDS = os.getenv("APPLE_CLIENT_IDS", "")
     
     # Email configuration for account activation
     EMAIL_ENABLED = os.getenv("EMAIL_ENABLED", "true").lower() == "true"

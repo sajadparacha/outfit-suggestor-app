@@ -6,7 +6,13 @@
 
 import { OutfitResponse, ApiError, OutfitHistoryEntry } from '../models/OutfitModels';
 import { GuestUsage, GuestLimitReachedError } from '../models/GuestModels';
-import { RegisterRequest, LoginRequest, TokenResponse, User } from '../models/AuthModels';
+import {
+  RegisterRequest,
+  LoginRequest,
+  OAuthLoginRequest,
+  TokenResponse,
+  User,
+} from '../models/AuthModels';
 import {
   WardrobeItem,
   WardrobeItemCreate,
@@ -653,6 +659,38 @@ class ApiService {
         throw error;
       }
       throw new Error('Login failed');
+    }
+  }
+
+  /**
+   * Sign in with Google or Apple id_token
+   * @param oauthData - Provider and provider JWT
+   * @returns Promise with token and user information
+   */
+  async oauthLogin(oauthData: OAuthLoginRequest): Promise<TokenResponse> {
+    try {
+      const url = `${this.baseUrl}/api/auth/oauth`;
+      const response = await this.fetchWithLogging(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(oauthData),
+      });
+
+      if (!response.ok) {
+        const error: ApiError = await response.json();
+        throw new Error(error.detail || 'OAuth sign-in failed');
+      }
+
+      const data: TokenResponse = await response.json();
+      this.setAuthToken(data.access_token);
+      return data;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('OAuth sign-in failed');
     }
   }
 

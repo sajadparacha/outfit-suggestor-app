@@ -7,6 +7,9 @@
 //
 
 import SwiftUI
+#if canImport(GoogleSignIn)
+import GoogleSignIn
+#endif
 
 @main
 struct OutfitSuggestorApp: App {
@@ -14,6 +17,11 @@ struct OutfitSuggestorApp: App {
         WindowGroup {
             RootView()
                 .onOpenURL { url in
+#if canImport(GoogleSignIn)
+                    if GIDSignIn.sharedInstance.handle(url) {
+                        return
+                    }
+#endif
                     RouteCoordinator.shared.handleOpenURL(url)
                 }
         }

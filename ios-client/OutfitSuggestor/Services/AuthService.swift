@@ -9,7 +9,8 @@ import Foundation
 
 class AuthService: ObservableObject {
     static let shared = AuthService()
-    private var baseURL: String { AppConfig.apiBaseURL }
+    private let baseURLOverride: String?
+    private var baseURL: String { baseURLOverride ?? AppConfig.apiBaseURL }
     private let session: URLSession
     
     @Published var currentUser: User?
@@ -19,6 +20,7 @@ class AuthService: ObservableObject {
     
     private init() {
         self.session = URLSession.shared
+        self.baseURLOverride = nil
         if AppConfig.isUITestMode {
             self.authToken = "ui-test-token"
             self.currentUser = User(
@@ -38,6 +40,15 @@ class AuthService: ObservableObject {
             self.isBootstrapping = true
             Task { await fetchCurrentUser() }
         }
+    }
+
+    /// Isolated instance for unit tests (does not bootstrap from Keychain).
+    init(session: URLSession, baseURL: String) {
+        self.session = session
+        self.baseURLOverride = baseURL
+        self.authToken = nil
+        self.currentUser = nil
+        self.isBootstrapping = false
     }
     
     func setBaseURL(_ url: String) {
@@ -75,6 +86,27 @@ class AuthService: ObservableObject {
         let body = "username=\(email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")&password=\(password.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
         request.httpBody = body.data(using: .utf8)
         
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw AuthError.invalidResponse }
+        if http.statusCode != 200 {
+            if let err = try? JSONDecoder().decode(AuthAPIError.self, from: data) {
+                throw AuthError.serverError(err.detail)
+            }
+            throw AuthError.httpError(http.statusCode)
+        }
+        let token = try JSONDecoder().decode(Token.self, from: data)
+        await setSession(token: token)
+        return token
+    }
+
+    // MARK: - OAuth
+    func oauthLogin(provider: OAuthProvider, idToken: String) async throws -> Token {
+        guard let url = URL(string: "\(baseURL)/api/auth/oauth") else { throw AuthError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(OAuthLoginRequest(provider: provider, idToken: idToken))
+
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw AuthError.invalidResponse }
         if http.statusCode != 200 {

@@ -36,7 +36,7 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
     {
       icon: '🔐',
       title: 'Accounts',
-      text: 'Sign in to sync wardrobe, history, and preferences across web and iOS.',
+      text: 'Sign in with email, Google, or Apple to sync wardrobe, history, and preferences across web and iOS.',
     },
   ];
 
