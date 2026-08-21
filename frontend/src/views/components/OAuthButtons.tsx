@@ -14,29 +14,27 @@ interface OAuthButtonsProps {
   loading: boolean;
 }
 
+interface GoogleTokenClient {
+  requestAccessToken: (override?: { prompt?: string }) => void;
+}
+
+interface GoogleTokenResponse {
+  access_token?: string;
+  error?: string;
+  error_description?: string;
+}
+
 declare global {
   interface Window {
     google?: {
       accounts: {
-        id: {
-          initialize: (config: {
+        oauth2: {
+          initTokenClient: (config: {
             client_id: string;
-            callback: (response: { credential: string }) => void;
-            auto_select?: boolean;
-            cancel_on_tap_outside?: boolean;
-          }) => void;
-          renderButton: (
-            parent: HTMLElement,
-            options: {
-              type?: string;
-              theme?: string;
-              size?: string;
-              text?: string;
-              width?: number;
-              shape?: string;
-              logo_alignment?: string;
-            }
-          ) => void;
+            scope: string;
+            callback: (response: GoogleTokenResponse) => void;
+            prompt?: string;
+          }) => GoogleTokenClient;
         };
       };
     };
@@ -59,34 +57,8 @@ declare global {
 const appleConfigHint =
   'Add REACT_APP_APPLE_CLIENT_ID to frontend/.env, then restart the app.';
 
-const GIS_MIN_WIDTH = 200;
-const GIS_MAX_WIDTH = 400;
-
 const googleButtonClassName =
-  'btn-brand flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold';
-
-/**
- * Google's iframe keeps a fixed inner hit target (~40px). Stretching it with
- * CSS width/height does not remap clicks — only a strip (often the corners)
- * stays clickable. Transform scale maps the whole custom button to that target.
- */
-export function scaleGoogleIdentityIframeToCover(
-  iframe: HTMLElement,
-  container: HTMLElement
-): void {
-  const targetWidth = container.clientWidth || container.offsetWidth;
-  const targetHeight = container.clientHeight || container.offsetHeight;
-  const sourceWidth = iframe.offsetWidth;
-  const sourceHeight = iframe.offsetHeight;
-  if (targetWidth <= 0 || targetHeight <= 0 || sourceWidth <= 0 || sourceHeight <= 0) {
-    return;
-  }
-  iframe.style.position = 'absolute';
-  iframe.style.top = '0px';
-  iframe.style.left = '0px';
-  iframe.style.transformOrigin = '0 0';
-  iframe.style.transform = `scale(${targetWidth / sourceWidth}, ${targetHeight / sourceHeight})`;
-}
+  'btn-brand flex min-h-[44px] w-full cursor-pointer touch-manipulation items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold';
 
 function googleOriginHint(): string {
   const origin =
@@ -98,8 +70,7 @@ function googleOriginHint(): string {
 }
 
 const OAuthButtons: React.FC<OAuthButtonsProps> = ({ onOAuthLogin, loading }) => {
-  const googleWrapperRef = useRef<HTMLDivElement>(null);
-  const googleButtonHostRef = useRef<HTMLDivElement>(null);
+  const googleTokenClientRef = useRef<GoogleTokenClient | null>(null);
   const [sdkError, setSdkError] = useState<string | null>(null);
   const [googleReady, setGoogleReady] = useState(isOAuthTestStub);
   const [appleReady, setAppleReady] = useState(isOAuthTestStub);
@@ -120,48 +91,10 @@ const OAuthButtons: React.FC<OAuthButtonsProps> = ({ onOAuthLogin, loading }) =>
     [onOAuthLogin]
   );
 
-  // Load GIS once, then render into the always-mounted host (overlay).
   useEffect(() => {
     if (isOAuthTestStub || !GOOGLE_CLIENT_ID) return;
 
     let cancelled = false;
-    let retryTimer: number | undefined;
-    let lastRenderWidth = 0;
-    let resizeObserver: ResizeObserver | undefined;
-
-    const coverCustomButton = () => {
-      const host = googleButtonHostRef.current;
-      const wrapper = googleWrapperRef.current;
-      const iframe = host?.querySelector('iframe');
-      if (!iframe || !wrapper) return false;
-      if (iframe.offsetWidth <= 0 || iframe.offsetHeight <= 0) return false;
-      scaleGoogleIdentityIframeToCover(iframe, wrapper);
-      return true;
-    };
-
-    const renderGoogleButton = () => {
-      const host = googleButtonHostRef.current;
-      const wrapper = googleWrapperRef.current;
-      if (!host || !wrapper || !window.google?.accounts?.id) return false;
-      const measured = Math.round(wrapper.offsetWidth || host.offsetWidth || 0);
-      if (measured <= 0 && lastRenderWidth === 0) return false;
-      const width = Math.min(Math.max(measured || lastRenderWidth || 320, GIS_MIN_WIDTH), GIS_MAX_WIDTH);
-      if (Math.abs(width - lastRenderWidth) < 2 && lastRenderWidth > 0) {
-        return coverCustomButton();
-      }
-      lastRenderWidth = width;
-      host.innerHTML = '';
-      window.google.accounts.id.renderButton(host, {
-        type: 'standard',
-        theme: 'outline',
-        size: 'large',
-        text: 'continue_with',
-        width,
-        shape: 'rectangular',
-        logo_alignment: 'left',
-      });
-      return coverCustomButton() || host.childElementCount > 0;
-    };
 
     void (async () => {
       try {
@@ -170,45 +103,35 @@ const OAuthButtons: React.FC<OAuthButtonsProps> = ({ onOAuthLogin, loading }) =>
 
         const ready = await waitForGoogleIdentityServices();
         if (cancelled) return;
-        if (!ready || !window.google?.accounts?.id) {
+        if (!ready || !window.google?.accounts?.oauth2?.initTokenClient) {
           setSdkError(
             `Could not initialize Google sign-in. ${googleOriginHint()} Also check that accounts.google.com is not blocked by an extension.`
           );
           return;
         }
 
-        window.google.accounts.id.initialize({
+        googleTokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
           client_id: GOOGLE_CLIENT_ID,
+          scope: 'openid email profile',
           callback: (response) => {
-            void handleCredential('google', response.credential);
+            if (response.error) {
+              if (response.error === 'popup_closed_by_user') return;
+              if (response.error === 'popup_failed_to_open') {
+                setSdkError('Allow popups for this site, then try Continue with Google again.');
+                return;
+              }
+              setSdkError(response.error_description || response.error);
+              return;
+            }
+            if (!response.access_token) {
+              setSdkError('Google sign-in did not return a token.');
+              return;
+            }
+            void handleCredential('google', response.access_token);
           },
-          cancel_on_tap_outside: true,
         });
-
-        // Host may not have layout yet; retry briefly.
-        const tryRender = (attempt: number) => {
-          if (cancelled) return;
-          if (renderGoogleButton() && coverCustomButton()) {
-            setGoogleReady(true);
-            setSdkError(null);
-            return;
-          }
-          if (attempt < 20) {
-            retryTimer = window.setTimeout(() => tryRender(attempt + 1), 100);
-          } else {
-            setSdkError(`Google sign-in button failed to load. ${googleOriginHint()}`);
-          }
-        };
-        tryRender(0);
-
-        if (typeof ResizeObserver !== 'undefined' && googleWrapperRef.current) {
-          resizeObserver = new ResizeObserver(() => {
-            if (cancelled) return;
-            renderGoogleButton();
-            coverCustomButton();
-          });
-          resizeObserver.observe(googleWrapperRef.current);
-        }
+        setGoogleReady(true);
+        setSdkError(null);
       } catch {
         if (!cancelled) {
           setSdkError(
@@ -220,8 +143,6 @@ const OAuthButtons: React.FC<OAuthButtonsProps> = ({ onOAuthLogin, loading }) =>
 
     return () => {
       cancelled = true;
-      if (retryTimer) window.clearTimeout(retryTimer);
-      resizeObserver?.disconnect();
     };
   }, [handleCredential]);
 
@@ -252,6 +173,25 @@ const OAuthButtons: React.FC<OAuthButtonsProps> = ({ onOAuthLogin, loading }) =>
       cancelled = true;
     };
   }, []);
+
+  const handleGoogleClick = () => {
+    if (loading) return;
+    if (isOAuthTestStub) {
+      void handleCredential('google', 'test-google-id-token');
+      return;
+    }
+    if (!googleConfigured) {
+      setSdkError(`Google sign-in is not configured. ${googleOriginHint()}`);
+      return;
+    }
+    const client = googleTokenClientRef.current;
+    if (!client) {
+      setSdkError('Google sign-in is still loading. Try again in a moment.');
+      return;
+    }
+    // Must run in the click/tap handler so browsers allow Google's account picker.
+    client.requestAccessToken({ prompt: 'select_account' });
+  };
 
   const handleAppleClick = async () => {
     if (loading) return;
@@ -311,34 +251,18 @@ const OAuthButtons: React.FC<OAuthButtonsProps> = ({ onOAuthLogin, loading }) =>
       )}
 
       <div className="space-y-2">
-        {showGoogle &&
-          (isOAuthTestStub ? (
-            <button
-              type="button"
-              onClick={() => void handleCredential('google', 'test-google-id-token')}
-              disabled={loading}
-              className={`${googleButtonClassName} ${loading ? 'cursor-not-allowed opacity-50' : ''}`}
-            >
-              Continue with Google
-            </button>
-          ) : (
-            <div
-              ref={googleWrapperRef}
-              className={`relative w-full overflow-hidden ${googleButtonClassName} ${
-                loading ? 'pointer-events-none opacity-50' : ''
-              }`}
-            >
-              <div className="pointer-events-none">
-                {googleReady ? 'Continue with Google' : 'Loading Google…'}
-              </div>
-              {/* Invisible GIS iframe, scaled to the full custom button hit area */}
-              <div
-                ref={googleButtonHostRef}
-                className="absolute inset-0 z-10 overflow-hidden opacity-[0.01]"
-                aria-label="Continue with Google"
-              />
-            </div>
-          ))}
+        {showGoogle && (
+          <button
+            type="button"
+            onClick={handleGoogleClick}
+            disabled={loading || (!isOAuthTestStub && !googleReady)}
+            className={`${googleButtonClassName} ${
+              loading || (!isOAuthTestStub && !googleReady) ? 'cursor-not-allowed opacity-50' : ''
+            }`}
+          >
+            {googleReady ? 'Continue with Google' : 'Loading Google…'}
+          </button>
+        )}
 
         {showApple && (
           <button

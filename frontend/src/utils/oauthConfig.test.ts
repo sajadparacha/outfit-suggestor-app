@@ -26,11 +26,11 @@ describe('waitForGoogleIdentityServices', () => {
     delete (window as { google?: unknown }).google;
   });
 
-  it('resolves true when google.accounts.id appears', async () => {
+  it('resolves true when google.accounts.oauth2 appears', async () => {
     const pending = waitForGoogleIdentityServices(1000, 20);
     window.setTimeout(() => {
       (window as { google?: unknown }).google = {
-        accounts: { id: { initialize: jest.fn(), renderButton: jest.fn() } },
+        accounts: { oauth2: { initTokenClient: jest.fn() } },
       };
     }, 40);
     await expect(pending).resolves.toBe(true);

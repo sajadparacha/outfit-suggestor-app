@@ -51,25 +51,26 @@ export function loadScript(src: string, id: string): Promise<void> {
   return promise;
 }
 
-/** Wait until GIS exposes window.google.accounts.id (script onload can race). */
+/** Wait until GIS exposes window.google.accounts.oauth2 (script onload can race). */
 export function waitForGoogleIdentityServices(
   timeoutMs = 8000,
   intervalMs = 50
 ): Promise<boolean> {
-  const hasGoogleId = () =>
+  const hasGoogleOauth = () =>
     Boolean(
-      (window as Window & { google?: { accounts?: { id?: unknown } } }).google
-        ?.accounts?.id
+      (window as Window & {
+        google?: { accounts?: { oauth2?: { initTokenClient?: unknown } } };
+      }).google?.accounts?.oauth2?.initTokenClient
     );
 
   return new Promise((resolve) => {
-    if (typeof window !== 'undefined' && hasGoogleId()) {
+    if (typeof window !== 'undefined' && hasGoogleOauth()) {
       resolve(true);
       return;
     }
     const started = Date.now();
     const timer = window.setInterval(() => {
-      if (hasGoogleId()) {
+      if (hasGoogleOauth()) {
         window.clearInterval(timer);
         resolve(true);
         return;

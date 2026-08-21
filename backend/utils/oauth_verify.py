@@ -27,15 +27,34 @@ def _allowed_audiences(raw: str) -> list[str]:
     return [part.strip() for part in (raw or "").split(",") if part.strip()]
 
 
+def _looks_like_jwt(token: str) -> bool:
+    return token.count(".") == 2
+
+
+def _google_audience_ok(payload: dict[str, Any], audiences: list[str]) -> bool:
+    aud = payload.get("aud")
+    azp = payload.get("azp")
+    candidates: list[Any] = [azp]
+    if isinstance(aud, list):
+        candidates.extend(aud)
+    else:
+        candidates.append(aud)
+    return any(value in audiences for value in candidates if isinstance(value, str))
+
+
 def verify_google_id_token(id_token: str) -> VerifiedOAuthIdentity:
     audiences = _allowed_audiences(Config.GOOGLE_CLIENT_IDS)
     if not audiences:
         raise OAuthVerificationError("Google Sign-In is not configured")
 
+    # GIS custom buttons on iPad/WebKit cannot overlay Google's iframe; web uses
+    # oauth2 access tokens. Native iOS still sends a JWT id_token.
+    token_param = "id_token" if _looks_like_jwt(id_token) else "access_token"
+
     try:
         response = requests.get(
             "https://oauth2.googleapis.com/tokeninfo",
-            params={"id_token": id_token},
+            params={token_param: id_token},
             timeout=10,
         )
     except requests.RequestException as exc:
@@ -45,8 +64,7 @@ def verify_google_id_token(id_token: str) -> VerifiedOAuthIdentity:
         raise OAuthVerificationError("Invalid Google ID token")
 
     payload: dict[str, Any] = response.json()
-    aud = payload.get("aud")
-    if aud not in audiences:
+    if not _google_audience_ok(payload, audiences):
         raise OAuthVerificationError("Google token audience mismatch")
 
     sub = payload.get("sub")
