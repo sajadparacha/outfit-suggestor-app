@@ -59,6 +59,35 @@ declare global {
 const appleConfigHint =
   'Add REACT_APP_APPLE_CLIENT_ID to frontend/.env, then restart the app.';
 
+const GIS_MIN_WIDTH = 200;
+const GIS_MAX_WIDTH = 400;
+
+const googleButtonClassName =
+  'btn-brand flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold';
+
+/**
+ * Google's iframe keeps a fixed inner hit target (~40px). Stretching it with
+ * CSS width/height does not remap clicks — only a strip (often the corners)
+ * stays clickable. Transform scale maps the whole custom button to that target.
+ */
+export function scaleGoogleIdentityIframeToCover(
+  iframe: HTMLElement,
+  container: HTMLElement
+): void {
+  const targetWidth = container.clientWidth || container.offsetWidth;
+  const targetHeight = container.clientHeight || container.offsetHeight;
+  const sourceWidth = iframe.offsetWidth;
+  const sourceHeight = iframe.offsetHeight;
+  if (targetWidth <= 0 || targetHeight <= 0 || sourceWidth <= 0 || sourceHeight <= 0) {
+    return;
+  }
+  iframe.style.position = 'absolute';
+  iframe.style.top = '0px';
+  iframe.style.left = '0px';
+  iframe.style.transformOrigin = '0 0';
+  iframe.style.transform = `scale(${targetWidth / sourceWidth}, ${targetHeight / sourceHeight})`;
+}
+
 function googleOriginHint(): string {
   const origin =
     typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
@@ -69,6 +98,7 @@ function googleOriginHint(): string {
 }
 
 const OAuthButtons: React.FC<OAuthButtonsProps> = ({ onOAuthLogin, loading }) => {
+  const googleWrapperRef = useRef<HTMLDivElement>(null);
   const googleButtonHostRef = useRef<HTMLDivElement>(null);
   const [sdkError, setSdkError] = useState<string | null>(null);
   const [googleReady, setGoogleReady] = useState(isOAuthTestStub);
@@ -96,12 +126,31 @@ const OAuthButtons: React.FC<OAuthButtonsProps> = ({ onOAuthLogin, loading }) =>
 
     let cancelled = false;
     let retryTimer: number | undefined;
+    let lastRenderWidth = 0;
+    let resizeObserver: ResizeObserver | undefined;
+
+    const coverCustomButton = () => {
+      const host = googleButtonHostRef.current;
+      const wrapper = googleWrapperRef.current;
+      const iframe = host?.querySelector('iframe');
+      if (!iframe || !wrapper) return false;
+      if (iframe.offsetWidth <= 0 || iframe.offsetHeight <= 0) return false;
+      scaleGoogleIdentityIframeToCover(iframe, wrapper);
+      return true;
+    };
 
     const renderGoogleButton = () => {
       const host = googleButtonHostRef.current;
-      if (!host || !window.google?.accounts?.id) return false;
+      const wrapper = googleWrapperRef.current;
+      if (!host || !wrapper || !window.google?.accounts?.id) return false;
+      const measured = Math.round(wrapper.offsetWidth || host.offsetWidth || 0);
+      if (measured <= 0 && lastRenderWidth === 0) return false;
+      const width = Math.min(Math.max(measured || lastRenderWidth || 320, GIS_MIN_WIDTH), GIS_MAX_WIDTH);
+      if (Math.abs(width - lastRenderWidth) < 2 && lastRenderWidth > 0) {
+        return coverCustomButton();
+      }
+      lastRenderWidth = width;
       host.innerHTML = '';
-      const width = Math.max(host.offsetWidth || host.parentElement?.offsetWidth || 320, 240);
       window.google.accounts.id.renderButton(host, {
         type: 'standard',
         theme: 'outline',
@@ -111,7 +160,7 @@ const OAuthButtons: React.FC<OAuthButtonsProps> = ({ onOAuthLogin, loading }) =>
         shape: 'rectangular',
         logo_alignment: 'left',
       });
-      return host.childElementCount > 0;
+      return coverCustomButton() || host.childElementCount > 0;
     };
 
     void (async () => {
@@ -139,7 +188,7 @@ const OAuthButtons: React.FC<OAuthButtonsProps> = ({ onOAuthLogin, loading }) =>
         // Host may not have layout yet; retry briefly.
         const tryRender = (attempt: number) => {
           if (cancelled) return;
-          if (renderGoogleButton()) {
+          if (renderGoogleButton() && coverCustomButton()) {
             setGoogleReady(true);
             setSdkError(null);
             return;
@@ -151,6 +200,15 @@ const OAuthButtons: React.FC<OAuthButtonsProps> = ({ onOAuthLogin, loading }) =>
           }
         };
         tryRender(0);
+
+        if (typeof ResizeObserver !== 'undefined' && googleWrapperRef.current) {
+          resizeObserver = new ResizeObserver(() => {
+            if (cancelled) return;
+            renderGoogleButton();
+            coverCustomButton();
+          });
+          resizeObserver.observe(googleWrapperRef.current);
+        }
       } catch {
         if (!cancelled) {
           setSdkError(
@@ -163,6 +221,7 @@ const OAuthButtons: React.FC<OAuthButtonsProps> = ({ onOAuthLogin, loading }) =>
     return () => {
       cancelled = true;
       if (retryTimer) window.clearTimeout(retryTimer);
+      resizeObserver?.disconnect();
     };
   }, [handleCredential]);
 
@@ -258,26 +317,24 @@ const OAuthButtons: React.FC<OAuthButtonsProps> = ({ onOAuthLogin, loading }) =>
               type="button"
               onClick={() => void handleCredential('google', 'test-google-id-token')}
               disabled={loading}
-              className={`flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 py-2.5 text-sm font-medium text-white transition hover:bg-white/10 ${
-                loading ? 'cursor-not-allowed opacity-50' : ''
-              }`}
+              className={`${googleButtonClassName} ${loading ? 'cursor-not-allowed opacity-50' : ''}`}
             >
               Continue with Google
             </button>
           ) : (
             <div
-              className={`relative w-full overflow-hidden rounded-xl border border-white/15 bg-white/5 ${
+              ref={googleWrapperRef}
+              className={`relative w-full overflow-hidden ${googleButtonClassName} ${
                 loading ? 'pointer-events-none opacity-50' : ''
               }`}
             >
-              {/* Visual label */}
-              <div className="pointer-events-none flex w-full items-center justify-center gap-2 py-2.5 text-sm font-medium text-white">
+              <div className="pointer-events-none">
                 {googleReady ? 'Continue with Google' : 'Loading Google…'}
               </div>
-              {/* Real GIS button overlays the label so clicks hit Google’s iframe */}
+              {/* Invisible GIS iframe, scaled to the full custom button hit area */}
               <div
                 ref={googleButtonHostRef}
-                className="absolute inset-0 z-10 opacity-0 [&_div]:!h-full [&_div]:!w-full [&_iframe]:!h-full [&_iframe]:!w-full"
+                className="absolute inset-0 z-10 overflow-hidden opacity-[0.01]"
                 aria-label="Continue with Google"
               />
             </div>
