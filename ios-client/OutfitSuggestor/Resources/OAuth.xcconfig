@@ -1,7 +1,7 @@
-// OAuth client IDs for Google Sign-In (leave blank until Cloud Console values are set).
+// OAuth client IDs for Google Sign-In.
 // iOS client ID from Google Cloud → Credentials → iOS OAuth client
-GOOGLE_IOS_CLIENT_ID =
-// Web client ID (used as audience for backend token verification / GIDServerClientID)
-GOOGLE_SERVER_CLIENT_ID =
-// Reversed iOS client ID (shown as "iOS URL scheme" in Cloud Console)
-GOOGLE_REVERSED_CLIENT_ID =
+GOOGLE_IOS_CLIENT_ID = 219514007868-hpcgargreubfr1fsn4ai15v7ugoiqpao.apps.googleusercontent.com
+// Web client ID (audience for backend token verification / GIDServerClientID)
+GOOGLE_SERVER_CLIENT_ID = 219514007868-gsibbel4r081r9bkgaoru34cs44s36af.apps.googleusercontent.com
+// Reversed iOS client ID (iOS URL scheme)
+GOOGLE_REVERSED_CLIENT_ID = com.googleusercontent.apps.219514007868-hpcgargreubfr1fsn4ai15v7ugoiqpao

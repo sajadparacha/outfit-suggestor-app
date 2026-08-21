@@ -28,17 +28,38 @@ function asSuggestion(outfit: WeekPlanOutfit): OutfitSuggestion {
     sweater: outfit.sweater,
     outerwear: outfit.outerwear,
     tie: outfit.tie,
-    shirt_id: outfit.shirt_id,
-    trouser_id: outfit.trouser_id,
-    blazer_id: outfit.blazer_id,
-    shoes_id: outfit.shoes_id,
-    belt_id: outfit.belt_id,
-    sweater_id: outfit.sweater_id,
-    outerwear_id: outfit.outerwear_id,
-    tie_id: outfit.tie_id,
+    // Treat null like omitted so we can fall back to matching_wardrobe_items[0]
+    // (week overview thumbs already use that path).
+    shirt_id: outfit.shirt_id ?? undefined,
+    trouser_id: outfit.trouser_id ?? undefined,
+    blazer_id: outfit.blazer_id ?? undefined,
+    shoes_id: outfit.shoes_id ?? undefined,
+    belt_id: outfit.belt_id ?? undefined,
+    sweater_id: outfit.sweater_id ?? undefined,
+    outerwear_id: outfit.outerwear_id ?? undefined,
+    tie_id: outfit.tie_id ?? undefined,
     matching_wardrobe_items: outfit.matching_wardrobe_items ?? undefined,
     model_image: outfit.model_image,
   };
+}
+
+/** Prefer id resolve; else first match image — same source as week overview cards. */
+export function resolveWeekPlanItemThumbnail(
+  outfit: WeekPlanOutfit,
+  categoryKey: OutfitCategoryKey
+) {
+  const suggestion = asSuggestion(outfit);
+  const resolved = resolveOutfitItemThumbnail(suggestion, categoryKey);
+  if (resolved.imageSrc) return resolved;
+
+  const image = outfit.matching_wardrobe_items?.[categoryKey]?.[0]?.image_data;
+  if (image) {
+    return {
+      imageSrc: image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`,
+      tag: 'wardrobe' as const,
+    };
+  }
+  return resolved;
 }
 
 const OutfitItem: React.FC<OutfitItemProps> = ({
@@ -48,8 +69,7 @@ const OutfitItem: React.FC<OutfitItemProps> = ({
   outfit,
   onChangeItem,
 }) => {
-  const suggestion = asSuggestion(outfit);
-  const thumb = resolveOutfitItemThumbnail(suggestion, categoryKey);
+  const thumb = resolveWeekPlanItemThumbnail(outfit, categoryKey);
   const { shortName } = parseOutfitItemCardText(value);
   const displayName = shortName || value;
   const tagLabel =

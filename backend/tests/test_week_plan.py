@@ -450,7 +450,7 @@ class TestWeekPlanPresetLimitResolver:
         user.week_plan_preset_limit_override = None
         user.subscription_plan = None
         limit, source = resolve_week_plan_preset_limit(user)
-        assert limit == WEEK_PLAN_PRESET_LIMIT_DEFAULT == 4
+        assert limit == WEEK_PLAN_PRESET_LIMIT_DEFAULT == 10
         assert source == "default"
 
     def test_override_wins_over_tier(self):
@@ -489,7 +489,7 @@ class TestWeekPlanPresets:
         data = res.json()
         assert data["items"] == []
         assert data["count"] == 0
-        assert data["limit"] == 4
+        assert data["limit"] == 10
         assert data["limit_source"] == "default"
 
     def test_create_reject_empty_name(self, client, auth_headers):
@@ -618,7 +618,7 @@ class TestWeekPlanPresets:
 
         setup_auth_override(test_user2)
         listed2 = client.get(PRESETS_URL, headers=non_admin_auth_headers)
-        assert listed2.json()["limit"] == 4
+        assert listed2.json()["limit"] == 10
         assert listed2.json()["limit_source"] == "default"
 
     def test_admin_override_bounds(self, client, auth_headers, test_user2):

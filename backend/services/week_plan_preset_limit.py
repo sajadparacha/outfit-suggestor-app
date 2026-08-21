@@ -11,14 +11,14 @@ from typing import Literal, Optional, Tuple
 from models.user import User
 
 WEEK_PLAN_PRESET_LIMIT_DEFAULT = int(
-    os.getenv("WEEK_PLAN_PRESET_LIMIT_DEFAULT", "4")
+    os.getenv("WEEK_PLAN_PRESET_LIMIT_DEFAULT", "10")
 )
 
 # Ready for future tiers; unused in product UI until plans exist.
 WEEK_PLAN_PRESET_LIMIT_BY_PLAN: dict[str, int] = {
     "free": 2,
     "plus": 4,
-    "pro": 8,
+    "pro": 10,
 }
 
 LimitSource = Literal["override", "tier", "default"]

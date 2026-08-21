@@ -7,6 +7,8 @@ backend/.env
 # Build outputs
 frontend/build/
 frontend/dist/
+ios-client/build-device/
+ios-client/build-test/
 
 # IDE
 .vscode/

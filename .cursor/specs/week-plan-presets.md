@@ -19,7 +19,7 @@ Users save/load/rename/update/delete up to **N** week **configurations** (config
 effective_limit(user) =
   1. user.week_plan_preset_limit_override if not null
   2. else tier default from user.subscription_plan if set and mapped
-  3. else WEEK_PLAN_PRESET_LIMIT_DEFAULT (4)
+  3. else WEEK_PLAN_PRESET_LIMIT_DEFAULT (10)
 ```
 
 - GET returns `{ items, count, limit, limit_source? }` where `limit_source` is `override` | `tier` | `default`.
@@ -91,7 +91,7 @@ List / Save as… / Update / Rename / Delete (confirm) / Load (apply config, cle
 
 ### Backend
 
-- [x] Resolver: default 4; override wins; tier map when plan set and no override
+- [x] Resolver: default 10; override wins; tier map when plan set and no override
 - [x] Create up to limit; 409 over; apply clears outfits; CRUD; 401/403
 - [x] Admin override changes subsequent GET `limit`
 

@@ -901,6 +901,7 @@ class OutfitController:
         selected_wardrobe_item_ids: Optional[List[int]] = None,
         previous_outfit_text: Optional[str] = None,
         avoid_outfit_texts: Optional[List[str]] = None,
+        exclude_wardrobe_item_ids: Optional[List[int]] = None,
     ) -> OutfitSuggestion:
         """
         Suggest an outfit using ONLY the user's wardrobe items (no uploaded image).
@@ -912,6 +913,8 @@ class OutfitController:
             style: Style preference (modern, classic, etc.)
             db: Database session
             current_user: Current authenticated user (required)
+            exclude_wardrobe_item_ids: Wardrobe item IDs to hard-exclude (e.g. already
+                used earlier in a week plan). Kept only when no alternatives exist.
         
         Returns:
             OutfitSuggestion object
@@ -940,7 +943,29 @@ class OutfitController:
                 limit=None,
                 offset=None
             )
-            wardrobe_items_dict = self._group_items_by_outfit_slot(all_wardrobe_items)
+            exclude_set = {
+                int(i) for i in (exclude_wardrobe_item_ids or []) if isinstance(i, int)
+            }
+            # Soft-pin selected items stay available even if listed in exclude.
+            selected_ids = {item.id for item in ordered_selected_items}
+            exclude_set -= selected_ids
+
+            available_items = [
+                item for item in all_wardrobe_items if item.id not in exclude_set
+            ]
+            # If filtering emptied a critical slot entirely, fall back to full wardrobe
+            # for that generation (better a repeat than an incomplete outfit).
+            wardrobe_items_dict = self._group_items_by_outfit_slot(available_items)
+            full_dict = self._group_items_by_outfit_slot(all_wardrobe_items)
+            for slot in ("shirt", "trouser", "shoes"):
+                if not wardrobe_items_dict.get(slot) and full_dict.get(slot):
+                    wardrobe_items_dict[slot] = full_dict[slot]
+                    # Allow those fallback ids back into matcher pool for this day.
+                    for item in full_dict[slot]:
+                        exclude_set.discard(item.id)
+            matcher_pool = [
+                item for item in all_wardrobe_items if item.id not in exclude_set
+            ] or all_wardrobe_items
 
             # Build combined context for the AI prompt
             filters_context = f"Occasion: {occasion}, Season: {season}, Style: {style}"
@@ -982,6 +1007,12 @@ class OutfitController:
             extra = text_input.strip()
             if extra:
                 combined_text_input += f". Additional preferences: {extra}"
+            if exclude_set:
+                combined_text_input += (
+                    ". HARD RULE: Do not use these wardrobe item IDs (already worn this week): "
+                    + ", ".join(str(i) for i in sorted(exclude_set))
+                    + ". They are not in your available wardrobe list."
+                )
 
             # Call AI service in text-only, wardrobe-only mode
             suggestion, cost_info = self.ai_service.get_outfit_suggestion_text_only(
@@ -1000,9 +1031,9 @@ class OutfitController:
             # Match wardrobe items to outfit suggestion (for UI purposes)
             matching_items = self.wardrobe_matcher.match_wardrobe_to_outfit(
                 suggestion,
-                all_wardrobe_items
+                matcher_pool,
             )
-            self._apply_selected_ids_to_matches(suggestion, matching_items, all_wardrobe_items)
+            self._apply_selected_ids_to_matches(suggestion, matching_items, matcher_pool)
             self._ensure_pinned_selected_items_in_matches(matching_items, ordered_selected_items)
             self._apply_upper_body_layer_exclusivity(
                 suggestion,

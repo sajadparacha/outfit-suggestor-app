@@ -7,10 +7,8 @@
 
 import AuthenticationServices
 import Foundation
-import UIKit
-#if canImport(GoogleSignIn)
 import GoogleSignIn
-#endif
+import UIKit
 
 enum OAuthCopy {
     static let googleButtonTitle = "Continue with Google"
@@ -44,7 +42,6 @@ protocol GoogleSignInProviding {
 @MainActor
 final class GoogleSignInProvider: GoogleSignInProviding {
     func fetchIDToken() async throws -> String {
-#if canImport(GoogleSignIn)
         guard AppConfig.isGoogleSignInConfigured else {
             throw OAuthSignInError.googleSignInNotConfigured
         }
@@ -64,9 +61,6 @@ final class GoogleSignInProvider: GoogleSignInProviding {
             throw OAuthSignInError.missingIdentityToken
         }
         return idToken
-#else
-        throw OAuthSignInError.googleSignInNotConfigured
-#endif
     }
 
     private static func topViewController(

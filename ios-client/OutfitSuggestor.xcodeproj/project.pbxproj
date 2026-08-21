@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		OAU04BF0000000000000001 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = OAU04PD0000000000000001 /* GoogleSignIn */; };
 		WP01BF0000000000000001 /* WeekPlanModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = WP01FR0000000000000001 /* WeekPlanModels.swift */; };
 		WP01BF0000000000000002 /* WeekPlanNotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = WP01FR0000000000000002 /* WeekPlanNotificationScheduler.swift */; };
 		WP01BF0000000000000003 /* WeekPlannerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = WP01FR0000000000000003 /* WeekPlannerViewModel.swift */; };
@@ -566,6 +567,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = DD09C061B54BE082847E5CE1 /* Build configuration list for PBXNativeTarget "OutfitSuggestor" */;
 			buildPhases = (
+				OAU04FW0000000000000001 /* Frameworks */,
 				07A2F4C13B6A4D91A32E7802 /* Resources */,
 				87962CA4676270CF174F5C0D /* Sources */,
 			);
@@ -648,6 +650,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		OAU04FW0000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				OAU04BF0000000000000001 /* GoogleSignIn in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXResourcesBuildPhase section */
 		07A2F4C13B6A4D91A32E7802 /* Resources */ = {

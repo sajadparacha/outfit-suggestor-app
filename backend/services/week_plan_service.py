@@ -89,6 +89,86 @@ def extract_wardrobe_item_ids(suggestion: OutfitSuggestion) -> list[int]:
     return unique
 
 
+# Common color tokens for week-plan variety (prompt guidance only).
+_COLOR_TOKEN_RE = re.compile(
+    r"\b("
+    r"black|white|ivory|cream|beige|khaki|tan|brown|chocolate|camel|"
+    r"gray|grey|charcoal|silver|navy|blue|light[\s-]?blue|sky[\s-]?blue|"
+    r"teal|turquoise|green|olive|forest|sage|red|burgundy|maroon|wine|"
+    r"pink|blush|purple|violet|lilac|orange|rust|coral|yellow|mustard|gold"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
+def _normalize_color_token(raw: str) -> str:
+    cleaned = re.sub(r"\s+", " ", (raw or "").strip().lower())
+    return cleaned.replace("-", " ")
+
+
+def extract_outfit_colors(suggestion: OutfitSuggestion) -> list[str]:
+    """Collect colors from wardrobe matches and outfit text for week variety prompts."""
+    found: list[str] = []
+    seen: set[str] = set()
+
+    def add(raw: Optional[str]) -> None:
+        if not raw:
+            return
+        token = _normalize_color_token(raw)
+        if not token or token in seen or token == "unknown":
+            return
+        seen.add(token)
+        found.append(token)
+
+    matching = getattr(suggestion, "matching_wardrobe_items", None)
+    if isinstance(matching, dict):
+        for items in matching.values():
+            if not isinstance(items, list):
+                continue
+            for item in items:
+                if isinstance(item, dict):
+                    add(item.get("color"))
+
+    for attr in (
+        "shirt",
+        "trouser",
+        "blazer",
+        "shoes",
+        "belt",
+        "sweater",
+        "outerwear",
+        "tie",
+    ):
+        text = getattr(suggestion, attr, None)
+        if not isinstance(text, str) or not text.strip():
+            continue
+        for match in _COLOR_TOKEN_RE.finditer(text):
+            add(match.group(1))
+
+    return found
+
+
+def extract_colors_from_outfit_payload(payload: dict[str, Any]) -> list[str]:
+    """Same as extract_outfit_colors but from a stored outfit_json dict."""
+    class _Shim:
+        pass
+
+    shim = _Shim()
+    for key in (
+        "shirt",
+        "trouser",
+        "blazer",
+        "shoes",
+        "belt",
+        "sweater",
+        "outerwear",
+        "tie",
+        "matching_wardrobe_items",
+    ):
+        setattr(shim, key, payload.get(key))
+    return extract_outfit_colors(shim)  # type: ignore[arg-type]
+
+
 def suggestion_to_outfit_json(suggestion: OutfitSuggestion) -> dict[str, Any]:
     if hasattr(suggestion, "model_dump"):
         data = suggestion.model_dump()
@@ -98,6 +178,156 @@ def suggestion_to_outfit_json(suggestion: OutfitSuggestion) -> dict[str, Any]:
     for key in ("ai_prompt", "ai_raw_response", "cost"):
         data.pop(key, None)
     return data
+
+
+_SLOT_ID_FIELDS = (
+    ("shirt", "shirt_id"),
+    ("trouser", "trouser_id"),
+    ("blazer", "blazer_id"),
+    ("shoes", "shoes_id"),
+    ("belt", "belt_id"),
+    ("sweater", "sweater_id"),
+    ("outerwear", "outerwear_id"),
+    ("tie", "tie_id"),
+)
+
+
+def _first_unused_match_id(
+    items: Any, exclude_ids: set[int], *, allow_excluded_fallback: bool = True
+) -> Optional[int]:
+    if not isinstance(items, list):
+        return None
+    fallback: Optional[int] = None
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        item_id = item.get("id")
+        if not isinstance(item_id, int):
+            continue
+        if item_id not in exclude_ids:
+            return item_id
+        if allow_excluded_fallback and fallback is None:
+            fallback = item_id
+    return fallback if allow_excluded_fallback else None
+
+
+def prioritize_matching_items(
+    matching: Any, exclude_ids: set[int]
+) -> dict[str, Any]:
+    """Keep all matches but put unused ids first so bind prefers them."""
+    if not isinstance(matching, dict):
+        return {}
+    if not exclude_ids:
+        return matching
+    prioritized: dict[str, Any] = {}
+    for category, items in matching.items():
+        if not isinstance(items, list):
+            prioritized[category] = items
+            continue
+        unused: list[Any] = []
+        used: list[Any] = []
+        for item in items:
+            if (
+                isinstance(item, dict)
+                and isinstance(item.get("id"), int)
+                and item["id"] in exclude_ids
+            ):
+                used.append(item)
+            else:
+                unused.append(item)
+        prioritized[category] = unused + used
+    return prioritized
+
+
+def filter_matching_items_excluding(
+    matching: Any, exclude_ids: set[int]
+) -> dict[str, Any]:
+    """Drop already-used wardrobe ids from match lists (keep order)."""
+    if not isinstance(matching, dict):
+        return {}
+    filtered: dict[str, Any] = {}
+    for category, items in matching.items():
+        if not isinstance(items, list):
+            filtered[category] = items
+            continue
+        kept = [
+            item
+            for item in items
+            if not (
+                isinstance(item, dict)
+                and isinstance(item.get("id"), int)
+                and item["id"] in exclude_ids
+            )
+        ]
+        # If filtering emptied the slot, keep originals as last-resort fallback.
+        filtered[category] = kept if kept else list(items)
+    return filtered
+
+
+def scrub_reused_slot_ids(
+    suggestion: OutfitSuggestion, exclude_ids: set[int]
+) -> None:
+    """
+    Hard-clear slot ids already used earlier in the week when an unused alternative
+    exists in matching_wardrobe_items. Prioritize unused matches for bind/save.
+    """
+    if not exclude_ids:
+        return
+    matching = getattr(suggestion, "matching_wardrobe_items", None)
+    if isinstance(matching, dict):
+        matching = prioritize_matching_items(matching, exclude_ids)
+        suggestion.matching_wardrobe_items = matching
+    else:
+        matching = {}
+
+    for category, id_field in _SLOT_ID_FIELDS:
+        val = getattr(suggestion, id_field, None)
+        if not isinstance(val, int) or val not in exclude_ids:
+            continue
+        items = matching.get(category) or []
+        has_alt = any(
+            isinstance(item, dict)
+            and isinstance(item.get("id"), int)
+            and item["id"] not in exclude_ids
+            for item in items
+        )
+        if has_alt:
+            setattr(suggestion, id_field, None)
+
+
+def bind_missing_slot_ids_from_matches(
+    payload: dict[str, Any],
+    *,
+    exclude_item_ids: Optional[set[int]] = None,
+) -> None:
+    """
+    When AI leaves *_id null but matching_wardrobe_items has photos, bind the first
+    unused match id so day-detail cards show the same thumbs as the week overview.
+    Never binds an id already used on another day this week when alternatives exist.
+    """
+    exclude = exclude_item_ids or set()
+    matching = payload.get("matching_wardrobe_items")
+    if isinstance(matching, dict) and exclude:
+        matching = prioritize_matching_items(matching, exclude)
+        payload["matching_wardrobe_items"] = matching
+    if not isinstance(matching, dict):
+        return
+    claimed = set(exclude)
+    for category, id_field in _SLOT_ID_FIELDS:
+        existing = payload.get(id_field)
+        if isinstance(existing, int):
+            if existing in claimed:
+                # Reused — clear and rebind from remaining matches if possible.
+                payload[id_field] = None
+            else:
+                claimed.add(existing)
+                continue
+        item_id = _first_unused_match_id(
+            matching.get(category), claimed, allow_excluded_fallback=True
+        )
+        if item_id is not None:
+            payload[id_field] = item_id
+            claimed.add(item_id)
 
 
 def admin_fields_from_suggestion(suggestion: OutfitSuggestion) -> dict[str, Any]:
@@ -341,9 +571,14 @@ class WeekPlanService:
         db: Session,
         day: WeeklyPlanDay,
         suggestion: OutfitSuggestion,
+        *,
+        exclude_item_ids: Optional[set[int]] = None,
     ) -> WeeklyPlanOutfit:
         summary = outfit_summary(suggestion)
         payload = suggestion_to_outfit_json(suggestion)
+        bind_missing_slot_ids_from_matches(
+            payload, exclude_item_ids=exclude_item_ids
+        )
         plan = day.plan
         sanitize_outfit_layers(
             payload,
@@ -408,6 +643,29 @@ class WeekPlanService:
                 if isinstance(i, int) and i not in seen:
                     seen.add(i)
                     used.append(i)
+        return used
+
+    def collect_used_colors(
+        self, plan: WeeklyPlan, *, exclude_day: Optional[int] = None
+    ) -> list[str]:
+        """Colors already used on other days (for generate variety prompts)."""
+        used: list[str] = []
+        seen: set[str] = set()
+        for day in plan.days:
+            if exclude_day is not None and day.day_of_week == exclude_day:
+                continue
+            if day.outfit is None:
+                continue
+            try:
+                payload = json.loads(day.outfit.outfit_json or "{}")
+            except json.JSONDecodeError:
+                payload = {}
+            if not isinstance(payload, dict):
+                continue
+            for color in extract_colors_from_outfit_payload(payload):
+                if color not in seen:
+                    seen.add(color)
+                    used.append(color)
         return used
 
     def local_day_of_week(self, timezone_name: str) -> int:

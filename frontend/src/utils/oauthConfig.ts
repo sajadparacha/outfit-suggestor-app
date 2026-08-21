@@ -12,18 +12,72 @@ export function isOAuthProviderConfigured(provider: OAuthProvider): boolean {
   return APPLE_CLIENT_ID.length > 0;
 }
 
+/** Deduplicate concurrent loads (React Strict Mode remounts the same script). */
+const scriptPromises = new Map<string, Promise<void>>();
+
 export function loadScript(src: string, id: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (document.getElementById(id)) {
+  const cached = scriptPromises.get(id);
+  if (cached) return cached;
+
+  const promise = new Promise<void>((resolve, reject) => {
+    const existing = document.getElementById(id) as HTMLScriptElement | null;
+    if (existing?.dataset.loaded === 'true') {
       resolve();
       return;
     }
-    const script = document.createElement('script');
-    script.id = id;
-    script.src = src;
-    script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
-    document.body.appendChild(script);
+
+    const script = existing ?? document.createElement('script');
+    const onLoad = () => {
+      script.dataset.loaded = 'true';
+      resolve();
+    };
+    const onError = () => {
+      scriptPromises.delete(id);
+      reject(new Error(`Failed to load script: ${src}`));
+    };
+
+    script.addEventListener('load', onLoad, { once: true });
+    script.addEventListener('error', onError, { once: true });
+
+    if (!existing) {
+      script.id = id;
+      script.src = src;
+      script.async = true;
+      document.body.appendChild(script);
+    }
+  });
+
+  scriptPromises.set(id, promise);
+  return promise;
+}
+
+/** Wait until GIS exposes window.google.accounts.id (script onload can race). */
+export function waitForGoogleIdentityServices(
+  timeoutMs = 8000,
+  intervalMs = 50
+): Promise<boolean> {
+  const hasGoogleId = () =>
+    Boolean(
+      (window as Window & { google?: { accounts?: { id?: unknown } } }).google
+        ?.accounts?.id
+    );
+
+  return new Promise((resolve) => {
+    if (typeof window !== 'undefined' && hasGoogleId()) {
+      resolve(true);
+      return;
+    }
+    const started = Date.now();
+    const timer = window.setInterval(() => {
+      if (hasGoogleId()) {
+        window.clearInterval(timer);
+        resolve(true);
+        return;
+      }
+      if (Date.now() - started >= timeoutMs) {
+        window.clearInterval(timer);
+        resolve(false);
+      }
+    }, intervalMs);
   });
 }

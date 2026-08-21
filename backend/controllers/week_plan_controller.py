@@ -1,6 +1,7 @@
 """Week plan controller — generate outfits via OutfitController paths."""
 from __future__ import annotations
 
+import json
 from typing import Optional
 
 from fastapi import HTTPException
@@ -26,9 +27,11 @@ from services.week_plan_service import (
     WeekPlanService,
     admin_fields_from_suggestion,
     empty_plan_response,
+    extract_outfit_colors,
     extract_wardrobe_item_ids,
     outfit_summary,
     plan_to_response,
+    scrub_reused_slot_ids,
 )
 
 
@@ -299,10 +302,20 @@ class WeekPlanController:
                 )
 
         outfit_controller = self._require_outfit_controller()
-        used_ids = self.week_plan_service.collect_used_item_ids(
-            plan,
-            exclude_day=body.day_of_week,
-        )
+        # Full-week regenerate only tracks IDs within this run; single-day
+        # regenerate still avoids items already planned on other days.
+        if body.day_of_week is not None:
+            used_ids = self.week_plan_service.collect_used_item_ids(
+                plan,
+                exclude_day=body.day_of_week,
+            )
+            used_colors = self.week_plan_service.collect_used_colors(
+                plan,
+                exclude_day=body.day_of_week,
+            )
+        else:
+            used_ids = []
+            used_colors = []
         avoid_texts: list[str] = []
         is_admin = bool(getattr(current_user, "is_admin", False))
         admin_outfit_by_day: dict[int, dict] = {}
@@ -314,11 +327,24 @@ class WeekPlanController:
 
         for day in days_to_generate:
             use_wardrobe = bool(getattr(day, "use_wardrobe_only", True))
+            exclude_set = set(used_ids)
             avoid_note = ""
             if used_ids and use_wardrobe:
                 avoid_note = (
                     f" Prefer different wardrobe items than IDs already used this week: "
                     f"{', '.join(str(i) for i in used_ids)}. Avoid repeating those items when possible."
+                )
+            if used_colors:
+                avoid_note += (
+                    " Avoid repeating these colors already used on other days this week "
+                    f"when alternatives exist: {', '.join(used_colors)}. "
+                    "Prefer a different color story each day; neutrals (black, white, navy, grey) "
+                    "may repeat only if needed for cohesion."
+                )
+            else:
+                avoid_note += (
+                    " Vary colors across the week — do not repeat the same dominant color "
+                    "story on multiple days when other options exist."
                 )
             text_input = (
                 f"Week planner day {day.day_of_week}. "
@@ -335,6 +361,7 @@ class WeekPlanController:
                     selected_wardrobe_item_ids=None,
                     previous_outfit_text=avoid_texts[-1] if avoid_texts else None,
                     avoid_outfit_texts=avoid_texts[-5:] if avoid_texts else None,
+                    exclude_wardrobe_item_ids=list(exclude_set),
                 )
             else:
                 suggestion = await self._suggest_open(
@@ -349,15 +376,32 @@ class WeekPlanController:
                     avoid_outfit_texts=avoid_texts[-5:] if avoid_texts else None,
                 )
 
-            self.week_plan_service.save_day_outfit(db, day, suggestion)
+            if use_wardrobe and exclude_set:
+                scrub_reused_slot_ids(suggestion, exclude_set)
+
+            outfit_row = self.week_plan_service.save_day_outfit(
+                db,
+                day,
+                suggestion,
+                exclude_item_ids=exclude_set if use_wardrobe else None,
+            )
             if is_admin:
                 admin_outfit_by_day[day.day_of_week] = admin_fields_from_suggestion(
                     suggestion
                 )
-            new_ids = extract_wardrobe_item_ids(suggestion)
-            for i in new_ids:
-                if i not in used_ids:
+            # Prefer IDs actually stored after bind (includes matched thumbs).
+            try:
+                stored_ids = json.loads(outfit_row.wardrobe_item_ids_json or "[]")
+            except Exception:
+                stored_ids = extract_wardrobe_item_ids(suggestion)
+            if not isinstance(stored_ids, list):
+                stored_ids = extract_wardrobe_item_ids(suggestion)
+            for i in stored_ids:
+                if isinstance(i, int) and i not in used_ids:
                     used_ids.append(i)
+            for color in extract_outfit_colors(suggestion):
+                if color not in used_colors:
+                    used_colors.append(color)
             avoid_texts.append(outfit_summary(suggestion))
 
         db.commit()
