@@ -108,7 +108,11 @@ final class OAuthAuthServiceTests: XCTestCase {
 
     @MainActor
     func testGoogleSignInProviderRequiresClientID() async {
-        // Without GOOGLE_IOS_CLIENT_ID in the test host Info.plist, provider must fail clearly.
+        if AppConfig.isGoogleSignInConfigured {
+            // Calling fetchIDToken() would present the live Google Sign-In sheet in XCTest.
+            XCTAssertFalse(AppConfig.googleClientID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            return
+        }
         do {
             _ = try await GoogleSignInProvider().fetchIDToken()
             XCTFail("Expected GoogleSignInProvider to throw when unconfigured")

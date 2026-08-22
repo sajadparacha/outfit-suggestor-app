@@ -105,7 +105,7 @@ class APIService {
     private func maybeSimulateUITestDelay() async {
         guard AppConfig.isUITestMode else { return }
         // Long enough for UITests to observe ai.progressPanel before suggestion completes.
-        try? await Task.sleep(nanoseconds: 3_500_000_000)
+        try? await Task.sleep(nanoseconds: 2_000_000_000)
     }
 
     private func beginRequestActivity() async {

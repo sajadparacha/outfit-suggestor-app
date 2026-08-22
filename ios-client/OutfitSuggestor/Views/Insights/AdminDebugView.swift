@@ -33,6 +33,7 @@ struct AdminDebugView: View {
                     .foregroundColor(AppTheme.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal)
+                    .accessibilityIdentifier("insights.adminDebug")
 
                 if let cost = admin?.cost {
                     VStack(alignment: .leading, spacing: 6) {
@@ -78,7 +79,6 @@ struct AdminDebugView: View {
                 )
             }
         }
-        .accessibilityIdentifier("insights.adminDebug")
     }
 
     private func resolvedContent(_ value: String?) -> String {
@@ -115,11 +115,14 @@ private struct AdminInsightsTextPanel: View {
             Text(title)
                 .font(.caption.weight(.semibold))
                 .foregroundColor(AppTheme.textSecondary)
+                .accessibilityIdentifier(accessibilityIdentifier)
+                .accessibilityValue(content)
             ScrollView(.vertical, showsIndicators: true) {
                 Text(content)
                     .font(.system(.caption, design: .monospaced))
                     .foregroundColor(AppTheme.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityLabel(content)
             }
             .frame(minHeight: 90, maxHeight: 140)
             .padding(8)
@@ -130,6 +133,5 @@ private struct AdminInsightsTextPanel: View {
         .padding()
         .glassCard()
         .padding(.horizontal)
-        .accessibilityIdentifier(accessibilityIdentifier)
     }
 }

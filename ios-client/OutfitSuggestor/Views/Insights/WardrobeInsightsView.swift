@@ -14,6 +14,14 @@ struct WardrobeInsightsView: View {
 
     var body: some View {
         VStack(spacing: 24) {
+            Text("Insights results")
+                .font(.caption2)
+                .foregroundStyle(.clear)
+                .frame(height: 1)
+                .accessibilityIdentifier("insights.results")
+                .accessibilityLabel("Insights results")
+                .accessibilityAddTraits(.isHeader)
+
             InsightSummaryCardView(
                 score: result.score,
                 topPriorities: result.topPriorities
@@ -45,7 +53,6 @@ struct WardrobeInsightsView: View {
                 AdminDebugView(admin: result.admin)
             }
         }
-        .accessibilityIdentifier("insights.results")
         .sheet(isPresented: $showingShoppingList) {
             ShoppingListView(result: result) {
                 showingShoppingList = false

@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct RootView: View {
     @ObservedObject var auth = AuthService.shared
@@ -24,6 +25,11 @@ struct RootView: View {
             }
         } else {
             MainTabView()
+                .onAppear {
+                    if AppConfig.isUITestMode {
+                        UIView.setAnimationsEnabled(false)
+                    }
+                }
         }
     }
 }

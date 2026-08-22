@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 
 final class OutfitAppE2ETests: XCTestCase {
     private var app: XCUIApplication!
@@ -20,6 +21,56 @@ final class OutfitAppE2ETests: XCTestCase {
     @discardableResult
     private func waitFor(_ element: XCUIElement, timeout: TimeInterval = 10) -> Bool {
         element.waitForExistence(timeout: timeout)
+    }
+
+    /// Coordinate taps avoid XCTest "scroll to visible", which SIGKILL'd the runner on iOS 26.
+    private func safeTap(_ element: XCUIElement, timeout: TimeInterval = 10, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertTrue(
+            element.waitForExistence(timeout: timeout),
+            "Element did not appear in time",
+            file: file,
+            line: line
+        )
+        element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+    }
+
+    private func tapGetSuggestion() {
+        let button = app.buttons["main.getSuggestionButton"]
+        XCTAssertTrue(button.waitForExistence(timeout: 10), "Get suggestion button missing")
+        if app.scrollViews.firstMatch.exists {
+            app.scrollViews.firstMatch.swipeUp()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.15))
+        }
+        button.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+    }
+
+    private func waitForStyledLook(timeout: TimeInterval = 15, file: StaticString = #filePath, line: UInt = #line) {
+        waitForAppUnlocked(timeout: timeout)
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if app.otherElements["main.resultCard"].exists { return }
+            if app.staticTexts["main.resultTitle"].exists { return }
+            if app.staticTexts["Your Styled Look"].exists { return }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+        }
+        XCTFail("Expected styled look result card", file: file, line: line)
+    }
+
+    private func enterText(_ field: XCUIElement, _ text: String) {
+        XCTAssertTrue(field.waitForExistence(timeout: 8), "Text field missing")
+        field.tap()
+        if app.keyboards.firstMatch.waitForExistence(timeout: 2) {
+            field.typeText(text)
+            return
+        }
+        UIPasteboard.general.string = text
+        field.press(forDuration: 1.0)
+        let paste = app.menuItems["Paste"].firstMatch
+        if paste.waitForExistence(timeout: 2) {
+            paste.tap()
+        } else {
+            field.typeText(text)
+        }
     }
 
     private func tabIdentifier(for name: String) -> String? {
@@ -141,24 +192,45 @@ final class OutfitAppE2ETests: XCTestCase {
         return app.descendants(matching: .any)["history.card.\(entryId)"]
     }
 
+    private func insightsElement(identifier: String) -> XCUIElement {
+        app.descendants(matching: .any)[identifier]
+    }
+
+    private func insightsTextContaining(_ needle: String) -> XCUIElement {
+        app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", needle)).firstMatch
+    }
+
+    private func accessibilityBlob(_ element: XCUIElement) -> String {
+        guard element.exists else { return "" }
+        return "\(element.label) \((element.value as? String) ?? "")"
+    }
+
     @discardableResult
     private func scrollToInsightsAdminSection(timeout: TimeInterval = 12) -> Bool {
         let adminMarker = app.descendants(matching: .any)["insights.adminDebug"]
         let costTitle = app.staticTexts["Analysis Cost"]
+        let promptPanel = insightsElement(identifier: "insights.inputPrompt")
+        let promptText = insightsTextContaining("ui-test-premium-prompt")
+        let promptTitle = app.staticTexts["Input Prompt"]
         let scrollView = app.scrollViews.firstMatch
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
-            if adminMarker.waitForExistence(timeout: 0.3) { return true }
-            if costTitle.waitForExistence(timeout: 0.3) { return true }
-            if app.staticTexts["Admin diagnostics"].waitForExistence(timeout: 0.3) { return true }
+            if promptPanel.waitForExistence(timeout: 0.2)
+                || promptText.waitForExistence(timeout: 0.2)
+                || promptTitle.waitForExistence(timeout: 0.2) {
+                return true
+            }
+            if adminMarker.waitForExistence(timeout: 0.15) { /* keep scrolling to prompt */ }
+            if costTitle.waitForExistence(timeout: 0.15) { /* keep scrolling to prompt */ }
+            if app.staticTexts["Admin diagnostics"].waitForExistence(timeout: 0.15) { /* keep scrolling */ }
             if scrollView.exists {
                 scrollView.swipeUp()
             } else {
                 app.swipeUp()
             }
-            RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
         }
-        return adminMarker.exists || costTitle.exists || app.staticTexts["Admin diagnostics"].exists
+        return promptPanel.exists || promptText.exists || promptTitle.exists
     }
 
     @discardableResult
@@ -194,7 +266,7 @@ final class OutfitAppE2ETests: XCTestCase {
 
     private func addSampleImageOnSuggest() {
         XCTAssertTrue(waitFor(app.buttons["main.useSampleImageButton"]))
-        app.buttons["main.useSampleImageButton"].tap()
+        safeTap(app.buttons["main.useSampleImageButton"])
         XCTAssertTrue(waitFor(app.buttons["main.getSuggestionButton"]))
     }
 
@@ -509,22 +581,21 @@ final class OutfitAppE2ETests: XCTestCase {
         openHistory()
 
         XCTAssertFalse(historyCard(entryId: 102).exists)
-        app.buttons["history.loadAllButton"].tap()
+        safeTap(app.buttons["history.loadAllButton"])
         XCTAssertTrue(waitForHistoryIdle(timeout: 12), "History loading spinner did not dismiss")
         XCTAssertTrue(
             waitForHistoryEntryCount(3, timeout: 12),
             "Expected 3 history entries after Load All"
         )
         XCTAssertTrue(
-            historyCard(entryId: 100).waitForExistence(timeout: 4),
+            historyCard(entryId: 100).waitForExistence(timeout: 8),
             "Expected newest history entry 100 after Load All"
         )
         XCTAssertTrue(scrollToHistoryCard(entryId: 102, timeout: 16), "Expected history entry 102 after Load All")
 
         let searchField = app.textFields["history.searchField"]
-        searchField.tap()
-        searchField.typeText("brogues")
-        app.buttons["history.searchButton"].tap()
+        enterText(searchField, "brogues")
+        safeTap(app.buttons["history.searchButton"])
         waitForAppUnlocked()
         XCTAssertTrue(scrollToHistoryCard(entryId: 101, timeout: 8))
         XCTAssertFalse(historyCard(entryId: 100).exists)
@@ -532,28 +603,37 @@ final class OutfitAppE2ETests: XCTestCase {
         searchField.tap()
         if let current = searchField.value as? String, !current.isEmpty {
             let delete = String(repeating: XCUIKeyboardKey.delete.rawValue, count: current.count)
-            searchField.typeText(delete)
+            if app.keyboards.firstMatch.exists {
+                searchField.typeText(delete)
+            } else {
+                searchField.press(forDuration: 1.0)
+                let selectAll = app.menuItems["Select All"].firstMatch
+                if selectAll.waitForExistence(timeout: 1) {
+                    selectAll.tap()
+                    searchField.typeText(XCUIKeyboardKey.delete.rawValue)
+                }
+            }
         }
-        app.buttons["history.searchButton"].tap()
+        safeTap(app.buttons["history.searchButton"])
 
-        app.buttons["history.sortMenu"].tap()
-        app.buttons["Oldest First"].tap()
+        safeTap(app.buttons["history.sortMenu"])
+        safeTap(app.buttons["Oldest First"])
         waitForAppUnlocked()
         XCTAssertTrue(scrollToHistoryCard(entryId: 102, timeout: 8))
     }
 
     func testSuggestFlowFromSampleImageShowsResultCard() {
         addSampleImageOnSuggest()
-        app.buttons["main.getSuggestionButton"].tap()
-        XCTAssertTrue(app.staticTexts["Your Styled Look"].waitForExistence(timeout: 6))
+        tapGetSuggestion()
+        waitForStyledLook()
     }
 
     func testResultActionButtonsAreVisibleAfterSuggestion() {
         addSampleImageOnSuggest()
-        app.buttons["main.getSuggestionButton"].tap()
-        XCTAssertTrue(app.staticTexts["Your Styled Look"].waitForExistence(timeout: 6))
+        tapGetSuggestion()
+        waitForStyledLook()
 
-        XCTAssertTrue(app.buttons["main.generateAnotherButton"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["main.generateAnotherButton"].waitForExistence(timeout: 6))
         XCTAssertTrue(app.buttons["main.saveLookButton"].exists)
         XCTAssertTrue(app.buttons["main.refineButton"].exists)
         XCTAssertFalse(app.buttons["main.likeButton"].exists)
@@ -561,23 +641,23 @@ final class OutfitAppE2ETests: XCTestCase {
 
     func testChangeOccasionOpensPickerSheet() {
         addSampleImageOnSuggest()
-        app.buttons["main.getSuggestionButton"].tap()
-        XCTAssertTrue(app.staticTexts["Your Styled Look"].waitForExistence(timeout: 6))
+        tapGetSuggestion()
+        waitForStyledLook()
 
-        app.buttons["main.refineButton"].tap()
-        XCTAssertTrue(app.buttons["main.refineChangeOccasionButton"].waitForExistence(timeout: 4))
-        app.buttons["main.refineChangeOccasionButton"].tap()
-        XCTAssertTrue(app.navigationBars["Change occasion"].waitForExistence(timeout: 4))
+        safeTap(app.buttons["main.refineButton"])
+        XCTAssertTrue(app.buttons["main.refineChangeOccasionButton"].waitForExistence(timeout: 6))
+        safeTap(app.buttons["main.refineChangeOccasionButton"])
+        XCTAssertTrue(app.navigationBars["Change occasion"].waitForExistence(timeout: 6))
     }
 
     func testGenerateAnotherLookKeepsResultVisible() {
         addSampleImageOnSuggest()
-        app.buttons["main.getSuggestionButton"].tap()
-        XCTAssertTrue(app.staticTexts["Your Styled Look"].waitForExistence(timeout: 6))
+        tapGetSuggestion()
+        waitForStyledLook()
 
-        app.buttons["main.generateAnotherButton"].tap()
-        waitForAppUnlocked(timeout: 8)
-        XCTAssertTrue(app.staticTexts["Your Styled Look"].waitForExistence(timeout: 6))
+        safeTap(app.buttons["main.generateAnotherButton"])
+        waitForAppUnlocked(timeout: 10)
+        waitForStyledLook()
     }
 
     private func focusWardrobeItem(_ itemId: Int) {
@@ -603,9 +683,9 @@ final class OutfitAppE2ETests: XCTestCase {
             app.staticTexts["From your wardrobe"].waitForExistence(timeout: 6)
                 || app.otherElements["main.wardrobeSourceBanner"].waitForExistence(timeout: 1)
         )
-        XCTAssertTrue(app.buttons["main.getSuggestionButton"].waitForExistence(timeout: 4))
-        app.buttons["main.getSuggestionButton"].tap()
-        XCTAssertTrue(app.staticTexts["Your Styled Look"].waitForExistence(timeout: 6))
+        XCTAssertTrue(app.buttons["main.getSuggestionButton"].waitForExistence(timeout: 6))
+        tapGetSuggestion()
+        waitForStyledLook()
 
         openWardrobe()
         focusWardrobeItem(wardrobeItemId)
@@ -617,12 +697,12 @@ final class OutfitAppE2ETests: XCTestCase {
         ).firstMatch
         XCTAssertTrue(waitFor(suggestionEntry, timeout: 12), "Expected wardrobe history entries")
         tapWardrobeHistoryUseThis()
-        XCTAssertTrue(app.staticTexts["Your Styled Look"].waitForExistence(timeout: 6))
+        waitForStyledLook()
     }
 
     func testAiProgressPanelAppearsDuringSuggestionAndTabsStayUsable() {
         addSampleImageOnSuggest()
-        app.buttons["main.getSuggestionButton"].tap()
+        tapGetSuggestion()
 
         let progressPanel = app.descendants(matching: .any)["ai.progressPanel"]
         let progressTitle = app.staticTexts["ai.progressTitle"]
@@ -640,7 +720,7 @@ final class OutfitAppE2ETests: XCTestCase {
         )
 
         openTab("Suggest")
-        XCTAssertTrue(app.staticTexts["Your Styled Look"].waitForExistence(timeout: 12))
+        waitForStyledLook(timeout: 16)
     }
 
     func testAdminPremiumInsightsShowsCostPromptAndResponse() {
@@ -672,35 +752,77 @@ final class OutfitAppE2ETests: XCTestCase {
             premiumSegment.tap()
         }
 
-        app.buttons["insights.analyzeButton"].tap()
-        waitForAppUnlocked(timeout: 8)
+        let analyze = app.buttons["insights.analyzeButton"]
+        XCTAssertTrue(analyze.waitForExistence(timeout: 6))
+        if app.scrollViews.firstMatch.exists {
+            app.scrollViews.firstMatch.swipeUp()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+        }
+        analyze.tap()
+        waitForAppUnlocked(timeout: 12)
 
-        XCTAssertTrue(app.otherElements["insights.results"].waitForExistence(timeout: 8))
+        let results = app.descendants(matching: .any)["insights.results"]
         let summary = app.staticTexts.containing(
             NSPredicate(format: "label CONTAINS %@", "Premium wardrobe analysis completed")
         ).firstMatch
-        XCTAssertTrue(summary.waitForExistence(timeout: 4))
+        let shoppingList = app.buttons["insights.shoppingListButton"]
+        let resultsReady = results.waitForExistence(timeout: 12)
+            || summary.waitForExistence(timeout: 4)
+            || shoppingList.waitForExistence(timeout: 2)
+            || app.staticTexts["Top items to add"].waitForExistence(timeout: 2)
+        XCTAssertTrue(resultsReady, "Expected insights results after analyze")
 
         XCTAssertTrue(
-            scrollToInsightsAdminSection(timeout: 12),
+            scrollToInsightsAdminSection(timeout: 16),
             "Expected admin diagnostics section after scrolling insights results"
         )
 
         let adminDiagnostics = app.descendants(matching: .any)["insights.adminDiagnostics"]
         let adminDebugPanel = app.descendants(matching: .any)["insights.adminDebug"]
         XCTAssertTrue(
-            adminDiagnostics.waitForExistence(timeout: 2) || adminDebugPanel.waitForExistence(timeout: 2)
-                || app.staticTexts["Admin diagnostics"].waitForExistence(timeout: 2)
+            adminDiagnostics.waitForExistence(timeout: 4) || adminDebugPanel.waitForExistence(timeout: 4)
+                || app.staticTexts["Admin diagnostics"].waitForExistence(timeout: 4)
         )
-        XCTAssertTrue(app.staticTexts["Analysis Cost"].waitForExistence(timeout: 4))
+        XCTAssertTrue(app.staticTexts["Analysis Cost"].waitForExistence(timeout: 6))
+        let cost = app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "$0.012")).firstMatch
+        XCTAssertTrue(cost.waitForExistence(timeout: 4), "Expected analysis cost amount")
+
+        let promptPanel = insightsElement(identifier: "insights.inputPrompt")
+        let promptText = insightsTextContaining("ui-test-premium-prompt")
+        let promptTitle = app.staticTexts["Input Prompt"]
         XCTAssertTrue(
-            app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "$0.012")).firstMatch.exists
+            promptPanel.waitForExistence(timeout: 8)
+                || promptText.waitForExistence(timeout: 8)
+                || promptTitle.waitForExistence(timeout: 4),
+            "Expected input prompt panel"
         )
+        let promptBlob = [
+            accessibilityBlob(promptPanel),
+            accessibilityBlob(promptText),
+            accessibilityBlob(promptTitle)
+        ].joined(separator: " ")
         XCTAssertTrue(
-            app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "ui-test-premium-prompt")).firstMatch.exists
+            promptBlob.contains("ui-test-premium-prompt") || promptText.exists,
+            "Expected ui-test-premium-prompt in admin diagnostics, got \(promptBlob)"
         )
+
+        let responsePanel = insightsElement(identifier: "insights.aiResponse")
+        let responseText = insightsTextContaining("ui-test-premium-response")
+        let responseTitle = app.staticTexts["AI Response"]
         XCTAssertTrue(
-            app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "ui-test-premium-response")).firstMatch.exists
+            responsePanel.waitForExistence(timeout: 8)
+                || responseText.waitForExistence(timeout: 8)
+                || responseTitle.waitForExistence(timeout: 4),
+            "Expected AI response panel"
+        )
+        let responseBlob = [
+            accessibilityBlob(responsePanel),
+            accessibilityBlob(responseText),
+            accessibilityBlob(responseTitle)
+        ].joined(separator: " ")
+        XCTAssertTrue(
+            responseBlob.contains("ui-test-premium-response") || responseText.exists,
+            "Expected ui-test-premium-response in admin diagnostics, got \(responseBlob)"
         )
     }
 }

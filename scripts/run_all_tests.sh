@@ -274,6 +274,8 @@ run_ios_tests() {
   echo ">>> iOS ($target_label)"
   cd "$REPO_ROOT/ios-client"
   xcrun simctl boot "$IOS_SIM" >/dev/null 2>&1 || true
+  # Hardware keyboard makes XCUITest typeText hang on some simulators (iOS 26).
+  defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool false >/dev/null 2>&1 || true
 
   local exit_code=0
   run_logged "$log_file" xcodebuild test \
