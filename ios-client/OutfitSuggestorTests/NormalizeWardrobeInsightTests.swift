@@ -263,7 +263,7 @@ final class NormalizeWardrobeInsightTests: XCTestCase {
 
         XCTAssertEqual(
             blazer?.details,
-            "Owned: 1 colors, 1 styles. Missing: 0 colors, 0 styles."
+            "Owned: 1 colors, 0 styles. Missing: 0 colors, 0 styles."
         )
     }
 
@@ -297,6 +297,231 @@ final class NormalizeWardrobeInsightTests: XCTestCase {
         XCTAssertEqual(styles?.missingStyles, ["clean sneakers"])
         XCTAssertEqual(styles?.ownedColors, [])
         XCTAssertEqual(styles?.missingColors, [])
+    }
+
+    func testPriorityMissingPreviewIsEssentialFirstAndLimited() {
+        let styles = (1...8).map { "essential-\($0)" }
+            + (1...8).map { "useful-\($0)" }
+            + (1...8).map { "skip-\($0)" }
+        var priorities: [String: String] = [:]
+        for style in styles {
+            if style.hasPrefix("essential") { priorities[style] = "Essential" }
+            else if style.hasPrefix("useful") { priorities[style] = "Useful" }
+            else { priorities[style] = "Skip" }
+        }
+
+        let preview = NormalizeWardrobeInsight.priorityMissingPreview(styles, priorities: priorities)
+
+        XCTAssertEqual(preview.count, NormalizeWardrobeInsight.priorityMissingPreviewLimit)
+        XCTAssertGreaterThanOrEqual(preview.count, 8)
+        XCTAssertLessThanOrEqual(preview.count, 12)
+        XCTAssertTrue(preview.allSatisfy { $0.hasPrefix("essential") || $0.hasPrefix("useful") })
+        XCTAssertFalse(preview.contains { $0.hasPrefix("skip") })
+
+        let lastEssential = preview.lastIndex { $0.hasPrefix("essential") }
+        let firstUseful = preview.firstIndex { $0.hasPrefix("useful") }
+        XCTAssertNotNil(lastEssential)
+        XCTAssertNotNil(firstUseful)
+        if let lastEssential, let firstUseful {
+            XCTAssertLessThan(lastEssential, firstUseful)
+        }
+    }
+
+    func testShowAllHelperExposesFullCatalogSortedByPriority() {
+        let styles = ["skip-z", "useful-m", "essential-a", "oxford"]
+        let priorities = [
+            "skip-z": "Skip",
+            "useful-m": "Useful",
+            "essential-a": "Essential",
+            "oxford": "Essential",
+        ]
+
+        let full = NormalizeWardrobeInsight.sortStylesByPriority(styles, priorities: priorities)
+
+        XCTAssertEqual(full, ["essential-a", "oxford", "useful-m", "skip-z"])
+        XCTAssertEqual(full.count, styles.count)
+        XCTAssertTrue(full.contains("skip-z"))
+
+        let preview = NormalizeWardrobeInsight.priorityMissingPreview(styles, priorities: priorities)
+        XCTAssertEqual(preview, ["essential-a", "oxford", "useful-m"])
+        XCTAssertFalse(preview.contains("skip-z"))
+    }
+
+    func testOwnedStylesUnchangedWhenPrioritiesRankMissingStyles() {
+        let response = makeResponse(
+            analysisByCategory: [
+                "shirt": makeCategoryGap(
+                    category: "shirt",
+                    itemCount: 2,
+                    missingStyles: ["overshirt", "oxford", "textured", "invented-couture"],
+                    ownedStyles: ["linen"],
+                    stylePriorities: [
+                        "oxford": "Essential",
+                        "textured": "Useful",
+                        "overshirt": "Skip",
+                        "invented-couture": "Essential",
+                    ]
+                ),
+                "trouser": makeCategoryGap(category: "trouser", itemCount: 1, ownedStyles: ["chino"]),
+                "shoes": makeCategoryGap(category: "shoes", itemCount: 1, ownedStyles: ["loafers"]),
+                "blazer": makeCategoryGap(category: "blazer", itemCount: 1, ownedStyles: ["unstructured"]),
+                "belt": makeCategoryGap(category: "belt", itemCount: 1, ownedStyles: ["leather"]),
+            ]
+        )
+
+        let result = NormalizeWardrobeInsight.normalize(response)
+        let shirt = result.categoryHealth.first { $0.id == "shirt" }
+
+        XCTAssertEqual(shirt?.ownedStyles, ["linen"])
+        XCTAssertEqual(shirt?.missingStyles, ["oxford", "textured", "overshirt"])
+        XCTAssertEqual(shirt?.stylePriorities["oxford"], "Essential")
+        XCTAssertEqual(shirt?.stylePriorities["textured"], "Useful")
+        XCTAssertEqual(shirt?.stylePriorities["overshirt"], "Skip")
+        XCTAssertNil(shirt?.stylePriorities["invented-couture"])
+
+        let preview = NormalizeWardrobeInsight.priorityMissingPreview(
+            shirt?.missingStyles ?? [],
+            priorities: shirt?.stylePriorities ?? [:]
+        )
+        XCTAssertEqual(preview, ["oxford", "textured"])
+        XCTAssertTrue(shirt?.recommendedStep.lowercased().contains("oxford") ?? false)
+    }
+
+    func testShoppingListStylesStayOnLibraryTags() {
+        let response = makeResponse(
+            priorityShoppingList: [
+                WardrobePriorityShoppingItem(
+                    rank: 1,
+                    itemName: "White oxford",
+                    category: "shirt",
+                    priority: "High",
+                    recommendedColors: ["white"],
+                    recommendedStyles: ["oxford", "invented-couture", "silk tie", "clean sneakers"],
+                    reason: "Work staple.",
+                    outfitImpact: "More office options.",
+                    actions: ["Shop similar"]
+                )
+            ]
+        )
+
+        let item = NormalizeWardrobeInsight.normalize(response).missingItems.first
+        let libraryOnly = NormalizeWardrobeInsight.shoppingListStyles(
+            category: "shirt",
+            recommendedStyles: ["oxford", "invented-couture", "silk tie", "clean sneakers"]
+        )
+
+        XCTAssertEqual(libraryOnly, ["oxford"])
+        XCTAssertEqual(item?.worksWith, ["Oxford"])
+        XCTAssertFalse(libraryOnly.contains("invented-couture"))
+        XCTAssertFalse(item?.worksWith.contains(where: { $0.lowercased().contains("invented") }) ?? true)
+    }
+
+    func testDerivedShoppingListStylesStayOnLibraryTags() {
+        let response = makeResponse(
+            analysisByCategory: [
+                "shirt": makeCategoryGap(
+                    category: "shirt",
+                    itemCount: 1,
+                    missingStyles: ["oxford", "invented-couture", "clean sneakers"],
+                    ownedStyles: ["linen"],
+                    stylePriorities: ["oxford": "Essential", "invented-couture": "Essential"]
+                ),
+                "trouser": makeCategoryGap(category: "trouser", itemCount: 1, ownedStyles: ["chino"]),
+                "shoes": makeCategoryGap(category: "shoes", itemCount: 1, ownedStyles: ["loafers"]),
+                "blazer": makeCategoryGap(category: "blazer", itemCount: 1, ownedStyles: ["unstructured"]),
+                "belt": makeCategoryGap(category: "belt", itemCount: 1, ownedStyles: ["leather"]),
+            ]
+        )
+
+        let shirtItem = NormalizeWardrobeInsight.normalize(response).missingItems.first { $0.category == "shirt" }
+
+        XCTAssertEqual(shirtItem?.worksWith, ["Oxford"])
+        XCTAssertFalse(shirtItem?.worksWith.contains(where: { $0.lowercased().contains("invented") }) ?? true)
+    }
+
+    func testBlazerOwnedCharcoalDropsDuplicateMissingColor() {
+        let response = makeResponse(
+            analysisByCategory: [
+                "shirt": makeCategoryGap(category: "shirt", itemCount: 1),
+                "trouser": makeCategoryGap(category: "trouser", itemCount: 1),
+                "blazer": makeCategoryGap(
+                    category: "blazer",
+                    itemCount: 2,
+                    missingColors: ["Charcoal", "Navy"],
+                    ownedColors: ["charcoal"],
+                    ownedStyles: ["unstructured"]
+                ),
+                "sweater": makeCategoryGap(category: "sweater", itemCount: 1),
+                "jacket": makeCategoryGap(category: "jacket", itemCount: 1),
+                "shoes": makeCategoryGap(category: "shoes", itemCount: 1),
+                "belt": makeCategoryGap(category: "belt", itemCount: 1),
+            ]
+        )
+
+        let blazer = NormalizeWardrobeInsight.normalize(response).categoryHealth.first { $0.id == "blazer" }
+
+        XCTAssertEqual(blazer?.ownedColors, ["charcoal"])
+        XCTAssertEqual(blazer?.missingColors, ["Navy"])
+        XCTAssertFalse(blazer?.missingColors.contains { $0.compare("charcoal", options: .caseInsensitive) == .orderedSame } ?? true)
+        XCTAssertEqual(
+            blazer?.details,
+            "Owned: 1 colors, 1 styles. Missing: 1 colors, 0 styles."
+        )
+    }
+
+    func testOwnedStyleIsNotAlsoMissing() {
+        let response = makeResponse(
+            analysisByCategory: [
+                "shirt": makeCategoryGap(category: "shirt", itemCount: 1),
+                "trouser": makeCategoryGap(category: "trouser", itemCount: 1),
+                "blazer": makeCategoryGap(
+                    category: "blazer",
+                    itemCount: 2,
+                    missingStyles: ["Unstructured", "lightweight"],
+                    ownedStyles: ["unstructured"]
+                ),
+                "sweater": makeCategoryGap(category: "sweater", itemCount: 1),
+                "jacket": makeCategoryGap(category: "jacket", itemCount: 1),
+                "shoes": makeCategoryGap(category: "shoes", itemCount: 1),
+                "belt": makeCategoryGap(category: "belt", itemCount: 1),
+            ]
+        )
+
+        let blazer = NormalizeWardrobeInsight.normalize(response).categoryHealth.first { $0.id == "blazer" }
+
+        XCTAssertEqual(blazer?.ownedStyles, ["unstructured"])
+        XCTAssertEqual(blazer?.missingStyles, ["lightweight"])
+        XCTAssertFalse(blazer?.missingStyles.contains { $0.compare("unstructured", options: .caseInsensitive) == .orderedSame } ?? true)
+    }
+
+    func testShoppingListAppendsShirtCategoryWithRemainingGaps() {
+        let response = makeResponse(
+            analysisByCategory: [
+                "shirt": makeCategoryGap(
+                    category: "shirt",
+                    itemCount: 2,
+                    missingStyles: ["oxford", "linen"],
+                    ownedStyles: ["textured"]
+                ),
+                "trouser": makeCategoryGap(category: "trouser", itemCount: 1),
+                "blazer": makeCategoryGap(category: "blazer", itemCount: 1),
+                "sweater": makeCategoryGap(category: "sweater", itemCount: 1),
+                "jacket": makeCategoryGap(category: "jacket", itemCount: 1),
+                "shoes": makeCategoryGap(category: "shoes", itemCount: 1),
+                "belt": makeCategoryGap(category: "belt", itemCount: 1),
+            ],
+            priorityShoppingList: [
+                makeShoppingItem(rank: 1, name: "Navy blazer", category: "blazer", priority: "High"),
+                makeShoppingItem(rank: 2, name: "Merino sweater", category: "sweater", priority: "Medium"),
+                makeShoppingItem(rank: 3, name: "Brown belt", category: "belt", priority: "Low"),
+            ]
+        )
+
+        let result = NormalizeWardrobeInsight.normalize(response)
+
+        XCTAssertTrue(result.missingItems.contains { $0.category == "shirt" })
+        XCTAssertEqual(result.topPriorities.count, 3)
+        XCTAssertFalse(result.topPriorities.contains { $0.category == "shirt" })
     }
 
     // MARK: - Fixtures
@@ -340,16 +565,19 @@ final class NormalizeWardrobeInsightTests: XCTestCase {
         itemCount: Int = 1,
         missingColors: [String] = [],
         missingStyles: [String] = [],
-        ownedStyles: [String] = ["linen"]
+        ownedColors: [String] = ["blue"],
+        ownedStyles: [String] = ["linen"],
+        stylePriorities: [String: String]? = nil
     ) -> WardrobeCategoryGap {
         WardrobeCategoryGap(
             category: category,
-            owned_colors: ["blue"],
+            owned_colors: ownedColors,
             owned_styles: ownedStyles,
             missing_colors: missingColors,
             missing_styles: missingStyles,
             recommended_purchases: itemCount == 0 ? ["Add a versatile \(category)"] : [],
-            item_count: itemCount
+            item_count: itemCount,
+            style_priorities: stylePriorities
         )
     }
 

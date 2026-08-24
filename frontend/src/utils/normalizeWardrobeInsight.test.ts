@@ -1,5 +1,9 @@
 import { WardrobeGapAnalysisResponse } from '../models/WardrobeModels';
-import { normalizeWardrobeInsight } from './normalizeWardrobeInsight';
+import {
+  normalizeWardrobeInsight,
+  priorityMissingStyles,
+  sortStylesByPriority,
+} from './normalizeWardrobeInsight';
 
 const baseResponse: WardrobeGapAnalysisResponse = {
   occasion: 'casual',
@@ -153,7 +157,7 @@ describe('normalizeWardrobeInsight', () => {
       ],
     });
 
-    expect(result.missingItems[0].name).toBe('Custom Shirt');
+    expect(result.missingItems[0].name).toBe('Shirts');
     expect(result.missingItems[0].reason).toBe('Custom reason');
   });
 
@@ -310,5 +314,267 @@ describe('normalizeWardrobeInsight', () => {
 
     expect(result.missingItems[0].worksWith).toEqual(['Linen']);
     expect(result.missingItems[0].worksWith).not.toContain('Clean Sneakers');
+  });
+
+  it('drops owned colors from missingColors in the same category (case-insensitive)', () => {
+    const result = normalizeWardrobeInsight({
+      ...baseResponse,
+      analysis_by_category: {
+        ...baseResponse.analysis_by_category,
+        blazer: {
+          category: 'blazer',
+          owned_colors: ['Charcoal'],
+          owned_styles: [],
+          missing_colors: ['Charcoal', 'Navy'],
+          missing_styles: ['unstructured'],
+          recommended_purchases: ['Navy blazer'],
+          item_count: 1,
+        },
+      },
+    });
+
+    const blazers = result.categoryHealth.find((c) => c.id === 'blazer');
+    expect(blazers?.missingColors).toEqual(['Navy']);
+    expect(blazers?.missingColors).not.toContain('Charcoal');
+    expect(blazers?.details).toContain('Missing: 1 colors');
+  });
+
+  it('drops owned styles from missingStyles in the same category', () => {
+    const result = normalizeWardrobeInsight({
+      ...baseResponse,
+      analysis_by_category: {
+        ...baseResponse.analysis_by_category,
+        shirt: {
+          category: 'shirt',
+          owned_colors: ['white'],
+          owned_styles: ['Oxford'],
+          missing_colors: ['navy'],
+          missing_styles: ['oxford', 'linen'],
+          recommended_purchases: [],
+          item_count: 2,
+        },
+      },
+    });
+
+    const shirts = result.categoryHealth.find((c) => c.id === 'shirt');
+    expect(shirts?.missingStyles).toEqual(['linen']);
+    expect(shirts?.missingStyles).not.toContain('oxford');
+    expect(shirts?.ownedStyles).toEqual(['Oxford']);
+  });
+
+  it('appends clothing categories with remaining gaps to priorityShoppingList', () => {
+    const result = normalizeWardrobeInsight({
+      ...baseResponse,
+      analysis_by_category: {
+        ...baseResponse.analysis_by_category,
+        shirt: {
+          category: 'shirt',
+          owned_colors: ['white'],
+          owned_styles: [],
+          missing_colors: [],
+          missing_styles: ['oxford', 'linen'],
+          style_priorities: {
+            oxford: 'Essential',
+            linen: 'Useful',
+          },
+          recommended_purchases: [],
+          item_count: 2,
+        },
+      },
+      priorityShoppingList: [
+        {
+          rank: 1,
+          itemName: 'Navy blazer',
+          category: 'blazer',
+          priority: 'High',
+          recommendedColors: ['navy'],
+          recommendedStyles: ['unstructured'],
+          reason: 'Fill the blazer gap',
+          outfitImpact: 'More formal looks',
+          actions: [],
+        },
+      ],
+    });
+
+    const shirts = result.categoryHealth.find((c) => c.id === 'shirt');
+    expect(shirts?.status).toBe('Medium');
+    expect(result.missingItems.map((item) => item.category)).toContain('shirt');
+    expect(result.missingItems[0].category).toBe('blazer');
+  });
+});
+
+const LARGE_CATALOG = Array.from({ length: 32 }, (_, index) => `style-${index + 1}`);
+const LARGE_PRIORITIES = LARGE_CATALOG.reduce<Record<string, 'Essential' | 'Useful' | 'Skip'>>(
+  (map, tag, index) => {
+    if (index < 6) map[tag] = 'Essential';
+    else if (index < 11) map[tag] = 'Useful';
+    else map[tag] = 'Skip';
+    return map;
+  },
+  {}
+);
+
+const SHIRT_LIBRARY_TAGS = ['linen', 'textured', 'smart casual', 'overshirt', 'oxford'];
+
+describe('style priority helpers', () => {
+  it('sorts missing styles Essential → Useful → Skip', () => {
+    const shuffled = ['style-20', 'style-1', 'style-8', 'style-32', 'style-2'];
+    expect(sortStylesByPriority(shuffled, LARGE_PRIORITIES)).toEqual([
+      'style-1',
+      'style-2',
+      'style-8',
+      'style-20',
+      'style-32',
+    ]);
+  });
+
+  it('returns a priority-only missing list: Essential first, about 8–12', () => {
+    const preview = priorityMissingStyles(LARGE_CATALOG, LARGE_PRIORITIES);
+
+    expect(preview.length).toBeGreaterThanOrEqual(8);
+    expect(preview.length).toBeLessThanOrEqual(12);
+    expect(preview.slice(0, 6)).toEqual(LARGE_CATALOG.slice(0, 6));
+    preview.forEach((tag) => {
+      expect(LARGE_PRIORITIES[tag]).not.toBe('Skip');
+    });
+    expect(preview).not.toContain('style-12');
+  });
+
+  it('show-all path exposes the full catalog including Skip tags', () => {
+    const preview = priorityMissingStyles(LARGE_CATALOG, LARGE_PRIORITIES);
+    const fullCatalog = sortStylesByPriority(LARGE_CATALOG, LARGE_PRIORITIES);
+
+    expect(fullCatalog).toHaveLength(32);
+    expect(fullCatalog.length).toBeGreaterThan(preview.length);
+    expect(fullCatalog.slice(-5)).toEqual(['style-28', 'style-29', 'style-30', 'style-31', 'style-32']);
+    expect(fullCatalog.filter((tag) => LARGE_PRIORITIES[tag] === 'Skip').length).toBe(21);
+  });
+});
+
+describe('normalizeWardrobeInsight style inventory hybrid', () => {
+  const shirtCatalogResponse: WardrobeGapAnalysisResponse = {
+    ...baseResponse,
+    analysis_by_category: {
+      ...baseResponse.analysis_by_category,
+      shirt: {
+        category: 'shirt',
+        owned_colors: ['white'],
+        owned_styles: ['oxford'],
+        missing_colors: ['navy'],
+        missing_styles: ['overshirt', 'linen', 'textured', 'smart casual'],
+        style_priorities: {
+          linen: 'Essential',
+          'smart casual': 'Useful',
+          textured: 'Skip',
+          overshirt: 'Skip',
+        },
+        recommended_purchases: ['Navy linen shirt'],
+        item_count: 2,
+      },
+    },
+    priorityShoppingList: [
+      {
+        rank: 1,
+        itemName: 'Navy linen shirt',
+        category: 'shirt',
+        priority: 'High',
+        recommendedColors: ['navy'],
+        recommendedStyles: ['linen', 'smart casual'],
+        reason: 'Highest-impact shirt gap for work and everyday.',
+        outfitImpact: 'Adds a ranked library shirt',
+        actions: [],
+      },
+    ],
+  };
+
+  it('attaches stylePriorities and sorts missingStyles Essential → Useful → Skip', () => {
+    const result = normalizeWardrobeInsight(shirtCatalogResponse);
+    const shirts = result.categoryHealth.find((c) => c.id === 'shirt');
+
+    expect(shirts?.stylePriorities).toEqual({
+      linen: 'Essential',
+      'smart casual': 'Useful',
+      textured: 'Skip',
+      overshirt: 'Skip',
+    });
+    expect(shirts?.missingStyles).toEqual(['linen', 'smart casual', 'overshirt', 'textured']);
+    expect(shirts?.missingStyles).toHaveLength(4);
+  });
+
+  it('keeps owned styles intact when priorities are present', () => {
+    const result = normalizeWardrobeInsight(shirtCatalogResponse);
+    const shirts = result.categoryHealth.find((c) => c.id === 'shirt');
+    const styles = result.categoryHealth.find((c) => c.id === 'styles');
+
+    expect(shirts?.ownedStyles).toEqual(['oxford']);
+    expect(styles?.ownedStyles).toEqual(
+      expect.arrayContaining(['oxford', 'chino', 'loafers', 'leather'])
+    );
+    expect(shirts?.ownedStyles).not.toContain('linen');
+  });
+
+  it('default missing list is priority-only while the catalog stays complete', () => {
+    const result = normalizeWardrobeInsight(shirtCatalogResponse);
+    const shirts = result.categoryHealth.find((c) => c.id === 'shirt');
+    const preview = priorityMissingStyles(shirts?.missingStyles ?? [], shirts?.stylePriorities);
+
+    expect(preview).toEqual(['linen', 'smart casual']);
+    expect(shirts?.missingStyles).toEqual(['linen', 'smart casual', 'overshirt', 'textured']);
+  });
+
+  it('priority preview for a large catalog is Essential-first and about 8–12 tags', () => {
+    const priorities = LARGE_CATALOG.reduce<Record<string, 'Essential' | 'Useful' | 'Skip'>>(
+      (map, tag, index) => {
+        map[tag] = index < 6 ? 'Essential' : index < 11 ? 'Useful' : 'Skip';
+        return map;
+      },
+      {}
+    );
+    const response: WardrobeGapAnalysisResponse = {
+      ...baseResponse,
+      analysis_by_category: {
+        shirt: {
+          category: 'shirt',
+          owned_colors: ['white'],
+          owned_styles: ['oxford'],
+          missing_colors: [],
+          missing_styles: LARGE_CATALOG,
+          style_priorities: priorities,
+          recommended_purchases: [],
+          item_count: 1,
+        },
+      },
+    };
+
+    const result = normalizeWardrobeInsight(response);
+    const shirts = result.categoryHealth.find((c) => c.id === 'shirt');
+    // Shirt library filters unknown tags; use helpers on the raw catalog as the show-all path does.
+    const preview = priorityMissingStyles(LARGE_CATALOG, priorities);
+    const fullCatalog = sortStylesByPriority(LARGE_CATALOG, priorities);
+
+    expect(preview.length).toBeGreaterThanOrEqual(8);
+    expect(preview.length).toBeLessThanOrEqual(12);
+    expect(preview[0]).toBe('style-1');
+    expect(fullCatalog).toHaveLength(32);
+    expect(shirts?.ownedStyles).toEqual(['oxford']);
+  });
+
+  it('keeps shopping-list styles on library tags only', () => {
+    const result = normalizeWardrobeInsight(shirtCatalogResponse);
+    const libraryLabels = SHIRT_LIBRARY_TAGS.map((tag) =>
+      tag
+        .split(/[_\s]+/)
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ')
+    );
+
+    expect(result.missingItems[0].worksWith).toEqual(['Linen', 'Smart Casual']);
+    result.missingItems[0].worksWith.forEach((label) => {
+      expect(libraryLabels).toContain(label);
+    });
+    expect(result.missingItems[0].worksWith).not.toContain('Bomber');
+    expect(result.missingItems[0].worksWith).not.toContain('Silk Tie');
+    expect(result.missingItems[0].worksWith).not.toContain('Invented Couture');
   });
 });

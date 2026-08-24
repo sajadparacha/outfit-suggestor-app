@@ -357,6 +357,40 @@ class TestWardrobeEndpoints:
         assert isinstance(payload["priorityShoppingList"], list)
         assert isinstance(payload["categoryInsights"], list)
 
+    def test_analyze_wardrobe_gaps_lifestyle_mix_returns_display_context(
+        self, client, auth_headers, db, test_user
+    ):
+        from models.wardrobe import WardrobeItem
+
+        db.add(
+            WardrobeItem(
+                user_id=test_user.id,
+                category="shirt",
+                color="White",
+                description="Oxford shirt",
+            )
+        )
+        db.commit()
+
+        response = client.post(
+            "/api/wardrobe/analyze-gaps",
+            headers=auth_headers,
+            json={
+                "occasion": "everyday",
+                "season": "summer",
+                "style": "preppy",
+                "lifestyle_mix": ["work", "everyday"],
+                "primary_lifestyle": "work",
+                "dress_code": "smart-casual",
+                "style_primary": "classic",
+            },
+        )
+        assert response.status_code == status.HTTP_200_OK
+        payload = response.json()
+        assert payload["occasion"] == "Work + Everyday"
+        assert payload["season"] == "Smart casual · Year-round"
+        assert payload["style"] == "Classic"
+
     def test_analyze_wardrobe_gaps_premium_success(self, client, auth_headers, db, test_user, monkeypatch):
         """Premium mode uses ChatGPT analysis path and returns structured response."""
         from models.wardrobe import WardrobeItem
@@ -373,7 +407,7 @@ class TestWardrobeEndpoints:
         db.commit()
 
         class _MockPremiumAI:
-            def analyze_wardrobe_gaps_with_chatgpt(self, wardrobe_items, occasion, season, style, text_input=""):
+            def analyze_wardrobe_gaps_with_chatgpt(self, wardrobe_items, occasion, season, style, text_input="", **kwargs):
                 return {
                     "occasion": occasion,
                     "season": season,
@@ -463,7 +497,7 @@ class TestWardrobeEndpoints:
         import config as app_config
 
         class _MockPremiumAI:
-            def analyze_wardrobe_gaps_with_chatgpt(self, wardrobe_items, occasion, season, style, text_input=""):
+            def analyze_wardrobe_gaps_with_chatgpt(self, wardrobe_items, occasion, season, style, text_input="", **kwargs):
                 assert wardrobe_items == []
                 return {
                     "occasion": occasion,
@@ -551,7 +585,7 @@ class TestWardrobeEndpoints:
                 super().__init__(api_key="test-key")
                 self.captured_max_tokens = None
 
-            def analyze_wardrobe_gaps_with_chatgpt(self, wardrobe_items, occasion, season, style, text_input=""):
+            def analyze_wardrobe_gaps_with_chatgpt(self, wardrobe_items, occasion, season, style, text_input="", **kwargs):
                 captured = {}
 
                 def fake_create(**kwargs):
@@ -624,7 +658,7 @@ class TestWardrobeEndpoints:
         db.commit()
 
         class _FailingPremiumAI:
-            def analyze_wardrobe_gaps_with_chatgpt(self, wardrobe_items, occasion, season, style, text_input=""):
+            def analyze_wardrobe_gaps_with_chatgpt(self, wardrobe_items, occasion, season, style, text_input="", **kwargs):
                 raise HTTPException(status_code=500, detail="Premium parser failure")
 
         monkeypatch.setattr(app_config, "get_ai_service", lambda: _FailingPremiumAI())

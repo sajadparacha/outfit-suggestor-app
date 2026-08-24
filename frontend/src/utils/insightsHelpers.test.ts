@@ -64,38 +64,52 @@ describe('insights shopping list helpers', () => {
     expect(searchAllUrl).toMatch(/men's sweater/i);
   });
 
-  it('dedupes repeated words and prefers category labels', () => {
+  it('always returns the plural dashboard label, never a SKU name', () => {
+    expect(cleanShoppingItemLabel('black leather belt', 'belt')).toBe('Belts');
+    expect(cleanShoppingItemLabel('Oxford Shirt', 'shirt')).toBe('Shirts');
+    expect(cleanShoppingItemLabel('navy oxford shirt', 'shirts')).toBe('Shirts');
     expect(cleanShoppingItemLabel('White Trouser Trouser', 'trouser')).toBe('Trousers');
-    expect(cleanShoppingItemLabel('Merino Sweater Sweater', 'sweater')).toBe('Sweater');
-    expect(cleanShoppingItemLabel('belt', 'belt')).toBe('Belt');
-    expect(cleanShoppingItemLabel('shirt', 'shirt')).toBe('Shirt');
+    expect(cleanShoppingItemLabel('Merino Sweater Sweater', 'sweater')).toBe('Sweaters');
+    expect(cleanShoppingItemLabel('field jacket', 'jacket')).toBe('Jackets');
+    expect(cleanShoppingItemLabel('Summer Dress', 'shirt')).toBe('Shirts');
+    expect(cleanShoppingItemLabel('belt', 'belt')).toBe('Belts');
+    expect(cleanShoppingItemLabel('shirt', 'shirt')).toBe('Shirts');
+    expect(cleanShoppingItemLabel('blazer', 'blazer')).toBe('Blazers');
+    expect(cleanShoppingItemLabel('tie', 'tie')).toBe('Ties');
+    expect(cleanShoppingItemLabel('derby shoes', 'shoes')).toBe('Shoes');
   });
 
-  it('prefers category label over AI junk names and keeps valid descriptive names', () => {
-    expect(cleanShoppingItemLabel('Summer Dress', 'shirt')).toBe('Shirt');
-    expect(cleanShoppingItemLabel('Oxford Shirt', 'shirt')).toBe('Oxford Shirt');
-    expect(cleanShoppingItemLabel('field jacket', 'jacket')).toBe('Field Jacket');
-    expect(cleanShoppingItemLabel('Merino', 'sweater')).toBe('Sweater');
-  });
-
-  it('uses cleanLabel from category when AI name is junk in shopping list rows', () => {
-    const junkItem: WardrobeMissingItem = {
-      id: 'junk-shirt',
-      name: 'Summer Dress',
+  it('uses the category plural as the shopping-list title even when the AI name is Oxford Shirt', () => {
+    const oxfordItem: WardrobeMissingItem = {
+      id: 'oxford-shirt',
+      name: 'Oxford Shirt',
       category: 'shirt',
       priority: 'High',
       reason: 'Needs a proper shirt.',
       bestColors: ['white'],
       worksWith: ['oxford'],
     };
-    const row = buildShoppingListRows([junkItem])[0];
-    expect(row.cleanLabel).toBe('Shirt');
-    expect(row.itemLabel).toBe('Shirt');
+    const row = buildShoppingListRows([oxfordItem])[0];
+    expect(row.cleanLabel).toBe('Shirts');
+    expect(row.itemLabel).toBe('Shirts');
+    expect(row.cleanLabel).not.toBe('Oxford Shirt');
   });
 
-  it('formats human-readable look-for text with sentence-case or lists', () => {
+  it('formats empty-belt look-for as all colors with the first style, remaining styles optional', () => {
+    const emptyBeltTuples = buildStyleColorTuples(
+      ['leather', 'braided', 'reversible'],
+      ['black', 'brown']
+    );
+    expect(formatLookForText(emptyBeltTuples)).toBe(
+      'Black or brown leather; braided or reversible optional'
+    );
+    expect(formatLookForText(emptyBeltTuples)).not.toMatch(/OK$/);
+    expect(formatLookForText(emptyBeltTuples)).not.toContain('black or brown braided');
+  });
+
+  it('formats look-for text with colors once, then extra styles as optional', () => {
     const beltTuples = buildStyleColorTuples(['leather', 'braided'], ['black', 'brown']);
-    expect(formatLookForText(beltTuples)).toBe('Black or brown leather; black or brown braided OK');
+    expect(formatLookForText(beltTuples)).toBe('Black or brown leather; braided optional');
 
     const shirtTuples = buildStyleColorTuples(['oxford'], ['olive', 'white']);
     expect(formatLookForText(shirtTuples)).toBe('Olive or white oxford');
@@ -107,6 +121,27 @@ describe('insights shopping list helpers', () => {
     expect(formatStyleColorTuples(tuples)).toBe(
       '(Oxford, Olive), (Oxford, White), (Linen, Olive), (Linen, White)'
     );
+  });
+
+  it('builds one shopping-list row per missing item/category, not one row per color×style combo', () => {
+    const emptyBelt: WardrobeMissingItem = {
+      id: 'empty-belt',
+      name: 'black leather belt',
+      category: 'belt',
+      priority: 'High',
+      reason: 'You own no belts. Buy first black leather.',
+      bestColors: ['black', 'brown'],
+      worksWith: ['leather', 'braided', 'reversible'],
+    };
+    const rows = buildShoppingListRows([emptyBelt, missingItems[0]]);
+
+    expect(rows).toHaveLength(2);
+    expect(rows.length).toBe(2);
+    expect(rows[0].tuples).toHaveLength(6);
+    expect(rows[0].comboLinks).toHaveLength(6);
+    expect(rows[0].cleanLabel).toBe('Belts');
+    expect(rows[0].lookForText).toBe('Black or brown leather; braided or reversible optional');
+    expect(rows[1].cleanLabel).toBe('Shirts');
   });
 
   it('builds per-combo URLs with focused category, style, and color queries', () => {
@@ -163,25 +198,25 @@ describe('insights shopping list helpers', () => {
     expect(formatLookForText(tuples)).toBe('Classic neutral');
   });
 
-  it('builds shopping-list rows with clean labels, look-for text, and combo links', () => {
+  it('builds shopping-list rows with plural category labels, look-for text, and combo links', () => {
     const rows = buildShoppingListRows(missingItems);
 
     expect(rows).toHaveLength(2);
     expect(rows[0]).toMatchObject({
       id: 'missing-shirt',
-      cleanLabel: 'Shirt',
-      itemLabel: 'Shirt',
+      cleanLabel: 'Shirts',
+      itemLabel: 'Shirts',
       category: 'shirt',
       priority: 'High',
       styles: ['Oxford', 'Linen'],
       colors: ['Olive', 'White'],
-      lookForText: 'Olive or white oxford; olive or white linen OK',
+      lookForText: 'Olive or white oxford; linen optional',
       tupleText: '(Oxford, Olive), (Oxford, White), (Linen, Olive), (Linen, White)',
     });
     expect(rows[0].comboLinks).toHaveLength(4);
     expect(rows[0].searchAllUrl).toContain('tbm=shop');
-    expect(rows[1].cleanLabel).toBe('Belt');
-    expect(rows[1].lookForText).toBe('Black or brown leather; black or brown braided OK');
+    expect(rows[1].cleanLabel).toBe('Belts');
+    expect(rows[1].lookForText).toBe('Black or brown leather; braided optional');
   });
 
   it('builds numbered WhatsApp export text with one link per item and no raw tuples', () => {
@@ -194,10 +229,10 @@ describe('insights shopping list helpers', () => {
 
     expect(text).toContain('🛍 ClosIQ Shopping List');
     expect(text).toContain('For: Business · Winter · Smart Casual');
-    expect(text).toContain('1. Shirt (High)');
-    expect(text).toContain('→ Olive or white oxford; olive or white linen OK');
+    expect(text).toContain('1. Shirts (High)');
+    expect(text).toContain('→ Olive or white oxford; linen optional');
     expect(text).toContain('🔗');
-    expect(text).toContain('2. Belt (Medium)');
+    expect(text).toContain('2. Belts (Medium)');
     expect(text).not.toContain('(Oxford, Olive)');
     expect(text).not.toMatch(/\(Style, Color\)/);
 
@@ -207,7 +242,7 @@ describe('insights shopping list helpers', () => {
       style: 'smart casual',
     });
     expect(url).toMatch(/^https:\/\/wa\.me\/\?text=/);
-    expect(decodeURIComponent(url)).toContain('1. Shirt (High)');
+    expect(decodeURIComponent(url)).toContain('1. Shirts (High)');
   });
 
   it('builds plain copy-list text aligned with WhatsApp structure', () => {
@@ -219,8 +254,8 @@ describe('insights shopping list helpers', () => {
     });
 
     expect(text).toContain('ClosIQ Shopping List');
-    expect(text).toContain('2. Belt (Medium)');
-    expect(text).toContain('→ Black or brown leather; black or brown braided OK');
+    expect(text).toContain('2. Belts (Medium)');
+    expect(text).toContain('→ Black or brown leather; braided optional');
     expect(text).not.toContain('(Leather, Black)');
   });
 });

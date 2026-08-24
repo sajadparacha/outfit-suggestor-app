@@ -14,6 +14,7 @@ from models.wardrobe_schemas import (
 )
 from services.wardrobe_service import WardrobeService
 from services.wardrobe_ai_service import WardrobeAIService
+from services.wardrobe_gap_context import resolve_gap_analysis_context
 from utils.image_processor import encode_image, validate_image
 
 
@@ -434,6 +435,20 @@ class WardrobeController:
     ) -> WardrobeGapAnalysisResponse:
         """Analyze wardrobe inventory and return missing colors/styles by category."""
         try:
+            ctx = resolve_gap_analysis_context(
+                occasion=request.occasion,
+                season=request.season,
+                style=request.style,
+                text_input=request.text_input,
+                lifestyle_mix=request.lifestyle_mix,
+                primary_lifestyle=request.primary_lifestyle,
+                dress_code=request.dress_code,
+                climate=request.climate,
+                style_primary=request.style_primary,
+                style_accent=request.style_accent,
+                event_focus=request.event_focus,
+            )
+            ranking_dress_code = ctx.dress_codes if ctx.used_lifestyle else request.dress_code
             if request.analysis_mode == "premium":
                 from config import get_ai_service
 
@@ -459,25 +474,43 @@ class WardrobeController:
                     }
                     for item in wardrobe_items
                 ]
+                inventory = self.wardrobe_service.build_style_inventory(
+                    wardrobe_payload,
+                    occasion=ctx.occasion,
+                    lifestyle_mix=request.lifestyle_mix,
+                    primary_lifestyle=request.primary_lifestyle,
+                    dress_code=ranking_dress_code,
+                )
                 ai_service = get_ai_service()
                 try:
                     analysis = ai_service.analyze_wardrobe_gaps_with_chatgpt(
                         wardrobe_items=wardrobe_payload,
-                        occasion=request.occasion,
-                        season=request.season,
-                        style=request.style,
+                        occasion=ctx.occasion,
+                        season=ctx.season,
+                        style=ctx.style,
                         text_input=request.text_input,
+                        lifestyle_context=ctx.prompt_context,
+                        style_inventory=inventory,
+                        lifestyle_mix=request.lifestyle_mix,
+                        primary_lifestyle=request.primary_lifestyle,
+                        dress_code=ranking_dress_code,
                     )
+                    analysis["occasion"] = ctx.display_occasion
+                    analysis["season"] = ctx.display_season
+                    analysis["style"] = ctx.display_style
                     return WardrobeGapAnalysisResponse(**analysis)
                 except HTTPException:
                     # Graceful fallback so users never hit a hard 500 when premium parsing/provider fails.
                     fallback = self.wardrobe_service.analyze_wardrobe_gaps(
                         db=db,
                         user_id=current_user.id,
-                        occasion=request.occasion,
-                        season=request.season,
-                        style=request.style,
+                        occasion=ctx.occasion,
+                        season=ctx.season,
+                        style=ctx.style,
                         text_input=request.text_input,
+                        lifestyle_mix=request.lifestyle_mix,
+                        primary_lifestyle=request.primary_lifestyle,
+                        dress_code=ranking_dress_code,
                     )
                     fallback["analysis_mode"] = "free"
                     fallback["overall_summary"] = (
@@ -485,16 +518,25 @@ class WardrobeController:
                     )
                     fallback["summaryText"] = fallback["overall_summary"]
                     fallback["analysisDepth"] = "Basic"
+                    fallback["occasion"] = ctx.display_occasion
+                    fallback["season"] = ctx.display_season
+                    fallback["style"] = ctx.display_style
                     return WardrobeGapAnalysisResponse(**fallback)
 
             analysis = self.wardrobe_service.analyze_wardrobe_gaps(
                 db=db,
                 user_id=current_user.id,
-                occasion=request.occasion,
-                season=request.season,
-                style=request.style,
+                occasion=ctx.occasion,
+                season=ctx.season,
+                style=ctx.style,
                 text_input=request.text_input,
+                lifestyle_mix=request.lifestyle_mix,
+                primary_lifestyle=request.primary_lifestyle,
+                dress_code=ranking_dress_code,
             )
+            analysis["occasion"] = ctx.display_occasion
+            analysis["season"] = ctx.display_season
+            analysis["style"] = ctx.display_style
             return WardrobeGapAnalysisResponse(**analysis)
         except Exception as e:
             raise HTTPException(

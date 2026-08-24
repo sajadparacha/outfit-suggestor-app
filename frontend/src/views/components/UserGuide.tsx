@@ -267,13 +267,14 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
           <StepList
             items={[
               'Open the Insights tab for the Wardrobe Insights workspace—summary-first layout with gap score and top priorities.',
-              'Before your first run, set occasion, season, style, and optional notes in Analysis Preferences.',
+              'Before your first run, set Insights preferences: lifestyle mix (max 3 plus a Primary), and more than one dress code, climate, style, and accent if you want. Year-round stays on. Extra notes are constraints only—not extra occasions or styles.',
               'You can also start from Wardrobe by clicking Analyze My Wardrobe in the header.',
               'Choose Quick Wardrobe Check (rules-based) or AI Stylist Review (deeper AI styling advice).',
               'After analysis, preferences collapse into an Analyzed for bar—tap Change preferences to edit and re-run.',
-              'Review the summary card, Top items to add, Wardrobe coverage dashboard (shirts through belts plus sweaters and jackets; ties appear for business, formal, or office), and expand Detailed category analysis for specifics.',
-              'Tap a best color on any item card to search Google Shopping for that category and color. Use Shop similar for a broader search.',
-              'Tap Shopping list to open a market-ready table with Buy labels, priority badges, human Look for guidance, and per style/color Search online chips.',
+              'Review the summary card, Top items to add (every gapped category, including empty ones, with colors and styles to buy—not one starter product), Wardrobe coverage dashboard (shirts through belts plus sweaters and jackets; ties appear for business, formal, or office), and expand Detailed category analysis for specifics.',
+              'Owned and missing styles come from a wardrobe catalog. AI ranks which missing tags to buy next—it does not invent new style names. Missing styles default to the highest-priority tags; tap Show all to see the full catalog.',
+              'In Detailed category analysis, tap a missing color or missing style chip to search Google Shopping for that category and color or style. On Top items to add, tap a best color or Shop similar for a broader search.',
+              'Tap Shopping list to open a table of every category that still has a gap (including empty ones). Each row is the category name—Belts, Shirts, Shoes—with all missing colors and styles to buy, not a single starter product. Search online chips stay per color/style combo.',
               'Use Copy list, Export to WhatsApp, or Export as PDF—the export uses numbered items with one focused Google Shopping link per row (no raw style/color tuples).',
             ]}
           />
@@ -300,7 +301,7 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               'For one saved piece, tap Style this item with AI to open Suggest with that item loaded—set preferences and tap Generate Outfit.',
               'To combine multiple pieces, use Complete an outfit from selected wardrobe pieces: tap Add to outfit completion on item cards (1 to 5 items). Core slots are shirt, trousers, blazer, shoes, and belt; jackets and coats count as outerwear, sweaters as layer. Choose only one of blazer, outerwear, or sweater at a time—one item per other slot.',
               'Expand Preferences on Wardrobe to set occasion, season, style, and notes—the same pickers as Suggest. Logged in? Toggle Use my wardrobe only if you want recommendations limited to saved items.',
-              'Preferences on Wardrobe stay in sync with Suggest and Insights—change them inline without switching tabs first.',
+              'Preferences on Wardrobe stay in sync with Suggest—change them inline without switching tabs first. Insights uses its own lifestyle mix, not these pickers.',
               'Tap Complete outfit with AI when at least one item is selected. The AI keeps your picks and fills any missing slots.',
               'We warn you if a new photo looks like something you already saved—no accidental twins.',
             ]}

@@ -212,6 +212,26 @@ def test_analyze_wardrobe_gaps_requests_dedicated_token_budget():
     assert "Navy blue -> Navy" in prompt
     assert "café au lait" in prompt
     assert "summer" in prompt.lower()
+    assert "Dress code overrides a vague work occasion" in prompt
+
+
+def test_analyze_wardrobe_gaps_includes_lifestyle_context_block():
+    ai = _ai_service()
+    captured = _install_openai_mock(ai, content=_build_full_premium_json())
+
+    ai.analyze_wardrobe_gaps_with_chatgpt(
+        wardrobe_items=[{"category": "shirt", "color": "navy"}],
+        occasion="work",
+        season="all-season",
+        style="classic",
+        text_input="no wool",
+        lifestyle_context="- lifestyle mix: Work (primary), Everyday\n- dress code: smart-casual",
+    )
+
+    prompt = captured["messages"][0]["content"]
+    assert "lifestyle mix: Work (primary), Everyday" in prompt
+    assert "dress code: smart-casual" in prompt
+    assert "Extra notes are constraints only" in prompt
 
 
 def test_analyze_wardrobe_gaps_filters_heavy_summer_purchases():

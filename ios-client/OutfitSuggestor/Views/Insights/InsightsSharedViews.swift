@@ -62,6 +62,21 @@ enum InsightsShoppingSearch {
         )
     }
 
+    static func openStyle(
+        category: String,
+        style: String,
+        defaultStyle: String,
+        openURL: OpenURLAction
+    ) {
+        open(
+            category: category,
+            colors: [],
+            styles: [style],
+            defaultStyle: defaultStyle,
+            openURL: openURL
+        )
+    }
+
     private static func formatSearchList(_ items: [String]) -> String {
         let labels = items.map { $0.capitalized }
         guard !labels.isEmpty else { return "neutral" }
@@ -188,7 +203,14 @@ struct InsightsColorSwatchRow: View {
 struct InsightsStyleChipRow: View {
     var title: String? = nil
     let styles: [String]
+    var category: String? = nil
+    var defaultStyle: String? = nil
     var emptyMessage: String? = nil
+    @Environment(\.openURL) private var openURL
+
+    private var isInteractive: Bool {
+        category != nil && defaultStyle != nil
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -207,22 +229,41 @@ struct InsightsStyleChipRow: View {
             } else {
                 InsightsFlowLayout(spacing: 6) {
                     ForEach(styles, id: \.self) { style in
-                        Text(style)
-                            .font(.caption)
-                            .foregroundColor(AppTheme.accent.opacity(0.9))
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(AppTheme.accent.opacity(0.10))
-                            .cornerRadius(8)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(AppTheme.accent.opacity(0.25), lineWidth: 1)
-                            )
+                        if isInteractive, let category, let defaultStyle {
+                            Button {
+                                InsightsShoppingSearch.openStyle(
+                                    category: category,
+                                    style: style,
+                                    defaultStyle: defaultStyle,
+                                    openURL: openURL
+                                )
+                            } label: {
+                                styleChipLabel(style)
+                            }
+                            .buttonStyle(.plain)
                             .accessibilityIdentifier(InsightsChipAccessibility.styleChip(style))
+                        } else {
+                            styleChipLabel(style)
+                                .accessibilityIdentifier(InsightsChipAccessibility.styleChip(style))
+                        }
                     }
                 }
             }
         }
+    }
+
+    private func styleChipLabel(_ style: String) -> some View {
+        Text(style)
+            .font(.caption)
+            .foregroundColor(AppTheme.accent.opacity(0.9))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(AppTheme.accent.opacity(0.10))
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(AppTheme.accent.opacity(0.25), lineWidth: 1)
+            )
     }
 }
 

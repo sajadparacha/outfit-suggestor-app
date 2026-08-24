@@ -63,7 +63,34 @@ struct WardrobeInsightCategoryHealth: Identifiable, Equatable {
     let ownedStyles: [String]
     let missingColors: [String]
     let missingStyles: [String]
+    let stylePriorities: [String: String]
     let recommendedStep: String
+
+    init(
+        id: String,
+        category: String,
+        status: WardrobeCoverageStatus,
+        summary: String,
+        details: String,
+        ownedColors: [String],
+        ownedStyles: [String],
+        missingColors: [String],
+        missingStyles: [String],
+        recommendedStep: String,
+        stylePriorities: [String: String] = [:]
+    ) {
+        self.id = id
+        self.category = category
+        self.status = status
+        self.summary = summary
+        self.details = details
+        self.ownedColors = ownedColors
+        self.ownedStyles = ownedStyles
+        self.missingColors = missingColors
+        self.missingStyles = missingStyles
+        self.stylePriorities = stylePriorities
+        self.recommendedStep = recommendedStep
+    }
 }
 
 struct WardrobeInsightDiagnostics: Equatable {

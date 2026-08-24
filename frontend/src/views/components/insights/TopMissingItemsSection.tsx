@@ -12,7 +12,7 @@ const TopMissingItemsSection: React.FC<TopMissingItemsSectionProps> = ({ items, 
     <div>
       <h2 className="text-xl font-semibold text-white">Top items to add</h2>
       <p className="mt-1 text-sm text-slate-400">
-        High impact pieces that will level up your wardrobe.
+        Every category that still has a gap, with colors and styles to buy.
       </p>
     </div>
 

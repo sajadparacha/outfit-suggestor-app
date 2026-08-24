@@ -1,7 +1,18 @@
 """Pydantic schemas for wardrobe API requests and responses"""
-from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Literal
+from pydantic import BaseModel, Field, field_validator
+from typing import Optional, List, Dict, Literal, Any
 from datetime import datetime
+
+
+def _coerce_str_or_list(value: Any) -> Optional[List[str]]:
+    """Accept a single string or a list (Insights multi-select, backward compatible)."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list):
+        return [str(item) for item in value]
+    return None
 
 
 class WardrobeItemCreate(BaseModel):
@@ -61,6 +72,39 @@ class WardrobeGapAnalysisRequest(BaseModel):
         default="free",
         description="free = rules-based local analysis, premium = ChatGPT-powered analysis",
     )
+    lifestyle_mix: Optional[List[str]] = Field(
+        default=None,
+        description="Insights lifestyle mix: work, everyday, social, formal, sport (max 3)",
+    )
+    primary_lifestyle: Optional[str] = Field(
+        default=None,
+        description="Primary lifestyle mix item",
+    )
+    dress_code: Optional[List[str]] = Field(
+        default=None,
+        description="One or more: casual, smart-casual, business-professional, or formal",
+    )
+    climate: Optional[List[str]] = Field(
+        default=None,
+        description="Optional climate gap flags: hot, temperate, and/or cold",
+    )
+    style_primary: Optional[List[str]] = Field(
+        default=None,
+        description="One or more Insights styles; first item is primary",
+    )
+    style_accent: Optional[List[str]] = Field(
+        default=None,
+        description="Optional style accents",
+    )
+    event_focus: Optional[str] = Field(
+        default=None,
+        description="Optional single-event deep-dive (Suggest occasion value)",
+    )
+
+    @field_validator("dress_code", "climate", "style_primary", "style_accent", mode="before")
+    @classmethod
+    def coerce_optional_str_or_list(cls, value: Any) -> Optional[List[str]]:
+        return _coerce_str_or_list(value)
 
 
 class WardrobeCategoryGapResponse(BaseModel):
@@ -72,6 +116,7 @@ class WardrobeCategoryGapResponse(BaseModel):
     missing_styles: List[str]
     recommended_purchases: List[str]
     item_count: int
+    style_priorities: Optional[Dict[str, Literal["Essential", "Useful", "Skip"]]] = None
 
 
 class WardrobePriorityItemResponse(BaseModel):

@@ -13,6 +13,23 @@ export const INSIGHTS_COPY = {
   EMPTY_STATE:
     'Build your wardrobe, then run a check to see gaps and what to buy next.',
 
+  PREFERENCES_INTRO:
+    'Tell us where this wardrobe needs to work, how formal that life is, and your main look.',
+  LIFESTYLE_ONLY_HINT:
+    'Lifestyle mix is for Insights only. Extra notes are constraints (budget, fabrics, dress-code limits) — not extra occasions or styles.',
+  NOTES_PLACEHOLDER: 'e.g. budget under $100, no wool, conservative office, no logos.',
+  NOTES_HELPER: 'Use notes for limits, not extra occasions or styles.',
+  LIFESTYLE_MIX_LABEL: 'Where this wardrobe needs to work',
+  DRESS_CODE_LABEL: 'Dress code',
+  SEASON_LABEL: 'Season',
+  YEAR_ROUND_LABEL: 'Year-round',
+  STYLE_PRIMARY_LABEL: 'Primary style',
+  STYLE_ACCENT_LABEL: 'Accent (optional)',
+  EVENT_FOCUS_LABEL: 'Audit for a specific event',
+  EVENT_FOCUS_NONE: 'None',
+  ACCENT_NONE: 'None',
+  PRIMARY_BADGE: 'Primary',
+
   MODE_PICKER_TITLE: 'How would you like to check your wardrobe?',
   MODE_PICKER_SUBTITLE: 'Pick the level of detail you want from your stylist.',
   QUICK_MODE_SUBTITLE: 'Fast snapshot with practical buy-next guidance.',
@@ -39,6 +56,9 @@ export const INSIGHTS_COPY = {
   SHOPPING_LIST_COPIED: 'Copied to clipboard',
   SHOPPING_LIST_EXPORT_ERROR: 'Could not export shopping list.',
   SHOPPING_LIST_PRINT_TITLE: 'ClosIQ Shopping List',
+
+  SHOW_ALL_STYLES: 'Show all',
+  SHOW_PRIORITY_STYLES: 'Show priority',
 } as const;
 
 export function getReviewTypeLabel(

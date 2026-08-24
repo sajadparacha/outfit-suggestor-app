@@ -1,5 +1,6 @@
 import React from 'react';
 import { Filters } from '../../../models/OutfitModels';
+import { INSIGHTS_COPY } from '../../../utils/insightsCopy';
 import AnalysisPreferences from '../AnalysisPreferences';
 
 interface AnalysisPreferencesCardProps {
@@ -27,7 +28,7 @@ const AnalysisPreferencesCard: React.FC<AnalysisPreferencesCardProps> = ({
   >
     <h2 className="text-lg font-semibold text-white">Analysis Preferences</h2>
     <p className="mt-1 mb-4 text-sm text-slate-300">
-      Tell us your context so the analysis matches your event, season, and style needs.
+      {INSIGHTS_COPY.PREFERENCES_INTRO}
     </p>
 
     <AnalysisPreferences
@@ -37,6 +38,7 @@ const AnalysisPreferencesCard: React.FC<AnalysisPreferencesCardProps> = ({
       setPreferenceText={setPreferenceText}
       onClear={onClear}
       variant="insights"
+      showSharedHint={false}
     />
 
     <div className="mt-4 flex justify-end">

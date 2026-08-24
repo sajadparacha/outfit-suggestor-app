@@ -6,16 +6,45 @@ final class WardrobeInsightShoppingListTests: XCTestCase {
         let rows = WardrobeInsightShoppingList.buildRows(from: makeResult())
 
         XCTAssertEqual(rows.count, 2)
-        XCTAssertEqual(rows[0].item, "Oxford Shirt")
-        XCTAssertEqual(rows[0].category, "Shirt")
+        XCTAssertEqual(rows[0].item, "Shirts")
+        XCTAssertEqual(rows[0].category, "Shirts")
         XCTAssertEqual(rows[0].priority, "High")
         XCTAssertEqual(rows[0].styles, ["Oxford", "Linen"])
         XCTAssertEqual(rows[0].colors, ["Olive", "White"])
         XCTAssertEqual(rows[0].styleColorTuples, "(Oxford, Olive), (Oxford, White), (Linen, Olive), (Linen, White)")
-        XCTAssertEqual(rows[0].lookForText, "Olive or white oxford; linen olive OK")
+        XCTAssertEqual(rows[0].lookForText, "Olive or white oxford; linen optional")
         XCTAssertEqual(rows[0].comboLinks.count, 4)
         XCTAssertNotNil(rows[0].searchAllURL)
         XCTAssertNotNil(rows[0].exportURL)
+    }
+
+    func testBuildRowsEmitsOneRowPerCategoryNotPerColorStyleCombo() {
+        let result = WardrobeInsightResult(
+            context: makeResult().context,
+            score: WardrobeInsightScore(value: 60, label: .good, summary: "Gaps remain."),
+            topPriorities: [],
+            missingItems: [
+                WardrobeInsightMissingItem(
+                    id: "missing-1-belt",
+                    name: "black leather belt",
+                    category: "belt",
+                    priority: "High",
+                    reason: "You own no belts.",
+                    bestColors: ["black", "brown"],
+                    worksWith: ["leather", "braided", "reversible"]
+                ),
+            ],
+            categoryHealth: [],
+            diagnostics: nil,
+            admin: nil
+        )
+
+        let rows = WardrobeInsightShoppingList.buildRows(from: result)
+
+        XCTAssertEqual(rows.count, 1)
+        XCTAssertEqual(rows[0].item, "Belts")
+        XCTAssertEqual(rows[0].tuples.count, 6)
+        XCTAssertNotEqual(rows.count, rows[0].tuples.count)
     }
 
     func testBuildRowsFallsBackToTopPrioritiesWhenMissingItemsAreEmpty() {
@@ -44,55 +73,85 @@ final class WardrobeInsightShoppingListTests: XCTestCase {
         XCTAssertEqual(rows[0].category, "Shoes")
         XCTAssertEqual(rows[0].priority, "High")
         XCTAssertEqual(rows[0].styleColorTuples, "(Classic, Neutral)")
-        XCTAssertEqual(rows[0].lookForText, "Classic neutral")
+        XCTAssertEqual(rows[0].lookForText, "Neutral classic")
     }
 
-    func testCleanShoppingItemLabelDedupesRepeatedWordsAndPrefersCategory() {
+    func testCleanShoppingItemLabelAlwaysReturnsPluralCategoryNotSku() {
+        XCTAssertEqual(
+            WardrobeInsightShoppingList.cleanShoppingItemLabel(name: "black leather belt", category: "belt"),
+            "Belts"
+        )
+        XCTAssertEqual(
+            WardrobeInsightShoppingList.cleanShoppingItemLabel(name: "Oxford Shirt", category: "shirt"),
+            "Shirts"
+        )
         XCTAssertEqual(
             WardrobeInsightShoppingList.cleanShoppingItemLabel(name: "white trouser trouser", category: "trouser"),
             "Trousers"
         )
         XCTAssertEqual(
             WardrobeInsightShoppingList.cleanShoppingItemLabel(name: "Merino Sweater Sweater", category: "sweater"),
-            "Sweater"
+            "Sweaters"
         )
         XCTAssertEqual(
             WardrobeInsightShoppingList.cleanShoppingItemLabel(name: "belt", category: "belt"),
-            "Belt"
+            "Belts"
         )
         XCTAssertEqual(
             WardrobeInsightShoppingList.cleanShoppingItemLabel(name: "shirt", category: "shirt"),
-            "Shirt"
+            "Shirts"
         )
-    }
-
-    func testCleanShoppingItemLabelPrefersCategoryForNonTaxonomyNames() {
         XCTAssertEqual(
             WardrobeInsightShoppingList.cleanShoppingItemLabel(name: "Summer Dress", category: "shirt"),
-            "Shirt"
+            "Shirts"
         )
         XCTAssertEqual(
             WardrobeInsightShoppingList.cleanShoppingItemLabel(name: "merino sweater", category: "sweater"),
-            "Sweater"
+            "Sweaters"
         )
         XCTAssertEqual(
             WardrobeInsightShoppingList.cleanShoppingItemLabel(name: "field jacket", category: "jacket"),
-            "Field Jacket"
+            "Jackets"
         )
         XCTAssertEqual(
             WardrobeInsightShoppingList.cleanShoppingItemLabel(name: "oxford shirt", category: "shirt"),
-            "Oxford Shirt"
+            "Shirts"
+        )
+        XCTAssertEqual(
+            WardrobeInsightShoppingList.cleanShoppingItemLabel(name: "blazer", category: "blazer"),
+            "Blazers"
+        )
+        XCTAssertEqual(
+            WardrobeInsightShoppingList.cleanShoppingItemLabel(name: "tie", category: "tie"),
+            "Ties"
+        )
+        XCTAssertEqual(
+            WardrobeInsightShoppingList.cleanShoppingItemLabel(name: "shoes", category: "shoes"),
+            "Shoes"
         )
     }
 
-    func testFormatLookForTextProducesHumanReadableSummary() {
+    func testFormatLookForTextListsAllColorsWithOptionalExtraStyles() {
+        XCTAssertEqual(
+            WardrobeInsightShoppingList.formatLookForText(
+                styles: ["leather", "braided", "reversible"],
+                colors: ["black", "brown"]
+            ),
+            "Black or brown leather; braided or reversible optional"
+        )
         XCTAssertEqual(
             WardrobeInsightShoppingList.formatLookForText(styles: ["leather", "braided"], colors: ["black", "brown"]),
-            "Black or brown leather; braided black OK"
+            "Black or brown leather; braided optional"
         )
         XCTAssertEqual(
             WardrobeInsightShoppingList.formatLookForText(styles: ["unstructured"], colors: ["black", "white"]),
-            "Unstructured black or white"
+            "Black or white unstructured"
+        )
+        XCTAssertFalse(
+            WardrobeInsightShoppingList.formatLookForText(
+                styles: ["leather", "braided"],
+                colors: ["black", "brown"]
+            ).localizedCaseInsensitiveContains("OK")
         )
     }
 
@@ -118,8 +177,8 @@ final class WardrobeInsightShoppingListTests: XCTestCase {
 
         XCTAssertTrue(text.contains("🛍 ClosIQ Shopping List"))
         XCTAssertTrue(text.contains("For: Casual · Summer · Smart Casual"))
-        XCTAssertTrue(text.contains("1. Oxford Shirt (High)"))
-        XCTAssertTrue(text.contains("→ Olive or white oxford; linen olive OK"))
+        XCTAssertTrue(text.contains("1. Shirts (High)"))
+        XCTAssertTrue(text.contains("→ Olive or white oxford; linen optional"))
         XCTAssertTrue(text.contains("🔗 https://www.google.com/search"))
         XCTAssertFalse(text.contains("(Oxford, Olive)"))
         XCTAssertFalse(text.contains("☐"))
@@ -252,7 +311,8 @@ final class WardrobeInsightShoppingListTests: XCTestCase {
 
         let rows = WardrobeInsightShoppingList.buildRows(from: result)
 
-        XCTAssertEqual(rows.map(\.category), ["Sweater", "Jacket", "Tie"])
+        XCTAssertEqual(rows.map(\.item), ["Sweaters", "Jackets", "Ties"])
+        XCTAssertEqual(rows.map(\.category), ["Sweaters", "Jackets", "Ties"])
     }
 
     private func makeResult() -> WardrobeInsightResult {

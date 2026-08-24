@@ -40,34 +40,16 @@ enum WardrobeInsightShoppingList {
     /// Hardcoded this iteration; future: `AppConfig.shoppingGenderPrefix`.
     private static let shoppingGenderPrefix = "men's"
 
+    /// Plural dashboard labels — shopping rows never keep a fake SKU title.
     private static let categoryDisplayLabels: [String: String] = [
-        "shirt": "Shirt", "shirts": "Shirt",
+        "shirt": "Shirts", "shirts": "Shirts",
         "trouser": "Trousers", "trousers": "Trousers",
         "shoe": "Shoes", "shoes": "Shoes",
-        "blazer": "Blazer", "blazers": "Blazer",
-        "sweater": "Sweater", "sweaters": "Sweater",
-        "jacket": "Jacket", "jackets": "Jacket",
-        "tie": "Tie", "ties": "Tie",
-        "belt": "Belt", "belts": "Belt",
-    ]
-
-    private static let nonTaxonomyTerms: Set<String> = [
-        "dress", "dresses", "gown", "gowns", "skirt", "skirts",
-    ]
-
-    private static let categoryVocabulary: Set<String> = [
-        "shirt", "shirts", "trouser", "trousers", "pants", "jeans", "shorts",
-        "blazer", "blazers", "suit", "suits", "sweater", "sweaters",
-        "jacket", "jackets", "shoe", "shoes", "belt", "belts", "tie", "ties",
-        "polo", "oxford", "linen", "cotton", "wool", "merino", "leather",
-        "silk", "bomber", "field", "braided", "unstructured", "crew", "neck",
-    ]
-
-    private static let colorOrMaterialWords: Set<String> = [
-        "black", "white", "brown", "tan", "beige", "blue", "navy", "gray", "grey",
-        "green", "olive", "burgundy", "red", "purple", "pink", "yellow", "mint",
-        "neutral", "merino", "linen", "leather", "silk", "cotton", "wool", "cashmere",
-        "denim", "chino", "suede", "canvas", "nylon", "fleece", "corduroy",
+        "blazer": "Blazers", "blazers": "Blazers",
+        "sweater": "Sweaters", "sweaters": "Sweaters",
+        "jacket": "Jackets", "jackets": "Jackets",
+        "tie": "Ties", "ties": "Ties",
+        "belt": "Belts", "belts": "Belts",
     ]
 
     static func buildRows(from result: WardrobeInsightResult) -> [WardrobeInsightShoppingListRow] {
@@ -116,72 +98,24 @@ enum WardrobeInsightShoppingList {
         tuples.map { "(\($0.style), \($0.color))" }.joined(separator: ", ")
     }
 
-    static func cleanShoppingItemLabel(name: String, category: String) -> String {
+    static func cleanShoppingItemLabel(name _: String, category: String) -> String {
         let catKey = category.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let categoryLabel = categoryDisplayLabels[catKey] ?? displayCategoryLabel(category)
-        let rawName = prettyLabel(name.isEmpty ? category : name)
-        let rawWords = rawName.lowercased().split(separator: " ").map(String.init)
-        let stem = categoryStem(catKey)
-
-        func isCategoryWord(_ word: String) -> Bool {
-            word == catKey || word == stem || word == categoryLabel.lowercased()
-        }
-
-        let categoryRepeatCount = rawWords.filter(isCategoryWord).count
-        if categoryRepeatCount >= 2 {
-            return categoryLabel
-        }
-
-        let nameLabel = dedupeWords(rawName)
-        let nameWords = nameLabel.lowercased().split(separator: " ").map(String.init)
-        let nonCategoryWords = nameWords.filter { !isCategoryWord($0) }
-
-        if nonCategoryWords.isEmpty {
-            return categoryLabel
-        }
-
-        if rawWords.contains(where: { nonTaxonomyTerms.contains($0) }) {
-            return categoryLabel
-        }
-
-        if !rawWords.contains(where: { categoryVocabulary.contains($0) }) {
-            return categoryLabel
-        }
-
-        if nonCategoryWords.count == 1, nameWords.count <= 3,
-           colorOrMaterialWords.contains(nonCategoryWords[0]) {
-            return categoryLabel
-        }
-
-        return nameLabel
+        return categoryDisplayLabels[catKey] ?? displayCategoryLabel(category)
     }
 
     static func formatLookForText(styles: [String], colors: [String]) -> String {
         let normalizedStyles = normalizedLabels(styles, fallback: "Classic")
         let normalizedColors = normalizedLabels(colors, fallback: "Neutral")
+        let colorPhrase = formatOrList(normalizedColors.map { $0.lowercased() })
+        let firstStyle = normalizedStyles[0].lowercased()
+        let firstPhrase = "\(colorPhrase) \(firstStyle)"
 
         if normalizedStyles.count == 1 {
-            let style = normalizedStyles[0].lowercased()
-            let colorPhrase = formatOrList(normalizedColors.map { $0.lowercased() })
-            return capitalizeFirst("\(style) \(colorPhrase)")
+            return capitalizeFirst(firstPhrase)
         }
 
-        var phrases: [String] = []
-        for (index, style) in normalizedStyles.enumerated() {
-            let styleLower = style.lowercased()
-            if index == 0 {
-                let colorPhrase = formatOrList(normalizedColors.map { $0.lowercased() })
-                phrases.append("\(colorPhrase) \(styleLower)")
-            } else {
-                let color = normalizedColors.first?.lowercased() ?? ""
-                if color.isEmpty {
-                    phrases.append(styleLower)
-                } else {
-                    phrases.append("\(styleLower) \(color) OK")
-                }
-            }
-        }
-        return capitalizeFirst(phrases.joined(separator: "; "))
+        let extraStyles = normalizedStyles.dropFirst().map { $0.lowercased() }
+        return capitalizeFirst("\(firstPhrase); \(formatOrList(Array(extraStyles))) optional")
     }
 
     static func buildShoppingSearchURL(category: String, styles: [String], colors: [String]) -> URL? {
@@ -445,25 +379,6 @@ enum WardrobeInsightShoppingList {
         case "tie", "ties": return "tie"
         default: return lower
         }
-    }
-
-    private static func categoryStem(_ category: String) -> String {
-        category.hasSuffix("s") ? String(category.dropLast()) : category
-    }
-
-    private static func dedupeWords(_ label: String) -> String {
-        let words = label.split(separator: " ").map(String.init)
-        var seen = Set<String>()
-        var result: [String] = []
-
-        for word in words where !word.isEmpty {
-            let key = word.lowercased()
-            guard !seen.contains(key) else { continue }
-            seen.insert(key)
-            result.append(word)
-        }
-
-        return result.joined(separator: " ")
     }
 
     private static func displayCategoryLabel(_ category: String) -> String {

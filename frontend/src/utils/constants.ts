@@ -42,6 +42,45 @@ export const FILTER_OPTIONS = {
   ],
 };
 
+/** Insights-only lifestyle options. Do not reuse these on Suggest pickers. */
+export const INSIGHTS_LIFESTYLE_OPTIONS = [
+  { value: 'work', label: 'Work' },
+  { value: 'everyday', label: 'Everyday' },
+  { value: 'social', label: 'Social / Dinner' },
+  { value: 'formal', label: 'Formal' },
+  { value: 'sport', label: 'Sport / Outdoor' },
+] as const;
+
+export const INSIGHTS_DRESS_CODE_OPTIONS = [
+  { value: 'casual', label: 'Casual' },
+  { value: 'smart-casual', label: 'Smart casual' },
+  { value: 'business-professional', label: 'Business professional' },
+  { value: 'formal', label: 'Formal' },
+] as const;
+
+export const INSIGHTS_CLIMATE_OPTIONS = [
+  { value: 'hot', label: 'Hot' },
+  { value: 'temperate', label: 'Temperate' },
+  { value: 'cold', label: 'Cold' },
+] as const;
+
+export const INSIGHTS_STYLE_PRIMARY_OPTIONS = [
+  { value: 'classic', label: 'Classic' },
+  { value: 'smart-casual', label: 'Smart Casual' },
+  { value: 'preppy', label: 'Preppy' },
+  { value: 'minimal', label: 'Minimal' },
+  { value: 'elegant', label: 'Elegant' },
+  { value: 'streetwear', label: 'Streetwear' },
+  { value: 'sporty', label: 'Sporty' },
+] as const;
+
+export const INSIGHTS_STYLE_ACCENT_OPTIONS = [
+  { value: 'vintage', label: 'Vintage' },
+  { value: 'edgy', label: 'Edgy' },
+  { value: 'sporty', label: 'Sporty' },
+  { value: 'preppy', label: 'Preppy' },
+] as const;
+
 export const IMAGE_CONFIG = {
   maxSizeMB: 10,
   acceptedTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp', 'image/webp'],

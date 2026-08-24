@@ -20,8 +20,37 @@ enum InsightsCopy {
 
     static let analyzedForLabel = "Analyzed for"
     static let changePreferencesButton = "Change preferences"
+    /// Suggest / Wardrobe shared-hint copy. Insights uses `lifestyleOnlyNote` instead.
     static let sharedPreferencesNote =
         "Shared with Suggest — occasion, season, style, and notes stay in sync across outfit suggestions and wardrobe insights."
+
+    // MARK: - Insights lifestyle form
+
+    static let preferencesIntro =
+        "Tell us where this wardrobe needs to work, how formal that life is, and your main look."
+    static let lifestyleOnlyNote =
+        "Lifestyle mix is for Insights only. Extra notes are constraints (budget, fabrics, dress-code limits) — not extra occasions or styles."
+    static let lifestyleMixTitle = "Where this wardrobe needs to work"
+    static let primaryBadge = "Primary"
+    static let dressCodeTitle = "Dress code"
+    static let seasonTitle = "Season"
+    static let yearRoundLabel = "Year-round"
+    static let styleTitle = "Style"
+    static let stylePrimaryTitle = "Primary"
+    static let styleAccentTitle = "Accent"
+    static let noneOption = "None"
+    static let eventFocusTitle = "Audit for a specific event"
+    static let notesPlaceholder =
+        "e.g. budget under $100, no wool, conservative office, no logos."
+    static let notesHelper = "Use notes for limits, not extra occasions or styles."
+    static let aboutFeature =
+        "• Insights — gap analysis from your lifestyle mix and dress code, coverage dashboard, and a shopping list for what to buy next. Styles come from a wardrobe catalog; AI ranks which missing tags to buy next."
+    static let guideTapMissingCategoryChips =
+        "Tap a missing color or missing style chip in Detailed category analysis to search Google Shopping."
+    static let guideTapShopSimilar =
+        "Tap Shop similar on any item to search Google Shopping."
+    static let aboutStylesCatalogNote =
+        "Insights styles come from a wardrobe catalog; AI ranks what to buy next."
 
     // MARK: - Summary card
 
@@ -66,6 +95,8 @@ enum InsightsCopy {
     static let missingColorsLabel = "Missing colors"
     static let ownedStylesLabel = "Owned styles"
     static let missingStylesLabel = "Missing styles"
+    static let showAllMissingStyles = "Show all"
+    static let showPriorityMissingStyles = "Show priority"
     static let noOwnedColorsMessage = "No colors detected yet."
     static let noMissingColorsMessage = "You already have enough core colors in this category."
     static let noOwnedStylesMessage = "No style keywords detected yet."

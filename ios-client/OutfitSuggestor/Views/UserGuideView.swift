@@ -121,14 +121,15 @@ struct UserGuideView: View {
                     color: .teal,
                     steps: [
                         "Open Insights from Profile to get an AI-powered wardrobe analysis.",
-                        "Set occasion, season, and style, then tap Analyze My Wardrobe.",
+                        "Set your lifestyle mix (max 3, one Primary). Insights preferences allow more than one dress code, climate, style, and accent. Year-round stays on. Use extra notes for constraints only, then tap Analyze My Wardrobe.",
                         "Review your gap score, top priorities, and items to add next.",
                         "Check the coverage dashboard for category health—including blazers, jackets, coats, sweaters, and ties for business or formal occasions.",
-                        "Tap a category in Detailed category analysis for recommendations.",
+                        "Tap a category in Detailed category analysis for recommendations. Owned and missing styles come from a wardrobe catalog; AI ranks which missing tags to buy next.",
+                        InsightsCopy.guideTapMissingCategoryChips,
                         "Tap a best color to search Google Shopping for that category and color.",
-                        "Tap Shop similar on any item to search Google Shopping.",
-                        "After results load, tap Shopping list for Buy, Look for, and Search online columns.",
-                        "Tap style · color chips for focused Google Shopping searches, or Search all for the top options.",
+                        InsightsCopy.guideTapShopSimilar,
+                        "After results load, tap Shopping list for a buy map of every category that still has a gap—including empty categories—with colors and styles to look for, not a single starter SKU.",
+                        "Each row is one category (Buy, Look for, Search online). Tap style · color chips for focused Google Shopping searches, or Search all for the top options.",
                         "Use Copy list, Export to WhatsApp, or Export as PDF to share a numbered list with one link per item."
                     ],
                     tip: isAdmin
@@ -191,7 +192,7 @@ struct UserGuideView: View {
                             "Looks — Your saved outfit history.",
                             "Settings — Email, name, password, and shortcuts to Week Planner, Insights, and Guide.",
                             "Week Planner — Also available from the Week tab; plan outfits for selected days.",
-                            "Insights — Action-focused wardrobe analysis with gap score, coverage dashboard, and buy-next guidance.",
+                            "Insights — Action-focused wardrobe analysis with gap score, a catalog of owned vs missing styles, coverage dashboard, and buy-next guidance ranked for your lifestyle.",
                             "Guide — Step-by-step help and tips (this page).",
                             "About — Product story, features, and creator links.",
                             "Reports — \(GuideCopy.reportsNavDescription)"

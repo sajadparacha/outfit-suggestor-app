@@ -9,6 +9,7 @@ struct CategoryDetailAccordionView: View {
     let categories: [WardrobeInsightCategoryHealth]
     let defaultStyle: String
     @State private var expandedIds: Set<String> = WardrobeInsightsAccordionLogic.initialExpandedIds
+    @State private var showAllMissingStyleIds: Set<String> = []
 
     private static func isClothingCategory(_ categoryId: String) -> Bool {
         categoryId != "colors" && categoryId != "styles"
@@ -86,7 +87,7 @@ struct CategoryDetailAccordionView: View {
                     colors: category.missingColors,
                     category: missingColorSearchCategory(for: category),
                     defaultStyle: defaultStyle,
-                    stylesToTry: category.missingStyles,
+                    stylesToTry: displayedMissingStyles(for: category),
                     emptyMessage: InsightsCopy.noMissingColorsMessage
                 )
             }
@@ -101,19 +102,14 @@ struct CategoryDetailAccordionView: View {
                 }
                 InsightsStyleChipRow(
                     title: InsightsCopy.missingStylesLabel,
-                    styles: category.missingStyles,
+                    styles: displayedMissingStyles(for: category),
+                    category: missingStyleSearchCategory(for: category),
+                    defaultStyle: defaultStyle,
                     emptyMessage: InsightsCopy.noMissingStylesMessage
                 )
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(InsightsCopy.recommendedNextStepLabel)
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(AppTheme.textSecondary)
-                    .textCase(.uppercase)
-                Text(category.recommendedStep)
-                    .font(.subheadline)
-                    .foregroundColor(AppTheme.textPrimary)
+                if canToggleMissingStyles(for: category) {
+                    missingStylesToggle(for: category)
+                }
             }
         }
     }
@@ -127,5 +123,54 @@ struct CategoryDetailAccordionView: View {
             return "shirt"
         }
         return nil
+    }
+
+    private func missingStyleSearchCategory(for category: WardrobeInsightCategoryHealth) -> String? {
+        guard !displayedMissingStyles(for: category).isEmpty else { return nil }
+        if Self.isClothingCategory(category.id) {
+            return category.id
+        }
+        if category.id == "styles" {
+            return "shirt"
+        }
+        return nil
+    }
+
+    private func displayedMissingStyles(for category: WardrobeInsightCategoryHealth) -> [String] {
+        if showAllMissingStyleIds.contains(category.id) {
+            return category.missingStyles
+        }
+        return NormalizeWardrobeInsight.priorityMissingPreview(
+            category.missingStyles,
+            priorities: category.stylePriorities
+        )
+    }
+
+    private func canToggleMissingStyles(for category: WardrobeInsightCategoryHealth) -> Bool {
+        let preview = NormalizeWardrobeInsight.priorityMissingPreview(
+            category.missingStyles,
+            priorities: category.stylePriorities
+        )
+        return category.missingStyles.count > preview.count
+    }
+
+    private func missingStylesToggle(for category: WardrobeInsightCategoryHealth) -> some View {
+        let showingAll = showAllMissingStyleIds.contains(category.id)
+        return Button {
+            if showingAll {
+                showAllMissingStyleIds.remove(category.id)
+            } else {
+                showAllMissingStyleIds.insert(category.id)
+            }
+        } label: {
+            Text(showingAll ? InsightsCopy.showPriorityMissingStyles : InsightsCopy.showAllMissingStyles)
+                .font(.caption.weight(.semibold))
+                .foregroundColor(AppTheme.accent)
+        }
+        .accessibilityIdentifier(
+            showingAll
+                ? "insights.categoryDetails.showPriorityStyles.\(category.id)"
+                : "insights.categoryDetails.showAllStyles.\(category.id)"
+        )
     }
 }

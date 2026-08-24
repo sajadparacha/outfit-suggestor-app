@@ -21,6 +21,69 @@ import {
   scoreLabelFromValue,
 } from './insightsHelpers';
 
+export type StylePriority = 'Essential' | 'Useful' | 'Skip';
+
+const PRIORITY_RANK: Record<StylePriority, number> = {
+  Essential: 0,
+  Useful: 1,
+  Skip: 2,
+};
+
+export const stylePriorityFor = (
+  style: string,
+  priorities?: Record<string, StylePriority>
+): StylePriority | undefined => {
+  if (!priorities) return undefined;
+  if (priorities[style]) return priorities[style];
+  return priorities[style.trim().toLowerCase()];
+};
+
+export const sortStylesByPriority = (
+  styles: string[],
+  priorities?: Record<string, StylePriority>
+): string[] => {
+  if (!priorities || Object.keys(priorities).length === 0) {
+    return [...styles];
+  }
+
+  return [...styles].sort((a, b) => {
+    const rankA = PRIORITY_RANK[stylePriorityFor(a, priorities) ?? 'Useful'];
+    const rankB = PRIORITY_RANK[stylePriorityFor(b, priorities) ?? 'Useful'];
+    return rankA - rankB;
+  });
+};
+
+export const priorityMissingStyles = (
+  styles: string[],
+  priorities?: Record<string, StylePriority>,
+  limit = 10
+): string[] => {
+  const sorted = sortStylesByPriority(styles, priorities);
+  if (!priorities || Object.keys(priorities).length === 0) {
+    return sorted;
+  }
+
+  return sorted
+    .filter((style) => stylePriorityFor(style, priorities) !== 'Skip')
+    .slice(0, limit);
+};
+
+const mergeStylePriorities = (
+  maps: Array<Record<string, StylePriority> | undefined>
+): Record<string, StylePriority> | undefined => {
+  const merged: Record<string, StylePriority> = {};
+  maps.forEach((map) => {
+    if (!map) return;
+    Object.entries(map).forEach(([tag, priority]) => {
+      const existing = merged[tag];
+      if (!existing || PRIORITY_RANK[priority] < PRIORITY_RANK[existing]) {
+        merged[tag] = priority;
+      }
+    });
+  });
+  return Object.keys(merged).length > 0 ? merged : undefined;
+};
+
 const categoryDisplayNames: Record<string, string> = {
   shirt: 'Shirts',
   trouser: 'Trousers',
@@ -35,6 +98,38 @@ const categoryDisplayNames: Record<string, string> = {
 };
 
 const uniqueStrings = (values: string[]): string[] => Array.from(new Set(values));
+
+const colorMatchKey = (value: string): string =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, ' ')
+    .trim()
+    .replace(/grey/g, 'gray');
+
+const styleMatchKey = (value: string): string => value.trim().toLowerCase();
+
+const dropOwned = (
+  missing: string[],
+  owned: string[],
+  matchKey: (value: string) => string
+): string[] => {
+  const ownedKeys = new Set(owned.map(matchKey));
+  return missing.filter((item) => !ownedKeys.has(matchKey(item)));
+};
+
+const remainingMissingColors = (entry: WardrobeCategoryGap): string[] =>
+  dropOwned(entry.missing_colors, entry.owned_colors, colorMatchKey);
+
+const remainingMissingStyles = (category: string, entry: WardrobeCategoryGap): string[] =>
+  dropOwned(
+    filterStylesForCategory(category, entry.missing_styles),
+    entry.owned_styles,
+    styleMatchKey
+  );
+
+const isClothingCategory = (category: string): boolean =>
+  category !== 'colors' && category !== 'styles';
 
 const gapScore = (entry: WardrobeCategoryGap): number =>
   entry.missing_colors.length * 2 + entry.missing_styles.length * 2 + (entry.item_count === 0 ? 2 : 0);
@@ -56,35 +151,67 @@ const orderedCategories = (result: WardrobeGapAnalysisResponse): string[] => {
   return [...CATEGORY_ORDER, ...extras].filter((category) => result.analysis_by_category[category]);
 };
 
+const shoppingItemFromCategory = (
+  result: WardrobeGapAnalysisResponse,
+  category: string
+): (WardrobePriorityShoppingItem & { score: number }) | null => {
+  const entry = result.analysis_by_category[category];
+  if (!entry) return null;
+
+  const missingColors = remainingMissingColors(entry);
+  const remainingStyles = remainingMissingStyles(category, entry);
+  const rankedStyles = priorityMissingStyles(
+    sortStylesByPriority(remainingStyles, entry.style_priorities),
+    entry.style_priorities,
+    remainingStyles.length
+  );
+  if (missingColors.length === 0 && rankedStyles.length === 0) return null;
+
+  const score = gapScore(entry);
+  return {
+    score,
+    rank: 0,
+    itemName: categoryDisplayNames[category] || prettyLabel(category),
+    category,
+    priority: priorityFromScore(score),
+    recommendedColors: missingColors,
+    recommendedStyles: rankedStyles,
+    reason: `Improves your ${result.style} ${result.occasion} options for ${result.season}.`,
+    outfitImpact: `Unlocks more complete looks in ${prettyLabel(category)}.`,
+    actions: ['Show outfit examples'],
+  };
+};
+
+const rerankShoppingList = (items: WardrobePriorityShoppingItem[]): WardrobePriorityShoppingItem[] =>
+  items.map((item, idx) => ({ ...item, rank: idx + 1 }));
+
 const derivePriorityList = (
   result: WardrobeGapAnalysisResponse,
   categories: string[]
 ): WardrobePriorityShoppingItem[] => {
-  if (result.priorityShoppingList?.length) return result.priorityShoppingList;
+  const clothingCategories = categories.filter(isClothingCategory);
+
+  if (result.priorityShoppingList?.length) {
+    const merged: WardrobePriorityShoppingItem[] = [...result.priorityShoppingList];
+    const present = new Set(merged.map((item) => item.category));
+    clothingCategories.forEach((category) => {
+      if (present.has(category)) return;
+      const derived = shoppingItemFromCategory(result, category);
+      if (!derived) return;
+      const { score: _score, ...item } = derived;
+      merged.push(item);
+      present.add(category);
+    });
+    return rerankShoppingList(merged);
+  }
 
   type RankedPriority = WardrobePriorityShoppingItem & { score: number };
-  const ranked: RankedPriority[] = categories
-    .map<RankedPriority>((category) => {
-      const entry = result.analysis_by_category[category];
-      const score = gapScore(entry);
-      const priority = priorityFromScore(score);
-      return {
-        score,
-        rank: 0,
-        itemName: `${entry.missing_colors[0] || 'core'} ${entry.missing_styles[0] || category} ${category}`,
-        category,
-        priority,
-        recommendedColors: entry.missing_colors,
-        recommendedStyles: entry.missing_styles,
-        reason: `Improves your ${result.style} ${result.occasion} options for ${result.season}.`,
-        outfitImpact: `Unlocks more complete looks in ${prettyLabel(category)}.`,
-        actions: ['Show outfit examples'],
-      };
-    })
-    .filter((item) => item.score > 0)
+  const ranked: RankedPriority[] = clothingCategories
+    .map((category) => shoppingItemFromCategory(result, category))
+    .filter((item): item is RankedPriority => item !== null && item.score > 0)
     .sort((a, b) => b.score - a.score);
 
-  return ranked.map(({ score: _score, ...item }, idx): WardrobePriorityShoppingItem => ({ ...item, rank: idx + 1 }));
+  return rerankShoppingList(ranked.map(({ score: _score, ...item }) => item));
 };
 
 const deriveScoreValue = (result: WardrobeGapAnalysisResponse, categories: string[]): number => {
@@ -113,7 +240,7 @@ const buildColorsHealth = (
   categories.forEach((category) => {
     const entry = result.analysis_by_category[category];
     allOwned.push(...entry.owned_colors);
-    allMissing.push(...entry.missing_colors);
+    allMissing.push(...remainingMissingColors(entry));
   });
 
   const missingNeutrals = allMissing.filter((color) => {
@@ -138,7 +265,7 @@ const buildColorsHealth = (
         : `${allMissing.length} color gaps across categories.`;
 
   const ownedColors = uniqueStrings(allOwned);
-  const missingColors = uniqueStrings(allMissing);
+  const missingColors = dropOwned(uniqueStrings(allMissing), ownedColors, colorMatchKey);
 
   return {
     id: 'colors',
@@ -166,7 +293,7 @@ const buildStylesHealth = (
   categories.forEach((category) => {
     const entry = result.analysis_by_category[category];
     allOwned.push(...filterStylesForCategory(category, entry.owned_styles));
-    allMissing.push(...filterStylesForCategory(category, entry.missing_styles));
+    allMissing.push(...remainingMissingStyles(category, entry));
   });
 
   const occasion = result.occasion.trim().toLowerCase();
@@ -192,7 +319,13 @@ const buildStylesHealth = (
         : `${allMissing.length} style gaps to address.`;
 
   const ownedStyles = uniqueStrings(allOwned);
-  const missingStyles = uniqueStrings(allMissing);
+  const stylePriorities = mergeStylePriorities(
+    categories.map((category) => result.analysis_by_category[category]?.style_priorities)
+  );
+  const missingStyles = sortStylesByPriority(
+    dropOwned(uniqueStrings(allMissing), ownedStyles, styleMatchKey),
+    stylePriorities
+  );
 
   return {
     id: 'styles',
@@ -204,6 +337,7 @@ const buildStylesHealth = (
     ownedStyles,
     missingColors: [],
     missingStyles,
+    stylePriorities,
     recommendedStep: isFormalContext
       ? 'Add tailored or structured pieces for formal occasions.'
       : 'Introduce one new style direction to expand outfit options.',
@@ -221,6 +355,14 @@ const buildCategoryHealth = (
     const recommendedStep =
       entry.recommended_purchases[0] || `Add one versatile ${prettyLabel(category)} option first.`;
 
+    const ownedColors = [...entry.owned_colors];
+    const ownedStyles = filterStylesForCategory(category, entry.owned_styles);
+    const missingColors = remainingMissingColors(entry);
+    const missingStyles = sortStylesByPriority(
+      remainingMissingStyles(category, entry),
+      entry.style_priorities
+    );
+
     return {
       id: category,
       category: displayName,
@@ -231,11 +373,12 @@ const buildCategoryHealth = (
           : status === 'Good'
             ? `${displayName} coverage looks solid.`
             : `${displayName} needs attention for your ${prettyLabel(result.occasion)} looks.`,
-      details: `Owned: ${entry.owned_colors.length} colors, ${entry.owned_styles.length} styles. Missing: ${entry.missing_colors.length} colors, ${entry.missing_styles.length} styles.`,
-      ownedColors: [...entry.owned_colors],
-      ownedStyles: filterStylesForCategory(category, entry.owned_styles),
-      missingColors: [...entry.missing_colors],
-      missingStyles: filterStylesForCategory(category, entry.missing_styles),
+      details: `Owned: ${ownedColors.length} colors, ${ownedStyles.length} styles. Missing: ${missingColors.length} colors, ${missingStyles.length} styles.`,
+      ownedColors,
+      ownedStyles,
+      missingColors,
+      missingStyles,
+      stylePriorities: entry.style_priorities,
       recommendedStep,
     };
   });
@@ -249,7 +392,7 @@ const toTopPriorities = (items: WardrobePriorityShoppingItem[]): WardrobeTopPrio
   items.slice(0, 3).map((item) => ({
     id: `priority-${item.rank}`,
     rank: item.rank,
-    name: prettyLabel(item.itemName),
+    name: categoryDisplayNames[item.category] || prettyLabel(item.itemName),
     category: item.category,
     priority: item.priority,
   }));
@@ -259,14 +402,14 @@ const toMissingItems = (items: WardrobePriorityShoppingItem[]): WardrobeMissingI
     const categoryStyles = filterStylesForCategory(item.category, item.recommendedStyles);
     return {
       id: `missing-${item.rank}-${item.category}`,
-      name: prettyLabel(item.itemName),
+      name: categoryDisplayNames[item.category] || prettyLabel(item.category),
       category: item.category,
       priority: item.priority,
       reason: item.reason,
       bestColors: item.recommendedColors,
       worksWith:
         categoryStyles.length > 0
-          ? categoryStyles.slice(0, 4).map(prettyLabel)
+          ? categoryStyles.map(prettyLabel)
           : [prettyLabel(item.category)],
     };
   });

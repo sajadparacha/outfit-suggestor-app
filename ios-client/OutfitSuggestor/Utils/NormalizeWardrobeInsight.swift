@@ -39,6 +39,8 @@ enum NormalizeWardrobeInsight {
         "belt": ["leather", "braided", "reversible", "formal leather", "casual leather"],
     ]
 
+    static let priorityMissingPreviewLimit = 10
+
     static func filterStyles(for category: String, styles: [String]) -> [String] {
         let allowed = Set(
             (categoryStyleLibrary[category] ?? [])
@@ -58,12 +60,78 @@ enum NormalizeWardrobeInsight {
         return filtered
     }
 
+    static func stylePriority(for style: String, in priorities: [String: String]) -> String? {
+        if let exact = priorities[style] { return exact }
+        let needle = style.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !needle.isEmpty else { return nil }
+        return priorities.first {
+            $0.key.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == needle
+        }?.value
+    }
+
+    static func attachedStylePriorities(
+        from raw: [String: String]?,
+        styles: [String]
+    ) -> [String: String] {
+        guard let raw, !raw.isEmpty else { return [:] }
+        var result: [String: String] = [:]
+        for style in styles {
+            if let value = stylePriority(for: style, in: raw) {
+                result[style] = value
+            }
+        }
+        return result
+    }
+
+    static func sortStylesByPriority(_ styles: [String], priorities: [String: String]) -> [String] {
+        styles.sorted { lhs, rhs in
+            let leftRank = stylePriorityRank(for: stylePriority(for: lhs, in: priorities))
+            let rightRank = stylePriorityRank(for: stylePriority(for: rhs, in: priorities))
+            if leftRank != rightRank { return leftRank < rightRank }
+            return lhs.lowercased() < rhs.lowercased()
+        }
+    }
+
+    /// Priority missing preview: Essential then Useful, capped at `limit` (default 10).
+    /// Skip (and untagged, when any priorities exist) stay hidden until Show all.
+    /// With no priorities, returns the first `limit` catalog tags.
+    static func priorityMissingPreview(
+        _ styles: [String],
+        priorities: [String: String],
+        limit: Int = priorityMissingPreviewLimit
+    ) -> [String] {
+        let sorted = sortStylesByPriority(styles, priorities: priorities)
+        let hasPriorities = styles.contains { stylePriority(for: $0, in: priorities) != nil }
+        if !hasPriorities {
+            return Array(sorted.prefix(limit))
+        }
+        let ranked = sorted.filter { style in
+            let rank = stylePriorityRank(for: stylePriority(for: style, in: priorities))
+            return rank == 0 || rank == 1
+        }
+        return Array(ranked.prefix(limit))
+    }
+
+    static func shoppingListStyles(category: String, recommendedStyles: [String]) -> [String] {
+        filterStyles(for: category, styles: recommendedStyles)
+    }
+
+    private static func stylePriorityRank(for label: String?) -> Int {
+        switch label?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "essential": return 0
+        case "useful": return 1
+        case "skip": return 2
+        default: return 3
+        }
+    }
+
     static func normalize(_ response: WardrobeGapAnalysisResponse) -> WardrobeInsightResult {
         let orderedKeys = orderedCategories(from: response)
         let scoreValue = computeScore(response: response, orderedKeys: orderedKeys)
         let summary = response.summaryText?.nonEmpty ?? response.overall_summary
-        let priorities = buildTopPriorities(response: response, orderedKeys: orderedKeys)
-        let missingItems = buildMissingItems(response: response, orderedKeys: orderedKeys)
+        let shoppingItems = mergedShoppingItems(response: response, orderedKeys: orderedKeys)
+        let priorities = buildTopPriorities(from: shoppingItems)
+        let missingItems = buildMissingItems(from: shoppingItems)
         let categoryHealth = buildCategoryHealth(response: response, orderedKeys: orderedKeys)
         let diagnostics = WardrobeInsightDiagnostics(
             missingCategories: orderedKeys.compactMap { key in
@@ -131,46 +199,94 @@ enum NormalizeWardrobeInsight {
 
     // MARK: - Priorities & missing items
 
-    private static func buildTopPriorities(
+    private static func mergedShoppingItems(
         response: WardrobeGapAnalysisResponse,
         orderedKeys: [String]
-    ) -> [WardrobeInsightPriority] {
+    ) -> [WardrobePriorityShoppingItem] {
         if let list = response.priorityShoppingList, !list.isEmpty {
-            return list.map { item in
-                WardrobeInsightPriority(
-                    id: "priority-\(item.rank)-\(item.category)",
-                    rank: item.rank,
-                    name: item.itemName,
-                    category: item.category,
-                    priority: item.priority
-                )
-            }
+            return appendOmittedGapCategories(
+                to: list,
+                response: response,
+                orderedKeys: orderedKeys
+            )
         }
         return derivedShoppingItems(response: response, orderedKeys: orderedKeys)
-            .enumerated()
-            .map { index, item in
-                WardrobeInsightPriority(
-                    id: "priority-\(index + 1)-\(item.category)",
-                    rank: index + 1,
-                    name: item.itemName,
-                    category: item.category,
-                    priority: item.priority
+    }
+
+    private static func appendOmittedGapCategories(
+        to list: [WardrobePriorityShoppingItem],
+        response: WardrobeGapAnalysisResponse,
+        orderedKeys: [String]
+    ) -> [WardrobePriorityShoppingItem] {
+        let clothingKeys = orderedKeys.filter { $0 != "colors" && $0 != "styles" }
+        let existing = Set(
+            list.map { $0.category.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+        )
+        var merged = list
+        var nextRank = (list.map(\.rank).max() ?? 0) + 1
+
+        for category in clothingKeys {
+            let key = category.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard !existing.contains(key) else { continue }
+            guard let entry = response.analysis_by_category[category] else { continue }
+            guard let gap = remainingActionableGap(category: category, entry: entry) else { continue }
+            let gapScore = (gap.colors.count * 2) + (gap.styles.count * 2) + (entry.item_count == 0 ? 2 : 0)
+            merged.append(
+                makeDerivedShoppingItem(
+                    category: category,
+                    response: response,
+                    missingColors: gap.colors,
+                    rankedStyles: gap.styles,
+                    rank: nextRank,
+                    gapScore: gapScore
                 )
-            }
+            )
+            nextRank += 1
+        }
+        return merged
+    }
+
+    /// Remaining missing colors, or Essential/Useful (via `priorityMissingPreview`) missing styles.
+    private static func remainingActionableGap(
+        category: String,
+        entry: WardrobeCategoryGap
+    ) -> (colors: [String], styles: [String])? {
+        let missingColors = exclusiveMissingColors(
+            owned: entry.owned_colors,
+            missing: entry.missing_colors
+        )
+        let libraryMissing = filterStyles(
+            for: category,
+            styles: exclusiveMissingStyles(owned: entry.owned_styles, missing: entry.missing_styles)
+        )
+        let stylePriorities = attachedStylePriorities(from: entry.style_priorities, styles: libraryMissing)
+        let rankedStyles = priorityMissingPreview(
+            libraryMissing,
+            priorities: stylePriorities,
+            limit: max(libraryMissing.count, 1)
+        )
+        guard !missingColors.isEmpty || !rankedStyles.isEmpty else { return nil }
+        return (missingColors, rankedStyles)
+    }
+
+    private static func buildTopPriorities(
+        from items: [WardrobePriorityShoppingItem]
+    ) -> [WardrobeInsightPriority] {
+        items.map { item in
+            WardrobeInsightPriority(
+                id: "priority-\(item.rank)-\(item.category)",
+                rank: item.rank,
+                name: item.itemName,
+                category: item.category,
+                priority: item.priority
+            )
+        }
     }
 
     private static func buildMissingItems(
-        response: WardrobeGapAnalysisResponse,
-        orderedKeys: [String]
+        from items: [WardrobePriorityShoppingItem]
     ) -> [WardrobeInsightMissingItem] {
-        let source: [WardrobePriorityShoppingItem]
-        if let list = response.priorityShoppingList, !list.isEmpty {
-            source = list
-        } else {
-            source = derivedShoppingItems(response: response, orderedKeys: orderedKeys)
-        }
-
-        return source.map { item in
+        items.map { item in
             WardrobeInsightMissingItem(
                 id: "missing-\(item.rank)-\(item.category)",
                 name: item.itemName,
@@ -188,46 +304,87 @@ enum NormalizeWardrobeInsight {
         orderedKeys: [String]
     ) -> [WardrobePriorityShoppingItem] {
         let derived: [(score: Int, item: WardrobePriorityShoppingItem)] = orderedKeys.compactMap { category in
+            guard category != "colors", category != "styles" else { return nil }
             guard let entry = response.analysis_by_category[category] else { return nil }
-            let score = (entry.missing_colors.count * 2) + (entry.missing_styles.count * 2) + (entry.item_count == 0 ? 2 : 0)
-            guard score > 0 else { return nil }
-            let priority = priorityLabel(forGapScore: score)
-            let item = WardrobePriorityShoppingItem(
-                rank: 0,
-                itemName: "\(entry.missing_colors.first ?? "core") \(entry.missing_styles.first ?? category) \(category)",
-                category: category,
-                priority: priority,
-                recommendedColors: entry.missing_colors,
-                recommendedStyles: entry.missing_styles,
-                reason: "Improves your \(response.style) \(response.occasion) options for \(response.season).",
-                outfitImpact: "Unlocks more complete looks in \(category).",
-                actions: ["Shop similar"]
+            let missingColors = exclusiveMissingColors(
+                owned: entry.owned_colors,
+                missing: entry.missing_colors
             )
-            return (score, item)
+            let libraryMissing = filterStyles(
+                for: category,
+                styles: exclusiveMissingStyles(owned: entry.owned_styles, missing: entry.missing_styles)
+            )
+            let stylePriorities = attachedStylePriorities(from: entry.style_priorities, styles: libraryMissing)
+            let rankedStyles = priorityMissingPreview(
+                libraryMissing,
+                priorities: stylePriorities,
+                limit: max(libraryMissing.count, 1)
+            )
+            let score = (missingColors.count * 2) + (libraryMissing.count * 2) + (entry.item_count == 0 ? 2 : 0)
+            guard score > 0 else { return nil }
+            return (
+                score,
+                makeDerivedShoppingItem(
+                    category: category,
+                    response: response,
+                    missingColors: missingColors,
+                    rankedStyles: rankedStyles,
+                    rank: 0,
+                    gapScore: score
+                )
+            )
         }
         .sorted { $0.score > $1.score }
 
         return derived.enumerated().map { idx, pair in
-            WardrobePriorityShoppingItem(
-                rank: idx + 1,
-                itemName: pair.item.itemName,
-                category: pair.item.category,
-                priority: pair.item.priority,
-                recommendedColors: pair.item.recommendedColors,
-                recommendedStyles: pair.item.recommendedStyles,
-                reason: pair.item.reason,
-                outfitImpact: pair.item.outfitImpact,
-                actions: pair.item.actions
-            )
+            rerankedShoppingItem(pair.item, rank: idx + 1)
         }
     }
 
+    private static func makeDerivedShoppingItem(
+        category: String,
+        response: WardrobeGapAnalysisResponse,
+        missingColors: [String],
+        rankedStyles: [String],
+        rank: Int,
+        gapScore: Int
+    ) -> WardrobePriorityShoppingItem {
+        return WardrobePriorityShoppingItem(
+            rank: rank,
+            itemName: displayNames[category] ?? prettyLabel(category),
+            category: category,
+            priority: priorityLabel(forGapScore: gapScore),
+            recommendedColors: missingColors,
+            recommendedStyles: rankedStyles,
+            reason: "Improves your \(response.style) \(response.occasion) options for \(response.season).",
+            outfitImpact: "Unlocks more complete looks in \(category).",
+            actions: ["Shop similar"]
+        )
+    }
+
+    private static func rerankedShoppingItem(
+        _ item: WardrobePriorityShoppingItem,
+        rank: Int
+    ) -> WardrobePriorityShoppingItem {
+        WardrobePriorityShoppingItem(
+            rank: rank,
+            itemName: item.itemName,
+            category: item.category,
+            priority: item.priority,
+            recommendedColors: item.recommendedColors,
+            recommendedStyles: item.recommendedStyles,
+            reason: item.reason,
+            outfitImpact: item.outfitImpact,
+            actions: item.actions
+        )
+    }
+
     private static func worksWithStyles(from item: WardrobePriorityShoppingItem) -> [String] {
-        let filtered = filterStyles(for: item.category, styles: item.recommendedStyles)
+        let filtered = shoppingListStyles(category: item.category, recommendedStyles: item.recommendedStyles)
         if filtered.isEmpty {
             return [prettyLabel(item.category)]
         }
-        return Array(filtered.prefix(4).map(prettyLabel))
+        return filtered.map(prettyLabel)
     }
 
     private static func prettyLabel(_ value: String) -> String {
@@ -253,22 +410,53 @@ enum NormalizeWardrobeInsight {
             let display = displayNames[key] ?? key.capitalized
             let status = categoryStatus(entry: entry)
             let insight = categoryInsight(for: key, response: response, entry: entry)
+            let ownedColors = entry?.owned_colors ?? []
+            let ownedStyles = filterStyles(for: key, styles: entry?.owned_styles ?? [])
+            let missingColors = exclusiveMissingColors(
+                owned: ownedColors,
+                missing: entry?.missing_colors ?? []
+            )
+            let missingStyles = filterStyles(
+                for: key,
+                styles: exclusiveMissingStyles(
+                    owned: entry?.owned_styles ?? [],
+                    missing: entry?.missing_styles ?? []
+                )
+            )
+            let stylePriorities = attachedStylePriorities(from: entry?.style_priorities, styles: missingStyles)
+            let sortedMissing = sortStylesByPriority(missingStyles, priorities: stylePriorities)
+            let fallbackStep = insight?.recommendation
+                ?? entry?.recommended_purchases.first
+                ?? "Add one versatile \(display.lowercased()) item first."
             return WardrobeInsightCategoryHealth(
                 id: key,
                 category: display,
                 status: status,
                 summary: categorySummary(entry: entry, status: status),
-                details: clothingCategoryDetails(entry: entry),
-                ownedColors: entry?.owned_colors ?? [],
-                ownedStyles: filterStyles(for: key, styles: entry?.owned_styles ?? []),
-                missingColors: entry?.missing_colors ?? [],
-                missingStyles: filterStyles(for: key, styles: entry?.missing_styles ?? []),
-                recommendedStep: insight?.recommendation ?? entry?.recommended_purchases.first ?? "Add one versatile \(display.lowercased()) item first."
+                details: clothingCategoryDetails(
+                    ownedColors: ownedColors,
+                    ownedStyles: ownedStyles,
+                    missingColors: missingColors,
+                    missingStyles: sortedMissing
+                ),
+                ownedColors: ownedColors,
+                ownedStyles: ownedStyles,
+                missingColors: missingColors,
+                missingStyles: sortedMissing,
+                recommendedStep: recommendedStepFromCatalog(
+                    missingStyles: sortedMissing,
+                    stylePriorities: stylePriorities,
+                    fallback: fallbackStep
+                ),
+                stylePriorities: stylePriorities
             )
         }
 
         let ownedColors = uniqueOwnedColors(response: response, orderedKeys: orderedKeys)
-        let missingColors = uniqueMissingColors(response: response, orderedKeys: orderedKeys)
+        let missingColors = exclusiveMissingColors(
+            owned: ownedColors,
+            missing: uniqueMissingColors(response: response, orderedKeys: orderedKeys)
+        )
         let colorsStatus = colorsAggregateStatus(missingColors: missingColors)
         health.append(
             WardrobeInsightCategoryHealth(
@@ -288,22 +476,37 @@ enum NormalizeWardrobeInsight {
         )
 
         let ownedStyles = uniqueOwnedStyles(response: response, orderedKeys: orderedKeys)
-        let missingStyles = uniqueMissingStyles(response: response, orderedKeys: orderedKeys)
-        let stylesStatus = stylesAggregateStatus(missingStyles: missingStyles, requestedStyle: response.style)
+        let missingStyles = exclusiveMissingStyles(
+            owned: ownedStyles,
+            missing: uniqueMissingStyles(response: response, orderedKeys: orderedKeys)
+        )
+        let stylePriorities = mergedStylePriorities(
+            response: response,
+            orderedKeys: orderedKeys,
+            styles: missingStyles
+        )
+        let sortedMissing = sortStylesByPriority(missingStyles, priorities: stylePriorities)
+        let stylesStatus = stylesAggregateStatus(missingStyles: sortedMissing, requestedStyle: response.style)
+        let stylesFallback = stylesStatus == .tooCasual
+            ? "Add smarter pieces to balance casual items for \(response.occasion) occasions."
+            : "Try one new style direction that complements your \(response.style) preference."
         health.append(
             WardrobeInsightCategoryHealth(
                 id: "styles",
                 category: "Styles",
                 status: stylesStatus,
-                summary: stylesSummary(status: stylesStatus, count: missingStyles.count),
-                details: "Owned: \(ownedStyles.count) styles. Missing: \(missingStyles.count) styles.",
+                summary: stylesSummary(status: stylesStatus, count: sortedMissing.count),
+                details: "Owned: \(ownedStyles.count) styles. Missing: \(sortedMissing.count) styles.",
                 ownedColors: [],
                 ownedStyles: ownedStyles,
                 missingColors: [],
-                missingStyles: missingStyles,
-                recommendedStep: stylesStatus == .tooCasual
-                    ? "Add smarter pieces to balance casual items for \(response.occasion) occasions."
-                    : "Try one new style direction that complements your \(response.style) preference."
+                missingStyles: sortedMissing,
+                recommendedStep: recommendedStepFromCatalog(
+                    missingStyles: sortedMissing,
+                    stylePriorities: stylePriorities,
+                    fallback: stylesFallback
+                ),
+                stylePriorities: stylePriorities
             )
         )
 
@@ -386,8 +589,47 @@ enum NormalizeWardrobeInsight {
         orderedCategories(from: response).filter { $0 != "colors" && $0 != "styles" }
     }
 
+    /// Trim, lowercase, collapse whitespace/hyphens, `grey`→`gray`. Does not alias navy↔blue or charcoal↔gray.
+    private static func colorDisplayKey(_ value: String) -> String {
+        var key = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        key = key.replacingOccurrences(of: #"[\s\-]+"#, with: "", options: .regularExpression)
+        return key.replacingOccurrences(of: "grey", with: "gray")
+    }
+
+    private static func styleDisplayKey(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    private static func exclusiveMissingColors(owned: [String], missing: [String]) -> [String] {
+        let ownedKeys = Set(owned.map(colorDisplayKey).filter { !$0.isEmpty })
+        return missing.filter { color in
+            let key = colorDisplayKey(color)
+            return !key.isEmpty && !ownedKeys.contains(key)
+        }
+    }
+
+    private static func exclusiveMissingStyles(owned: [String], missing: [String]) -> [String] {
+        let ownedKeys = Set(owned.map(styleDisplayKey).filter { !$0.isEmpty })
+        return missing.filter { style in
+            let key = styleDisplayKey(style)
+            return !key.isEmpty && !ownedKeys.contains(key)
+        }
+    }
+
+    private static func uniqueColorStrings(_ values: [String]) -> [String] {
+        var seen = Set<String>()
+        var result: [String] = []
+        for value in values {
+            let key = colorDisplayKey(value)
+            guard !key.isEmpty, !seen.contains(key) else { continue }
+            seen.insert(key)
+            result.append(value)
+        }
+        return result.sorted { colorDisplayKey($0) < colorDisplayKey($1) }
+    }
+
     private static func uniqueOwnedColors(response: WardrobeGapAnalysisResponse, orderedKeys: [String]) -> [String] {
-        uniqueStrings(
+        uniqueColorStrings(
             orderedKeys.flatMap { response.analysis_by_category[$0]?.owned_colors ?? [] }
         )
     }
@@ -404,20 +646,70 @@ enum NormalizeWardrobeInsight {
     }
 
     private static func uniqueMissingColors(response: WardrobeGapAnalysisResponse, orderedKeys: [String]) -> [String] {
-        uniqueStrings(
-            orderedKeys.flatMap { response.analysis_by_category[$0]?.missing_colors ?? [] }
-        )
-    }
-
-    private static func uniqueMissingStyles(response: WardrobeGapAnalysisResponse, orderedKeys: [String]) -> [String] {
-        uniqueStrings(
+        let owned = uniqueOwnedColors(response: response, orderedKeys: orderedKeys)
+        let perCategory = uniqueColorStrings(
             orderedKeys.flatMap { key in
-                filterStyles(
-                    for: key,
-                    styles: response.analysis_by_category[key]?.missing_styles ?? []
+                let entry = response.analysis_by_category[key]
+                return exclusiveMissingColors(
+                    owned: entry?.owned_colors ?? [],
+                    missing: entry?.missing_colors ?? []
                 )
             }
         )
+        return exclusiveMissingColors(owned: owned, missing: perCategory)
+    }
+
+    private static func uniqueMissingStyles(response: WardrobeGapAnalysisResponse, orderedKeys: [String]) -> [String] {
+        let owned = uniqueOwnedStyles(response: response, orderedKeys: orderedKeys)
+        let perCategory = uniqueStrings(
+            orderedKeys.flatMap { key in
+                let entry = response.analysis_by_category[key]
+                return filterStyles(
+                    for: key,
+                    styles: exclusiveMissingStyles(
+                        owned: entry?.owned_styles ?? [],
+                        missing: entry?.missing_styles ?? []
+                    )
+                )
+            }
+        )
+        return exclusiveMissingStyles(owned: owned, missing: perCategory)
+    }
+
+    private static func mergedStylePriorities(
+        response: WardrobeGapAnalysisResponse,
+        orderedKeys: [String],
+        styles: [String]
+    ) -> [String: String] {
+        var raw: [String: String] = [:]
+        for key in orderedKeys {
+            guard let priorities = response.analysis_by_category[key]?.style_priorities else { continue }
+            for (tag, label) in priorities {
+                let normalized = tag.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                guard !normalized.isEmpty else { continue }
+                if let existing = raw[normalized],
+                   stylePriorityRank(for: existing) <= stylePriorityRank(for: label) {
+                    continue
+                }
+                raw[normalized] = label
+            }
+        }
+        return attachedStylePriorities(from: raw, styles: styles)
+    }
+
+    private static func recommendedStepFromCatalog(
+        missingStyles: [String],
+        stylePriorities: [String: String],
+        fallback: String
+    ) -> String {
+        guard let first = priorityMissingPreview(
+            missingStyles,
+            priorities: stylePriorities,
+            limit: 1
+        ).first else {
+            return fallback
+        }
+        return "Add \(prettyLabel(first)) next."
     }
 
     private static func uniqueStrings(_ values: [String]) -> [String] {
@@ -461,12 +753,13 @@ enum NormalizeWardrobeInsight {
         )
     }
 
-    private static func clothingCategoryDetails(entry: WardrobeCategoryGap?) -> String {
-        let ownedColors = entry?.owned_colors.count ?? 0
-        let ownedStyles = entry?.owned_styles.count ?? 0
-        let missingColors = entry?.missing_colors.count ?? 0
-        let missingStyles = entry?.missing_styles.count ?? 0
-        return "Owned: \(ownedColors) colors, \(ownedStyles) styles. Missing: \(missingColors) colors, \(missingStyles) styles."
+    private static func clothingCategoryDetails(
+        ownedColors: [String],
+        ownedStyles: [String],
+        missingColors: [String],
+        missingStyles: [String]
+    ) -> String {
+        "Owned: \(ownedColors.count) colors, \(ownedStyles.count) styles. Missing: \(missingColors.count) colors, \(missingStyles.count) styles."
     }
 
 }

@@ -144,6 +144,39 @@ final class WardrobeInsightsViewTests: XCTestCase {
         XCTAssertFalse(query.contains("Relaxed"))
     }
 
+    func testMissingStyleShoppingURLIncludesShopCategoryAndStyle() {
+        let url = InsightsShoppingSearch.buildSearchURL(
+            category: "shirt",
+            colors: [],
+            styles: ["oxford"],
+            defaultStyle: "smart casual"
+        )
+        XCTAssertNotNil(url)
+        XCTAssertTrue(url?.absoluteString.contains("tbm=shop") ?? false)
+        let query = URLComponents(url: url!, resolvingAgainstBaseURL: false)?
+            .queryItems?
+            .first(where: { $0.name == "q" })?
+            .value ?? ""
+        XCTAssertTrue(query.contains("shirts"))
+        XCTAssertTrue(query.contains("Oxford"))
+        XCTAssertTrue(query.contains("Neutral"))
+        XCTAssertFalse(query.contains("Smart Casual"))
+    }
+
+    func testCategoryAnalysisShoppingCopyUsesMissingChipsNotRecommendedNextStep() {
+        XCTAssertTrue(InsightsCopy.guideTapMissingCategoryChips.contains("missing color"))
+        XCTAssertTrue(InsightsCopy.guideTapMissingCategoryChips.contains("missing style"))
+        XCTAssertTrue(InsightsCopy.guideTapMissingCategoryChips.contains("Detailed category analysis"))
+        XCTAssertTrue(InsightsCopy.guideTapMissingCategoryChips.contains("Google Shopping"))
+        XCTAssertEqual(
+            InsightsCopy.guideTapShopSimilar,
+            "Tap Shop similar on any item to search Google Shopping."
+        )
+        XCTAssertEqual(InsightsCopy.shopSimilarButton, "Shop similar")
+        XCTAssertFalse(InsightsCopy.guideTapShopSimilar.contains("Detailed category analysis"))
+        XCTAssertFalse(InsightsCopy.guideTapMissingCategoryChips.contains(InsightsCopy.recommendedNextStepLabel))
+    }
+
     // 5. Coverage dashboard renders all category statuses
     func testCoverageDashboardHasExtendedClothingCategories() {
         let health = NormalizeWardrobeInsight.normalize(makeExtendedResponse()).categoryHealth

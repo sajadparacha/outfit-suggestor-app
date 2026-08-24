@@ -129,10 +129,10 @@ describe('MissingItemCard', () => {
     });
   });
 
-  it('renders Styles To Try as individual style chips', () => {
+  it('renders Styles to try as individual style chips', () => {
     render(<MissingItemCard item={missingItem} styleContext="classic" />);
 
-    expect(screen.getByText('Styles To Try')).toBeInTheDocument();
+    expect(screen.getByText('Styles to try')).toBeInTheDocument();
     expect(screen.queryByText('Works with')).not.toBeInTheDocument();
 
     const styleChips = screen.getAllByTestId('insight-style-chip');
@@ -264,22 +264,61 @@ describe('CategoryDetailAccordion', () => {
     missingColorChips.forEach((chip) => {
       expect(chip.tagName).toBe('BUTTON');
     });
+
+    const ownedStyleChips = ownedStylesSection.querySelectorAll('[data-testid="insight-style-chip"]');
+    ownedStyleChips.forEach((chip) => {
+      expect(chip.tagName).toBe('SPAN');
+    });
+
+    const missingStyleChips = missingStylesSection.querySelectorAll('[data-testid="insight-style-chip"]');
+    expect(missingStyleChips.length).toBeGreaterThan(0);
+    missingStyleChips.forEach((chip) => {
+      expect(chip.tagName).toBe('BUTTON');
+    });
   });
 
-  it("opens Google Shopping with men's sweater when sweater row Shop similar is clicked", () => {
+  it('does not show recommended next step or Shop similar inside accordion details', () => {
+    render(
+      <CategoryDetailAccordion categories={insight.categoryHealth} styleContext="classic" />
+    );
+
+    fireEvent.click(screen.getByTestId('category-row-shirt').querySelector('button') as HTMLButtonElement);
+    const shirtDetails = screen.getByTestId('category-details-shirt');
+    expect(shirtDetails).not.toHaveTextContent(/Recommended next step/i);
+    expect(within(shirtDetails).queryByRole('button', { name: /Shop similar/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('category-row-sweater').querySelector('button') as HTMLButtonElement);
+    const sweaterDetails = screen.getByTestId('category-details-sweater');
+    expect(sweaterDetails).not.toHaveTextContent(/Recommended next step/i);
+    expect(within(sweaterDetails).queryByRole('button', { name: /Shop similar/i })).not.toBeInTheDocument();
+  });
+
+  it('does not open shopping when owned color or style chips are clicked', () => {
     const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
 
     render(
       <CategoryDetailAccordion categories={insight.categoryHealth} styleContext="classic" />
     );
 
-    fireEvent.click(screen.getByTestId('category-row-sweater').querySelector('button') as HTMLButtonElement);
-    fireEvent.click(screen.getByRole('button', { name: /Shop similar/i }));
+    fireEvent.click(screen.getByTestId('category-row-shirt').querySelector('button') as HTMLButtonElement);
 
-    expect(openSpy).toHaveBeenCalled();
-    const url = decodeURIComponent(String(openSpy.mock.calls[0][0]));
-    expect(url).toMatch(/men's sweater/i);
+    screen
+      .getByTestId('category-owned-colors-shirt')
+      .querySelectorAll('[data-testid="insight-color-chip"]')
+      .forEach((chip) => {
+        expect(chip.tagName).toBe('SPAN');
+        fireEvent.click(chip);
+      });
 
+    screen
+      .getByTestId('category-owned-styles-shirt')
+      .querySelectorAll('[data-testid="insight-style-chip"]')
+      .forEach((chip) => {
+        expect(chip.tagName).toBe('SPAN');
+        fireEvent.click(chip);
+      });
+
+    expect(openSpy).not.toHaveBeenCalled();
     openSpy.mockRestore();
   });
 
@@ -307,6 +346,32 @@ describe('CategoryDetailAccordion', () => {
       expect(url).toMatch(new RegExp(style, 'i'));
     });
     expect(url).not.toMatch(/classic style/i);
+
+    openSpy.mockRestore();
+  });
+
+  it('opens Google Shopping with category and style when a missing style chip is clicked', () => {
+    const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
+    const shirt = insight.categoryHealth.find((c) => c.id === 'shirt');
+    expect(shirt).toBeDefined();
+
+    render(
+      <CategoryDetailAccordion categories={insight.categoryHealth} styleContext="classic" />
+    );
+
+    fireEvent.click(screen.getByTestId('category-row-shirt').querySelector('button') as HTMLButtonElement);
+
+    const missingSection = screen.getByTestId('category-missing-styles-shirt');
+    const missingButton = missingSection.querySelector(
+      'button[data-testid="insight-style-chip"]'
+    ) as HTMLButtonElement;
+    fireEvent.click(missingButton);
+
+    expect(openSpy).toHaveBeenCalled();
+    const url = decodeURIComponent(String(openSpy.mock.calls[0][0]));
+    expect(url).toContain('tbm=shop');
+    expect(url).toMatch(/shirts/i);
+    expect(url).toMatch(new RegExp(shirt!.missingStyles[0], 'i'));
 
     openSpy.mockRestore();
   });

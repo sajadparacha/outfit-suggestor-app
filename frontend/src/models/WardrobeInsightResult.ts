@@ -50,6 +50,7 @@ export interface WardrobeCategoryHealth {
   ownedStyles: string[];
   missingColors: string[];
   missingStyles: string[];
+  stylePriorities?: Record<string, 'Essential' | 'Useful' | 'Skip'>;
   recommendedStep: string;
 }
 

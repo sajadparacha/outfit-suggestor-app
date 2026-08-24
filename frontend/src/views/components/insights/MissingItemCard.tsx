@@ -1,6 +1,6 @@
 import React from 'react';
 import { WardrobeMissingItem } from '../../../models/WardrobeInsightResult';
-import { openShoppingSearch } from '../../../utils/insightsHelpers';
+import { cleanShoppingItemLabel, openShoppingSearch } from '../../../utils/insightsHelpers';
 import InsightColorChip from './InsightColorChip';
 import InsightStyleChip from './InsightStyleChip';
 
@@ -26,7 +26,9 @@ const MissingItemCard: React.FC<MissingItemCardProps> = ({ item, styleContext })
     data-testid={`missing-item-card-${item.id}`}
   >
     <div className="flex flex-wrap items-center gap-2">
-      <h3 className="text-base font-semibold text-white">{item.name}</h3>
+      <h3 className="text-base font-semibold text-white">
+        {cleanShoppingItemLabel(item.name, item.category)}
+      </h3>
       <span
         className={`rounded-full border px-2 py-0.5 text-xs font-medium ${priorityBadgeClass(item.priority)}`}
         data-testid="priority-badge"
@@ -56,7 +58,7 @@ const MissingItemCard: React.FC<MissingItemCardProps> = ({ item, styleContext })
 
     {item.worksWith.length > 0 && (
       <div className="mt-3">
-        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Styles To Try</p>
+        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Styles to try</p>
         <div className="flex flex-wrap gap-2" data-testid="styles-to-try">
           {item.worksWith.map((style) => (
             <InsightStyleChip key={style} label={style} />

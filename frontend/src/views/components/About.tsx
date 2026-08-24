@@ -26,7 +26,7 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
     {
       icon: '🧠',
       title: 'Insights',
-      text: 'Run a Quick Wardrobe Check or AI Stylist Review to see gaps and what to buy next.',
+      text: 'Insights preferences can include multiple dress codes, climates, styles, and accents. Set a lifestyle mix, then run a Quick Wardrobe Check or AI Stylist Review. Styles come from a wardrobe catalog; AI ranks what to buy next rather than inventing missing styles. The shopping list and Top items to add cover every category that still has a gap—including empty ones—with colors and styles to buy, not a single starter product. Tap missing color or style chips in category analysis to search Google Shopping.',
     },
     {
       icon: '📋',

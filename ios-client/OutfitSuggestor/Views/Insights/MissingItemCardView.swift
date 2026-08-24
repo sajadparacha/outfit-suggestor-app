@@ -14,7 +14,12 @@ struct MissingItemCardView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(item.name.capitalized)
+                    Text(
+                        WardrobeInsightShoppingList.cleanShoppingItemLabel(
+                            name: item.name,
+                            category: item.category
+                        )
+                    )
                         .font(.headline)
                         .foregroundColor(AppTheme.textPrimary)
                     InsightsPriorityBadge(priority: item.priority)

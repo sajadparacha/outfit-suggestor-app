@@ -48,6 +48,13 @@ export interface WardrobeGapAnalysisRequest {
   style: string;
   text_input: string;
   analysis_mode?: 'free' | 'premium';
+  lifestyle_mix?: string[];
+  primary_lifestyle?: string;
+  dress_code?: string[];
+  climate?: string[];
+  style_primary?: string[];
+  style_accent?: string[];
+  event_focus?: string | null;
 }
 
 export interface WardrobeAnalysisCost {
@@ -66,6 +73,7 @@ export interface WardrobeCategoryGap {
   missing_styles: string[];
   recommended_purchases: string[];
   item_count: number;
+  style_priorities?: Record<string, 'Essential' | 'Useful' | 'Skip'>;
 }
 
 export interface WardrobePriorityShoppingItem {

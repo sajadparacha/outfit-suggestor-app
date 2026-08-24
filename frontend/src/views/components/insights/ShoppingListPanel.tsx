@@ -151,7 +151,9 @@ const ShoppingListPanel: React.FC<ShoppingListPanelProps> = ({ items, context })
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-white">{INSIGHTS_COPY.SHOPPING_LIST_TITLE}</h2>
-            <p className="mt-1 text-sm text-slate-400">{INSIGHTS_COPY.SHOPPING_LIST_SUBTITLE}</p>
+            <p className="mt-1 text-sm text-slate-400">
+              Every category that still has a gap, with colors and styles to buy — not a single starter product.
+            </p>
           </div>
           <button
             type="button"

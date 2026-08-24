@@ -39,7 +39,6 @@ import { useWeekPlanController } from './controllers/useWeekPlanController';
 import ApiService from './services/ApiService';
 import WardrobeInsightsPage from './views/components/insights/WardrobeInsightsPage';
 import { WardrobeGapAnalysisResponse } from './models/WardrobeModels';
-import { resolveFilters } from './utils/outfitPreferences';
 import { LOGIN_REDIRECT_STATE, ROUTES, wardrobePath, parseWardrobePickSession, weekPath } from './navigation/routes';
 import AuthGateCard from './views/components/AuthGateCard';
 import FirstOutfitPromptBanner from './views/components/FirstOutfitPromptBanner';
@@ -50,6 +49,7 @@ import {
   prefersRegister,
 } from './utils/authPromptCopy';
 import { INSIGHTS_COPY } from './utils/insightsCopy';
+import { buildInsightsAnalyzePayload, loadInsightsLifestyle } from './utils/insightsLifestyle';
 import { MICRO_HELP } from './utils/microHelpCopy';
 import { dismissFirstRunCoach, isFirstRunCoachDismissed } from './utils/firstRunCoach';
 import { MAIN_FLOW_UX_COPY } from './utils/mainFlowUxCopy';
@@ -438,12 +438,9 @@ function App() {
     setWardrobeGapLoading(true);
     setWardrobeGapError(null);
     try {
-      const resolved = resolveFilters(filters);
+      const lifestyle = loadInsightsLifestyle();
       const result = await ApiService.analyzeWardrobeGaps({
-        occasion: resolved.occasion,
-        season: resolved.season,
-        style: resolved.style,
-        text_input: preferenceText || '',
+        ...buildInsightsAnalyzePayload(lifestyle, preferenceText || ''),
         analysis_mode: mode,
       }, abortController.signal);
       setWardrobeGapResult(result);

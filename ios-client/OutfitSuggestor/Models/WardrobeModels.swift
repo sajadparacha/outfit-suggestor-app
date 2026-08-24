@@ -307,6 +307,64 @@ struct WardrobeGapAnalysisRequest: Codable {
     let style: String
     let text_input: String
     let analysis_mode: String // "free" or "premium"
+    let lifestyle_mix: [String]?
+    let primary_lifestyle: String?
+    let dress_code: [String]?
+    let climate: [String]?
+    let style_primary: [String]?
+    let style_accent: [String]?
+    let event_focus: String?
+
+    init(
+        occasion: String,
+        season: String,
+        style: String,
+        text_input: String,
+        analysis_mode: String,
+        lifestyle_mix: [String]? = nil,
+        primary_lifestyle: String? = nil,
+        dress_code: [String]? = nil,
+        climate: [String]? = nil,
+        style_primary: [String]? = nil,
+        style_accent: [String]? = nil,
+        event_focus: String? = nil
+    ) {
+        self.occasion = occasion
+        self.season = season
+        self.style = style
+        self.text_input = text_input
+        self.analysis_mode = analysis_mode
+        self.lifestyle_mix = lifestyle_mix
+        self.primary_lifestyle = primary_lifestyle
+        self.dress_code = dress_code
+        self.climate = climate
+        self.style_primary = style_primary
+        self.style_accent = style_accent
+        self.event_focus = event_focus
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case occasion, season, style, text_input, analysis_mode
+        case lifestyle_mix, primary_lifestyle, dress_code, climate
+        case style_primary, style_accent, event_focus
+    }
+
+    /// Encode optional lifestyle fields as JSON null (do not omit keys).
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(occasion, forKey: .occasion)
+        try container.encode(season, forKey: .season)
+        try container.encode(style, forKey: .style)
+        try container.encode(text_input, forKey: .text_input)
+        try container.encode(analysis_mode, forKey: .analysis_mode)
+        try container.encode(lifestyle_mix, forKey: .lifestyle_mix)
+        try container.encode(primary_lifestyle, forKey: .primary_lifestyle)
+        try container.encode(dress_code, forKey: .dress_code)
+        try container.encode(climate, forKey: .climate)
+        try container.encode(style_primary, forKey: .style_primary)
+        try container.encode(style_accent, forKey: .style_accent)
+        try container.encode(event_focus, forKey: .event_focus)
+    }
 }
 
 struct WardrobeCategoryGap: Codable {
@@ -317,6 +375,27 @@ struct WardrobeCategoryGap: Codable {
     let missing_styles: [String]
     let recommended_purchases: [String]
     let item_count: Int
+    let style_priorities: [String: String]?
+
+    init(
+        category: String,
+        owned_colors: [String],
+        owned_styles: [String],
+        missing_colors: [String],
+        missing_styles: [String],
+        recommended_purchases: [String],
+        item_count: Int,
+        style_priorities: [String: String]? = nil
+    ) {
+        self.category = category
+        self.owned_colors = owned_colors
+        self.owned_styles = owned_styles
+        self.missing_colors = missing_colors
+        self.missing_styles = missing_styles
+        self.recommended_purchases = recommended_purchases
+        self.item_count = item_count
+        self.style_priorities = style_priorities
+    }
 }
 
 struct WardrobeGapAnalysisCost: Codable, Equatable {

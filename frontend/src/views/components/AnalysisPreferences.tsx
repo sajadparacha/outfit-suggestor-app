@@ -1,6 +1,30 @@
 import React from 'react';
 import { Filters } from '../../models/OutfitModels';
-import { FILTER_OPTIONS } from '../../utils/constants';
+import {
+  FILTER_OPTIONS,
+  INSIGHTS_CLIMATE_OPTIONS,
+  INSIGHTS_DRESS_CODE_OPTIONS,
+  INSIGHTS_LIFESTYLE_OPTIONS,
+  INSIGHTS_STYLE_ACCENT_OPTIONS,
+  INSIGHTS_STYLE_PRIMARY_OPTIONS,
+} from '../../utils/constants';
+import { INSIGHTS_COPY } from '../../utils/insightsCopy';
+import {
+  InsightsClimate,
+  InsightsDressCode,
+  InsightsLifestyleState,
+  InsightsLifestyleValue,
+  InsightsStyleAccent,
+  InsightsStylePrimary,
+  loadInsightsLifestyle,
+  resetInsightsLifestyle,
+  saveInsightsLifestyle,
+  toggleClimateChip,
+  toggleDressCodeChip,
+  toggleLifestyleChip,
+  toggleStyleAccentChip,
+  toggleStylePrimaryChip,
+} from '../../utils/insightsLifestyle';
 import { DEFAULT_FILTERS } from '../../utils/outfitPreferences';
 import { MICRO_HELP } from '../../utils/microHelpCopy';
 
@@ -159,68 +183,248 @@ const AnalysisPreferences: React.FC<AnalysisPreferencesProps> = ({
   }
 
   return (
-    <div className="space-y-4">
-      {sharedHint}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-slate-200 mb-2">Occasion</label>
-          <select
-            value={resolved.occasion}
-            onChange={(e) => handleFilterChange('occasion', e.target.value)}
-            className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-brand-blue focus:border-brand-blue transition-all"
-            aria-label="Select occasion for wardrobe insights"
+    <InsightsLifestyleForm
+      preferenceText={preferenceText}
+      setPreferenceText={setPreferenceText}
+      onClear={onClear}
+    />
+  );
+};
+
+const chipClass = (selected: boolean) =>
+  `inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors touch-manipulation ${
+    selected
+      ? 'border-brand-blue/50 bg-brand-blue/20 text-white'
+      : 'border-white/15 bg-white/[0.04] text-slate-300 hover:border-brand-blue/40'
+  }`;
+
+const InsightsLifestyleForm: React.FC<{
+  preferenceText: string;
+  setPreferenceText: (text: string) => void;
+  onClear?: () => void;
+}> = ({ preferenceText, setPreferenceText, onClear }) => {
+  const [lifestyle, setLifestyle] = React.useState<InsightsLifestyleState>(() => loadInsightsLifestyle());
+  const [eventOpen, setEventOpen] = React.useState(Boolean(lifestyle.eventFocus));
+
+  const updateLifestyle = (patch: Partial<InsightsLifestyleState>) => {
+    setLifestyle((prev) => {
+      const next = { ...prev, ...patch };
+      saveInsightsLifestyle(next);
+      return next;
+    });
+  };
+
+  const handleMixTap = (value: InsightsLifestyleValue) => {
+    const next = toggleLifestyleChip(lifestyle.lifestyleMix, lifestyle.primaryLifestyle, value);
+    updateLifestyle({ lifestyleMix: next.mix, primaryLifestyle: next.primary });
+  };
+
+  const handleDressCodeTap = (value: InsightsDressCode) => {
+    updateLifestyle({ dressCodes: toggleDressCodeChip(lifestyle.dressCodes, value) });
+  };
+
+  const handleClimateTap = (value: InsightsClimate) => {
+    updateLifestyle({ climates: toggleClimateChip(lifestyle.climates, value) });
+  };
+
+  const handleStylePrimaryTap = (value: InsightsStylePrimary) => {
+    updateLifestyle({ stylePrimaries: toggleStylePrimaryChip(lifestyle.stylePrimaries, value) });
+  };
+
+  const handleStyleAccentTap = (value: InsightsStyleAccent) => {
+    updateLifestyle({ styleAccents: toggleStyleAccentChip(lifestyle.styleAccents, value) });
+  };
+
+  const handleClear = () => {
+    setLifestyle(resetInsightsLifestyle());
+    setEventOpen(false);
+    if (onClear) {
+      onClear();
+      return;
+    }
+    setPreferenceText('');
+  };
+
+  return (
+    <div id="insights.preferencesForm" className="space-y-5">
+      <p className="text-xs text-brand-blue/90 rounded-xl border border-brand-blue/20 bg-brand-blue/10 px-3 py-2">
+        {INSIGHTS_COPY.LIFESTYLE_ONLY_HINT}
+      </p>
+
+      <div
+        id="insights.lifestyleMix"
+        data-testid="insights.lifestyleMix"
+        role="group"
+        aria-label={INSIGHTS_COPY.LIFESTYLE_MIX_LABEL}
+      >
+        <p className="mb-2 block text-sm font-medium text-slate-200">{INSIGHTS_COPY.LIFESTYLE_MIX_LABEL}</p>
+        <div className="flex flex-wrap gap-2">
+          {INSIGHTS_LIFESTYLE_OPTIONS.map((opt) => {
+            const selected = lifestyle.lifestyleMix.includes(opt.value);
+            const isPrimary = selected && lifestyle.primaryLifestyle === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                aria-pressed={selected}
+                aria-label={isPrimary ? `${opt.label}, ${INSIGHTS_COPY.PRIMARY_BADGE}` : opt.label}
+                onClick={() => handleMixTap(opt.value)}
+                className={chipClass(selected)}
+              >
+                {opt.label}
+                {isPrimary && (
+                  <span className="rounded-full bg-brand-blue/30 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-blue">
+                    {INSIGHTS_COPY.PRIMARY_BADGE}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div id="insights.dressCode" data-testid="insights.dressCode">
+        <p className="mb-2 block text-sm font-medium text-slate-200">{INSIGHTS_COPY.DRESS_CODE_LABEL}</p>
+        <div role="group" aria-label={INSIGHTS_COPY.DRESS_CODE_LABEL} className="flex flex-wrap gap-2">
+          {INSIGHTS_DRESS_CODE_OPTIONS.map((opt) => {
+            const selected = lifestyle.dressCodes.includes(opt.value);
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => handleDressCodeTap(opt.value as InsightsDressCode)}
+                className={chipClass(selected)}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div id="insights.seasonCore" data-testid="insights.seasonCore">
+        <p className="mb-2 block text-sm font-medium text-slate-200">{INSIGHTS_COPY.SEASON_LABEL}</p>
+        <div className="flex flex-wrap gap-2" role="group" aria-label={INSIGHTS_COPY.SEASON_LABEL}>
+          <button
+            type="button"
+            aria-pressed="true"
+            aria-label={INSIGHTS_COPY.YEAR_ROUND_LABEL}
+            className={chipClass(true)}
           >
+            {INSIGHTS_COPY.YEAR_ROUND_LABEL}
+          </button>
+          {INSIGHTS_CLIMATE_OPTIONS.map((opt) => {
+            const selected = lifestyle.climates.includes(opt.value);
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                aria-pressed={selected}
+                aria-label={opt.label}
+                onClick={() => handleClimateTap(opt.value as InsightsClimate)}
+                className={chipClass(selected)}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div id="insights.stylePrimary" data-testid="insights.stylePrimary">
+        <p className="mb-2 block text-sm font-medium text-slate-200">{INSIGHTS_COPY.STYLE_PRIMARY_LABEL}</p>
+        <div className="flex flex-wrap gap-2" role="group" aria-label={INSIGHTS_COPY.STYLE_PRIMARY_LABEL}>
+          {INSIGHTS_STYLE_PRIMARY_OPTIONS.map((opt) => {
+            const selected = lifestyle.stylePrimaries.includes(opt.value);
+            const isPrimary = selected && lifestyle.stylePrimaries[0] === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                aria-pressed={selected}
+                aria-label={isPrimary ? `${opt.label}, ${INSIGHTS_COPY.PRIMARY_BADGE}` : opt.label}
+                onClick={() => handleStylePrimaryTap(opt.value as InsightsStylePrimary)}
+                className={chipClass(selected)}
+              >
+                {opt.label}
+                {isPrimary && (
+                  <span className="rounded-full bg-brand-blue/30 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-blue">
+                    {INSIGHTS_COPY.PRIMARY_BADGE}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div id="insights.styleAccent" data-testid="insights.styleAccent">
+        <p className="mb-2 block text-sm font-medium text-slate-200">{INSIGHTS_COPY.STYLE_ACCENT_LABEL}</p>
+        <div className="flex flex-wrap gap-2" role="group" aria-label={INSIGHTS_COPY.STYLE_ACCENT_LABEL}>
+          <button
+            type="button"
+            aria-pressed={lifestyle.styleAccents.length === 0}
+            onClick={() => updateLifestyle({ styleAccents: [] })}
+            className={chipClass(lifestyle.styleAccents.length === 0)}
+          >
+            {INSIGHTS_COPY.ACCENT_NONE}
+          </button>
+          {INSIGHTS_STYLE_ACCENT_OPTIONS.map((opt) => {
+            const selected = lifestyle.styleAccents.includes(opt.value);
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => handleStyleAccentTap(opt.value as InsightsStyleAccent)}
+                className={chipClass(selected)}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div id="insights.eventFocus" data-testid="insights.eventFocus">
+        <button
+          type="button"
+          onClick={() => setEventOpen((open) => !open)}
+          className="flex w-full items-center justify-between rounded-xl border border-white/15 bg-white/[0.04] px-3 py-2.5 text-left text-sm font-medium text-slate-200 hover:border-brand-blue/40"
+          aria-expanded={eventOpen}
+        >
+          <span>{INSIGHTS_COPY.EVENT_FOCUS_LABEL}</span>
+          <span className="text-xs text-slate-400">{eventOpen ? 'Hide' : 'Optional'}</span>
+        </button>
+        {eventOpen && (
+          <select
+            value={lifestyle.eventFocus || ''}
+            onChange={(e) => updateLifestyle({ eventFocus: e.target.value || null })}
+            className="mt-2 w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white focus:border-brand-blue focus:ring-2 focus:ring-brand-blue"
+            aria-label={INSIGHTS_COPY.EVENT_FOCUS_LABEL}
+          >
+            <option value="">{INSIGHTS_COPY.EVENT_FOCUS_NONE}</option>
             {FILTER_OPTIONS.occasions.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
             ))}
           </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-200 mb-2">Season</label>
-          <select
-            value={resolved.season}
-            onChange={(e) => handleFilterChange('season', e.target.value)}
-            className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-brand-blue focus:border-brand-blue transition-all"
-            aria-label="Select season for wardrobe insights"
-          >
-            {FILTER_OPTIONS.seasons.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-200 mb-2">Style</label>
-          <select
-            value={resolved.style}
-            onChange={(e) => handleFilterChange('style', e.target.value)}
-            className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white focus:ring-2 focus:ring-brand-blue focus:border-brand-blue transition-all"
-            aria-label="Select style for wardrobe insights"
-          >
-            {FILTER_OPTIONS.styles.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        )}
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-200 mb-2">Extra Notes</label>
+        <label className="mb-2 block text-sm font-medium text-slate-200">Extra Notes</label>
         <textarea
           value={preferenceText}
           onChange={(e) => setPreferenceText(e.target.value)}
-          placeholder="e.g., Smart casual, navy and brown, no sneakers."
-          className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-brand-blue focus:border-brand-blue transition-all resize-none"
+          placeholder={INSIGHTS_COPY.NOTES_PLACEHOLDER}
+          className="w-full resize-none rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white placeholder-slate-400 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue"
           rows={3}
           aria-label="Extra notes for wardrobe insights"
         />
+        <p className="mt-1.5 text-xs text-slate-400">{INSIGHTS_COPY.NOTES_HELPER}</p>
       </div>
 
       {onClear && (
@@ -228,7 +432,7 @@ const AnalysisPreferences: React.FC<AnalysisPreferencesProps> = ({
           <button
             type="button"
             onClick={handleClear}
-            className="px-4 py-2.5 rounded-xl font-medium bg-white/10 text-slate-200 hover:bg-white/20 border border-white/15 transition-colors"
+            className="rounded-xl border border-white/15 bg-white/10 px-4 py-2.5 font-medium text-slate-200 transition-colors hover:bg-white/20"
           >
             Clear
           </button>

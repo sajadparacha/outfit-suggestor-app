@@ -12,6 +12,7 @@ struct InsightsView: View {
     @ObservedObject private var auth = AuthService.shared
 
     @State private var analysisMode = "free"
+    @State private var lifestyle = InsightsLifestyle.default
     @State private var rawResult: WardrobeGapAnalysisResponse?
     @State private var isLoading = false
     @State private var errorMessage: String?
@@ -36,7 +37,7 @@ struct InsightsView: View {
                         isPreferencesExpanded: preferencesExpanded
                     ) {
                         AnalysisPreferencesView(
-                            filters: $viewModel.filters,
+                            lifestyle: $lifestyle,
                             preferenceText: $viewModel.preferenceText,
                             analysisMode: $analysisMode
                         )
@@ -150,12 +151,9 @@ struct InsightsView: View {
         }
         do {
             try Task.checkCancellation()
-            let request = WardrobeGapAnalysisRequest(
-                occasion: viewModel.filters.occasion,
-                season: viewModel.filters.season,
-                style: viewModel.filters.style,
-                text_input: viewModel.preferenceText,
-                analysis_mode: analysisMode
+            let request = lifestyle.makeRequest(
+                textInput: viewModel.preferenceText,
+                analysisMode: analysisMode
             )
             rawResult = try await APIService.shared.analyzeWardrobeGaps(request: request)
             preferencesExpanded = false

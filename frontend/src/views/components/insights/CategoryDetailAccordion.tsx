@@ -1,6 +1,11 @@
 import React from 'react';
 import { WardrobeCategoryHealth } from '../../../models/WardrobeInsightResult';
+import { INSIGHTS_COPY } from '../../../utils/insightsCopy';
 import { openShoppingSearch, prettyLabel } from '../../../utils/insightsHelpers';
+import {
+  priorityMissingStyles,
+  stylePriorityFor,
+} from '../../../utils/normalizeWardrobeInsight';
 import InsightColorChip from './InsightColorChip';
 import InsightStyleChip from './InsightStyleChip';
 import { categoryIcons } from './CoverageStatusCard';
@@ -55,6 +60,49 @@ const InventorySubsection: React.FC<InventorySubsectionProps> = ({
     )}
   </div>
 );
+
+const MissingStylesSubsection: React.FC<{ item: WardrobeCategoryHealth }> = ({ item }) => {
+  const [showAll, setShowAll] = React.useState(false);
+  const fullCatalog = item.missingStyles;
+  const priorityStyles = priorityMissingStyles(fullCatalog, item.stylePriorities);
+  const visibleStyles = showAll ? fullCatalog : priorityStyles;
+  const canToggle = fullCatalog.length > priorityStyles.length;
+
+  return (
+    <div className="mt-3" data-testid={`category-missing-styles-${item.id}`}>
+      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Missing styles</p>
+      {fullCatalog.length === 0 ? (
+        <p className="text-sm text-slate-400" data-testid={`category-missing-styles-${item.id}-empty`}>
+          Your style coverage looks balanced for this category.
+        </p>
+      ) : (
+        <>
+          <div className="flex flex-wrap gap-2">
+            {visibleStyles.map((style) => (
+              <InsightStyleChip
+                key={style}
+                label={prettyLabel(style)}
+                priority={stylePriorityFor(style, item.stylePriorities)}
+                onClick={() => openShoppingSearch(item.id, [style], [])}
+              />
+            ))}
+          </div>
+          {canToggle ? (
+            <button
+              type="button"
+              onClick={() => setShowAll((open) => !open)}
+              className="mt-2 text-xs font-semibold text-sky-300 hover:text-sky-200"
+              aria-expanded={showAll}
+              data-testid={`category-missing-styles-toggle-${item.id}`}
+            >
+              {showAll ? INSIGHTS_COPY.SHOW_PRIORITY_STYLES : INSIGHTS_COPY.SHOW_ALL_STYLES}
+            </button>
+          ) : null}
+        </>
+      )}
+    </div>
+  );
+};
 
 const CategoryExpandedBody: React.FC<{
   item: WardrobeCategoryHealth;
@@ -121,31 +169,8 @@ const CategoryExpandedBody: React.FC<{
             ))}
           </InventorySubsection>
 
-          <InventorySubsection
-            label="Missing styles"
-            testId={`category-missing-styles-${item.id}`}
-            emptyCopy="Your style coverage looks balanced for this category."
-            isEmpty={item.missingStyles.length === 0}
-          >
-            {item.missingStyles.map((style) => (
-              <InsightStyleChip key={style} label={prettyLabel(style)} />
-            ))}
-          </InventorySubsection>
+          <MissingStylesSubsection item={item} />
         </>
-      )}
-
-      <p className="mt-3">
-        <span className="font-medium text-slate-200">Recommended next step: </span>
-        {item.recommendedStep}
-      </p>
-      {item.id !== 'colors' && item.id !== 'styles' && (
-        <button
-          type="button"
-          onClick={() => openShoppingSearch(item.id, [styleContext], ['neutral'])}
-          className="mt-3 rounded-lg border border-white/20 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-white/10"
-        >
-          Shop similar
-        </button>
       )}
     </>
   );

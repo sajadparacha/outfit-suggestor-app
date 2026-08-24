@@ -24,7 +24,8 @@ struct AboutView: View {
                     Text(AboutCopy.outfitSuggestionsFeature)
                     Text(AboutCopy.wardrobeFeature)
                     Text(AboutCopy.historyFeature)
-                    Text(AboutCopy.insightsFeature)
+                    Text(aboutInsightsFeature)
+                    Text(InsightsCopy.aboutStylesCatalogNote)
                     Text(AboutCopy.weekPlannerFeature)
                     Text(AboutCopy.accountFeature)
                 }
@@ -50,3 +51,7 @@ struct AboutView: View {
         .navigationTitle("About")
     }
 }
+
+private let aboutInsightsFeature =
+    "• Insights — gap analysis from your lifestyle mix and dress code, coverage dashboard, and a shopping list of every category that still has a gap (including empty ones), with colors and styles to buy—not one starter SKU. Insights preferences can include multiple dress codes, climates, styles, and accents. Styles come from a wardrobe catalog; AI ranks which missing tags to buy next."
+

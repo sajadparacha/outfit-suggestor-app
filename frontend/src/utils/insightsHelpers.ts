@@ -116,172 +116,41 @@ export interface ShoppingListRow {
 export const SHOPPING_LIST_SEARCH_ALL_LIMIT = 3;
 
 const CATEGORY_DISPLAY_LABELS: Record<string, string> = {
-  shirt: 'Shirt',
-  shirts: 'Shirt',
+  shirt: 'Shirts',
+  shirts: 'Shirts',
   trouser: 'Trousers',
   trousers: 'Trousers',
   shoe: 'Shoes',
   shoes: 'Shoes',
-  blazer: 'Blazer',
-  blazers: 'Blazer',
-  sweater: 'Sweater',
-  sweaters: 'Sweater',
-  jacket: 'Jacket',
-  jackets: 'Jacket',
-  tie: 'Tie',
-  ties: 'Tie',
-  belt: 'Belt',
-  belts: 'Belt',
+  blazer: 'Blazers',
+  blazers: 'Blazers',
+  sweater: 'Sweaters',
+  sweaters: 'Sweaters',
+  jacket: 'Jackets',
+  jackets: 'Jackets',
+  tie: 'Ties',
+  ties: 'Ties',
+  belt: 'Belts',
+  belts: 'Belts',
 };
 
-const dedupeWords = (label: string): string => {
-  const words = label.split(/\s+/).filter(Boolean);
-  const seen = new Set<string>();
-  const result: string[] = [];
-
-  for (const word of words) {
-    const key = word.toLowerCase();
-    if (!seen.has(key)) {
-      seen.add(key);
-      result.push(word);
-    }
-  }
-
-  return result.join(' ');
-};
-
-const categoryStem = (category: string): string =>
-  category.trim().toLowerCase().replace(/s$/, '');
-
-const NON_TAXONOMY_JUNK_TERMS = new Set([
-  'dress',
-  'dresses',
-  'gown',
-  'gowns',
-  'skirt',
-  'skirts',
-  'blouse',
-  'blouses',
-  'romper',
-  'rompers',
-  'jumpsuit',
-  'jumpsuits',
-]);
-
-const ITERATION_2_CATEGORY_VOCABULARY = new Set([
-  'shirt',
-  'shirts',
-  'trouser',
-  'trousers',
-  'pants',
-  'blazer',
-  'blazers',
-  'suit',
-  'suits',
-  'sweater',
-  'sweaters',
-  'jacket',
-  'jackets',
-  'shoe',
-  'shoes',
-  'belt',
-  'belts',
-  'tie',
-  'ties',
-]);
-
-const COLOR_AND_MATERIAL_WORDS = new Set([
-  'black',
-  'white',
-  'gray',
-  'grey',
-  'beige',
-  'tan',
-  'navy',
-  'brown',
-  'burgundy',
-  'red',
-  'blue',
-  'green',
-  'olive',
-  'purple',
-  'pink',
-  'yellow',
-  'mint',
-  'pastel',
-  'neutral',
-  'merino',
-  'linen',
-  'cotton',
-  'wool',
-  'silk',
-  'leather',
-  'denim',
-  'cashmere',
-  'knit',
-  'fleece',
-  'corduroy',
-  'suede',
-  'canvas',
-  'nylon',
-  'polyester',
-  'velvet',
-]);
-
-const isColorOrMaterialWord = (word: string): boolean =>
-  COLOR_AND_MATERIAL_WORDS.has(word.toLowerCase());
-
-const hasIteration2VocabularyOverlap = (words: string[]): boolean =>
-  words.some((word) => ITERATION_2_CATEGORY_VOCABULARY.has(word.toLowerCase()));
-
+/** Always the plural dashboard label (Belts, Shirts) — never a fake SKU. */
 export const cleanShoppingItemLabel = (name: string, category: string): string => {
-  const catKey = category.trim().toLowerCase();
-  const categoryLabel = CATEGORY_DISPLAY_LABELS[catKey] ?? prettyLabel(category);
-  const rawName = prettyLabel(name || category);
-  const rawWords = rawName.toLowerCase().split(/\s+/).filter(Boolean);
-  const stem = categoryStem(category);
-
-  const isCategoryWord = (word: string): boolean =>
-    word === catKey || word === stem || word === categoryLabel.toLowerCase();
-
-  const categoryRepeatCount = rawWords.filter(isCategoryWord).length;
-  if (categoryRepeatCount >= 2) {
-    return categoryLabel;
-  }
-
-  const nameLabel = dedupeWords(rawName);
-  const nameWords = nameLabel.toLowerCase().split(/\s+/).filter(Boolean);
-  const nonCategoryWords = nameWords.filter((word) => !isCategoryWord(word));
-
-  if (nonCategoryWords.length === 0) {
-    return categoryLabel;
-  }
-
-  if (nonCategoryWords.some((word) => NON_TAXONOMY_JUNK_TERMS.has(word))) {
-    return categoryLabel;
-  }
-
-  if (!hasIteration2VocabularyOverlap(nameWords)) {
-    return categoryLabel;
-  }
-
-  if (
-    nonCategoryWords.length === 1 &&
-    nameWords.length <= 3 &&
-    isColorOrMaterialWord(nonCategoryWords[0])
-  ) {
-    return categoryLabel;
-  }
-
-  return nameLabel;
+  const catKey = (category || name).trim().toLowerCase();
+  return CATEGORY_DISPLAY_LABELS[catKey] ?? prettyLabel(category || name);
 };
 
-const formatColorOrList = (colors: string[]): string => {
-  const lowered = colors.map((color) => color.toLowerCase());
-  if (lowered.length === 0) return 'neutral';
+const formatOrList = (items: string[]): string => {
+  const lowered = items.map((item) => item.toLowerCase());
+  if (lowered.length === 0) return '';
   if (lowered.length === 1) return lowered[0];
   if (lowered.length === 2) return `${lowered[0]} or ${lowered[1]}`;
   return `${lowered.slice(0, -1).join(', ')}, or ${lowered[lowered.length - 1]}`;
+};
+
+const formatColorOrList = (colors: string[]): string => {
+  if (colors.length === 0) return 'neutral';
+  return formatOrList(colors);
 };
 
 const capitalizeFirst = (value: string): string =>
@@ -297,35 +166,32 @@ export const formatLookForText = (tuples: ShoppingListTuple[]): string => {
     }
   }
 
-  const styleGroups: { style: string; colors: string[] }[] = [];
+  const styles: string[] = [];
+  const colors: string[] = [];
   const seenStyles = new Set<string>();
+  const seenColors = new Set<string>();
 
   for (const tuple of tuples) {
     const styleKey = tuple.style.toLowerCase();
-    let group = styleGroups.find((entry) => entry.style.toLowerCase() === styleKey);
-    if (!group) {
-      group = { style: tuple.style, colors: [] };
-      styleGroups.push(group);
+    if (!seenStyles.has(styleKey)) {
       seenStyles.add(styleKey);
+      styles.push(tuple.style);
     }
-    if (!group.colors.some((color) => color.toLowerCase() === tuple.color.toLowerCase())) {
-      group.colors.push(tuple.color);
+    const colorKey = tuple.color.toLowerCase();
+    if (!seenColors.has(colorKey)) {
+      seenColors.add(colorKey);
+      colors.push(tuple.color);
     }
   }
 
-  const phrases = styleGroups.map(
-    (group) => `${formatColorOrList(group.colors)} ${group.style.toLowerCase()}`
-  );
-
-  if (phrases.length === 1) {
-    return capitalizeFirst(phrases[0]);
+  const firstStyle = (styles[0] || 'classic').toLowerCase();
+  const firstPhrase = capitalizeFirst(`${formatColorOrList(colors)} ${firstStyle}`);
+  const extraStyles = styles.slice(1).map((style) => style.toLowerCase());
+  if (extraStyles.length === 0) {
+    return firstPhrase;
   }
 
-  const first = capitalizeFirst(phrases[0]);
-  const rest = phrases.slice(1);
-  const last = `${rest.pop()} OK`;
-  const middle = rest.join('; ');
-  return [first, middle, last].filter(Boolean).join('; ');
+  return `${firstPhrase}; ${formatOrList(extraStyles)} optional`;
 };
 
 export const buildComboSearchUrl = (
