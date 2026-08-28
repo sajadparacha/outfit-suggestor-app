@@ -14,16 +14,16 @@ This document describes the two Cursor agent workflows defined for **outfit-sugg
 They complement each other:
 
 ```text
-Twin UI (iterate on branch)  →  publish on web (ship from current branch)
+Twin UI (iterate on branch)  →  publish on web (local gate → ship → production gate → optional merge to main)
 ```
 
-Merge to `main` is **out of scope** for publish on web — do it separately if you want it later.
+Merge to `main` happens **only** after production gate passes and you confirm during publish on web.
 
 ---
 
 ## Twin UI
 
-**One instruction → platform-neutral spec → two parallel agents (web + iOS) → parity review → test gate.**
+**One instruction → platform-neutral spec → two parallel agents (web + iOS) → parity review → targeted tests → `./run_all_tests` in a new terminal.**
 
 ### Trigger
 
@@ -55,18 +55,14 @@ Keep iPhone and iPad UX the same — adapt layout, not behavior. Optional one-li
 
 1. **Confirm branch** — work stays on the current git branch (e.g. `feature/ui-ux-final-touches`).
 2. **Write spec** — orchestrator creates `.cursor/specs/<feature-slug>.md` from the template, including **Tests (required)** and whether **About** / **Guide** need updates.
-3. **Backend first (if needed)** — orchestrator updates `backend/` and runs `pytest` when API or business logic changes. Skipped for pure UI work.
+3. **Backend first (if needed)** — orchestrator updates `backend/` and runs **targeted** `pytest` when API or business logic changes. Skipped for pure UI work.
 4. **Two parallel subagents** (single message, required):
    - **Web agent** → `frontend/**` only (includes `UserGuide.tsx` / `About.tsx` when spec requires)
    - **iOS agent** → `ios-client/**` only (includes `UserGuideView.swift` / `AboutView.swift` when spec requires)
 5. **Parity review** — orchestrator compares both implementations to the spec, verifies About/Guide when required, and updates `IOS_WEB_FEATURE_PARITY.md` when capability changes.
-6. **Ask before full tests** — orchestrator asks you to confirm before running complete suites (~several minutes).
-7. **Full test gate** (after you confirm):
-   - Web: all Jest unit + integration tests
-   - iOS: all `OutfitSuggestorTests` + `OutfitSuggestorUITests`
-   - Backend: full `pytest` (only if backend changed this feature)
-8. **Test Execution Report** — orchestrator publishes pass/fail counts, durations, and failure details.
-9. **Done** — only when all required suites pass (or you declined full tests → verification noted as pending).
+6. **Targeted Test Report** — from agent-returned results only (spec-listed files/classes).
+7. **Full matrix in a new terminal** — orchestrator starts `./run_all_tests` (repo root) without asking; does **not** wait on or paste suite logs into chat.
+8. **Done** — when spec + targeted tests pass; full-suite pass/fail is watched in that terminal.
 
 ### Roles and boundaries
 
@@ -88,33 +84,35 @@ The orchestrator **must not** edit platform UI directly:
 
 | Owner | Requirement |
 |-------|-------------|
-| Orchestrator | Backend tests when `backend/` changes |
-| Web agent | At least one new unit or integration test for new behavior; update Guide/About when spec requires |
-| iOS agent | At least one new unit/integration test (UITest optional for E2E); update Guide/About when spec requires |
-| Orchestrator (end) | Full web + iOS suites after your confirmation |
+| Orchestrator | Targeted backend tests when `backend/` changes |
+| Web agent | At least one new unit or integration test; run **only** spec-listed file(s) until green; update Guide/About when spec requires |
+| iOS agent | At least one new unit/integration test; run **only** spec-listed class until green; update Guide/About when spec requires |
+| Orchestrator (end) | Targeted report → new terminal `./run_all_tests` (no log ingest) |
 
-**A Twin UI feature is not complete** if the full web or iOS suite fails, new behavior has no tests, or the Test Execution Report is missing.
+**A Twin UI feature is not complete** if new behavior has no tests, targeted agent tests fail, or the Targeted Test Report is missing. Full-suite verification lives in the terminal.
 
 ### Test commands (reference)
 
 ```bash
-# Web (full suite)
-cd frontend && npm test -- --watchAll=false --passWithNoTests
+# During work — web (targeted; use the path from the spec)
+cd frontend && npm test -- --watchAll=false src/path/to/file.test.ts
 
-# iOS (full suite)
+# During work — iOS (targeted class from the spec)
 cd ios-client && xcodebuild test \
   -scheme OutfitSuggestor \
   -destination 'platform=iOS Simulator,name=iPhone 17' \
-  -only-testing:OutfitSuggestorTests \
-  -only-testing:OutfitSuggestorUITests
+  -only-testing:OutfitSuggestorTests/<TestClass>
 
-# Backend (when changed)
-cd backend && . venv/bin/activate && pytest -q
+# During work — backend (when changed; targeted)
+cd backend && . venv/bin/activate && pytest tests/test_<feature>.py -q
+
+# End of Twin UI / Cost Twin UI — full matrix in a new terminal (orchestrator launches; user watches)
+./run_all_tests
 ```
 
 ### Commits
 
-Agents **do not commit** unless you explicitly ask. Twin UI ends with implemented + tested code on your branch; you merge when ready.
+Agents **do not commit** unless you explicitly ask. Twin UI ends with implemented + targeted-tested code on your branch; you merge when ready.
 
 ### Configuration files
 
@@ -129,15 +127,11 @@ Agents **do not commit** unless you explicitly ask. Twin UI ends with implemente
 
 ---
 
-## Publish on Web
+## Publish on Web (v2)
 
-**Remind user to test in terminal → commit → push → GitHub Pages → Railway** — all on the **current branch**.
+**Local gate (agent terminal) → ship from current branch → production gate → optional merge to `main`.**
 
-Invoking this skill counts as explicit approval to **commit, push, and deploy** (after the user confirms tests passed in their terminal).
-
-**Do not merge to `main`** as part of this workflow. Push `HEAD` on whatever branch you are on (e.g. `feature/ui-ux-final-touches`).
-
-**The agent does not run full test suites** during this workflow. It posts the commands below and waits for the user to confirm **tests passed** before deploy.
+Invoking this skill counts as approval to **commit, push, and deploy** after gates pass. **Merge to `main`** requires a **separate** confirmation after production tests pass.
 
 ### Trigger
 
@@ -147,33 +141,32 @@ publish on web
 
 ### What happens (step by step)
 
-1. **Record branch** — e.g. `main` or `feature/ui-ux-final-touches`.
-2. **Remind user to run all test suites in terminal** (agent does not run them — stop until user confirms pass):
+**Up to 3 attempts** — on failure: list failing tests, fix, **always redeploy** on retry.
 
-   | Suite | Command | Typical duration |
-   |-------|---------|------------------|
-   | All | `bash .cursor/skills/publish-on-web/scripts/run-all-tests.sh` | ~8–12 min |
-   | Web | `cd frontend && npm test -- --watchAll=false --passWithNoTests` | ~3 s |
-   | Backend | `cd backend && . venv/bin/activate && pytest -q` | ~4 min |
-   | iOS | `xcodebuild test -scheme OutfitSuggestor …` | ~4–8 min |
+1. **Cost estimate** — user approves before work starts.
+2. **Local gate** — agent opens **new terminal**, runs `./run_all_tests`, **auto-reads** summary (`exit_code`, Overall PASS/FAIL, failing test list).
+3. **Ship (no merge yet)** — commit → `git push -u origin HEAD` → `npm run deploy` → `railway up` → verify live URLs.
+4. **Production gate** — second **new terminal**, `./run_production_tests` (Option C: same matrix vs live API), **auto-read** results and show report.
+5. **Merge** — if production gate passes, ask user to confirm merge to `main`; on yes → merge + push `main`.
+6. **Report** — Publish on Web — Report + workflow cost `end`.
 
-3. **Commit** — stage relevant changes; **never** commit secrets (`.env.development`), build artifacts, or `xcuserdata/`.
-4. **Push** — `git push -u origin HEAD` (current branch only — **no merge to `main`**).
-5. **GitHub Pages** — `cd frontend && npm run deploy` (build + push to `gh-pages`).
-6. **Railway** — `cd backend && railway up`.
-7. **Verify** — health check and frontend URLs.
-8. **Publish on Web — Report** — summary of user-confirmed tests, git, deploys, and live checks.
+| Gate | Command | What it runs |
+|------|---------|----------------|
+| Local | `./run_all_tests` | Web Jest + backend pytest (local) + iOS + UITests |
+| Production | `./run_production_tests` | Jest (prod `REACT_APP_API_URL`) + `tests_remote` + iOS Release vs live API |
 
-**If the user reports test failures or has not confirmed:** workflow stops. No commit, push, or deploy.
+Production credentials: `.env.production.test` (from `.env.production.test.example`).
+
+**If either gate fails:** no merge; agent fixes and retries from step 2 (full redeploy). Stop after 3 failed attempts.
 
 ### Prerequisites
 
 | Tool | Purpose |
 |------|---------|
-| `git` | Commit and push |
-| `gh` | GitHub CLI (optional if git credentials work) |
-| `railway` | Backend deploy (`railway link` from repo root) |
-| `frontend/.env.production` | `REACT_APP_API_URL` for production build |
+| `git` / `gh` | Commit, push, merge |
+| `railway` | Backend deploy |
+| `frontend/.env.production` | Production API URL for build + gate |
+| `.env.production.test` | `TEST_USERNAME` / `TEST_PASSWORD` for remote tests |
 
 ### Live URLs
 
@@ -184,23 +177,14 @@ publish on web
 | Backend (example) | https://web-production-dfcf8.up.railway.app |
 | Health check | `<backend-url>/health` |
 
-Pushing **`main`** may trigger `.github/workflows/deploy.yml` (GitHub Actions → gh-pages). That is optional CI — publish on web does **not** require merging to `main` first.
-
-### What gets excluded from commits
-
-- `frontend/.env.development` and other secret env files
-- `ios-client/build*/`, `**/xcuserdata/**`
-- `node_modules/`, `backend/venv/`, `__pycache__/`
-
 ### Configuration
 
 | File | Role |
 |------|------|
-| `.cursor/skills/publish-on-web/SKILL.md` | Full workflow and report template |
-| `.cursor/skills/publish-on-web/scripts/run-all-tests.sh` | User-run test gate (not executed by agent) |
-| `DEPLOYMENT_INSTRUCTIONS.md` | Manual deploy reference |
-| `RAILWAY_DEPLOYMENT_STEPS.md` | Railway setup |
-| `.github/workflows/deploy.yml` | CI deploy on push to `main` |
+| `.cursor/skills/publish-on-web/SKILL.md` | Full workflow v2 |
+| `run_production_tests` | Production gate wrapper |
+| `scripts/run_all_tests.sh --production` | Production matrix implementation |
+| `.env.production.test.example` | Remote test credentials template |
 
 ---
 
@@ -209,17 +193,20 @@ Pushing **`main`** may trigger `.github/workflows/deploy.yml` (GitHub Actions �
 ```mermaid
 flowchart LR
   A[Create feature branch] --> B[Twin UI: spec + parallel agents]
-  B --> C[Review + optional full tests]
+  B --> C[Targeted tests + ./run_all_tests in new terminal]
   C --> D[Final touches on branch]
-  D --> E[publish on web from branch]
-  E --> F[Live: closiq.me + Railway]
-  D -. optional, separate .-> G[Merge to main later]
+  D --> E[publish on web]
+  E --> F[Local gate + ship branch]
+  F --> G[Production gate]
+  G --> H{User confirms merge?}
+  H -->|yes| I[main updated]
+  H -->|no| J[Live: closiq.me + Railway]
+  G --> J
 ```
 
 1. **Branch** — e.g. `git checkout -b feature/ui-ux-final-touches`
-2. **Twin UI** — iterate with matched web + iOS changes and tests
-3. **Publish on web** — test, commit, push, and deploy **from the current branch** (no merge to `main`)
-4. **Merge to `main`** (optional, separate) — only if you want `main` updated; not part of publish on web
+2. **Twin UI** — iterate with matched web + iOS changes; agents run related tests; full matrix via `./run_all_tests` in a new terminal
+3. **Publish on web** — agent runs local gate → ships from branch → production gate → asks to merge `main` if production passes (up to 3 retries, always redeploy on retry)
 
 ---
 
@@ -228,7 +215,9 @@ flowchart LR
 | I want to… | Say this |
 |------------|----------|
 | Change UI on web **and** iOS | `Twin UI: [description]` |
-| Run tests in terminal, then deploy | `publish on web` (agent reminds; you run tests) |
+| Run local gate + deploy + production gate | `publish on web` (agent launches `./run_all_tests` and `./run_production_tests` in new terminals) |
+| All local tests only | `./run_all_tests` |
+| Production gate only (after deploy) | `./run_production_tests` (requires `.env.production.test`) |
 | Run all tests (web + backend + iOS + UITests) | `run_all_tests` (from repo root; see alias below) |
 | See web/iOS parity status | Open `IOS_WEB_FEATURE_PARITY.md` |
 | Read agent entry point | Open `AGENTS.md` |

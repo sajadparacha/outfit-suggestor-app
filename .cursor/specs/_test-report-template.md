@@ -1,23 +1,21 @@
-# Test Execution Report Template
+# Targeted Test Report Template
 
-Copy into the orchestrator's final Twin UI message. Fill all sections.
+Copy into the orchestrator's final Twin UI / Cost Twin UI message. Fill all sections.
 
 ---
 
-## Test Execution Report
+## Targeted Test Report
 
 **Feature:** `<feature-slug>`  
 **Branch:** `<branch-name>`  
-**Overall:** PASS | FAIL
+**Overall (targeted):** PASS | FAIL
 
 ### Web (`frontend/`)
 
 | Metric | Value |
 |--------|-------|
-| Command | `npm test -- --watchAll=false --passWithNoTests` |
-| Suites | / |
-| Tests | / |
-| Duration | |
+| Command | (spec-listed file(s) only, e.g. `npm test -- --watchAll=false src/…`) |
+| Result | e.g. 1 suite, 13 passed |
 | Status | PASS / FAIL |
 
 **Failures (if any):**
@@ -32,10 +30,9 @@ Copy into the orchestrator's final Twin UI message. Fill all sections.
 
 | Metric | Value |
 |--------|-------|
-| Command | `xcodebuild test -scheme OutfitSuggestor …` |
+| Command | `-only-testing:OutfitSuggestorTests/<TestClass>` |
 | Simulator | |
-| Unit/Integration (OutfitSuggestorTests) | / |
-| UI tests (OutfitSuggestorUITests) | / |
+| Result | e.g. 14 tests, 0 failures |
 | Status | PASS / FAIL |
 
 **Failures (if any):**
@@ -50,13 +47,20 @@ Copy into the orchestrator's final Twin UI message. Fill all sections.
 
 | Metric | Value |
 |--------|-------|
-| Command | `pytest -q` |
+| Command | `pytest tests/<file> -q` (targeted) |
 | Tests | / |
 | Status | PASS / FAIL / SKIPPED |
 
 **Failures (if any):**
 
 - 
+
+### Full suite
+
+| Metric | Value |
+|--------|-------|
+| Command | `./run_all_tests` |
+| Status | Launched in new terminal (user watches; orchestrator did not ingest logs) |
 
 ### Notes
 

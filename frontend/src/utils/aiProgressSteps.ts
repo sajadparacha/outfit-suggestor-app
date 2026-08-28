@@ -6,7 +6,10 @@ export type AiOperationType =
   | 'wardrobe-outfit'
   | 'wardrobe-analysis'
   | 'random-history'
-  | 'past-suggestions';
+  | 'past-suggestions'
+  | 'week-plan-generate'
+  | 'week-plan-regenerate'
+  | 'week-plan-sync';
 
 export interface AiProgressStep {
   id: string;
@@ -14,6 +17,24 @@ export interface AiProgressStep {
   /** Typical duration before advancing to the next simulated step. */
   durationMs: number;
 }
+
+const WEEK_PLAN_GENERATE_STEPS: AiProgressStep[] = [
+  { id: 'read-plan', label: 'Reading your plan', durationMs: 4000 },
+  { id: 'match-wardrobe', label: 'Matching wardrobe pieces', durationMs: 8000 },
+  { id: 'build-outfits', label: 'Building outfits', durationMs: 12000 },
+];
+
+export const AI_PROGRESS_TITLES: Record<AiOperationType, string> = {
+  'outfit-suggestion': 'Creating your outfit',
+  'outfit-with-preview': 'Creating your outfit',
+  'wardrobe-outfit': 'Building from your wardrobe',
+  'wardrobe-analysis': 'Analyzing your wardrobe',
+  'random-history': 'Picking from your history',
+  'past-suggestions': 'Loading past suggestions',
+  'week-plan-generate': 'Planning your week',
+  'week-plan-regenerate': "Planning this day's outfit",
+  'week-plan-sync': 'Updating your week',
+};
 
 export const AI_PROGRESS_STEPS: Record<AiOperationType, AiProgressStep[]> = {
   'outfit-suggestion': [
@@ -49,6 +70,12 @@ export const AI_PROGRESS_STEPS: Record<AiOperationType, AiProgressStep[]> = {
     { id: 'filter', label: 'Finding outfits for this item', durationMs: 2000 },
     { id: 'prepare', label: 'Preparing suggestions', durationMs: 2000 },
   ],
+  'week-plan-generate': WEEK_PLAN_GENERATE_STEPS,
+  'week-plan-regenerate': WEEK_PLAN_GENERATE_STEPS,
+  'week-plan-sync': [
+    { id: 'save-changes', label: 'Saving your changes', durationMs: 2500 },
+    { id: 'update-week', label: 'Updating your week', durationMs: 2500 },
+  ],
 };
 
 export function getEstimatedDurationMs(operationType: AiOperationType): number {
@@ -65,6 +92,21 @@ export function formatDuration(seconds: number): string {
 export function resolveStepFromMessage(message: string | null | undefined, steps: AiProgressStep[]): number {
   if (!message) return 0;
   const lower = message.toLowerCase();
+  if (steps[0]?.id === 'read-plan') {
+    if (lower.includes('matching') || lower.includes('wardrobe piece')) {
+      return Math.min(1, steps.length - 1);
+    }
+    if (lower.includes('building')) {
+      return Math.min(2, steps.length - 1);
+    }
+    return 0;
+  }
+  if (steps[0]?.id === 'save-changes') {
+    if (lower.includes('updating')) {
+      return Math.min(1, steps.length - 1);
+    }
+    return 0;
+  }
   if (steps[0]?.id === 'fetch') {
     if (lower.includes('saved look') || lower.includes('loading your saved') || lower.includes('history')) {
       return 0;

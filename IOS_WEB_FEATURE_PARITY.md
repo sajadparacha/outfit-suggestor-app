@@ -244,7 +244,7 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 ## 12. Shared / UX
 
 - **Error handling**: Show API errors in a consistent way (e.g. alert or inline message).
-- **Loading states**: Skeleton or spinner for all async operations.
+- **Loading states**: Skeleton or spinner for short async work. Long AI ops (Suggest, Insights, Week Planner server calls) use a shared **blocking** bottom progress panel (full-screen dimmed backdrop; no backdrop dismiss; Cancel only when abort is supported).
 - **Offline**: Web does not require offline; iOS can add later (e.g. cache last suggestion).
 - **Deep links**: Optional; not required for parity.
 

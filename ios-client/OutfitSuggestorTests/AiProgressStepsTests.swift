@@ -92,4 +92,53 @@ final class AiProgressStepsTests: XCTestCase {
             2
         )
     }
+
+    func testWeekPlanGenerateHasStagedStepsAndTitle() {
+        let steps = AiProgressSteps.steps(for: .weekPlanGenerate)
+        XCTAssertEqual(steps.map(\.label), [
+            "Reading your plan",
+            "Matching wardrobe pieces",
+            "Building outfits",
+        ])
+        XCTAssertEqual(AiProgressSteps.title(for: .weekPlanGenerate), "Planning your week")
+        XCTAssertEqual(AiProgressSteps.estimatedTotalSeconds(for: .weekPlanGenerate), 24)
+    }
+
+    func testWeekPlanRegenerateSharesStepsWithDistinctTitle() {
+        let generateSteps = AiProgressSteps.steps(for: .weekPlanGenerate)
+        let regenerateSteps = AiProgressSteps.steps(for: .weekPlanRegenerate)
+        XCTAssertEqual(generateSteps.map(\.label), regenerateSteps.map(\.label))
+        XCTAssertEqual(generateSteps.map(\.durationMs), regenerateSteps.map(\.durationMs))
+        XCTAssertEqual(AiProgressSteps.title(for: .weekPlanRegenerate), "Planning this day’s outfit")
+    }
+
+    func testWeekPlanSyncHasShortDuration() {
+        let steps = AiProgressSteps.steps(for: .weekPlanSync)
+        XCTAssertGreaterThanOrEqual(steps.count, 1)
+        XCTAssertLessThanOrEqual(steps.count, 2)
+        let total = AiProgressSteps.estimatedTotalSeconds(for: .weekPlanSync)
+        XCTAssertGreaterThanOrEqual(total, 3)
+        XCTAssertLessThanOrEqual(total, 6)
+        XCTAssertEqual(AiProgressSteps.title(for: .weekPlanSync), "Updating your week")
+    }
+
+    func testWeekPlanGenerateStepIndexFromMessage() {
+        let steps = AiProgressSteps.steps(for: .weekPlanGenerate)
+        XCTAssertEqual(
+            AiProgressSteps.stepIndex(for: "Preparing this week’s outfits…", steps: steps),
+            0
+        )
+        XCTAssertEqual(
+            AiProgressSteps.stepIndex(for: "Reading your plan", steps: steps),
+            0
+        )
+        XCTAssertEqual(
+            AiProgressSteps.stepIndex(for: "Matching wardrobe pieces", steps: steps),
+            1
+        )
+        XCTAssertEqual(
+            AiProgressSteps.stepIndex(for: "Building outfits", steps: steps),
+            2
+        )
+    }
 }

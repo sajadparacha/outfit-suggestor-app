@@ -53,5 +53,6 @@ Behavior and copy must match the active spec and iOS implementation. Sync contra
 - Unit: `*.test.tsx` / `*.test.ts` colocated or under `src/`
 - Integration: `*.integration.test.tsx`; use `renderApp()` from `src/test/renderWithRouter.tsx`
 - MSW: update `src/test/msw/handlers.ts` when API changes
-- Run: `npm test -- --watchAll=false` before returning
+- Run **ONLY** the spec-listed test file(s) before returning, e.g. `npm test -- --watchAll=false src/path/to/file.test.ts`
+- Fix failures until green; do **not** run the full Jest suite before returning
 - Assert new behavior from spec — not smoke-only tests

@@ -80,5 +80,7 @@ Use `@Environment(\.horizontalSizeClass)` or `.adaptiveContent(maxWidth:)` — *
 
 - Unit/Integration: `ios-client/OutfitSuggestorTests/`
 - UITest (critical E2E only): `ios-client/OutfitSuggestorUITests/`
-- Run build + new test classes before returning
+- Build if needed, then run **ONLY** the spec-listed class:
+  `xcodebuild test -scheme OutfitSuggestor -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:OutfitSuggestorTests/<TestClass>`
+- Fix failures until green; do **not** run `OutfitSuggestorUITests` or the full `OutfitSuggestorTests` target unless the spec names that class
 - Assert new behavior from spec — build-only is not sufficient when logic changed

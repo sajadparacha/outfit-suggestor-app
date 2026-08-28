@@ -43,13 +43,13 @@ python3 .cursor/scripts/estimate-workflow-cost.py start \
 
 5. Only then continue to orchestrator step 1 (Confirm scope) below.
 
-At workflow completion (after test report or if user declined full suites), **always** report actual cost:
+At workflow completion (after targeted report + launching `./run_all_tests`), **always** report actual cost:
 
 ```bash
 python3 .cursor/scripts/estimate-workflow-cost.py end
 ```
 
-Include the `end` output verbatim in the final summary (Test Execution Report **Cost** section).
+Include the `end` output verbatim in the final summary (Targeted Test Report **Cost** section).
 
 If the estimate script fails (no token, offline), show a manual range from `.cursor/workflow-cost-baselines.json` and still ask before proceeding.
 
@@ -90,7 +90,8 @@ If API, validation, or shared client contract changes are needed, orchestrator u
 **Backend tests are mandatory** when orchestrator changes `backend/`:
 
 - Add/update tests in `backend/tests/`
-- Run `pytest` for touched modules before spawning UI agents
+- Run **targeted** `pytest` for touched modules before spawning UI agents
+- Do **not** run full `pytest -q` as an end gate in this chat
 
 Skip backend step for pure visual/layout changes with no behavior change.
 
@@ -105,7 +106,7 @@ In **one message**, spawn **exactly two** Task subagents (`subagent_type: genera
 
 Each prompt must include: spec path, branch name, allowed/forbidden dirs, `IOS_WEB_FEATURE_PARITY.md`, platform rule paths, **mandatory test instructions** (see skill), and **About/Guide update** when the spec marks it needed.
 
-Each agent **must** add/update tests and run them before returning. No feature is done without passing tests.
+Each agent **must** add/update tests and run the **spec-listed** related tests until green before returning. No feature is done without passing targeted tests.
 
 **Failure mode:** If only one subagent was spawned, the orchestrator edited platform UI directly, or either agent skipped tests — stop and correct before reporting done.
 
@@ -116,22 +117,27 @@ After both agents complete:
 1. Compare implementation vs spec (behavior, copy, API usage)
 2. Verify **About** and **Guide** were updated on both platforms when the spec required it
 3. Update `IOS_WEB_FEATURE_PARITY.md` if feature parity changed
-4. **Ask user to confirm** before running full test suites (web + iOS always; backend if changed). Do not auto-run — full suites take several minutes. See skill for the confirmation prompt.
+4. Publish the **Targeted Test Report** from agent-returned results only (see skill / `.cursor/specs/_test-report-template.md`)
+5. Open a **new terminal** (repo root) and start:
 
-5. **Run full test suites** (only after user confirms):
+```bash
+./run_all_tests
+```
 
-| Layer | Command | When |
-|-------|---------|------|
-| Backend | `cd backend && . venv/bin/activate && pytest -q` | Orchestrator changed `backend/` this feature |
-| Web | `cd frontend && npm test -- --watchAll=false --passWithNoTests` | **Always** — all unit + integration tests |
-| iOS | See skill: full `OutfitSuggestorTests` + `OutfitSuggestorUITests` via `xcodebuild test` | **Always** — all unit + integration (+ UITest) suites |
+   - Use `block_until_ms: 0` (or equivalent) so it is visible in the Terminal UI
+   - Do **NOT** AwaitShell, poll, or read full stdout/stderr into this chat
+   - Do **NOT** paste suite logs into the Twin UI summary
+   - One-line smoke check that the process started; then leave it running
+   - Do **NOT** ask “ready to run full suites?” — just launch
+   - Do **NOT** also run full `npm test` / full iOS `xcodebuild test` / full `pytest -q` via Shell in this chat
 
-6. Mark spec **Tests** checkboxes and parity checklist
-7. Publish the **Test Execution Report** (required — use template in skill)
-8. Run `python3 .cursor/scripts/estimate-workflow-cost.py end` and add **Workflow actual cost** to the report
-9. Report parity gaps, missing About/Guide updates, and missing new-behavior tests
+6. Mark spec **Tests** checkboxes and parity checklist (targeted)
+7. Run `python3 .cursor/scripts/estimate-workflow-cost.py end` and add **Workflow actual cost** to the report
+8. Final message: targeted results; full suite running in new terminal; implementation complete on spec + targeted tests (user watches full matrix in the terminal)
 
-**Do not report "done"** if any full suite fails, or if new behavior has no tests added. If the user declined the full-suite run, report implementation status but note verification is pending.
+**Exception:** If the user explicitly says “run full suites in this chat” / “wait for `./run_all_tests` and report”, then wait and summarize — quote only the summary footer, not the entire log.
+
+**Do not report "done"** if new behavior has no tests added, or if targeted agent tests failed. Full-suite pass/fail is observed in the terminal, not as an in-chat gate.
 
 ## 6. Commits
 

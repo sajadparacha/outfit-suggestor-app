@@ -157,9 +157,30 @@ From project root:
 
 ---
 
-## Remote tests (Railway API)
+## Production gate (publish on web — Option C)
 
-Run tests against your deployed backend at Railway.
+Full matrix against live deploy (same categories as `./run_all_tests`):
+
+```bash
+cp .env.production.test.example .env.production.test
+# Edit TEST_USERNAME / TEST_PASSWORD
+
+./run_production_tests
+```
+
+| Category | Behavior |
+|----------|----------|
+| Web | Jest with `REACT_APP_API_URL` from `frontend/.env.production` |
+| Backend | `backend/tests_remote` vs `API_BASE_URL` |
+| iOS | Release configuration + `API_BASE_URL` env (live API) |
+
+Used as the second gate in **publish on web** after shipping the current branch.
+
+---
+
+## Remote tests (Railway API only)
+
+For backend-only checks against Railway (subset of production gate):
 
 ### Run all remote tests
 ```bash
@@ -190,7 +211,8 @@ pytest backend/tests_remote/test_smoke.py -v
 
 | To run… | Command |
 |---------|---------|
-| **All local tests** | `./run_tests.sh` |
+| **All local tests** | `./run_all_tests` or `./run_tests.sh` |
+| **Production gate (full matrix)** | `./run_production_tests` |
 | **Backend unit only** | `cd backend && pytest tests/ -v -k "not integration"` |
 | **Backend integration only** | `cd backend && pytest tests/test_integration_*.py tests/test_outfit_wardrobe_integration.py -v` |
 | **Frontend unit only** | `cd frontend && npm test -- --watchAll=false --testPathIgnorePattern="integration"` |

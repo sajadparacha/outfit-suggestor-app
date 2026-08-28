@@ -9,7 +9,7 @@
       "calls_low": 40,
       "calls_typical": 80,
       "calls_high": 130,
-      "notes": "Orchestrator + 2 subagents + spec; full test gate if you confirm at end"
+      "notes": "Orchestrator + 2 subagents + spec; agents run targeted tests; full matrix via ./run_all_tests in a new terminal (orchestrator does not ingest suite logs)"
     },
     "cost-twin-ui": {
       "label": "Cost Twin UI (abbreviated)",
@@ -19,17 +19,17 @@
       "calls_low": 15,
       "calls_typical": 35,
       "calls_high": 50,
-      "notes": "Narrow file scope; targeted tests only unless you ask for full suites"
+      "notes": "Narrow file scope; one test file per platform; same end gate as Twin UI — ./run_all_tests in a new terminal without ingesting logs"
     },
     "publish-on-web": {
       "label": "Publish on web",
-      "usd_low": 3,
-      "usd_typical": 7,
-      "usd_high": 15,
-      "calls_low": 15,
-      "calls_typical": 30,
-      "calls_high": 50,
-      "notes": "User runs tests in terminal; agent commit/push/deploy only; excludes Railway/hosting fees"
+      "usd_low": 5,
+      "usd_typical": 12,
+      "usd_high": 28,
+      "calls_low": 20,
+      "calls_typical": 45,
+      "calls_high": 90,
+      "notes": "Agent launches local + production gates in new terminals (auto-read); ship branch; optional merge to main; up to 3 full retries with redeploy; excludes Railway/hosting fees"
     }
   },
   "prompt_multipliers": {

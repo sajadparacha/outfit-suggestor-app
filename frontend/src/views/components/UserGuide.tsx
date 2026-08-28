@@ -335,6 +335,11 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               'Change or Add on a week day opens Wardrobe to pick an item for that slot, then returns to that day.',
             ]}
           />
+          <p>
+            While Generate outfits, Regenerate this day, Insights AI runs, and other server calls run, a
+            dimmed progress panel blocks the app until the operation finishes—you cannot use other tabs
+            until it completes (Cancel appears only when that action is available).
+          </p>
           <TipBox>
             Use the <span className="text-white font-medium">Today</span> section for today’s occasion and outfit
             summary. Add items to your wardrobe first so Generate outfits can fill looks without calling open-ended AI.

@@ -137,17 +137,12 @@ struct MainFlowView: View {
             }
 
             if viewModel.showsAiProgressPanel, let operationType = viewModel.aiOperationType {
-                VStack {
-                    Spacer()
-                    AiProgressPanelView(
-                        operationType: operationType,
-                        message: viewModel.loadingMessage,
-                        onCancel: { viewModel.cancelOperation() }
-                    )
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, showsCompactResultLayout ? 88 : 16)
-                }
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+                AiProgressPanelView(
+                    operationType: operationType,
+                    message: viewModel.loadingMessage,
+                    onCancel: { viewModel.cancelOperation() }
+                )
+                .transition(.opacity)
             }
 
             if let transientMessage {

@@ -1,5 +1,6 @@
 import {
   AI_PROGRESS_STEPS,
+  AI_PROGRESS_TITLES,
   formatDuration,
   getEstimatedDurationMs,
   resolveStepFromMessage,
@@ -65,6 +66,47 @@ describe('aiProgressSteps', () => {
       expect(resolveStepFromMessage('Loading your saved looks…', steps)).toBe(0);
       expect(resolveStepFromMessage('Finding outfits for this item…', steps)).toBe(1);
       expect(resolveStepFromMessage('Preparing suggestions…', steps)).toBe(2);
+    });
+  });
+
+  describe('week-plan-generate', () => {
+    const steps = AI_PROGRESS_STEPS['week-plan-generate'];
+
+    it('has the three labels and title Planning your week; estimated duration ≈ 24s', () => {
+      expect(steps.map((s) => s.label)).toEqual([
+        'Reading your plan',
+        'Matching wardrobe pieces',
+        'Building outfits',
+      ]);
+      expect(AI_PROGRESS_TITLES['week-plan-generate']).toBe('Planning your week');
+      expect(getEstimatedDurationMs('week-plan-generate') / 1000).toBe(24);
+    });
+
+    it('resolves step index from the generate footer and step labels', () => {
+      expect(resolveStepFromMessage("Preparing this week's outfits…", steps)).toBe(0);
+      expect(resolveStepFromMessage('Reading your plan', steps)).toBe(0);
+      expect(resolveStepFromMessage('Matching wardrobe pieces', steps)).toBe(1);
+      expect(resolveStepFromMessage('Building outfits', steps)).toBe(2);
+    });
+  });
+
+  describe('week-plan-regenerate', () => {
+    it('shares generate steps and uses title Planning this day’s outfit', () => {
+      expect(AI_PROGRESS_STEPS['week-plan-regenerate']).toBe(AI_PROGRESS_STEPS['week-plan-generate']);
+      expect(AI_PROGRESS_TITLES['week-plan-regenerate']).toBe("Planning this day's outfit");
+    });
+  });
+
+  describe('week-plan-sync', () => {
+    const steps = AI_PROGRESS_STEPS['week-plan-sync'];
+
+    it('has 1–2 steps totaling 3–6s and title Updating your week', () => {
+      expect(steps.length).toBeGreaterThanOrEqual(1);
+      expect(steps.length).toBeLessThanOrEqual(2);
+      const totalSeconds = getEstimatedDurationMs('week-plan-sync') / 1000;
+      expect(totalSeconds).toBeGreaterThanOrEqual(3);
+      expect(totalSeconds).toBeLessThanOrEqual(6);
+      expect(AI_PROGRESS_TITLES['week-plan-sync']).toBe('Updating your week');
     });
   });
 });

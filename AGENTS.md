@@ -1,6 +1,6 @@
 # Agent workflow: Parallel Web + iOS UI/UX
 
-One instruction → spec → **two parallel agents** (web + iOS) → **parity + test gate**. On the **current branch**.
+One instruction → spec → **two parallel agents** (web + iOS) → **parity + targeted tests** → **new terminal `./run_all_tests`**. On the **current branch**.
 
 ## Trigger phrase
 
@@ -10,7 +10,7 @@ Twin UI:
 [your instruction]
 ```
 
-**Small cross-platform task (lower token use):** start with `Cost Twin UI:` instead — still spawns web + iOS agents, but narrow file scope, short spec, targeted tests only (no full-suite gate unless you ask). See `.cursor/rules/cost-conscious-agent.mdc`.
+**Small cross-platform task (lower token use):** start with `Cost Twin UI:` instead — still spawns web + iOS agents, but narrow file scope, short spec, one test file per platform. See `.cursor/rules/cost-conscious-agent.mdc`.
 
 **Before any workflow starts**, the agent runs `.cursor/scripts/estimate-workflow-cost.py` and waits for your **yes/proceed** (Twin UI, Cost Twin UI, and publish on web). After approval it runs `… start`; when the workflow finishes it runs `… end` and reports **actual** Cursor spend vs the estimate.
 
@@ -19,14 +19,13 @@ Twin UI:
 ## What happens
 
 1. Orchestrator writes `.cursor/specs/<feature-slug>.md` (includes **Tests required** section)
-2. Orchestrator handles `backend/` + **pytest** (if API/logic changes)
+2. Orchestrator handles `backend/` + **targeted pytest** (if API/logic changes)
 3. **Two subagents** run in parallel — web (`frontend/`) and iOS (`ios-client/`)
-4. Each agent **adds tests** for new behavior before returning; updates **About** and **Guide** when the spec says user-visible docs need it
-5. Orchestrator **asks for confirmation** before running full web + iOS test suites (and backend if changed)
-6. After user confirms: run **full web + iOS test suites** (all unit + integration; iOS includes UITests)
-7. Orchestrator runs full `pytest` if backend changed this feature
-8. Publish **Test Execution Report** (suites passed/failed, durations, failure details)
-9. Report done only when all full suites pass (or note verification pending if user declined)
+4. Each agent **adds tests** for new behavior and runs the **spec-listed** related tests until green; updates **About** and **Guide** when the spec says user-visible docs need it
+5. Orchestrator parity review (About/Guide / `IOS_WEB_FEATURE_PARITY.md` when needed)
+6. Publish **Targeted Test Report** (agent-returned results only)
+7. Open a **new terminal** and start `./run_all_tests` (do **not** ingest suite logs into chat)
+8. Report done when spec + targeted tests pass; full-suite pass/fail is in that terminal
 
 The orchestrator **does not** implement web or iOS UI itself.
 
@@ -34,14 +33,12 @@ The orchestrator **does not** implement web or iOS UI itself.
 
 | Phase | Owner | What | Command |
 |-------|-------|------|---------|
-| During work | Orchestrator | `backend/tests/` when API changes | `pytest tests/<file> -q` |
-| During work | Web agent | New unit + integration tests for feature | (orchestrator runs full suite at end) |
-| During work | iOS agent | New unit/integration tests for feature | (orchestrator runs full suite at end) |
-| **End of Twin UI** | **Orchestrator** | **All web tests** (after user confirms) | `npm test -- --watchAll=false` |
-| **End of Twin UI** | **Orchestrator** | **All iOS tests** (after user confirms) | `xcodebuild test … OutfitSuggestorTests + OutfitSuggestorUITests` |
-| End of Twin UI | Orchestrator | Full backend (if changed, after user confirms) | `pytest -q` |
+| During work | Orchestrator | `backend/tests/` when API changes | `pytest tests/<file> -q` (targeted) |
+| During work | Web agent | Spec-listed unit + integration tests | `npm test -- --watchAll=false <file>` |
+| During work | iOS agent | Spec-listed unit/integration class | `xcodebuild test … -only-testing:OutfitSuggestorTests/<Class>` |
+| **End of Twin UI** | **Orchestrator** | Launch full matrix in new terminal | `./run_all_tests` (no log ingest) |
 
-A Twin UI feature is **not done** if the **full** web or iOS suite fails, new behavior has no tests, or the **Test Execution Report** is missing.
+A Twin UI feature is **not done** if new behavior has no tests, or targeted agent tests fail, or the **Targeted Test Report** is missing. Full-suite verification is watched in the terminal.
 
 Report template: `.cursor/specs/_test-report-template.md`
 
@@ -83,9 +80,9 @@ Update About and Guide if user-facing behavior or copy changes.
 | `.cursor/rules/web-ui-ux.mdc` | Web scope (`frontend/**`) |
 | `.cursor/rules/ios-ui-ux.mdc` | iOS scope (`ios-client/**`) |
 | `.cursor/skills/parallel-ui-ux/SKILL.md` | Workflow, prompts, test requirements |
-| `.cursor/skills/publish-on-web/SKILL.md` | Remind user to test in terminal → commit → push → GitHub Pages + Railway (current branch; **no merge to main**) |
+| `.cursor/skills/publish-on-web/SKILL.md` | Local + production test gates (agent terminals, auto-read) → ship branch → optional merge to `main` (max 3 retries, always redeploy) |
 | `.cursor/specs/_template.md` | Spec + Tests (required) template |
-| `.cursor/specs/_test-report-template.md` | End-of-run Test Execution Report |
+| `.cursor/specs/_test-report-template.md` | End-of-run Targeted Test Report |
 
 ## Commits
 

@@ -53,6 +53,7 @@ import { buildInsightsAnalyzePayload, loadInsightsLifestyle } from './utils/insi
 import { MICRO_HELP } from './utils/microHelpCopy';
 import { dismissFirstRunCoach, isFirstRunCoachDismissed } from './utils/firstRunCoach';
 import { MAIN_FLOW_UX_COPY } from './utils/mainFlowUxCopy';
+import { AiOperationType } from './utils/aiProgressSteps';
 
 function App() {
   const navigate = useNavigate();
@@ -214,6 +215,7 @@ function App() {
     userId: user?.id ?? null,
     isAuthenticated: isAuthenticated,
   });
+  const [weekPlanOpKind, setWeekPlanOpKind] = useState<'generate' | 'regenerate' | null>(null);
 
   const [addingToWardrobe, setAddingToWardrobe] = useState(false);
   const wardrobeAnalysisAbortRef = useRef<AbortController | null>(null);
@@ -550,13 +552,38 @@ function App() {
   }
 
   // Allow anonymous access - show login/register as optional modal, not required
-  const appBusy = loading || wardrobeGapLoading;
+  const suggestOrInsightsBusy = loading || wardrobeGapLoading;
+  const weekPlanBusy =
+    weekPlan.generating ||
+    weekPlan.saving ||
+    weekPlan.loading ||
+    weekPlan.restoring ||
+    weekPlan.presetBusy;
+  const appBusy = suggestOrInsightsBusy || weekPlanBusy;
+  const weekPlanOperationType: AiOperationType = weekPlan.generating
+    ? weekPlanOpKind === 'regenerate'
+      ? 'week-plan-regenerate'
+      : 'week-plan-generate'
+    : 'week-plan-sync';
+  const weekPlanBusyMessage = weekPlan.generating
+    ? weekPlanOpKind === 'regenerate'
+      ? "Preparing this day's outfit…"
+      : "Preparing this week's outfits…"
+    : weekPlan.saving
+      ? 'Saving…'
+      : weekPlan.loading || weekPlan.restoring
+        ? 'Loading…'
+        : 'Saving…';
   const appBusyMessage = loading
     ? (loadingMessage || 'Generating AI suggestion...')
-    : wardrobeAnalysisLoadingMessage;
-  const appBusyOperationType = wardrobeGapLoading
-    ? 'wardrobe-analysis' as const
-    : (activeOperation ?? 'outfit-suggestion');
+    : wardrobeGapLoading
+      ? wardrobeAnalysisLoadingMessage
+      : weekPlanBusyMessage;
+  const appBusyOperationType: AiOperationType = suggestOrInsightsBusy
+    ? wardrobeGapLoading
+      ? 'wardrobe-analysis'
+      : (activeOperation ?? 'outfit-suggestion')
+    : weekPlanOperationType;
 
   return (
     <div 
@@ -888,9 +915,11 @@ function App() {
                   weekPlan.savePlan().catch(() => undefined);
                 }}
                 onGenerateWeek={() => {
+                  setWeekPlanOpKind('generate');
                   weekPlan.generateWeek().catch(() => undefined);
                 }}
                 onRegenerateDay={(day) => {
+                  setWeekPlanOpKind('regenerate');
                   weekPlan.regenerateDay(day).catch(() => undefined);
                 }}
                 onClearPlan={() => {
@@ -1331,12 +1360,12 @@ function App() {
         }}
       />
 
-      {/* AI progress panel — keeps the page visible while blocking duplicate submissions via button disabled states */}
+      {/* AI progress panel — true modal: dimmed backdrop blocks the app until the operation finishes */}
       <LoadingOverlay
         isLoading={appBusy}
         operationType={appBusyOperationType}
         message={appBusyMessage}
-        onCancel={handleCancelAiOperation}
+        onCancel={suggestOrInsightsBusy ? handleCancelAiOperation : undefined}
       />
 
       {/* Wardrobe Analysis Mode Picker */}

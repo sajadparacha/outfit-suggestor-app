@@ -15,6 +15,9 @@ enum AiOperationType: Equatable {
     case wardrobeAnalysis
     case randomHistory
     case pastSuggestions
+    case weekPlanGenerate
+    case weekPlanRegenerate
+    case weekPlanSync
 }
 
 struct AiProgressStep: Identifiable, Equatable {
@@ -65,6 +68,17 @@ enum AiProgressSteps {
                 AiProgressStep(id: "filter", label: "Finding outfits for this item", durationMs: 2000),
                 AiProgressStep(id: "prepare", label: "Preparing suggestions", durationMs: 2000),
             ]
+        case .weekPlanGenerate, .weekPlanRegenerate:
+            return [
+                AiProgressStep(id: "read", label: "Reading your plan", durationMs: 4000),
+                AiProgressStep(id: "match", label: "Matching wardrobe pieces", durationMs: 8000),
+                AiProgressStep(id: "build", label: "Building outfits", durationMs: 12000),
+            ]
+        case .weekPlanSync:
+            return [
+                AiProgressStep(id: "save", label: "Saving your changes", durationMs: 2500),
+                AiProgressStep(id: "update", label: "Updating your week", durationMs: 2500),
+            ]
         }
     }
 
@@ -80,6 +94,12 @@ enum AiProgressSteps {
             return "Picking from your history"
         case .pastSuggestions:
             return "Loading past suggestions"
+        case .weekPlanGenerate:
+            return "Planning your week"
+        case .weekPlanRegenerate:
+            return "Planning this day’s outfit"
+        case .weekPlanSync:
+            return "Updating your week"
         }
     }
 
@@ -98,6 +118,21 @@ enum AiProgressSteps {
     static func stepIndex(for message: String?, steps: [AiProgressStep]) -> Int {
         guard let message else { return 0 }
         let lower = message.lowercased()
+        if steps.first?.id == "read" {
+            if lower.contains("match") || lower.contains("wardrobe piece") {
+                return min(1, steps.count - 1)
+            }
+            if lower.contains("build") {
+                return min(2, steps.count - 1)
+            }
+            return 0
+        }
+        if steps.first?.id == "save" {
+            if lower.contains("updat") {
+                return min(1, steps.count - 1)
+            }
+            return 0
+        }
         if steps.first?.id == "fetch" {
             if lower.contains("saved look") || lower.contains("loading your saved") || lower.contains("history") {
                 return 0

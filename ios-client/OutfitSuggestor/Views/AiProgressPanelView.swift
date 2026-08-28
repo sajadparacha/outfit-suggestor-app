@@ -2,15 +2,28 @@
 //  AiProgressPanelView.swift
 //  OutfitSuggestor
 //
-//  Non-blocking staged progress panel for long AI operations.
+//  Blocking modal staged progress panel for long AI operations.
+//  Full-screen dimmed backdrop blocks taps underneath; does not dismiss on backdrop tap.
 //
 
 import SwiftUI
 
+/// Layout/behavior contract for the AI progress modal (unit-testable).
+enum AiProgressPanelModal {
+    static let blocksInteractionWhileVisible = true
+    static let dismissesOnBackdropTap = false
+    static let modalAccessibilityId = "ai.progressModal"
+    static let backdropAccessibilityId = "ai.progressBackdrop"
+    static let panelAccessibilityId = "ai.progressPanel"
+    static let backdropOpacity: Double = 0.5
+    /// Counteracts typical host `.padding(.horizontal/.bottom, 16)` so the dimmer stays full-bleed.
+    static let hostPaddingCompensation: CGFloat = 16
+}
+
 struct AiProgressPanelView: View {
     let operationType: AiOperationType
     let message: String?
-    let onCancel: () -> Void
+    var onCancel: (() -> Void)? = nil
 
     @StateObject private var tracker = StagedAiProgressTracker()
 
@@ -19,6 +32,41 @@ struct AiProgressPanelView: View {
     }
 
     var body: some View {
+        ZStack(alignment: .bottom) {
+            Color.black.opacity(AiProgressPanelModal.backdropOpacity)
+                .ignoresSafeArea()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
+                .allowsHitTesting(true)
+                .accessibilityHidden(true)
+                .accessibilityIdentifier(AiProgressPanelModal.backdropAccessibilityId)
+
+            progressCard
+                .padding(.horizontal, 16)
+                .padding(.bottom, 16)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Escape host padding so the backdrop covers the full screen while the card stays inset.
+        .padding(.horizontal, -AiProgressPanelModal.hostPaddingCompensation)
+        .padding(.bottom, -AiProgressPanelModal.hostPaddingCompensation)
+        .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(.isModal)
+        .accessibilityIdentifier(AiProgressPanelModal.modalAccessibilityId)
+        .onAppear {
+            tracker.start(operation: operationType, message: message)
+        }
+        .onDisappear {
+            tracker.stop()
+        }
+        .onChange(of: message) { newMessage in
+            tracker.updateMessage(newMessage)
+        }
+        .onChange(of: operationType) { newType in
+            tracker.start(operation: newType, message: message)
+        }
+    }
+
+    private var progressCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
@@ -31,18 +79,20 @@ struct AiProgressPanelView: View {
                         .foregroundColor(AppTheme.textSecondary)
                 }
                 Spacer(minLength: 8)
-                Button("Cancel", action: onCancel)
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(AppTheme.textPrimary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color.white.opacity(0.08))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(AppTheme.border, lineWidth: 1)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .accessibilityIdentifier("ai.progressCancelButton")
+                if let onCancel {
+                    Button("Cancel", action: onCancel)
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(AppTheme.textPrimary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.white.opacity(0.08))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .stroke(AppTheme.border, lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .accessibilityIdentifier("ai.progressCancelButton")
+                }
             }
 
             GeometryReader { geometry in
@@ -81,7 +131,9 @@ struct AiProgressPanelView: View {
             }
 
             if tracker.showSlowHint {
-                Text("Still working — complex outfits can take a bit longer. You can cancel anytime.")
+                Text(onCancel == nil
+                    ? "Still working — complex outfits can take a bit longer."
+                    : "Still working — complex outfits can take a bit longer. You can cancel anytime.")
                     .font(.caption)
                     .foregroundColor(Color(red: 1, green: 0.92, blue: 0.75))
                     .padding(10)
@@ -103,19 +155,7 @@ struct AiProgressPanelView: View {
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .shadow(color: Color.black.opacity(0.45), radius: 24, y: 10)
         .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("ai.progressPanel")
-        .onAppear {
-            tracker.start(operation: operationType, message: message)
-        }
-        .onDisappear {
-            tracker.stop()
-        }
-        .onChange(of: message) { newMessage in
-            tracker.updateMessage(newMessage)
-        }
-        .onChange(of: operationType) { newType in
-            tracker.start(operation: newType, message: message)
-        }
+        .accessibilityIdentifier(AiProgressPanelModal.panelAccessibilityId)
     }
 
     @ViewBuilder

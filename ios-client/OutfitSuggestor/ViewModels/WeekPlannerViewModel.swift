@@ -68,6 +68,8 @@ final class WeekPlannerViewModel: ObservableObject {
     /// Fingerprint of last persisted / loaded editable plan state.
     private var baselineFingerprint: String = ""
     private var toastClearTask: Task<Void, Never>?
+    /// True when `generate(dayOfWeek:)` was called with a day (regenerate), not the full week.
+    private var activeGenerateIsDay = false
 
     init(
         api: WeekPlanAPIClient = APIService.shared,
@@ -91,6 +93,37 @@ final class WeekPlannerViewModel: ObservableObject {
 
     var isBusy: Bool {
         isGenerating || isSaving || isRestoring || isLoading
+    }
+
+    /// Server work that shows the staged AI progress panel (not local day/pref edits).
+    var showsAiProgressPanel: Bool {
+        isGenerating || isSaving || isLoading || isRestoring || isPresetBusy
+    }
+
+    /// Generate vs regenerate vs sync, derived from the method that started the request.
+    var aiProgressOperation: AiOperationType? {
+        if isGenerating {
+            return activeGenerateIsDay ? .weekPlanRegenerate : .weekPlanGenerate
+        }
+        if isSaving || isLoading || isRestoring || isPresetBusy {
+            return .weekPlanSync
+        }
+        return nil
+    }
+
+    var aiProgressMessage: String? {
+        switch aiProgressOperation {
+        case .weekPlanGenerate:
+            return "Preparing this week’s outfits…"
+        case .weekPlanRegenerate:
+            return "Preparing this day’s outfit…"
+        case .weekPlanSync:
+            if isSaving { return "Saving…" }
+            if isLoading || isRestoring { return WeekPlanCopy.loading }
+            return "Updating your week…"
+        default:
+            return nil
+        }
     }
 
     var isDirty: Bool {
@@ -706,10 +739,14 @@ final class WeekPlannerViewModel: ObservableObject {
     }
 
     private func generate(dayOfWeek: Int?) async {
+        activeGenerateIsDay = dayOfWeek != nil
         isGenerating = true
         errorMessage = nil
         infoMessage = nil
-        defer { isGenerating = false }
+        defer {
+            isGenerating = false
+            activeGenerateIsDay = false
+        }
 
         // Persist current toggles/occasions before generate (API requires a saved plan).
         do {

@@ -157,17 +157,21 @@ Fill before spawning agents. Each platform needs tests that assert **new behavio
 | Web | tests colocated with changed modules |
 | iOS | `OutfitSuggestorTests/<NewClass>Tests.swift` |
 
-### End of Twin UI — confirm, then full suites + report (orchestrator)
+### End of Twin UI — targeted report + new terminal `./run_all_tests` (orchestrator)
 
-Orchestrator **asks user to confirm** before running these (full suites take several minutes):
+Same for full Twin UI and Cost Twin UI:
 
-| Layer | Command |
-|-------|---------|
-| Backend (if changed) | `cd backend && pytest -q` |
-| Web (always) | `cd frontend && npm test -- --watchAll=false --passWithNoTests` |
-| iOS (always) | `xcodebuild test -scheme OutfitSuggestor -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:OutfitSuggestorTests -only-testing:OutfitSuggestorUITests` |
+1. Publish **Targeted Test Report** from agent results (spec-listed files/classes only).
+2. Open a **new terminal** at repo root and start `./run_all_tests` — do **not** ask first; do **not** ingest suite logs into chat.
+3. Implementation is complete when spec + targeted tests pass; full-suite pass/fail is watched in that terminal.
 
-After user confirms, publish filled report using `.cursor/specs/_test-report-template.md`.
+| Layer | During work | End |
+|-------|-------------|-----|
+| Backend (if changed) | `pytest tests/test_<feature>.py -q` | Covered by `./run_all_tests` in new terminal |
+| Web | Spec-listed file(s) only | Covered by `./run_all_tests` in new terminal |
+| iOS | Spec-listed class only | Covered by `./run_all_tests` in new terminal |
+
+After agents return, publish filled report using `.cursor/specs/_test-report-template.md`.
 
 ---
 
@@ -180,9 +184,10 @@ After user confirms, publish filled report using `.cursor/specs/_test-report-tem
 - [ ] API client methods match on both platforms
 - [ ] `IOS_WEB_FEATURE_PARITY.md` updated (if new capability)
 - [ ] New-behavior tests added (web + iOS)
-- [ ] Full web suite pass (`npm test -- --watchAll=false`) — orchestrator end gate
-- [ ] Full iOS suite pass (`xcodebuild test` OutfitSuggestorTests + UITests) — orchestrator end gate
-- [ ] Full backend pytest pass (if backend changed)
+- [ ] Targeted web tests pass (spec-listed file(s))
+- [ ] Targeted iOS tests pass (spec-listed class)
+- [ ] Targeted backend pytest pass (if backend changed)
+- [ ] Full suite launched: `./run_all_tests` in new terminal (user watches)
 
 ---
 

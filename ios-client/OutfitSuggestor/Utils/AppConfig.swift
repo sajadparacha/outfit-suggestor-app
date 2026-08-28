@@ -25,6 +25,12 @@ enum AppConfig {
             return override
         }
 
+        if let envValue = ProcessInfo.processInfo.environment["API_BASE_URL"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           !envValue.isEmpty {
+            return envValue
+        }
+
         if let plistValue = Bundle.main.object(forInfoDictionaryKey: "API_BASE_URL") as? String {
             let trimmed = plistValue.trimmingCharacters(in: .whitespacesAndNewlines)
             if !trimmed.isEmpty {

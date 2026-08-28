@@ -14,6 +14,9 @@ IOS_SIM="${IOS_SIM:-iPhone 17}"
 RUN_WEB=1
 RUN_BACKEND=1
 RUN_IOS=1
+PRODUCTION_MODE=0
+PRODUCTION_ENV_FILE="${PRODUCTION_ENV_FILE:-$REPO_ROOT/.env.production.test}"
+IOS_XCODE_CONFIGURATION="Debug"
 
 TMP_DIR=""
 OVERALL_EXIT=0
@@ -46,6 +49,10 @@ Options:
   --web-only          Frontend Jest only
   --backend-only      Backend pytest only
   --ios-only          iOS unit + UITests only
+  --production        Production gate: same categories as local, pointed at live API
+                      (web REACT_APP_API_URL from frontend/.env.production;
+                       backend tests_remote; iOS Release + API_BASE_URL env).
+                      Requires .env.production.test (see .env.production.test.example).
   --simulator NAME    iOS simulator (default: iPhone 17; or set IOS_SIM)
   --help              Show this help
 
@@ -71,6 +78,11 @@ while [[ $# -gt 0 ]]; do
     --ios-only)
       RUN_WEB=0
       RUN_BACKEND=0
+      shift
+      ;;
+    --production)
+      PRODUCTION_MODE=1
+      IOS_XCODE_CONFIGURATION="Release"
       shift
       ;;
     --simulator)
@@ -223,30 +235,94 @@ list_failing_tests() {
   esac
 }
 
+load_production_env() {
+  local env_file="$PRODUCTION_ENV_FILE"
+  local production_api_url=""
+
+  if [[ ! -f "$env_file" ]]; then
+    echo "ERROR: Production test credentials file not found: $env_file" >&2
+    echo "Copy .env.production.test.example to .env.production.test and fill in values." >&2
+    return 1
+  fi
+
+  # shellcheck disable=SC1090
+  set -a
+  source "$env_file"
+  set +a
+
+  if [[ -z "${TEST_PASSWORD:-}" && -n "${PRODUCTION_TEST_PASSWORD:-}" ]]; then
+    export TEST_PASSWORD="$PRODUCTION_TEST_PASSWORD"
+  fi
+
+  if [[ -f "$REPO_ROOT/frontend/.env.production" ]]; then
+    production_api_url="$(grep -E '^REACT_APP_API_URL=' "$REPO_ROOT/frontend/.env.production" | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'")"
+  fi
+
+  if [[ -z "${API_BASE_URL:-}" && -n "$production_api_url" ]]; then
+    export API_BASE_URL="$production_api_url"
+  fi
+
+  if [[ -z "${REACT_APP_API_URL:-}" && -n "$production_api_url" ]]; then
+    export REACT_APP_API_URL="$production_api_url"
+  fi
+
+  if [[ -z "${API_BASE_URL:-}" ]]; then
+    echo "ERROR: API_BASE_URL is required for --production (set in $env_file or frontend/.env.production)." >&2
+    return 1
+  fi
+
+  if [[ -z "${TEST_USERNAME:-}" || -z "${TEST_PASSWORD:-}" ]]; then
+    echo "ERROR: TEST_USERNAME and TEST_PASSWORD are required in $env_file for backend remote tests." >&2
+    echo "Set TEST_PASSWORD in .env.production.test or export PRODUCTION_TEST_PASSWORD in your shell." >&2
+    return 1
+  fi
+
+  export API_BASE_URL REACT_APP_API_URL TEST_USERNAME TEST_PASSWORD
+  return 0
+}
+
 kind_for_summary_name() {
   case "$1" in
     "Web (Jest)") echo "jest" ;;
+    "Web (Jest — production env)") echo "jest" ;;
     "Backend (pytest)") echo "pytest" ;;
-    "iOS unit/integration"|"iOS UITests") echo "xcode" ;;
+    "Backend (remote pytest)") echo "pytest" ;;
+    "iOS unit/integration") echo "xcode" ;;
+    "iOS unit/integration (Release)") echo "xcode" ;;
+    "iOS UITests") echo "xcode" ;;
+    "iOS UITests (Release)") echo "xcode" ;;
     *) echo "" ;;
   esac
 }
 
 run_web_tests() {
   local log_file="$1"
-  echo ">>> Web (Jest — unit + integration)"
+  local label="Web (Jest)"
+  if [[ "$PRODUCTION_MODE" -eq 1 ]]; then
+    label="Web (Jest — production env)"
+  fi
+  echo ">>> $label"
   cd "$REPO_ROOT/frontend"
   local exit_code=0
-  run_logged "$log_file" npm test -- --watchAll=false --passWithNoTests || exit_code=$?
+  if [[ "$PRODUCTION_MODE" -eq 1 ]]; then
+    echo "REACT_APP_API_URL=${REACT_APP_API_URL:-<unset>}"
+    run_logged "$log_file" env REACT_APP_API_URL="${REACT_APP_API_URL}" npm test -- --watchAll=false --passWithNoTests || exit_code=$?
+  else
+    run_logged "$log_file" npm test -- --watchAll=false --passWithNoTests || exit_code=$?
+  fi
 
   read -r passed failed total <<<"$(parse_jest_counts "$log_file")"
-  record_summary "Web (Jest)" "$passed" "$failed" "$total" "$(status_from_counts "$exit_code" "$passed" "$failed" "$total")" "$log_file"
+  record_summary "$label" "$passed" "$failed" "$total" "$(status_from_counts "$exit_code" "$passed" "$failed" "$total")" "$log_file"
   echo
 }
 
 run_backend_tests() {
   local log_file="$1"
-  echo ">>> Backend (pytest)"
+  local label="Backend (pytest)"
+  if [[ "$PRODUCTION_MODE" -eq 1 ]]; then
+    label="Backend (remote pytest)"
+  fi
+  echo ">>> $label"
   cd "$REPO_ROOT/backend"
 
   if [[ ! -f venv/bin/activate ]]; then
@@ -259,10 +335,15 @@ run_backend_tests() {
   # shellcheck source=/dev/null
   . venv/bin/activate
   local exit_code=0
-  run_logged "$log_file" pytest -q || exit_code=$?
+  if [[ "$PRODUCTION_MODE" -eq 1 ]]; then
+    echo "API_BASE_URL=$API_BASE_URL"
+    run_logged "$log_file" pytest "$REPO_ROOT/backend/tests_remote" -q || exit_code=$?
+  else
+    run_logged "$log_file" pytest -q || exit_code=$?
+  fi
 
   read -r passed failed total <<<"$(parse_pytest_counts "$log_file")"
-  record_summary "Backend (pytest)" "$passed" "$failed" "$total" "$(status_from_counts "$exit_code" "$passed" "$failed" "$total")" "$log_file"
+  record_summary "$label" "$passed" "$failed" "$total" "$(status_from_counts "$exit_code" "$passed" "$failed" "$total")" "$log_file"
   echo
 }
 
@@ -271,6 +352,13 @@ run_ios_tests() {
   local only_testing="$2"
   local log_file="$3"
 
+  if [[ "$PRODUCTION_MODE" -eq 1 ]]; then
+    case "$target_label" in
+      "iOS unit/integration") target_label="iOS unit/integration (Release)" ;;
+      "iOS UITests") target_label="iOS UITests (Release)" ;;
+    esac
+  fi
+
   echo ">>> iOS ($target_label)"
   cd "$REPO_ROOT/ios-client"
   xcrun simctl boot "$IOS_SIM" >/dev/null 2>&1 || true
@@ -278,10 +366,19 @@ run_ios_tests() {
   defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool false >/dev/null 2>&1 || true
 
   local exit_code=0
-  run_logged "$log_file" xcodebuild test \
-    -scheme OutfitSuggestor \
-    -destination "platform=iOS Simulator,name=${IOS_SIM}" \
-    -only-testing:"$only_testing" || exit_code=$?
+  if [[ "$PRODUCTION_MODE" -eq 1 ]]; then
+    echo "API_BASE_URL=$API_BASE_URL (configuration: $IOS_XCODE_CONFIGURATION)"
+    run_logged "$log_file" env API_BASE_URL="$API_BASE_URL" xcodebuild test \
+      -scheme OutfitSuggestor \
+      -configuration "$IOS_XCODE_CONFIGURATION" \
+      -destination "platform=iOS Simulator,name=${IOS_SIM}" \
+      -only-testing:"$only_testing" || exit_code=$?
+  else
+    run_logged "$log_file" xcodebuild test \
+      -scheme OutfitSuggestor \
+      -destination "platform=iOS Simulator,name=${IOS_SIM}" \
+      -only-testing:"$only_testing" || exit_code=$?
+  fi
 
   read -r passed failed total <<<"$(parse_xcodebuild_counts "$log_file")"
   record_summary "$target_label" "$passed" "$failed" "$total" "$(status_from_counts "$exit_code" "$passed" "$failed" "$total")" "$log_file"
@@ -368,9 +465,21 @@ print_summary_table() {
 
 TMP_DIR="$(mktemp -d)"
 
-echo "=== run_all_tests ==="
+if [[ "$PRODUCTION_MODE" -eq 1 ]]; then
+  echo "=== run_production_tests ==="
+  if ! load_production_env; then
+    exit 1
+  fi
+else
+  echo "=== run_all_tests ==="
+fi
 echo "Repo: $REPO_ROOT"
 echo "Simulator: $IOS_SIM"
+if [[ "$PRODUCTION_MODE" -eq 1 ]]; then
+  echo "Mode: production (live API)"
+  echo "API_BASE_URL: $API_BASE_URL"
+  echo "Frontend URL: ${FRONTEND_URL:-https://closiq.me}"
+fi
 echo
 
 if [[ "$RUN_WEB" -eq 1 ]]; then

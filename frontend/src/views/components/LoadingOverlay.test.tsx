@@ -6,9 +6,28 @@ describe('LoadingOverlay', () => {
   it('renders nothing when not loading', () => {
     const { container } = render(<LoadingOverlay isLoading={false} />);
     expect(container.firstChild).toBeNull();
+    expect(screen.queryByTestId('loading-overlay')).not.toBeInTheDocument();
   });
 
-  it('shows staged progress steps for outfit suggestions', () => {
+  it('shows a full-screen backdrop that blocks interaction when loading', () => {
+    render(
+      <LoadingOverlay
+        isLoading
+        operationType="outfit-suggestion"
+      />
+    );
+
+    const overlay = screen.getByTestId('loading-overlay');
+    expect(overlay).toBeInTheDocument();
+    expect(overlay).toHaveClass('fixed', 'inset-0');
+    expect(overlay).toHaveAttribute('aria-modal', 'true');
+
+    const backdrop = screen.getByTestId('loading-overlay-backdrop');
+    expect(backdrop).toBeInTheDocument();
+    expect(backdrop).toHaveClass('absolute', 'inset-0');
+  });
+
+  it('still renders the bottom progress card while the modal is open', () => {
     render(
       <LoadingOverlay
         isLoading
@@ -23,6 +42,46 @@ describe('LoadingOverlay', () => {
     expect(screen.getByText('Matching colors and style')).toBeInTheDocument();
     expect(screen.getByText('Building outfit recommendation')).toBeInTheDocument();
     expect(screen.getByText(/Usually ~/i)).toBeInTheDocument();
+    expect(screen.getByText('Compressing image...')).toBeInTheDocument();
+  });
+
+  it('does not dismiss when the backdrop is clicked', () => {
+    const onCancel = jest.fn();
+    const { rerender } = render(
+      <LoadingOverlay
+        isLoading
+        operationType="outfit-suggestion"
+        onCancel={onCancel}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('loading-overlay-backdrop'));
+
+    expect(screen.getByTestId('loading-overlay')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByText('Creating your outfit')).toBeInTheDocument();
+    expect(onCancel).not.toHaveBeenCalled();
+
+    // Still visible while isLoading remains true
+    rerender(
+      <LoadingOverlay
+        isLoading
+        operationType="outfit-suggestion"
+        onCancel={onCancel}
+      />
+    );
+    expect(screen.getByTestId('loading-overlay')).toBeInTheDocument();
+  });
+
+  it('removes the overlay when isLoading becomes false', () => {
+    const { rerender } = render(
+      <LoadingOverlay isLoading operationType="outfit-suggestion" />
+    );
+    expect(screen.getByTestId('loading-overlay')).toBeInTheDocument();
+
+    rerender(<LoadingOverlay isLoading={false} operationType="outfit-suggestion" />);
+    expect(screen.queryByTestId('loading-overlay')).not.toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('includes preview step when generating model image', () => {

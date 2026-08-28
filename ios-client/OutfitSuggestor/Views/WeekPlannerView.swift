@@ -236,7 +236,7 @@ struct WeekPlannerView: View {
                 }
                 .padding(.horizontal, isRegularWidth ? 28 : 16)
                 .padding(.top, 16)
-                .padding(.bottom, 24)
+                .padding(.bottom, viewModel.showsAiProgressPanel ? 240 : 24)
                 .adaptiveContent(maxWidth: isRegularWidth ? 1080 : 720)
                 .frame(maxWidth: .infinity)
             }
@@ -247,8 +247,23 @@ struct WeekPlannerView: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
                     .zIndex(1)
             }
+
+            if let operation = viewModel.aiProgressOperation, viewModel.showsAiProgressPanel {
+                VStack {
+                    Spacer()
+                    AiProgressPanelView(
+                        operationType: operation,
+                        message: viewModel.aiProgressMessage
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 16)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .zIndex(2)
+            }
         }
         .animation(.easeInOut(duration: 0.25), value: viewModel.toastMessage)
+        .animation(.easeInOut(duration: 0.25), value: viewModel.showsAiProgressPanel)
     }
 
     private func toastBanner(_ message: String) -> some View {

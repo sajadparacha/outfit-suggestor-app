@@ -21,14 +21,13 @@ All triggers use the **strict** workflow: orchestrator never edits `frontend/**`
 - [ ] 0. Run cost estimate script; user confirms before any work
 - [ ] 1. Confirm branch (`git branch --show-current`)
 - [ ] 2. Create spec with Tests (required) section filled; mark if **About** / **Guide** need updates
-- [ ] 3. Orchestrator: backend/contract + backend pytest (if needed)
+- [ ] 3. Orchestrator: backend/contract + targeted backend pytest (if needed)
 - [ ] 4. Spawn web + iOS Task subagents in ONE message (required)
 - [ ] 5. Parity review vs spec, About/Guide (when required), and IOS_WEB_FEATURE_PARITY.md
-- [ ] 6. **Ask user to confirm** before running full web + iOS test suites
-- [ ] 7. Orchestrator: run FULL web + iOS test suites (only after user confirms)
-- [ ] 8. Publish Test Execution Report (required format below)
-- [ ] 9. Run `estimate-workflow-cost.py end`; include **Workflow actual cost** in report
-- [ ] 10. Mark spec done; summarize for user
+- [ ] 6. Publish Targeted Test Report (agent-returned results only)
+- [ ] 7. Open a **new terminal** and start `./run_all_tests` (do not ingest suite logs)
+- [ ] 8. Run `estimate-workflow-cost.py end`; include **Workflow actual cost** in summary
+- [ ] 9. Mark spec done; summarize for user (implementation complete on targeted tests; full suite in terminal)
 ```
 
 ## Mandatory tests (every Twin UI feature)
@@ -39,15 +38,20 @@ When `backend/` changes:
 
 - Add/update `backend/tests/test_<feature>.py` (or extend existing)
 - Cover happy path, auth/guest edge cases, error responses
-- Run: `cd backend && . venv/bin/activate && pytest tests/<file> -q`
+- Run **targeted only**: `cd backend && . venv/bin/activate && pytest tests/<file> -q`
+- Fix failures before spawning UI agents
+- Do **not** run full `pytest -q` as an end gate in this chat
 
 ### Web agent (required)
 
 - **Unit tests** for utils, controllers, pure components (`*.test.tsx` next to component or under `src/`)
 - **Integration tests** for user flows (`*.integration.test.tsx`, `renderApp()` from `src/test/renderWithRouter.tsx`)
 - Mock API via MSW handlers in `src/test/msw/handlers.ts` when endpoints change
-- Run: `cd frontend && npm test -- --watchAll=false --passWithNoTests`
-- Return: test file paths + pass count (e.g. `35 suites, 183 passed`)
+- Run **ONLY** the spec-listed test file(s), e.g.:
+  `cd frontend && npm test -- --watchAll=false src/path/to/file.test.ts`
+- Fix failures; do not skip tests
+- Do **NOT** run the full Jest suite before returning
+- Return: test file paths + pass count (e.g. `1 suite, 13 passed`)
 
 Minimum: **at least one test** that asserts the new behavior (not just "renders without crash").
 
@@ -56,83 +60,63 @@ Minimum: **at least one test** that asserts the new behavior (not just "renders 
 - **Unit tests** in `ios-client/OutfitSuggestorTests/` for ViewModels, parsers, copy helpers
 - **Integration tests** in `OutfitSuggestorTests/*IntegrationTests.swift` when API/ViewModel logic changes
 - **UITests** in `OutfitSuggestorUITests/` only for critical E2E flows (optional extra, not a substitute for unit tests)
-- Run at minimum: `xcodebuild -scheme OutfitSuggestor -destination 'platform=iOS Simulator,name=iPhone 17' build`
-- **Also run tests** when ViewModel/service tests were added:
+- Build if needed: `xcodebuild -scheme OutfitSuggestor -destination 'platform=iOS Simulator,name=iPhone 17' build`
+- Run **ONLY** the spec-listed class:
   `xcodebuild test -scheme OutfitSuggestor -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:OutfitSuggestorTests/<TestClass>`
+- Do **NOT** run `OutfitSuggestorUITests` or the full `OutfitSuggestorTests` target unless the spec names that class
+- Fix failures; do not skip tests
 - Return: test file paths + build/test result
 
 Minimum: **at least one unit or integration test** for new behavior. If truly impossible, document why in return — orchestrator must reject unless spec marks exception.
 
-## End-of-Twin-UI full test run (orchestrator — after user confirms)
+## End of Twin UI / Cost Twin UI (orchestrator — same policy)
 
-After both agents return and parity review is done, the orchestrator **must ask the user for confirmation** before running complete suites (not only new test files). Full suites can take several minutes — do not start them automatically.
+After both agents return and parity review is done:
 
-**Confirmation prompt (orchestrator → user):**
-
-```text
-Both web and iOS agents have returned. Ready to run the full test suites?
-
-- Web: all Jest unit + integration tests
-- iOS: all OutfitSuggestorTests + OutfitSuggestorUITests
-- Backend: full pytest (only if backend changed this feature)
-
-This may take several minutes. Proceed?
-```
-
-- **If user confirms:** run the suites below and publish the Test Execution Report.
-- **If user declines or does not respond:** summarize agent work and parity review; note that full-suite verification is pending. Do **not** report Twin UI complete.
-
-After confirmation, the orchestrator runs:
-
-### Web — all unit + integration tests
+1. Publish a **Targeted Test Report** from agent-returned results only (paths, pass counts, commands they ran). Use `.cursor/specs/_test-report-template.md`.
+2. Open a **new terminal** in the Cursor terminal panel and start the full matrix:
 
 ```bash
-cd frontend && npm test -- --watchAll=false --passWithNoTests
+./run_all_tests
 ```
 
-Covers `*.test.ts(x)` and `*.integration.test.tsx` under `frontend/src/`.
+(repo root wrapper → `scripts/run_all_tests.sh`)
 
-### iOS — all unit + integration (+ UITest) targets
+**How to launch (required):**
 
-```bash
-cd ios-client && xcodebuild test \
-  -scheme OutfitSuggestor \
-  -destination 'platform=iOS Simulator,name=iPhone 17' \
-  -only-testing:OutfitSuggestorTests \
-  -only-testing:OutfitSuggestorUITests
-```
+- Working directory: repo root
+- Run in a **new** terminal session, not reused for other commands
+- Start in the background / with `block_until_ms: 0` (or equivalent) so it is visible in the Terminal UI
+- Do **NOT** AwaitShell, poll, or read the full stdout/stderr back into the chat
+- Do **NOT** paste xcodebuild/Jest/pytest logs into the Twin UI summary
+- One-line smoke check that the process started is OK; then leave it running
 
-If simulator name differs, use an available iPhone simulator from `xcrun simctl list devices available`.
+3. Do **NOT** ask “ready to run full suites?” — just start `./run_all_tests` in that terminal.
+4. Do **NOT** run full `npm test`, full iOS `xcodebuild test`, or full `pytest -q` via the agent Shell in this chat (duplicates the terminal run and dumps logs into context).
+5. Final user message must say:
+   - Targeted tests (agents) passed/failed as reported
+   - Full suite is running in a new terminal: `./run_all_tests`
+   - Twin UI implementation is complete based on spec + targeted tests; full-suite pass/fail is in that terminal (user watches it)
+6. **Exception:** if the user explicitly says “run full suites in this chat” / “wait for `./run_all_tests` and report”, then it is OK to wait and summarize — still prefer quoting only the summary footer, not the entire log.
 
-### Backend (when orchestrator changed backend this feature)
+**Do not report Twin UI complete** if new behavior has no tests added, or if targeted agent tests failed. Full-suite verification lives in the terminal, not as an in-chat gate.
 
-```bash
-cd backend && . venv/bin/activate && pytest -q
-```
-
-### Test Execution Report (required — orchestrator publishes to user)
-
-After running full suites, always include this report in the final Twin UI message. Copy the template and fill every field; do not omit failed tests.
+### Targeted Test Report (required — orchestrator publishes to user)
 
 ```markdown
-## Test Execution Report
+## Targeted Test Report
 
 **Feature:** <feature-slug>  
 **Branch:** <branch-name>  
-**Overall:** PASS | FAIL
+**Overall (targeted):** PASS | FAIL
 
 ### Web (`frontend/`)
 
 | Metric | Value |
 |--------|-------|
-| Command | `npm test -- --watchAll=false --passWithNoTests` |
-| Suites | passed / total |
-| Tests | passed / total |
-| Duration | e.g. 2.4s |
+| Command | (spec-listed file(s) only) |
+| Result | e.g. 1 suite, 13 passed |
 | Status | PASS / FAIL |
-
-**Failures (if any):**
-- `path/to/file.test.tsx` — test name — one-line reason
 
 **New tests this feature:**
 - `path/to/new.test.tsx` — what it covers
@@ -141,14 +125,9 @@ After running full suites, always include this report in the final Twin UI messa
 
 | Metric | Value |
 |--------|-------|
-| Command | `xcodebuild test -scheme OutfitSuggestor …` |
-| Simulator | e.g. iPhone 17 |
-| Unit/Integration | passed / total (OutfitSuggestorTests) |
-| UI tests | passed / total (OutfitSuggestorUITests) |
+| Command | `-only-testing:OutfitSuggestorTests/<TestClass>` |
+| Result | e.g. 14 tests, 0 failures |
 | Status | PASS / FAIL |
-
-**Failures (if any):**
-- `ClassName/testMethod` — one-line reason
 
 **New tests this feature:**
 - `OutfitSuggestorTests/FooTests.swift` — what it covers
@@ -157,20 +136,21 @@ After running full suites, always include this report in the final Twin UI messa
 
 | Metric | Value |
 |--------|-------|
-| Command | `pytest -q` |
-| Tests | passed / total |
+| Command | `pytest tests/<file> -q` (targeted) |
+| Result | passed / total |
 | Status | PASS / FAIL / SKIPPED |
 
-**Failures (if any):**
-- `tests/test_foo.py::test_bar` — one-line reason
+### Full suite
+
+| Metric | Value |
+|--------|-------|
+| Command | `./run_all_tests` |
+| Status | Launched in new terminal (user watches; orchestrator did not ingest logs) |
 
 ### Notes
 
-- Flaky/skipped tests:
-- Environment issues (simulator, DB, env vars):
+- Flaky/skipped (from targeted runs only):
 ```
-
-**Do not report Twin UI complete** if Overall is FAIL or web/iOS full suite failed.
 
 ## Parallel agent prompts (include test block)
 
@@ -188,15 +168,17 @@ Rules: `.cursor/rules/web-ui-ux.mdc`
 
 TESTS (required before returning):
 - Add/update unit + integration tests per spec Tests section
-- Run: cd frontend && npm test -- --watchAll=false --passWithNoTests
+- Run ONLY the spec-listed test file(s), e.g.:
+  cd frontend && npm test -- --watchAll=false src/path/to/file.test.ts
 - Fix failures; do not skip tests
+- Do NOT run the full Jest suite before returning
 
 ABOUT / GUIDE (when spec requires):
 - Update `frontend/src/views/components/UserGuide.tsx` and `About.tsx` if the feature changes user-visible flows, copy, or capabilities described there
 - Skip for pure layout/styling with no user-facing behavior change
 - Update or add tests if Guide/About assertions exist (e.g. `GuideAndFooter.integration.test.tsx`)
 
-Return: files changed, spec compliance, test files added, test run summary, About/Guide updated (yes/no).
+Return: files changed, spec compliance, test files added, targeted test run summary, About/Guide updated (yes/no).
 ```
 
 ### iOS subagent
@@ -215,8 +197,10 @@ IPHONE / IPAD: Same UX on all devices — identical flows, copy, and actions. La
 
 TESTS (required before returning):
 - Add/update OutfitSuggestorTests per spec Tests section
-- Build: xcodebuild -scheme OutfitSuggestor -destination 'platform=iOS Simulator,name=iPhone 17' build
-- Run new test classes if added
+- Build if needed: xcodebuild -scheme OutfitSuggestor -destination 'platform=iOS Simulator,name=iPhone 17' build
+- Run ONLY the spec-listed class:
+  xcodebuild test -scheme OutfitSuggestor -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:OutfitSuggestorTests/<TestClass>
+- Do NOT run OutfitSuggestorUITests or the full OutfitSuggestorTests target unless the spec names that class
 - Fix failures; do not skip tests
 
 ABOUT / GUIDE (when spec requires):
@@ -224,7 +208,7 @@ ABOUT / GUIDE (when spec requires):
 - Skip for pure layout/styling with no user-facing behavior change
 - Keep Guide/About copy aligned with web where both document the same feature
 
-Return: files changed, spec compliance, test files added, build/test summary, About/Guide updated (yes/no).
+Return: files changed, spec compliance, test files added, targeted build/test summary, About/Guide updated (yes/no).
 ```
 
 ## Contract pairs (sync when spec requires)

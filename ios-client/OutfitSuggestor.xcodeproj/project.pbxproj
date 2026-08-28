@@ -45,6 +45,7 @@
 		E5F60718293A4B5C6D7E8F3 /* GuestAuthSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5F60718293A4B5C6D7E8F2 /* GuestAuthSheetView.swift */; };
 		B2C3D4E5F60718293A4B5C6E /* AiProgressPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F60718293A4B5C6D /* AiProgressPanelView.swift */; };
 		C3D4E5F60718293A4B5C6D7E /* AiProgressStepsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F60718293A4B5C6D7D /* AiProgressStepsTests.swift */; };
+		APP01FR0000000000000002 /* AiProgressPanelViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP01FR0000000000000001 /* AiProgressPanelViewTests.swift */; };
 		AA245C6D61B794ED24A4FB23 /* HistoryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF7CFFE9C12AF6FE014BD2FD /* HistoryModels.swift */; };
 		AAE87AAF310E73964C11C7FB /* WardrobeListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66828E50349EE49EE62FFFFD /* WardrobeListView.swift */; };
 		B030C4AADF57B3488189CD98 /* AuthModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7F8B084F37279B1A44C15F4 /* AuthModels.swift */; };
@@ -189,6 +190,7 @@
 		E5F60718293A4B5C6D7E8F2 /* GuestAuthSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuestAuthSheetView.swift; sourceTree = "<group>"; };
 		B2C3D4E5F60718293A4B5C6D /* AiProgressPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AiProgressPanelView.swift; sourceTree = "<group>"; };
 		C3D4E5F60718293A4B5C6D7D /* AiProgressStepsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AiProgressStepsTests.swift; sourceTree = "<group>"; };
+		APP01FR0000000000000001 /* AiProgressPanelViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AiProgressPanelViewTests.swift; sourceTree = "<group>"; };
 		60FB09DAD00AB05C5F220D23 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		62893A1B15D2311F3AEBA721 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		OAU01FR0000000000000001 /* OAuthSignInSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuthSignInSupport.swift; sourceTree = "<group>"; };
@@ -314,6 +316,7 @@
 				ART01FR0000000000000001 /* AppRouteTabMappingTests.swift */,
 				M3A4B5C6D7E8F90A394A5B71 /* MicroHelpCopyTests.swift */,
 				C3D4E5F60718293A4B5C6D7D /* AiProgressStepsTests.swift */,
+				APP01FR0000000000000001 /* AiProgressPanelViewTests.swift */,
 				D86343F4A060EB70A1831EAA /* OutfitViewModelIntegrationTests.swift */,
 				W2A3B4C5D6E7F809293A4B60 /* WardrobeCardUxTests.swift */,
 				RLT01FR0000000000000001 /* RecentLooksThumbnailTests.swift */,
@@ -793,6 +796,7 @@
 				0D0FFD43456FF9B083A5AE92 /* APIServiceIntegrationTests.swift in Sources */,
 				A1V2I3S4B5I6L7I8T9Y0A03 /* AdminVisibilityTests.swift in Sources */,
 				C3D4E5F60718293A4B5C6D7E /* AiProgressStepsTests.swift in Sources */,
+				APP01FR0000000000000002 /* AiProgressPanelViewTests.swift in Sources */,
 				FD933F9E2EC6AC064C14756F /* AppConfigTests.swift in Sources */,
 				AFM01TF0000000000000001 /* AuthFormMessagesTests.swift in Sources */,
 				I4A5B6C7D8E9012345678A03 /* InsightsCopyTests.swift in Sources */,

@@ -1,39 +1,46 @@
 ---
 name: publish-on-web
 description: >-
-  Remind the user to run full web, backend, and iOS test suites in their
-  terminal (agent does not run them); then commit and push the current branch
-  (do not merge to main), publish frontend to GitHub Pages, and deploy backend
-  to Railway. Use when the user says "publish on web", "Publish on web", or
-  wants to ship the web app.
+  Local test gate (agent-launched terminal, auto-read results) → ship from
+  current branch → production test gate (full matrix vs live API) → optional
+  merge to main after user confirms. Retries up to 3 times (always redeploy on
+  retry). Use when the user says "publish on web", "Publish on web", or wants
+  to ship the web app.
 disable-model-invocation: true
 ---
 
-# Publish on Web
+# Publish on Web (v2)
 
-End-to-end release workflow for **outfit-suggestor-app**: remind user to test in terminal → commit → push → GitHub Pages → Railway.
+**Locked defaults (this project):**
 
-**Do not run test suites in this workflow.** Show the user the terminal commands below and remind them to run all suites locally before deploy. Ask them to confirm tests passed before commit/push/deploy. If they report failures, stop — do **not** commit, push, or deploy.
+| Setting | Value |
+|---------|--------|
+| Production gate | **Option C** — full matrix (`./run_production_tests` = same categories as local, vs live API) |
+| Test results | **Auto-read** from agent terminal logs (`exit_code` + summary table); do **not** wait for user “tests passed” |
+| Retries | Up to **3** attempts; **always redeploy** on every retry (local gate → ship → production gate), even if only production failed |
 
-**Do not merge to `main`.** Ship from the **current branch** only — commit, push `HEAD`, then deploy. Never `git merge main`, `git checkout main && git merge …`, or open/complete a merge-to-main step as part of this workflow.
+End-to-end release for **outfit-suggestor-app**:
+
+1. **Local gate** — agent opens a new terminal, runs `./run_all_tests`, auto-reads results
+2. **Ship** — commit, push `HEAD`, GitHub Pages, Railway (**no merge to `main` yet**)
+3. **Production gate** — second new terminal, `./run_production_tests` (Option C: same categories vs live API), auto-read results
+4. **Merge** — only if production gate passes; ask user to confirm merge to `main`
+
+**Retries:** up to **3 full attempts**. On any local or production failure: list failing tests, agent tries to fix, restart from step 1. **Always redeploy** on every retry (local → ship → production), even if only production failed.
 
 ---
 
 ## Trigger
 
-User says:
-
 ```text
 publish on web
 ```
 
-or invokes this skill by name.
+or invoke this skill by name.
 
 ---
 
 ## Step 0 — Cost estimate (required)
-
-Before git operations or deploy, **stop** and show an estimate:
 
 ```bash
 python3 .cursor/scripts/estimate-workflow-cost.py \
@@ -41,9 +48,7 @@ python3 .cursor/scripts/estimate-workflow-cost.py \
   --prompt "publish on web"
 ```
 
-Share the output and **wait for explicit approval** (`yes` / `proceed`). If the user declines, exit. If the script fails, cite the `publish-on-web` range in `.cursor/workflow-cost-baselines.json` and still ask.
-
-After approval, start tracking:
+Share output; **wait for** `yes` / `proceed`. Then:
 
 ```bash
 python3 .cursor/scripts/estimate-workflow-cost.py start \
@@ -51,226 +56,200 @@ python3 .cursor/scripts/estimate-workflow-cost.py start \
   --prompt "publish on web"
 ```
 
-_Note: this estimates **Cursor agent** cost only, not Railway/hosting fees._
-
 ---
 
-## Prerequisites (check before starting)
+## Prerequisites
 
 | Requirement | Check |
 |-------------|--------|
-| Clean intent | User invoked this skill (counts as explicit commit + push + deploy approval) |
-| `gh` CLI | `gh auth status` — needed for push if HTTPS credential helper missing |
-| Railway CLI | `railway --version` and `railway status` — project must be linked (`railway link`) |
-| Node + Python venv | `frontend/node_modules`, `backend/venv` present |
-| Xcode (iOS tests) | Simulator available; fallback name: `iPhone 17` |
+| User invoked skill | Counts as deploy approval (merge needs separate confirm) |
+| `gh` CLI | `gh auth status` |
+| Railway CLI | `railway status` (linked project) |
+| `frontend/node_modules`, `backend/venv` | Present |
+| Xcode + simulator | Default `iPhone 17` |
+| `frontend/.env.production` | `REACT_APP_API_URL` for build + production gate |
+| `.env.production.test` | Copy from `.env.production.test.example` — `TEST_USERNAME`, `TEST_PASSWORD` (gitignored) |
 
-If Railway is not linked, run `railway link` from repo root (user may need to approve in browser). If `frontend/.env.production` is missing, warn user that production build may use wrong API URL — do not create it with secrets unless user provides the Railway URL.
+If `.env.production.test` is missing, stop and tell user to create it before production gate.
+
+---
+
+## Attempt loop (max 3)
+
+```
+attempt = 1
+while attempt <= 3:
+  A. Local gate     → ./run_all_tests (new terminal, auto-read)
+  B. Ship           → commit + push HEAD + npm run deploy + railway up
+  C. Production gate → ./run_production_tests (new terminal, auto-read)
+  if C passes → ask merge to main → break
+  if C fails  → list failures, fix, attempt++, retry from A (always redeploy)
+if attempt > 3 and still failing → stop with report
+```
+
+**Local gate failure:** do not ship; list failures, fix, `attempt++`, retry from A.
+
+**Ship failure:** stop attempt; report error (no production gate until ship succeeds).
+
+**Production gate failure:** list failures from terminal log (`=== Failing tests ===` + summary table), fix, `attempt++`, **full retry from A including redeploy**.
+
+---
+
+## Agent: launch tests in new terminal and auto-read results
+
+**Do not** ask the user to type “tests passed”. **Do** launch suites in a **new terminal** and read the summary when the process ends.
+
+### Launch (required pattern)
+
+- Working directory: repo root
+- **New** terminal session (not reused for other commands)
+- Start in background: `block_until_ms: 0` (or equivalent)
+- Command:
+  - Local: `./run_all_tests`
+  - Production: `./run_production_tests`
+
+### Auto-read (required)
+
+Poll the terminal output file until `exit_code:` appears (or use Await with a completion pattern). Extract and show the user:
+
+- `=== Test Results ===` summary table (Overall row)
+- `=== Failing tests ===` section when present
+- `exit_code` (0 = pass)
+
+**Gate:** `exit_code: 0` and Overall **PASS** → continue. Otherwise → failure path (fix + retry or stop at attempt 3).
+
+**Do not** paste full xcodebuild/Jest/pytest logs into chat — quote the summary table and failing-test list only.
+
+---
+
+## Step A — Local test gate
+
+```bash
+./run_all_tests
+```
+
+Same matrix as today: web Jest + backend pytest (local) + iOS unit/integration + iOS UITests.
+
+**FAIL** → list failures, fix, next attempt (do not ship).  
+**PASS** → Step B.
+
+---
+
+## Step B — Ship from current branch (no merge yet)
+
+1. Record branch: `git branch --show-current`
+2. Commit (git safety rules; never stage secrets, `venv`, `node_modules`, `xcuserdata`)
+3. `git push -u origin HEAD`
+4. `cd frontend && npm run deploy`
+5. `cd backend && railway up`
+6. Verify: `curl` frontend URL + `<API_BASE_URL>/health`
+
+**Do not merge to `main` in this step.**
+
+---
+
+## Step C — Production test gate (Option C)
+
+Second **new** terminal:
+
+```bash
+./run_production_tests
+```
+
+Same categories, production wiring:
+
+| Category | Production behavior |
+|----------|---------------------|
+| Web | Jest with `REACT_APP_API_URL` from `frontend/.env.production` |
+| Backend | `backend/tests_remote` vs `API_BASE_URL` + credentials |
+| iOS | `Release` build + `API_BASE_URL` env (live Railway API) |
+
+Credentials: `.env.production.test` (see `.env.production.test.example`).
+
+Auto-read results; show production test report to user.
+
+**FAIL** → list failures, fix, **retry from Step A** (always redeploy).  
+**PASS** → Step D.
+
+---
+
+## Step D — Merge to `main` (only after production pass)
+
+Ask explicitly:
+
+> Production tests passed. Merge `<branch>` into `main` and push?
+
+Proceed **only** on `yes` / `proceed` / `merge`.
+
+```bash
+git checkout main
+git pull origin main
+git merge <branch>
+git push origin main
+git checkout <branch>   # return to feature branch if user was working there
+```
+
+If user declines merge, report success for ship + production gate only.
 
 ---
 
 ## Workflow checklist
 
 ```
-- [ ] 1. Record branch name (`git branch --show-current`) — stay on this branch; do not merge to main
-- [ ] 2. Remind user to run all test suites in terminal (agent does not run them)
-- [ ] 3. User confirms tests passed → inspect changes, draft commit message
-- [ ] 4. Stage, commit (exclude secrets & build artifacts)
-- [ ] 5. Push current branch to origin (`git push -u origin HEAD`) — not a merge to main
-- [ ] 6. Publish GitHub Pages
-- [ ] 7. Deploy backend to Railway
-- [ ] 8. Verify deployments
-- [ ] 9. Run `python3 .cursor/scripts/estimate-workflow-cost.py end` — include actual cost in report
-- [ ] 10. Publish execution report to user
+- [ ] 0. Cost estimate → user approves → start tracking
+- [ ] 1. attempt ≤ 3:
+- [ ]    A. New terminal: ./run_all_tests → auto-read → PASS required
+- [ ]    B. Commit + push HEAD + npm run deploy + railway up
+- [ ]    C. New terminal: ./run_production_tests → auto-read → show report
+- [ ]    D. On C pass: ask merge to main; on yes → merge + push main
+- [ ]    On failure: list failing tests, fix, retry from A (always redeploy)
+- [ ] 2. estimate-workflow-cost.py end + Publish on Web — Report
 ```
 
 ---
 
-## Step 1 — Remind user to run tests (do not run in agent)
-
-**Do not execute** web, backend, or iOS test commands in this workflow. Post a reminder like the section below and **wait for the user to confirm all suites passed** before continuing to commit/push/deploy.
-
-### Reminder to post to the user
-
-**Run all tests in your terminal before deploy**
-
-The agent does not run full suites during publish on web. Please run these locally and confirm when they pass.
-
-**All suites (one script):**
-
-```bash
-run_all_tests
-```
-
-Or from repo root without alias:
-
-```bash
-./run_all_tests
-```
-
-Legacy path (same script):
-
-```bash
-bash .cursor/skills/publish-on-web/scripts/run-all-tests.sh
-```
-
-**Or individually:**
-
-Web (~3 s):
-
-```bash
-cd frontend && npm test -- --watchAll=false --passWithNoTests
-```
-
-Backend (~4 min):
-
-```bash
-cd backend && . venv/bin/activate && pytest -q
-```
-
-iOS (~4–8 min; adjust simulator if needed):
-
-```bash
-cd ios-client && xcodebuild test \
-  -scheme OutfitSuggestor \
-  -destination 'platform=iOS Simulator,name=iPhone 17' \
-  -only-testing:OutfitSuggestorTests \
-  -only-testing:OutfitSuggestorUITests
-```
-
-If the simulator name fails: `xcrun simctl list devices available | grep iPhone`
-
-Reply **tests passed** (or report failures) when done.
-
-**Gate rule:** If the user reports failures or has not confirmed, **exit workflow**. No commit/push/deploy until they confirm all suites passed.
-
----
-
-## Step 2 — Commit current branch
-
-Follow git safety rules:
-
-1. In parallel:
-   - `git status`
-   - `git diff` (staged + unstaged)
-   - `git log -3 --oneline`
-2. **Never stage:**
-   - `.env`, `.env.*` with secrets (e.g. `frontend/.env.development`)
-   - `ios-client/build-device/`, `**/xcuserdata/**`, `node_modules/`
-   - `backend/venv/`, `__pycache__/`, `.pytest_cache/`
-3. Draft a 1–2 sentence commit message from the diff (focus on **why**).
-4. Commit with HEREDOC:
-
-```bash
-git add <relevant-files>
-git commit -m "$(cat <<'EOF'
-Your message here.
-
-EOF
-)"
-```
-
-5. `git status` to confirm commit succeeded.
-
-Do **not** amend unless a hook auto-modified files and rules allow it.
-
----
-
-## Step 3 — Push to GitHub
-
-Push the **same branch** you tested and committed on — do **not** merge into `main` first.
-
-```bash
-git push -u origin HEAD
-```
-
-Use `required_permissions: ["all"]` / network if the environment blocks push.
-
-GitHub Pages deploy (step 4) uses `npm run deploy` from the current branch’s `frontend/` tree. A push to **`main`** may *also* trigger [.github/workflows/deploy.yml](../../../.github/workflows/deploy.yml), but that is optional CI — **not** a required step in this workflow.
-
----
-
-## Step 4 — Publish GitHub Pages
-
-From repo root:
-
-```bash
-cd frontend && npm run deploy
-```
-
-This runs `predeploy` (`npm run build`) then `gh-pages -d build`.
-
-**Production API URL:** build reads `frontend/.env.production` (`REACT_APP_API_URL`). Ensure it points at the live Railway backend before deploy.
-
-**Live URLs (this project):**
-
-| Site | URL |
-|------|-----|
-| Custom domain | https://closiq.me |
-| GitHub Pages | https://sajadparacha.github.io/outfit-suggestor-app |
-
----
-
-## Step 5 — Deploy backend to Railway
-
-From repo root (linked project required):
-
-```bash
-cd backend && railway up
-```
-
-Railway builds/deploys the Python backend (`backend/` root per project settings). Auto-deploy also occurs on push if the GitHub repo is connected in Railway dashboard.
-
-**Verify:**
-
-```bash
-curl -s https://<your-railway-host>/health
-```
-
-Expect JSON with `"status":"healthy"`.
-
----
-
-## Step 6 — Execution report (required)
-
-Always post this summary to the user:
+## Execution report (required)
 
 ```markdown
 ## Publish on Web — Report
 
 **Branch:** <branch>
+**Attempt:** <n>/3
 **Overall:** SUCCESS | FAILED (stopped at <step>)
 
-### Tests (user-run in terminal)
-| Suite | Result | Details |
-|-------|--------|---------|
-| Web | PASS/FAIL / not confirmed | user-reported |
-| Backend | PASS/FAIL / not confirmed | user-reported |
-| iOS | PASS/FAIL / not confirmed | user-reported |
+### Local gate (./run_all_tests)
+| Metric | Value |
+|--------|-------|
+| Terminal | auto-read |
+| Overall | PASS / FAIL |
+| Failed tests | (list or —) |
 
-_Note: agent did not run suites; user confirmed in terminal._
-
-### Git
+### Ship (current branch, no merge yet)
 - **Commit:** `<hash>` — <message>
 - **Push:** origin/<branch> — OK / FAILED
+- **GitHub Pages:** OK / FAILED
+- **Railway:** OK / FAILED
 
-### Deployments
-| Target | Command | Status |
-|--------|---------|--------|
-| GitHub Pages | `npm run deploy` | OK / FAILED / SKIPPED |
-| Railway | `railway up` | OK / FAILED / SKIPPED |
-| GitHub Actions | push to main | triggered / N/A |
+### Production gate (./run_production_tests)
+| Metric | Value |
+|--------|-------|
+| Terminal | auto-read |
+| Overall | PASS / FAIL |
+| Failed tests | (list or —) |
+
+### Merge to main
+- **Asked:** yes / no
+- **Result:** merged + pushed / declined / not reached
 
 ### Live checks
 - Frontend: <URL> — HTTP status
 - Backend /health: <URL> — response
 
-### Cursor cost (required)
-
-Run `python3 .cursor/scripts/estimate-workflow-cost.py end` and paste the **Workflow actual cost** section here (estimated vs actual, API calls, on-demand portion).
+### Cursor cost
+(paste `estimate-workflow-cost.py end` output)
 
 ### Notes
-- Failures, skipped steps, or manual follow-ups
+- Retries, fixes applied, manual follow-ups
 ```
 
 ---
@@ -279,21 +258,20 @@ Run `python3 .cursor/scripts/estimate-workflow-cost.py end` and paste the **Work
 
 | Failure | Action |
 |---------|--------|
-| User reports test failures | Stop. No deploy until fixed and user re-confirms. |
-| User has not confirmed tests | Stop at step 1 reminder. No deploy. |
-| User or agent about to merge to `main` | **Stop.** Publish ships from the current branch only. |
-| Nothing to commit | Skip commit; ask user if they still want push/deploy. |
-| Push rejected | Report error; do not deploy. |
-| `npm run deploy` fails | Report; backend may still be on Railway from prior deploy. |
-| `railway up` fails | Report; suggest `railway status` and dashboard logs. |
-| Not logged into Railway | `railway login` then retry. |
+| Local gate FAIL | No ship. List failures, fix, retry attempt (max 3). |
+| Production gate FAIL | List failures, fix, **full retry from local gate + redeploy** (max 3). |
+| Ship / deploy FAIL | Stop current attempt; report; do not run production gate until ship OK. |
+| Missing `.env.production.test` | Stop before production gate; instruct user to create from example. |
+| 3 attempts exhausted | Stop; report all failing tests; no merge. |
+| User declines merge | Ship + production pass still reported as success. |
 
 ---
 
 ## References
 
+- `scripts/run_all_tests.sh` — local gate
+- `run_production_tests` / `scripts/run_all_tests.sh --production` — production gate
+- `.env.production.test.example` — remote test credentials
+- [TEST_CASE_EXECUTION_GUIDE.md](../../../TEST_CASE_EXECUTION_GUIDE.md)
 - [DEPLOYMENT_INSTRUCTIONS.md](../../../DEPLOYMENT_INSTRUCTIONS.md)
-- [RAILWAY_DEPLOYMENT_STEPS.md](../../../RAILWAY_DEPLOYMENT_STEPS.md)
-- [PRODUCTION_DEPLOYMENT_GUIDE.md](../../../PRODUCTION_DEPLOYMENT_GUIDE.md)
-- Frontend deploy script: `frontend/package.json` → `npm run deploy`
-- CI Pages workflow: `.github/workflows/deploy.yml`
+- `frontend/package.json` → `npm run deploy`

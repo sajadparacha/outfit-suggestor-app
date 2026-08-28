@@ -31,7 +31,7 @@ Cost Twin UI:
 [one short instruction — name files if you know them]
 ```
 
-**Activation:** `Cost Twin UI:` in the same message = strict cost mode **and** abbreviated Twin UI. Takes precedence over the full end-of-run test gate (no full suites unless the user asks).
+**Activation:** `Cost Twin UI:` in the same message = strict cost mode **and** abbreviated Twin UI (narrow files, short spec, one test file per platform).
 
 **Pre-flight:** Same as full Twin UI — orchestrator runs `estimate-workflow-cost.py` and waits for your approval before the spec or agents.
 
@@ -42,8 +42,8 @@ Cost Twin UI:
 | Spec | Full `_template.md` | Short spec: goal, file paths, 3–5 test bullets |
 | Agents | Web + iOS parallel | Web + iOS parallel (required) |
 | Subagent scope | Feature area | **Only listed files** + their tests |
-| During work | Targeted tests OK | **One test file per platform** max |
-| End | Ask → full web + iOS (+ backend) | **Skip full suites**; report targeted results only |
+| During work | Spec-listed targeted tests; fix until green | **One test file per platform** max; fix until green |
+| End | Targeted report → new terminal `./run_all_tests` (do not ingest logs) | Same: targeted report → new terminal `./run_all_tests` |
 | About / Guide | When spec says yes | Only if user-visible copy/flow changes |
 | `IOS_WEB_FEATURE_PARITY.md` | Update if parity changed | Skip for trivial / no new capability |
 
@@ -76,7 +76,7 @@ Orchestrator still must not edit `frontend/**` or `ios-client/**` directly — d
   - Web: `npm test -- --watchAll=false <pattern>` for touched files
   - iOS: one test class or file when possible
 - **Do not** run full web + iOS + backend suites mid-task unless the user asks.
-- At Twin UI end, follow the existing workflow: ask before full suites; do not auto-run them.
+- At Twin UI / Cost Twin UI end: publish targeted results, then open a **new terminal** and start `./run_all_tests`. Do **not** AwaitShell/poll/ingest suite logs into chat (unless the user explicitly asks to wait and report).
 
 ## Exploration and tools
 
