@@ -45,3 +45,13 @@ const { server } = require('./test/msw/server');
 beforeAll(() => server.listen({ onUnhandledRequest: 'warn' }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
+
+// jsdom crashes if animation frames run after the document is torn down
+// (Window.location → null._location). Flush rAF synchronously in tests.
+beforeAll(() => {
+  window.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+    cb(0);
+    return 0;
+  }) as typeof requestAnimationFrame;
+  window.cancelAnimationFrame = (() => {}) as typeof cancelAnimationFrame;
+});

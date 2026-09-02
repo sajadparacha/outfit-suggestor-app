@@ -56,6 +56,7 @@ describe('Random from Wardrobe regenerate integration', () => {
   beforeEach(() => {
     localStorage.setItem('auth_token', 'test-token');
     localStorage.setItem('first_run_coach_dismissed', 'true');
+    HTMLElement.prototype.scrollIntoView = jest.fn();
     server.use(
       rest.get(`${API_BASE}/api/auth/me`, (_req, res, ctx) => {
         return res(ctx.json(mockUser));
