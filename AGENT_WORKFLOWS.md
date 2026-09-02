@@ -14,7 +14,7 @@ This document describes the two Cursor agent workflows defined for **outfit-sugg
 They complement each other:
 
 ```text
-Twin UI (iterate on branch)  →  publish on web (local gate → ship → production gate → optional merge to main)
+Twin UI (iterate on branch)  →  publish on web (CI local → ship → CI production → optional merge to main)
 ```
 
 Merge to `main` happens **only** after production gate passes and you confirm during publish on web.
@@ -127,11 +127,13 @@ Agents **do not commit** unless you explicitly ask. Twin UI ends with implemente
 
 ---
 
-## Publish on Web (v2)
+## Publish on Web (v4)
 
-**Local gate (agent terminal) → ship from current branch → production gate → optional merge to `main`.**
+**CI owns gates: local Actions (web+backend) → ship branch → slim production Actions → optional merge to `main`.**
 
 Invoking this skill counts as approval to **commit, push, and deploy** after gates pass. **Merge to `main`** requires a **separate** confirmation after production tests pass.
+
+Start publish in a **new chat**. On gate failure the agent **stops** (fix in a new chat, then publish again). The agent waits on `wait-ci-gate.py` and reads `.cursor/test-gates/last-report.json` — it does not run full suites in chat.
 
 ### Trigger
 
@@ -139,34 +141,38 @@ Invoking this skill counts as approval to **commit, push, and deploy** after gat
 publish on web
 ```
 
+```text
+ship only
+```
+
 ### What happens (step by step)
 
-**Up to 3 attempts** — on failure: list failing tests, fix, **always redeploy** on retry.
+**One attempt per chat.** No in-chat retry loop.
 
 1. **Cost estimate** — user approves before work starts.
-2. **Local gate** — agent opens **new terminal**, runs `./run_all_tests`, **auto-reads** summary (`exit_code`, Overall PASS/FAIL, failing test list).
-3. **Ship (no merge yet)** — commit → `git push -u origin HEAD` → `npm run deploy` → `railway up` → verify live URLs.
-4. **Production gate** — second **new terminal**, `./run_production_tests` (Option C: same matrix vs live API), **auto-read** results and show report.
-5. **Merge** — if production gate passes, ask user to confirm merge to `main`; on yes → merge + push `main`.
+2. **Local gate** — skip if `check-local-test-gate.py` exits 0 (local stamp or Actions already green). Else push and `wait-ci-gate.py --workflow test-local.yml` (Jest + pytest on GitHub).
+3. **Ship (no merge yet)** — `git push` if needed → `npm run deploy` → `railway up` → verify live URLs.
+4. **Production gate** — `wait-ci-gate.py --workflow test-production.yml --dispatch` (slim live checks). Requires repo secrets `PRODUCTION_TEST_USERNAME` / `PRODUCTION_TEST_PASSWORD`.
+5. **Merge** — if production passes, ask to confirm merge to `main`.
 6. **Report** — Publish on Web — Report + workflow cost `end`.
 
-| Gate | Command | What it runs |
+`ship only` skips steps 2 and 4.
+
+| Gate | Where | What it runs |
 |------|---------|----------------|
-| Local | `./run_all_tests` | Web Jest + backend pytest (local) + iOS + UITests |
-| Production | `./run_production_tests` | Jest (prod `REACT_APP_API_URL`) + `tests_remote` + iOS Release vs live API |
+| Local | `.github/workflows/test-local.yml` | Web Jest + backend pytest (iOS is Twin UI / `./run_all_tests` only) |
+| Production | `.github/workflows/test-production.yml` | Live `/health` + frontend HTTP + `tests_remote` |
 
-Production credentials: `.env.production.test` (from `.env.production.test.example`).
-
-**If either gate fails:** no merge; agent fixes and retries from step 2 (full redeploy). Stop after 3 failed attempts.
+**If either gate fails:** no merge; agent lists `failing_tests` from JSON and stops.
 
 ### Prerequisites
 
 | Tool | Purpose |
 |------|---------|
-| `git` / `gh` | Commit, push, merge |
+| `git` / `gh` | Commit, push, merge, wait on Actions |
 | `railway` | Backend deploy |
-| `frontend/.env.production` | Production API URL for build + gate |
-| `.env.production.test` | `TEST_USERNAME` / `TEST_PASSWORD` for remote tests |
+| `frontend/.env.production` | Production API URL for the frontend build |
+| GitHub Actions secrets | `PRODUCTION_TEST_USERNAME`, `PRODUCTION_TEST_PASSWORD` (optional `API_BASE_URL`, `FRONTEND_URL`) |
 
 ### Live URLs
 
@@ -181,9 +187,10 @@ Production credentials: `.env.production.test` (from `.env.production.test.examp
 
 | File | Role |
 |------|------|
-| `.cursor/skills/publish-on-web/SKILL.md` | Full workflow v2 |
-| `run_production_tests` | Production gate wrapper |
-| `scripts/run_all_tests.sh --production` | Production matrix implementation |
+| `.cursor/skills/publish-on-web/SKILL.md` | Full workflow v4 (CI gates) |
+| `run_production_tests` | Local slim gate (same checks as Actions) |
+| `.github/workflows/test-local.yml` | Jest + pytest on push/PR |
+| `.github/workflows/test-production.yml` | Slim live gate (`workflow_dispatch`) |
 | `.env.production.test.example` | Remote test credentials template |
 
 ---
@@ -196,8 +203,8 @@ flowchart LR
   B --> C[Targeted tests + ./run_all_tests in new terminal]
   C --> D[Final touches on branch]
   D --> E[publish on web]
-  E --> F[Local gate + ship branch]
-  F --> G[Production gate]
+  E --> F[CI local gate + ship branch]
+  F --> G[CI production slim]
   G --> H{User confirms merge?}
   H -->|yes| I[main updated]
   H -->|no| J[Live: closiq.me + Railway]
@@ -206,7 +213,7 @@ flowchart LR
 
 1. **Branch** — e.g. `git checkout -b feature/ui-ux-final-touches`
 2. **Twin UI** — iterate with matched web + iOS changes; agents run related tests; full matrix via `./run_all_tests` in a new terminal
-3. **Publish on web** — agent runs local gate → ships from branch → production gate → asks to merge `main` if production passes (up to 3 retries, always redeploy on retry)
+3. **Publish on web** — CI local (or skip if already green) → ship → CI production slim → ask merge (fail-stop; new chat to fix)
 
 ---
 
@@ -215,7 +222,8 @@ flowchart LR
 | I want to… | Say this |
 |------------|----------|
 | Change UI on web **and** iOS | `Twin UI: [description]` |
-| Run local gate + deploy + production gate | `publish on web` (agent launches `./run_all_tests` and `./run_production_tests` in new terminals) |
+| Run CI gates + deploy + slim production CI | `publish on web` (new chat; agent waits on Actions, not local suites) |
+| Deploy without test gates | `ship only` |
 | All local tests only | `./run_all_tests` |
 | Production gate only (after deploy) | `./run_production_tests` (requires `.env.production.test`) |
 | Run all tests (web + backend + iOS + UITests) | `run_all_tests` (from repo root; see alias below) |

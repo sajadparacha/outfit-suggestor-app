@@ -157,9 +157,20 @@ From project root:
 
 ---
 
-## Production gate (publish on web — Option C)
+## Production gate (publish on web — CI slim)
 
-Full matrix against live deploy (same categories as `./run_all_tests`):
+After deploy, publish dispatches `.github/workflows/test-production.yml` (same checks as `./run_production_tests`).
+
+**Repo secrets** (Settings → Secrets and variables → Actions):
+
+| Secret | Required |
+|--------|----------|
+| `PRODUCTION_TEST_USERNAME` | yes |
+| `PRODUCTION_TEST_PASSWORD` | yes |
+| `API_BASE_URL` | no (defaults to Railway URL in the workflow) |
+| `FRONTEND_URL` | no (defaults to https://closiq.me) |
+
+Local equivalent:
 
 ```bash
 cp .env.production.test.example .env.production.test
@@ -170,11 +181,13 @@ cp .env.production.test.example .env.production.test
 
 | Category | Behavior |
 |----------|----------|
-| Web | Jest with `REACT_APP_API_URL` from `frontend/.env.production` |
+| API `/health` | HTTP 200 on live `API_BASE_URL` |
+| Frontend (HTTP) | HTTP 200 on `FRONTEND_URL` (default https://closiq.me) |
 | Backend | `backend/tests_remote` vs `API_BASE_URL` |
-| iOS | Release configuration + `API_BASE_URL` env (live API) |
 
-Used as the second gate in **publish on web** after shipping the current branch.
+Local `./run_all_tests` writes `.cursor/test-gates/local-pass.json`. Publish also skips the local wait if `test-local.yml` already succeeded for this commit.
+
+CI local gate (every push/PR): `.github/workflows/test-local.yml` — Jest + backend pytest (not iOS).
 
 ---
 
@@ -212,7 +225,9 @@ pytest backend/tests_remote/test_smoke.py -v
 | To run… | Command |
 |---------|---------|
 | **All local tests** | `./run_all_tests` or `./run_tests.sh` |
-| **Production gate (full matrix)** | `./run_production_tests` |
+| **CI local gate** | GitHub Actions `test-local.yml` (push/PR) |
+| **Production gate (CI slim)** | `test-production.yml` (`workflow_dispatch`) or `./run_production_tests` |
+| **Production gate (full matrix)** | `./run_production_tests --full` |
 | **Backend unit only** | `cd backend && pytest tests/ -v -k "not integration"` |
 | **Backend integration only** | `cd backend && pytest tests/test_integration_*.py tests/test_outfit_wardrobe_integration.py -v` |
 | **Frontend unit only** | `cd frontend && npm test -- --watchAll=false --testPathIgnorePattern="integration"` |

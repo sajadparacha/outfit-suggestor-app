@@ -1,0 +1,59 @@
+name: Test production (slim)
+
+# Live contract gate after deploy. Does not run on every push (avoids hitting Railway).
+# Trigger: python3 .cursor/scripts/wait-ci-gate.py --workflow test-production.yml --dispatch
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: test-production
+  cancel-in-progress: true
+
+jobs:
+  slim:
+    name: Health + remote pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements-ci.txt
+      - name: Install backend test deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements-ci.txt
+      - name: Write production test env
+        env:
+          TEST_USERNAME: ${{ secrets.PRODUCTION_TEST_USERNAME }}
+          TEST_PASSWORD: ${{ secrets.PRODUCTION_TEST_PASSWORD }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TEST_USERNAME}" ] || [ -z "${TEST_PASSWORD}" ]; then
+            echo "Missing GitHub secrets PRODUCTION_TEST_USERNAME and/or PRODUCTION_TEST_PASSWORD."
+            echo "Add them on the repo: Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          API_BASE_URL="${API_BASE_URL:-https://web-production-dfcf8.up.railway.app}"
+          FRONTEND_URL="${FRONTEND_URL:-https://closiq.me}"
+          umask 077
+          {
+            echo "API_BASE_URL=${API_BASE_URL}"
+            echo "TEST_USERNAME=${TEST_USERNAME}"
+            echo "TEST_PASSWORD=${TEST_PASSWORD}"
+            echo "FRONTEND_URL=${FRONTEND_URL}"
+          } > .env.production.test
+      - name: Slim production gate
+        env:
+          CI: true
+        run: ./run_production_tests
+      - name: Upload gate JSON
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-test-gate-json
+          path: .cursor/test-gates/last-report.json
+          if-no-files-found: ignore

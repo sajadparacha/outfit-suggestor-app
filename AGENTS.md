@@ -80,7 +80,7 @@ Update About and Guide if user-facing behavior or copy changes.
 | `.cursor/rules/web-ui-ux.mdc` | Web scope (`frontend/**`) |
 | `.cursor/rules/ios-ui-ux.mdc` | iOS scope (`ios-client/**`) |
 | `.cursor/skills/parallel-ui-ux/SKILL.md` | Workflow, prompts, test requirements |
-| `.cursor/skills/publish-on-web/SKILL.md` | Local + production test gates (agent terminals, auto-read) → ship branch → optional merge to `main` (max 3 retries, always redeploy) |
+| `.cursor/skills/publish-on-web/SKILL.md` | CI local + slim production Actions → ship branch → optional merge; fail-stop |
 | `.cursor/specs/_template.md` | Spec + Tests (required) template |
 | `.cursor/specs/_test-report-template.md` | End-of-run Targeted Test Report |
 

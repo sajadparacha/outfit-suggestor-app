@@ -82,6 +82,8 @@ After both agents return and parity review is done:
 
 (repo root wrapper → `scripts/run_all_tests.sh`)
 
+A passing run writes `.cursor/test-gates/local-pass.json`. Publish on web also treats a green `test-local.yml` Actions run for the same commit as a skip.
+
 **How to launch (required):**
 
 - Working directory: repo root

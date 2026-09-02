@@ -23,13 +23,13 @@
     },
     "publish-on-web": {
       "label": "Publish on web",
-      "usd_low": 5,
-      "usd_typical": 12,
-      "usd_high": 28,
-      "calls_low": 20,
-      "calls_typical": 45,
-      "calls_high": 90,
-      "notes": "Agent launches local + production gates in new terminals (auto-read); ship branch; optional merge to main; up to 3 full retries with redeploy; excludes Railway/hosting fees"
+      "usd_low": 1,
+      "usd_typical": 3,
+      "usd_high": 8,
+      "calls_low": 6,
+      "calls_typical": 14,
+      "calls_high": 28,
+      "notes": "CI owns Jest/pytest and slim production; agent wait-ci-gate.py + last-report.json; skip if stamp/CI already green; fail-stop; excludes Actions minutes and Railway/hosting"
     }
   },
   "prompt_multipliers": {

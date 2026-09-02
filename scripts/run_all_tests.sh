@@ -7,6 +7,8 @@
 #   ./run_all_tests
 #   IOS_SIM="iPhone 17 Pro" ./run_all_tests
 #   ./run_all_tests --web-only
+#   ./run_all_tests --production          # slim live gate (health + remote pytest)
+#   ./run_all_tests --production-full     # full matrix vs live API
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -14,9 +16,13 @@ IOS_SIM="${IOS_SIM:-iPhone 17}"
 RUN_WEB=1
 RUN_BACKEND=1
 RUN_IOS=1
+RUN_HEALTH=0
 PRODUCTION_MODE=0
+PRODUCTION_FULL=0
 PRODUCTION_ENV_FILE="${PRODUCTION_ENV_FILE:-$REPO_ROOT/.env.production.test}"
 IOS_XCODE_CONFIGURATION="Debug"
+CATEGORIES_TSV=""
+FAILING_TSV=""
 
 TMP_DIR=""
 OVERALL_EXIT=0
@@ -49,17 +55,22 @@ Options:
   --web-only          Frontend Jest only
   --backend-only      Backend pytest only
   --ios-only          iOS unit + UITests only
-  --production        Production gate: same categories as local, pointed at live API
-                      (web REACT_APP_API_URL from frontend/.env.production;
-                       backend tests_remote; iOS Release + API_BASE_URL env).
-                      Requires .env.production.test (see .env.production.test.example).
+  --production        Slim live gate (publish default): API /health,
+                      frontend HTTP, backend tests_remote. Requires
+                      .env.production.test (see .env.production.test.example).
+  --production-full   Full matrix vs live API (Jest + tests_remote + iOS Release)
+  --full              Same as --production-full (use with ./run_production_tests --full)
   --simulator NAME    iOS simulator (default: iPhone 17; or set IOS_SIM)
   --help              Show this help
+
+Writes .cursor/test-gates/last-report.json (and local-pass.json on a passing local run).
 
 Examples:
   run_all_tests
   run_all_tests --ios-only --simulator "iPhone 17 Pro"
   IOS_SIM="iPad Pro 13-inch (M5)" run_all_tests
+  ./run_production_tests
+  ./run_production_tests --full
 EOF
 }
 
@@ -85,6 +96,12 @@ while [[ $# -gt 0 ]]; do
       IOS_XCODE_CONFIGURATION="Release"
       shift
       ;;
+    --production-full|--full)
+      PRODUCTION_MODE=1
+      PRODUCTION_FULL=1
+      IOS_XCODE_CONFIGURATION="Release"
+      shift
+      ;;
     --simulator)
       IOS_SIM="${2:-}"
       shift 2
@@ -101,6 +118,15 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ "$PRODUCTION_MODE" -eq 1 && "$PRODUCTION_FULL" -eq 0 ]]; then
+  RUN_WEB=0
+  RUN_IOS=0
+  RUN_BACKEND=1
+  RUN_HEALTH=1
+elif [[ "$PRODUCTION_FULL" -eq 1 ]]; then
+  RUN_HEALTH=1
+fi
+
 record_summary() {
   local name="$1" passed="$2" failed="$3" total="$4" status="$5" log_file="${6:-}"
   SUMMARY_NAMES+=("$name")
@@ -111,6 +137,9 @@ record_summary() {
   SUMMARY_LOGS+=("$log_file")
   if [[ "$status" != "PASS" ]]; then
     OVERALL_EXIT=1
+  fi
+  if [[ -n "$CATEGORIES_TSV" ]]; then
+    printf '%s\t%s\t%s\t%s\t%s\n' "$name" "$passed" "$failed" "$total" "$status" >> "$CATEGORIES_TSV"
   fi
 }
 
@@ -277,7 +306,7 @@ load_production_env() {
     return 1
   fi
 
-  export API_BASE_URL REACT_APP_API_URL TEST_USERNAME TEST_PASSWORD
+  export API_BASE_URL REACT_APP_API_URL TEST_USERNAME TEST_PASSWORD FRONTEND_URL
   return 0
 }
 
@@ -291,8 +320,84 @@ kind_for_summary_name() {
     "iOS unit/integration (Release)") echo "xcode" ;;
     "iOS UITests") echo "xcode" ;;
     "iOS UITests (Release)") echo "xcode" ;;
+    "API /health") echo "http" ;;
+    "Frontend (HTTP)") echo "http" ;;
     *) echo "" ;;
   esac
+}
+
+run_http_check() {
+  local name="$1"
+  local url="$2"
+  local log_file="$3"
+
+  echo ">>> $name"
+  {
+    echo "GET $url"
+  } | tee "$log_file"
+  local code="000"
+  code="$(curl -sS -o /dev/null -w "%{http_code}" --max-time 20 "$url" 2>>"$log_file" || true)"
+  echo "HTTP $code" | tee -a "$log_file"
+  if [[ "$code" == "200" ]]; then
+    record_summary "$name" 1 0 1 "PASS" "$log_file"
+  else
+    record_summary "$name" 0 1 1 "FAIL" "$log_file"
+  fi
+  echo
+}
+
+run_health_checks() {
+  local api_url="${API_BASE_URL%/}"
+  local front="${FRONTEND_URL:-https://closiq.me}"
+  front="${front%/}"
+  run_http_check "API /health" "${api_url}/health" "$TMP_DIR/health-api.log"
+  run_http_check "Frontend (HTTP)" "$front" "$TMP_DIR/health-frontend.log"
+}
+
+write_failing_tsv() {
+  local i name status log_file kind failures
+  : > "$FAILING_TSV"
+
+  for i in "${!SUMMARY_NAMES[@]}"; do
+    name="${SUMMARY_NAMES[$i]}"
+    status="${SUMMARY_STATUS[$i]}"
+    log_file="${SUMMARY_LOGS[$i]:-}"
+
+    if [[ "$status" == "PASS" ]]; then
+      continue
+    fi
+
+    kind="$(kind_for_summary_name "$name")"
+    if [[ "$kind" == "http" ]]; then
+      printf '%s\t%s\n' "$name" "HTTP check failed (see log)" >> "$FAILING_TSV"
+      continue
+    fi
+    failures="$(list_failing_tests "$kind" "$log_file" || true)"
+    if [[ -z "$failures" ]]; then
+      printf '%s\t%s\n' "$name" "(could not extract test names)" >> "$FAILING_TSV"
+      continue
+    fi
+    while IFS= read -r line; do
+      [[ -z "$line" ]] && continue
+      printf '%s\t%s\n' "$name" "$line" >> "$FAILING_TSV"
+    done <<<"$failures"
+  done
+}
+
+write_gate_report() {
+  local mode="local"
+  if [[ "$PRODUCTION_FULL" -eq 1 ]]; then
+    mode="production-full"
+  elif [[ "$PRODUCTION_MODE" -eq 1 ]]; then
+    mode="production"
+  fi
+  write_failing_tsv
+  python3 "$REPO_ROOT/.cursor/scripts/write-test-gate-report.py" \
+    --repo "$REPO_ROOT" \
+    --mode "$mode" \
+    --exit-code "$OVERALL_EXIT" \
+    --categories-tsv "$CATEGORIES_TSV" \
+    --failing-tsv "$FAILING_TSV"
 }
 
 run_web_tests() {
@@ -325,15 +430,17 @@ run_backend_tests() {
   echo ">>> $label"
   cd "$REPO_ROOT/backend"
 
-  if [[ ! -f venv/bin/activate ]]; then
+  if [[ -f venv/bin/activate ]]; then
+    # shellcheck source=/dev/null
+    . venv/bin/activate
+  elif [[ "${CI:-}" == "true" ]]; then
+    echo "Using system Python (CI=true, no backend/venv)"
+  else
     echo "ERROR: backend/venv not found. Create the venv before running backend tests." >&2
     record_summary "Backend (pytest)" 0 0 0 "ERROR" ""
     echo
     return
   fi
-
-  # shellcheck source=/dev/null
-  . venv/bin/activate
   local exit_code=0
   if [[ "$PRODUCTION_MODE" -eq 1 ]]; then
     echo "API_BASE_URL=$API_BASE_URL"
@@ -464,9 +571,17 @@ print_summary_table() {
 }
 
 TMP_DIR="$(mktemp -d)"
+CATEGORIES_TSV="$TMP_DIR/categories.tsv"
+FAILING_TSV="$TMP_DIR/failing.tsv"
+: > "$CATEGORIES_TSV"
+: > "$FAILING_TSV"
 
 if [[ "$PRODUCTION_MODE" -eq 1 ]]; then
-  echo "=== run_production_tests ==="
+  if [[ "$PRODUCTION_FULL" -eq 1 ]]; then
+    echo "=== run_production_tests (full matrix vs live API) ==="
+  else
+    echo "=== run_production_tests (slim: health + remote pytest) ==="
+  fi
   if ! load_production_env; then
     exit 1
   fi
@@ -482,6 +597,10 @@ if [[ "$PRODUCTION_MODE" -eq 1 ]]; then
 fi
 echo
 
+if [[ "$RUN_HEALTH" -eq 1 ]]; then
+  run_health_checks
+fi
+
 if [[ "$RUN_WEB" -eq 1 ]]; then
   run_web_tests "$TMP_DIR/web.log"
 fi
@@ -496,4 +615,5 @@ if [[ "$RUN_IOS" -eq 1 ]]; then
 fi
 
 print_summary_table
+write_gate_report
 exit "$OVERALL_EXIT"

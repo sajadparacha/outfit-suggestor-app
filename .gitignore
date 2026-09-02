@@ -39,6 +39,7 @@ coverage/
 
 # Local test run artifacts
 .test-reports/
+.cursor/test-gates/
 
 # nyc test coverage
 .nyc_output

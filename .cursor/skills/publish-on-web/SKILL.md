@@ -1,32 +1,35 @@
 ---
 name: publish-on-web
 description: >-
-  Local test gate (agent-launched terminal, auto-read results) → ship from
-  current branch → production test gate (full matrix vs live API) → optional
-  merge to main after user confirms. Retries up to 3 times (always redeploy on
-  retry). Use when the user says "publish on web", "Publish on web", or wants
-  to ship the web app.
+  Cost-minimized ship: CI owns test gates (web+backend local, slim production).
+  Agent commits/pushes, waits on gh via wait-ci-gate.py, deploys, optional merge.
+  On failure stop (no in-chat retry). Triggers: "publish on web", "ship only".
 disable-model-invocation: true
 ---
 
-# Publish on Web (v2)
+# Publish on Web (v4 — CI gates)
+
+**Prefer a new chat** for this workflow. Do not continue a Twin UI thread.
 
 **Locked defaults (this project):**
 
 | Setting | Value |
 |---------|--------|
-| Production gate | **Option C** — full matrix (`./run_production_tests` = same categories as local, vs live API) |
-| Test results | **Auto-read** from agent terminal logs (`exit_code` + summary table); do **not** wait for user “tests passed” |
-| Retries | Up to **3** attempts; **always redeploy** on every retry (local gate → ship → production gate), even if only production failed |
+| Local gate | GitHub Actions `test-local.yml` (Jest + pytest). Skip wait if `check-local-test-gate.py` exits 0 (local stamp **or** CI already green on this SHA). **Do not** run `./run_all_tests` in this chat unless the user says to run gates locally |
+| Production gate | GitHub Actions `test-production.yml` (slim: `/health` + frontend HTTP + `tests_remote`), dispatched after deploy |
+| Test results | Read **`.cursor/test-gates/last-report.json` only**. Do not ingest Actions logs or suite output |
+| Retries | **None in this chat.** On fail: quote JSON, stop, new chat to fix |
 
-End-to-end release for **outfit-suggestor-app**:
+iOS unit/UITests are **not** in CI. Twin UI still runs `./run_all_tests` locally (includes iOS).
 
-1. **Local gate** — agent opens a new terminal, runs `./run_all_tests`, auto-reads results
-2. **Ship** — commit, push `HEAD`, GitHub Pages, Railway (**no merge to `main` yet**)
-3. **Production gate** — second new terminal, `./run_production_tests` (Option C: same categories vs live API), auto-read results
-4. **Merge** — only if production gate passes; ask user to confirm merge to `main`
+End-to-end:
 
-**Retries:** up to **3 full attempts**. On any local or production failure: list failing tests, agent tries to fix, restart from step 1. **Always redeploy** on every retry (local → ship → production), even if only production failed.
+1. **Commit** if needed, then **local CI** (skip or push + `wait-ci-gate.py --workflow test-local.yml`)
+2. **Ship** — push if needed, GitHub Pages, Railway (**no merge to `main` yet**)
+3. **Production CI** — `wait-ci-gate.py --workflow test-production.yml --dispatch`
+4. **Merge** — only if production passes; ask user to confirm
+
+**`ship only`:** skip both CI gates; still commit/push/deploy; no merge.
 
 ---
 
@@ -36,7 +39,9 @@ End-to-end release for **outfit-suggestor-app**:
 publish on web
 ```
 
-or invoke this skill by name.
+```text
+ship only
+```
 
 ---
 
@@ -48,13 +53,7 @@ python3 .cursor/scripts/estimate-workflow-cost.py \
   --prompt "publish on web"
 ```
 
-Share output; **wait for** `yes` / `proceed`. Then:
-
-```bash
-python3 .cursor/scripts/estimate-workflow-cost.py start \
-  --workflow publish-on-web \
-  --prompt "publish on web"
-```
+Share output; **wait for** `yes` / `proceed`. Then `estimate-workflow-cost.py start` with the same prompt.
 
 ---
 
@@ -62,134 +61,120 @@ python3 .cursor/scripts/estimate-workflow-cost.py start \
 
 | Requirement | Check |
 |-------------|--------|
-| User invoked skill | Counts as deploy approval (merge needs separate confirm) |
-| `gh` CLI | `gh auth status` |
-| Railway CLI | `railway status` (linked project) |
-| `frontend/node_modules`, `backend/venv` | Present |
-| Xcode + simulator | Default `iPhone 17` |
-| `frontend/.env.production` | `REACT_APP_API_URL` for build + production gate |
-| `.env.production.test` | Copy from `.env.production.test.example` — `TEST_USERNAME`, `TEST_PASSWORD` (gitignored) |
+| User invoked skill | Deploy approval (merge needs a later confirm) |
+| `gh` CLI | `gh auth status` (Actions: read/write) |
+| Railway CLI | `railway status` |
+| GitHub secrets (production gate) | `PRODUCTION_TEST_USERNAME`, `PRODUCTION_TEST_PASSWORD`; optional `API_BASE_URL`, `FRONTEND_URL` |
+| `frontend/.env.production` | `REACT_APP_API_URL` for the frontend build |
 
-If `.env.production.test` is missing, stop and tell user to create it before production gate.
+If production secrets are missing, CI will fail at the production gate — tell the user to add them under repo **Settings → Secrets and variables → Actions**. Do not fall back to reading `.env.production.test` into chat.
 
 ---
 
-## Attempt loop (max 3)
+## Flow (single attempt)
 
 ```
-attempt = 1
-while attempt <= 3:
-  A. Local gate     → ./run_all_tests (new terminal, auto-read)
-  B. Ship           → commit + push HEAD + npm run deploy + railway up
-  C. Production gate → ./run_production_tests (new terminal, auto-read)
-  if C passes → ask merge to main → break
-  if C fails  → list failures, fix, attempt++, retry from A (always redeploy)
-if attempt > 3 and still failing → stop with report
+0. Cost estimate + approval
+1. Commit (git safety; never stage secrets / venv / node_modules / .env.production.test)
+2. python3 .cursor/scripts/check-local-test-gate.py
+   - exit 0 → skip wait; note SOURCE in the report
+   - else → git push -u origin HEAD
+            new terminal: python3 .cursor/scripts/wait-ci-gate.py --workflow test-local.yml
+            read last-report.json (not the terminal log)
+3. Ship: push if needed + npm run deploy + railway up + curl health
+4. new terminal: python3 .cursor/scripts/wait-ci-gate.py --workflow test-production.yml --dispatch
+   read last-report.json
+5. If production PASS → ask merge to main
+On any FAIL → stop (do not fix, do not retry)
 ```
 
-**Local gate failure:** do not ship; list failures, fix, `attempt++`, retry from A.
+**Local CI FAIL:** do not deploy Pages/Railway. Quote `failing_tests` + `run_url` from JSON.
 
-**Ship failure:** stop attempt; report error (no production gate until ship succeeds).
+**Ship FAIL:** stop; no production dispatch.
 
-**Production gate failure:** list failures from terminal log (`=== Failing tests ===` + summary table), fix, `attempt++`, **full retry from A including redeploy**.
+**Production CI FAIL:** no merge. Quote JSON + `run_url`.
 
 ---
 
-## Agent: launch tests in new terminal and auto-read results
+## Agent: wait on CI, read JSON
 
-**Do not** ask the user to type “tests passed”. **Do** launch suites in a **new terminal** and read the summary when the process ends.
+**Do not** ask the user to type “tests passed”.
+**Do not** run `./run_all_tests` or `./run_production_tests` unless the user explicitly asks for local gates.
 
-### Launch (required pattern)
+### Launch wait scripts
 
 - Working directory: repo root
-- **New** terminal session (not reused for other commands)
-- Start in background: `block_until_ms: 0` (or equivalent)
-- Command:
-  - Local: `./run_all_tests`
-  - Production: `./run_production_tests`
+- **New** terminal
+- `block_until_ms: 0`
+- After `exit_code:` appears, read **only** `.cursor/test-gates/last-report.json`
 
-### Auto-read (required)
+Show: `overall`, `exit_code`, `mode`, `run_url`, `categories`, `failing_tests`.
 
-Poll the terminal output file until `exit_code:` appears (or use Await with a completion pattern). Extract and show the user:
+**Gate:** `exit_code` 0 and `overall` `PASS`.
 
-- `=== Test Results ===` summary table (Overall row)
-- `=== Failing tests ===` section when present
-- `exit_code` (0 = pass)
-
-**Gate:** `exit_code: 0` and Overall **PASS** → continue. Otherwise → failure path (fix + retry or stop at attempt 3).
-
-**Do not** paste full xcodebuild/Jest/pytest logs into chat — quote the summary table and failing-test list only.
+Do **not** paste `gh` job logs. One-line `CI_STATUS=` in the terminal is noise — ignore it.
 
 ---
 
-## Step A — Local test gate
+## Step A — Local CI gate
 
 ```bash
-./run_all_tests
+python3 .cursor/scripts/check-local-test-gate.py
 ```
 
-Same matrix as today: web Jest + backend pytest (local) + iOS unit/integration + iOS UITests.
+Exit 0 → skip wait.
 
-**FAIL** → list failures, fix, next attempt (do not ship).  
-**PASS** → Step B.
+Otherwise push, then:
+
+```bash
+python3 .cursor/scripts/wait-ci-gate.py --workflow test-local.yml
+```
+
+CI jobs: Web (Jest) + Backend (pytest). See `.github/workflows/test-local.yml`.
 
 ---
 
 ## Step B — Ship from current branch (no merge yet)
 
-1. Record branch: `git branch --show-current`
-2. Commit (git safety rules; never stage secrets, `venv`, `node_modules`, `xcuserdata`)
-3. `git push -u origin HEAD`
-4. `cd frontend && npm run deploy`
-5. `cd backend && railway up`
-6. Verify: `curl` frontend URL + `<API_BASE_URL>/health`
+1. `git branch --show-current`
+2. `git push -u origin HEAD` if the remote is missing this SHA
+3. `cd frontend && npm run deploy`
+4. `cd backend && railway up`
+5. `curl` frontend URL + `<API_BASE_URL>/health`
 
 **Do not merge to `main` in this step.**
 
 ---
 
-## Step C — Production test gate (Option C)
+## Step C — Production CI gate (slim)
 
-Second **new** terminal:
+After live deploy:
 
 ```bash
-./run_production_tests
+python3 .cursor/scripts/wait-ci-gate.py --workflow test-production.yml --dispatch
 ```
 
-Same categories, production wiring:
+Same checks as `./run_production_tests`: API `/health`, frontend HTTP, `backend/tests_remote`.
 
-| Category | Production behavior |
-|----------|---------------------|
-| Web | Jest with `REACT_APP_API_URL` from `frontend/.env.production` |
-| Backend | `backend/tests_remote` vs `API_BASE_URL` + credentials |
-| iOS | `Release` build + `API_BASE_URL` env (live Railway API) |
-
-Credentials: `.env.production.test` (see `.env.production.test.example`).
-
-Auto-read results; show production test report to user.
-
-**FAIL** → list failures, fix, **retry from Step A** (always redeploy).  
-**PASS** → Step D.
+**FAIL** → stop. **PASS** → Step D.
 
 ---
 
-## Step D — Merge to `main` (only after production pass)
+## Step D — Merge to `main`
 
-Ask explicitly:
+Ask:
 
 > Production tests passed. Merge `<branch>` into `main` and push?
 
-Proceed **only** on `yes` / `proceed` / `merge`.
+Only on `yes` / `proceed` / `merge`.
 
 ```bash
 git checkout main
 git pull origin main
 git merge <branch>
 git push origin main
-git checkout <branch>   # return to feature branch if user was working there
+git checkout <branch>
 ```
-
-If user declines merge, report success for ship + production gate only.
 
 ---
 
@@ -197,13 +182,12 @@ If user declines merge, report success for ship + production gate only.
 
 ```
 - [ ] 0. Cost estimate → user approves → start tracking
-- [ ] 1. attempt ≤ 3:
-- [ ]    A. New terminal: ./run_all_tests → auto-read → PASS required
-- [ ]    B. Commit + push HEAD + npm run deploy + railway up
-- [ ]    C. New terminal: ./run_production_tests → auto-read → show report
-- [ ]    D. On C pass: ask merge to main; on yes → merge + push main
-- [ ]    On failure: list failing tests, fix, retry from A (always redeploy)
-- [ ] 2. estimate-workflow-cost.py end + Publish on Web — Report
+- [ ] A. check-local-test-gate.py → skip or wait-ci-gate test-local.yml PASS
+- [ ] B. Push + npm run deploy + railway up
+- [ ] C. wait-ci-gate test-production.yml --dispatch PASS
+- [ ] D. Ask merge; on yes → merge + push main
+- [ ] On failure: quote last-report.json, stop, new-chat fix
+- [ ] estimate-workflow-cost.py end + Publish on Web — Report
 ```
 
 ---
@@ -214,15 +198,16 @@ If user declines merge, report success for ship + production gate only.
 ## Publish on Web — Report
 
 **Branch:** <branch>
-**Attempt:** <n>/3
+**Attempt:** 1 (no in-chat retries)
 **Overall:** SUCCESS | FAILED (stopped at <step>)
 
-### Local gate (./run_all_tests)
+### Local gate
 | Metric | Value |
 |--------|-------|
-| Terminal | auto-read |
-| Overall | PASS / FAIL |
-| Failed tests | (list or —) |
+| Skipped | yes / no (stamp / Actions) |
+| Overall | PASS / FAIL / skipped |
+| Run URL | (Actions URL or —) |
+| Failed tests | (from last-report.json or —) |
 
 ### Ship (current branch, no merge yet)
 - **Commit:** `<hash>` — <message>
@@ -230,10 +215,11 @@ If user declines merge, report success for ship + production gate only.
 - **GitHub Pages:** OK / FAILED
 - **Railway:** OK / FAILED
 
-### Production gate (./run_production_tests)
+### Production gate (CI slim)
 | Metric | Value |
 |--------|-------|
-| Terminal | auto-read |
+| Report | `.cursor/test-gates/last-report.json` |
+| Run URL | |
 | Overall | PASS / FAIL |
 | Failed tests | (list or —) |
 
@@ -249,7 +235,6 @@ If user declines merge, report success for ship + production gate only.
 (paste `estimate-workflow-cost.py end` output)
 
 ### Notes
-- Retries, fixes applied, manual follow-ups
 ```
 
 ---
@@ -258,20 +243,21 @@ If user declines merge, report success for ship + production gate only.
 
 | Failure | Action |
 |---------|--------|
-| Local gate FAIL | No ship. List failures, fix, retry attempt (max 3). |
-| Production gate FAIL | List failures, fix, **full retry from local gate + redeploy** (max 3). |
-| Ship / deploy FAIL | Stop current attempt; report; do not run production gate until ship OK. |
-| Missing `.env.production.test` | Stop before production gate; instruct user to create from example. |
-| 3 attempts exhausted | Stop; report all failing tests; no merge. |
-| User declines merge | Ship + production pass still reported as success. |
+| Local CI FAIL | No Pages/Railway. Quote JSON + run URL. **Stop.** |
+| Production CI FAIL | No merge. Quote JSON. **Stop.** |
+| Ship / deploy FAIL | Stop; no production dispatch. |
+| Missing Actions secrets | Stop at production; tell user which secrets to add. |
+| User declines merge | Ship + production pass still success. |
+
+Do **not** auto-fix product code in this chat.
 
 ---
 
 ## References
 
-- `scripts/run_all_tests.sh` — local gate
-- `run_production_tests` / `scripts/run_all_tests.sh --production` — production gate
-- `.env.production.test.example` — remote test credentials
+- `.github/workflows/test-local.yml` — Jest + pytest on push/PR
+- `.github/workflows/test-production.yml` — slim live gate (`workflow_dispatch`)
+- `.cursor/scripts/wait-ci-gate.py` — wait / `--check-only` / `--dispatch`
+- `.cursor/scripts/check-local-test-gate.py` — stamp or CI already green
+- `./run_all_tests` / `./run_production_tests` — local equivalents (Twin UI / manual)
 - [TEST_CASE_EXECUTION_GUIDE.md](../../../TEST_CASE_EXECUTION_GUIDE.md)
-- [DEPLOYMENT_INSTRUCTIONS.md](../../../DEPLOYMENT_INSTRUCTIONS.md)
-- `frontend/package.json` → `npm run deploy`

@@ -1,2 +1,3 @@
 #!/usr/bin/env bash
+# Slim production gate (health + remote pytest). Use --full for the old full matrix.
 exec "$(cd "$(dirname "$0")" && pwd)/scripts/run_all_tests.sh" --production "$@"

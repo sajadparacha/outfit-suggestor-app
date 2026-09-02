@@ -84,6 +84,13 @@ Orchestrator still must not edit `frontend/**` or `ios-client/**` directly — d
 - Do not attach or re-fetch large artifacts (images, logs, full CI output) unless required; quote the relevant slice.
 - Avoid redundant parallel subagents when one agent can finish the job.
 
+## Publish on web
+
+- Start in a **new chat** (do not continue Twin UI context).
+- Gates run on **GitHub Actions**. Agent uses `wait-ci-gate.py` and reads `last-report.json` only — do not run `./run_all_tests` / `./run_production_tests` in the publish chat unless the user asks.
+- Skip the local wait when `check-local-test-gate.py` exits 0.
+- On gate failure: **stop**. Do not retry or auto-fix in the same chat.
+
 ## Communication
 
 - Propose a **short plan** before large multi-file edits.
