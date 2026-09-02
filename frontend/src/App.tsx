@@ -119,6 +119,16 @@ function App() {
   const [wardrobeAnalysisLoadingMessage, setWardrobeAnalysisLoadingMessage] = useState('Analyzing your wardrobe...');
   const [showWardrobeAnalysisModeModal, setShowWardrobeAnalysisModeModal] = useState(false);
   const [highlightGenerateButton, setHighlightGenerateButton] = useState(false);
+  const resultScrollRafRef = useRef<number | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (resultScrollRafRef.current != null) {
+        cancelAnimationFrame(resultScrollRafRef.current);
+        resultScrollRafRef.current = null;
+      }
+    };
+  }, []);
 
   // Controllers (Business Logic)
   const {
@@ -177,8 +187,15 @@ function App() {
       if (!isAuthenticated) {
         await refreshGuestUsage();
       }
-      requestAnimationFrame(() => {
-        document.getElementById('outfit-result-hero')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+      if (resultScrollRafRef.current != null) {
+        cancelAnimationFrame(resultScrollRafRef.current);
+      }
+      resultScrollRafRef.current = requestAnimationFrame(() => {
+        resultScrollRafRef.current = null;
+        document.getElementById('outfit-result-hero')?.scrollIntoView?.({
+          behavior: 'smooth',
+          block: 'start',
+        });
       });
     },
     onGuestLimitReached: handleGuestLimitReached,
