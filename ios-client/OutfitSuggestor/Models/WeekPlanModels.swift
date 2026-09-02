@@ -31,6 +31,12 @@ struct WeekPlanDayInput: Codable, Equatable {
     var style: String = WeekPlanConstants.defaultStyle
     /// When true (default), generate uses wardrobe only for this day.
     var use_wardrobe_only: Bool = true
+    /// Slot key → wardrobe item id (pins kept across generate/regenerate).
+    var pinned_items: [String: Int] = [:]
+
+    enum CodingKeys: String, CodingKey {
+        case day_of_week, enabled, occasion, style, use_wardrobe_only, pinned_items
+    }
 }
 
 struct WeekPlanUpsertRequest: Codable, Equatable {
@@ -175,10 +181,12 @@ struct WeekPlanDayResponse: Codable, Identifiable {
     var style: String
     /// When true (default), generate uses wardrobe only for this day.
     var use_wardrobe_only: Bool
+    /// Slot key → wardrobe item id (pins kept across generate/regenerate).
+    var pinned_items: [String: Int]
     var outfit: WeekPlanOutfitResponse?
 
     enum CodingKeys: String, CodingKey {
-        case day_of_week, enabled, occasion, style, use_wardrobe_only, outfit
+        case day_of_week, enabled, occasion, style, use_wardrobe_only, pinned_items, outfit
     }
 
     init(
@@ -187,6 +195,7 @@ struct WeekPlanDayResponse: Codable, Identifiable {
         occasion: String,
         style: String = WeekPlanConstants.defaultStyle,
         use_wardrobe_only: Bool = true,
+        pinned_items: [String: Int] = [:],
         outfit: WeekPlanOutfitResponse? = nil
     ) {
         self.day_of_week = day_of_week
@@ -194,6 +203,7 @@ struct WeekPlanDayResponse: Codable, Identifiable {
         self.occasion = occasion
         self.style = style
         self.use_wardrobe_only = use_wardrobe_only
+        self.pinned_items = pinned_items
         self.outfit = outfit
     }
 
@@ -204,6 +214,7 @@ struct WeekPlanDayResponse: Codable, Identifiable {
         occasion = try c.decodeIfPresent(String.self, forKey: .occasion) ?? WeekPlanConstants.defaultOccasion
         style = try c.decodeIfPresent(String.self, forKey: .style) ?? WeekPlanConstants.defaultStyle
         use_wardrobe_only = try c.decodeIfPresent(Bool.self, forKey: .use_wardrobe_only) ?? true
+        pinned_items = try c.decodeIfPresent([String: Int].self, forKey: .pinned_items) ?? [:]
         outfit = try c.decodeIfPresent(WeekPlanOutfitResponse.self, forKey: .outfit)
     }
 }
@@ -230,6 +241,7 @@ struct WeekPlanResponse: Codable {
                     occasion: WeekPlanConstants.defaultOccasion,
                     style: WeekPlanConstants.defaultStyle,
                     use_wardrobe_only: true,
+                    pinned_items: [:],
                     outfit: nil
                 )
             },
@@ -526,6 +538,8 @@ enum WeekPlanCopy {
     static let whyThisOutfitWorks = "Why this outfit works"
     static let addAccessory = "Add accessory"
     static let changeItem = "Change"
+    static let pinnedBadge = "Pinned"
+    static let unpin = "Unpin"
     static let planned = "Planned"
     static let includeDay = "Include day"
     static let notPlanned = "Not planned"
@@ -663,17 +677,30 @@ enum WeekPlanOutfitDisplay {
     }
 
     /// Four aligned slots: top, bottom, shoes, optional accessory.
-    static func fourSlotRows(for outfit: WeekPlanOutfitResponse?) -> [SlotRow] {
-        guard let outfit else {
-            return [
-                SlotRow(category: "shirt", label: "Top", description: "", isPlaceholder: true),
-                SlotRow(category: "trouser", label: "Bottom", description: "", isPlaceholder: true),
-                SlotRow(category: "shoes", label: "Shoes", description: "", isPlaceholder: true),
-                SlotRow(category: "accessory", label: WeekPlanCopy.addAccessory, description: "", isPlaceholder: true),
-            ]
-        }
+    static func fourSlotRows(for day: WeekPlanDayResponse) -> [SlotRow] {
+        fourSlotRows(for: day.outfit, pinnedItems: day.pinned_items)
+    }
+
+    /// Four aligned slots: top, bottom, shoes, optional accessory.
+    static func fourSlotRows(for outfit: WeekPlanOutfitResponse?, pinnedItems: [String: Int] = [:]) -> [SlotRow] {
         func text(_ value: String?) -> String {
             (value ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        func isPinned(_ slotKey: String) -> Bool {
+            pinnedItems[slotKey] != nil
+        }
+        guard let outfit else {
+            return [
+                SlotRow(category: "shirt", label: "Top", description: "", isPlaceholder: !isPinned("shirt")),
+                SlotRow(category: "trouser", label: "Bottom", description: "", isPlaceholder: !isPinned("trouser")),
+                SlotRow(category: "shoes", label: "Shoes", description: "", isPlaceholder: !isPinned("shoes")),
+                SlotRow(
+                    category: "accessory",
+                    label: WeekPlanCopy.addAccessory,
+                    description: "",
+                    isPlaceholder: !isPinned("belt")
+                ),
+            ]
         }
         let top = text(outfit.shirt)
         let bottom = text(outfit.trouser)
@@ -682,14 +709,29 @@ enum WeekPlanOutfitDisplay {
         let accessory = accessoryCandidates.first ?? ""
 
         return [
-            SlotRow(category: "shirt", label: "Top", description: top, isPlaceholder: top.isEmpty),
-            SlotRow(category: "trouser", label: "Bottom", description: bottom, isPlaceholder: bottom.isEmpty),
-            SlotRow(category: "shoes", label: "Shoes", description: shoes, isPlaceholder: shoes.isEmpty),
+            SlotRow(
+                category: "shirt",
+                label: "Top",
+                description: top,
+                isPlaceholder: top.isEmpty && !isPinned("shirt")
+            ),
+            SlotRow(
+                category: "trouser",
+                label: "Bottom",
+                description: bottom,
+                isPlaceholder: bottom.isEmpty && !isPinned("trouser")
+            ),
+            SlotRow(
+                category: "shoes",
+                label: "Shoes",
+                description: shoes,
+                isPlaceholder: shoes.isEmpty && !isPinned("shoes")
+            ),
             SlotRow(
                 category: "accessory",
                 label: accessory.isEmpty ? WeekPlanCopy.addAccessory : "Accessory",
                 description: accessory,
-                isPlaceholder: accessory.isEmpty
+                isPlaceholder: accessory.isEmpty && !isPinned("belt")
             ),
         ]
     }

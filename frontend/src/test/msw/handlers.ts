@@ -153,6 +153,7 @@ export const handlers = [
           occasion: 'everyday',
           style: 'classic',
           use_wardrobe_only: true,
+          pinned_items: {},
           outfit: null,
         })),
         wardrobe_empty: false,
@@ -176,12 +177,14 @@ export const handlers = [
             occasion: string;
             style?: string;
             use_wardrobe_only?: boolean;
+            pinned_items?: Record<string, number>;
           }) => ({
             day_of_week: d.day_of_week,
             enabled: d.enabled,
             occasion: d.occasion,
             style: d.style ?? 'classic',
             use_wardrobe_only: d.use_wardrobe_only ?? true,
+            pinned_items: d.pinned_items ?? {},
             outfit: null,
           })
         ),

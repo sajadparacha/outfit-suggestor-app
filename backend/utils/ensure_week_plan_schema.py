@@ -77,6 +77,14 @@ def ensure_week_plan_day_columns(engine: Engine) -> None:
                     )
                 )
             print("✅ Added weekly_plan_days.use_wardrobe_only")
+        if "pinned_items_json" not in cols:
+            conn.execute(
+                text(
+                    "ALTER TABLE weekly_plan_days "
+                    "ADD COLUMN pinned_items_json TEXT NOT NULL DEFAULT '{}'"
+                )
+            )
+            print("✅ Added weekly_plan_days.pinned_items_json")
 
 
 def ensure_week_plan_preset_user_columns(engine: Engine) -> None:

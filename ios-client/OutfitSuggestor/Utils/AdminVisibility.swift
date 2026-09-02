@@ -67,7 +67,7 @@ enum AboutCopy {
     static let insightsFeature =
         "• Insights — gap analysis, coverage dashboard, and a shopping list for what to buy next."
     static let weekPlannerFeature =
-        "• Week Planner — generate outfits for selected days, Change/Add opens Wardrobe to pick a slot item then returns to that day, and save your plan. While Generate outfits, Regenerate this day, Insights AI runs, and other server calls run, a dimmed progress panel blocks the app until the operation finishes."
+        "• Week Planner — generate outfits for selected days, Change/Add opens Wardrobe to pick a slot item then returns to that day, and save your plan. Picking a wardrobe item for a week day pins it; generating fills only the remaining slots. While Generate outfits, Regenerate this day, Insights AI runs, and other server calls run, a dimmed progress panel blocks the app until the operation finishes."
     static let accountFeature =
         "• Account — sign in with email and password, Continue with Google, or Continue with Apple to sync wardrobe, history, Week Planner, and Insights."
     static let guideLocationNote =

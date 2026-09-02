@@ -278,6 +278,8 @@ export interface WeekPlanDay {
   style: string;
   /** When true (default), generate uses wardrobe only for this day. */
   use_wardrobe_only: boolean;
+  /** Slot key → wardrobe item id; persists across generate/regenerate. */
+  pinned_items?: Record<string, number>;
   outfit?: WeekPlanOutfit | null;
 }
 
@@ -303,7 +305,38 @@ export interface WeekPlanUpsertRequest {
     occasion: string;
     style: string;
     use_wardrobe_only: boolean;
+    pinned_items?: Record<string, number>;
   }>;
+}
+
+/** Wardrobe item id pinned to a slot, if any. */
+export function getPinnedItemId(
+  day: WeekPlanDay,
+  slotKey: string
+): number | undefined {
+  return day.pinned_items?.[slotKey];
+}
+
+export function isSlotPinned(day: WeekPlanDay, slotKey: string): boolean {
+  return getPinnedItemId(day, slotKey) != null;
+}
+
+/** Return day with one slot pin merged into pinned_items. */
+export function mergePinOnDay(
+  day: WeekPlanDay,
+  slotKey: string,
+  itemId: number
+): WeekPlanDay {
+  return {
+    ...day,
+    pinned_items: { ...(day.pinned_items ?? {}), [slotKey]: itemId },
+  };
+}
+
+/** True when the day has no AI-generated outfit yet (pins may still exist). */
+export function isUngeneratedWeekPlanDay(day: WeekPlanDay): boolean {
+  const summary = day.outfit?.summary;
+  return !summary || !String(summary).trim();
 }
 
 export interface WeekPlanGenerateRequest {
@@ -445,6 +478,7 @@ export function normalizeWeekPlanDays(plan: WeekPlan): WeekPlan {
         ...existing,
         style: existing.style || DEFAULT_DAY_STYLE,
         use_wardrobe_only: existing.use_wardrobe_only ?? true,
+        pinned_items: existing.pinned_items,
       };
     }
     return {
@@ -474,12 +508,15 @@ export function toUpsertPayload(plan: WeekPlan): WeekPlanUpsertRequest {
     shared_style: plan.shared_style,
     shared_season: plan.shared_season,
     days: plan.days.map(
-      ({ day_of_week, enabled, occasion, style, use_wardrobe_only }) => ({
+      ({ day_of_week, enabled, occasion, style, use_wardrobe_only, pinned_items }) => ({
         day_of_week,
         enabled,
         occasion,
         style: style || DEFAULT_DAY_STYLE,
         use_wardrobe_only: use_wardrobe_only ?? true,
+        ...(pinned_items && Object.keys(pinned_items).length > 0
+          ? { pinned_items }
+          : {}),
       })
     ),
   };

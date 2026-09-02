@@ -392,6 +392,40 @@ def outfit_row_to_response(
     )
 
 
+def _normalize_pinned_items(raw: Any) -> dict[str, int]:
+    if not isinstance(raw, dict):
+        return {}
+    pins: dict[str, int] = {}
+    for slot, item_id in raw.items():
+        if not isinstance(slot, str) or not slot.strip():
+            continue
+        if isinstance(item_id, int) and item_id > 0:
+            pins[slot.strip()] = item_id
+    return pins
+
+
+def parse_pinned_items(day: WeeklyPlanDay) -> dict[str, int]:
+    try:
+        raw = json.loads(getattr(day, "pinned_items_json", None) or "{}")
+    except json.JSONDecodeError:
+        raw = {}
+    return _normalize_pinned_items(raw)
+
+
+def pinned_item_ids(day: WeeklyPlanDay) -> list[int]:
+    ids: list[int] = []
+    seen: set[int] = set()
+    for item_id in parse_pinned_items(day).values():
+        if item_id not in seen:
+            seen.add(item_id)
+            ids.append(item_id)
+    return ids
+
+
+def serialize_pinned_items(pins: dict[str, int]) -> str:
+    return json.dumps(_normalize_pinned_items(pins))
+
+
 def day_to_response(
     day: WeeklyPlanDay,
     *,
@@ -413,6 +447,7 @@ def day_to_response(
         occasion=day.occasion or DEFAULT_OCCASION,
         style=getattr(day, "style", None) or DEFAULT_STYLE,
         use_wardrobe_only=bool(getattr(day, "use_wardrobe_only", True)),
+        pinned_items=parse_pinned_items(day),
         outfit=outfit,
     )
 
@@ -447,6 +482,7 @@ def plan_to_response(
                     occasion=DEFAULT_OCCASION,
                     style=DEFAULT_STYLE,
                     use_wardrobe_only=True,
+                    pinned_items={},
                     outfit=None,
                 )
             )
@@ -474,6 +510,7 @@ def empty_plan_response() -> WeekPlanResponse:
                 occasion=DEFAULT_OCCASION,
                 style=DEFAULT_STYLE,
                 use_wardrobe_only=True,
+                pinned_items={},
                 outfit=None,
             )
             for dow in range(7)
@@ -547,6 +584,9 @@ class WeekPlanService:
                         use_wardrobe_only=bool(
                             getattr(day_in, "use_wardrobe_only", True)
                         ),
+                        pinned_items_json=serialize_pinned_items(
+                            getattr(day_in, "pinned_items", None) or {}
+                        ),
                     )
                     plan.days.append(day)
                     by_dow[day_in.day_of_week] = day
@@ -557,6 +597,9 @@ class WeekPlanService:
                     day.style = getattr(day_in, "style", None) or DEFAULT_STYLE
                     day.use_wardrobe_only = bool(
                         getattr(day_in, "use_wardrobe_only", True)
+                    )
+                    day.pinned_items_json = serialize_pinned_items(
+                        getattr(day_in, "pinned_items", None) or {}
                     )
                     # Clear outfit when day is disabled
                     if was_enabled and not day.enabled and day.outfit is not None:
@@ -633,6 +676,10 @@ class WeekPlanService:
         for day in plan.days:
             if exclude_day is not None and day.day_of_week == exclude_day:
                 continue
+            for i in pinned_item_ids(day):
+                if i not in seen:
+                    seen.add(i)
+                    used.append(i)
             if day.outfit is None:
                 continue
             try:
@@ -644,6 +691,67 @@ class WeekPlanService:
                     seen.add(i)
                     used.append(i)
         return used
+
+    def prune_invalid_pins(
+        self,
+        db: Session,
+        user_id: int,
+        plan: WeeklyPlan,
+        *,
+        target_days: Optional[list[WeeklyPlanDay]] = None,
+    ) -> list[str]:
+        """Drop pins for wardrobe items the user no longer owns. Returns banner lines."""
+        from models.wardrobe import WardrobeItem
+
+        days = target_days if target_days is not None else list(plan.days)
+        all_pin_ids: set[int] = set()
+        for day in days:
+            all_pin_ids.update(parse_pinned_items(day).values())
+        if not all_pin_ids:
+            return []
+
+        owned = {
+            row.id
+            for row in db.query(WardrobeItem.id)
+            .filter(
+                WardrobeItem.user_id == user_id,
+                WardrobeItem.id.in_(all_pin_ids),
+            )
+            .all()
+        }
+        messages: list[str] = []
+        for day in days:
+            pins = parse_pinned_items(day)
+            if not pins:
+                continue
+            kept: dict[str, int] = {}
+            dropped: list[int] = []
+            for slot, item_id in pins.items():
+                if item_id in owned:
+                    kept[slot] = item_id
+                else:
+                    dropped.append(item_id)
+            if dropped:
+                day.pinned_items_json = serialize_pinned_items(kept)
+                messages.append(
+                    "Removed pinned item(s) you no longer own from "
+                    f"{self._day_label(day.day_of_week)}."
+                )
+        return messages
+
+    def _day_label(self, day_of_week: int) -> str:
+        labels = (
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday",
+        )
+        if 0 <= day_of_week < len(labels):
+            return labels[day_of_week]
+        return f"day {day_of_week}"
 
     def collect_used_colors(
         self, plan: WeeklyPlan, *, exclude_day: Optional[int] = None
@@ -829,6 +937,9 @@ class WeekPlanService:
                 occasion=raw.get("occasion") or DEFAULT_OCCASION,
                 style=raw.get("style") or DEFAULT_STYLE,
                 use_wardrobe_only=bool(raw.get("use_wardrobe_only", True)),
+                pinned_items_json=serialize_pinned_items(
+                    raw.get("pinned_items") or {}
+                ),
             )
             db.add(day)
             db.flush()

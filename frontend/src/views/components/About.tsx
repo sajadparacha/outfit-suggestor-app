@@ -21,7 +21,7 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
     {
       icon: '📅',
       title: 'Week Planner',
-      text: 'Plan selected days, generate looks, and Change/Add a slot from Wardrobe—then return to that day. While Generate outfits, Regenerate this day, Insights AI runs, and other server calls run, a dimmed progress panel blocks the app until the operation finishes.',
+      text: 'Plan selected days, generate looks, and Change/Add a slot from Wardrobe—then return to that day. Picking a wardrobe item for a day pins that slot; Generate outfits fills only the remaining slots. While Generate outfits, Regenerate this day, Insights AI runs, and other server calls run, a dimmed progress panel blocks the app until the operation finishes.',
     },
     {
       icon: '🧠',

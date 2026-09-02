@@ -56,6 +56,7 @@ final class WeekPlannerViewModelTests: XCTestCase {
                     occasion: input.occasion,
                     style: input.style,
                     use_wardrobe_only: input.use_wardrobe_only,
+                    pinned_items: input.pinned_items,
                     outfit: plan.days.first(where: { $0.day_of_week == input.day_of_week })?.outfit
                 )
             }
@@ -177,6 +178,7 @@ final class WeekPlannerViewModelTests: XCTestCase {
                     occasion: $0.occasion,
                     style: $0.style,
                     use_wardrobe_only: $0.use_wardrobe_only,
+                    pinned_items: [:],
                     outfit: nil
                 )
             }
@@ -985,6 +987,91 @@ final class WeekPlannerViewModelTests: XCTestCase {
         XCTAssertEqual(vm.plan.days[1].outfit?.shirt, shirtBefore)
         XCTAssertFalse(vm.isDirty)
         XCTAssertEqual(vm.selectedDayOfWeek, 1)
+    }
+
+    // MARK: - Pinned slots
+
+    func testApplyWardrobeItemPinsSlot() async {
+        let api = MockAPI()
+        let vm = WeekPlannerViewModel(api: api, notifier: MockNotifier(), timezoneProvider: { "UTC" })
+        await vm.load()
+        vm.setDayEnabled(1, enabled: true)
+
+        let item = WardrobeItem(
+            id: 99,
+            category: "shirt",
+            name: "Oxford",
+            description: "White oxford",
+            color: "white",
+            brand: nil,
+            size: nil,
+            image_data: nil,
+            tags: nil,
+            condition: nil,
+            wear_count: 0,
+            created_at: "2026-01-01",
+            updated_at: "2026-01-01"
+        )
+
+        XCTAssertTrue(vm.applyWardrobeItem(item, dayOfWeek: 1, slotKey: "shirt"))
+        XCTAssertEqual(vm.plan.days[1].pinned_items["shirt"], 99)
+        XCTAssertTrue(vm.isSlotPinned(dayOfWeek: 1, slotKey: "shirt"))
+        XCTAssertTrue(vm.isDirty)
+    }
+
+    func testUnpinSlotRemovesPinAndClearsOutfitSlot() async {
+        let api = MockAPI()
+        api.plan.days[1].enabled = true
+        api.plan.days[1].outfit = WeekPlanOutfitResponse(
+            summary: "Pinned shirt only",
+            shirt: "White oxford",
+            trouser: "",
+            shoes: "",
+            belt: "",
+            shirt_id: 99
+        )
+        api.plan.days[1].pinned_items = ["shirt": 99]
+        let vm = WeekPlannerViewModel(api: api, notifier: MockNotifier(), timezoneProvider: { "UTC" })
+        await vm.load()
+
+        vm.unpinSlot(dayOfWeek: 1, slot: "shirt")
+
+        XCTAssertNil(vm.plan.days[1].pinned_items["shirt"])
+        XCTAssertFalse(vm.isSlotPinned(dayOfWeek: 1, slotKey: "shirt"))
+        XCTAssertNil(vm.plan.days[1].outfit)
+        XCTAssertTrue(vm.isDirty)
+    }
+
+    func testSavePersistsPinnedItems() async throws {
+        let api = MockAPI()
+        let vm = WeekPlannerViewModel(api: api, notifier: MockNotifier(), timezoneProvider: { "UTC" })
+        await vm.load()
+        vm.setDayEnabled(2, enabled: true)
+        vm.plan.days[2].pinned_items = ["shoes": 7, "shirt": 3]
+        await vm.save()
+
+        let body = try XCTUnwrap(api.putBodies.first)
+        let day = try XCTUnwrap(body.days.first(where: { $0.day_of_week == 2 }))
+        XCTAssertEqual(day.pinned_items["shoes"], 7)
+        XCTAssertEqual(day.pinned_items["shirt"], 3)
+    }
+
+    func testPinnedSlotCopyMatchesWeb() {
+        XCTAssertEqual(WeekPlanCopy.pinnedBadge, "Pinned")
+        XCTAssertEqual(WeekPlanCopy.unpin, "Unpin")
+    }
+
+    func testFourSlotRowsRespectsPinnedItemsBeforeGenerate() {
+        let day = WeekPlanDayResponse(
+            day_of_week: 0,
+            enabled: true,
+            occasion: "work",
+            pinned_items: ["shirt": 42],
+            outfit: nil
+        )
+        let rows = WeekPlanOutfitDisplay.fourSlotRows(for: day)
+        XCTAssertFalse(rows.first(where: { $0.category == "shirt" })?.isPlaceholder ?? true)
+        XCTAssertTrue(rows.first(where: { $0.category == "trouser" })?.isPlaceholder ?? false)
     }
 }
 

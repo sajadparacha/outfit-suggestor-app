@@ -91,6 +91,9 @@ class WeeklyPlanDay(Base):
     use_wardrobe_only: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True
     )
+    pinned_items_json: Mapped[str] = mapped_column(
+        Text, nullable=False, default="{}"
+    )  # slot -> wardrobe item id
 
     plan: Mapped["WeeklyPlan"] = relationship("WeeklyPlan", back_populates="days")
     outfit: Mapped[Optional["WeeklyPlanOutfit"]] = relationship(
@@ -180,6 +183,7 @@ class WeekPlanDayInput(BaseModel):
     occasion: str = DEFAULT_OCCASION
     style: str = DEFAULT_STYLE
     use_wardrobe_only: bool = True
+    pinned_items: dict[str, int] = Field(default_factory=dict)
 
 
 class WeekPlanUpsertRequest(BaseModel):
@@ -245,6 +249,7 @@ class WeekPlanDayResponse(BaseModel):
     occasion: str
     style: str = DEFAULT_STYLE
     use_wardrobe_only: bool = True
+    pinned_items: dict[str, int] = Field(default_factory=dict)
     outfit: Optional[WeekPlanOutfitResponse] = None
 
 

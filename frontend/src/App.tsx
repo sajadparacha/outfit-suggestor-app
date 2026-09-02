@@ -922,6 +922,7 @@ function App() {
                   setWeekPlanOpKind('regenerate');
                   weekPlan.regenerateDay(day).catch(() => undefined);
                 }}
+                onUnpinSlot={weekPlan.unpinDaySlot}
                 onClearPlan={() => {
                   weekPlan.clearPlan().catch(() => undefined);
                 }}

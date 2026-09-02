@@ -313,10 +313,76 @@ final class WeekPlannerViewModel: ObservableObject {
 
         plan.days[idx].enabled = true
         plan.days[idx].outfit = outfit
+        plan.days[idx].pinned_items[key] = item.id
         dismissedMissingDays.remove(dayOfWeek)
         selectedDayOfWeek = dayOfWeek
         lastMissingAction = .chooseFromWardrobe(dayOfWeek: dayOfWeek)
         return true
+    }
+
+    /// Whether a slot is pinned (wardrobe pick) for the given day.
+    func isSlotPinned(dayOfWeek: Int, slotKey: String) -> Bool {
+        let key = WardrobePickSession(dayOfWeek: dayOfWeek, slotKey: slotKey).normalizedSlotKey
+        guard let day = plan.days.first(where: { $0.day_of_week == dayOfWeek }) else { return false }
+        return day.pinned_items[key] != nil
+    }
+
+    /// Remove pin and clear the slot in the local outfit when present.
+    func unpinSlot(dayOfWeek: Int, slot: String) {
+        guard let idx = plan.days.firstIndex(where: { $0.day_of_week == dayOfWeek }) else { return }
+        let key = WardrobePickSession(dayOfWeek: dayOfWeek, slotKey: slot).normalizedSlotKey
+        plan.days[idx].pinned_items.removeValue(forKey: key)
+        if var outfit = plan.days[idx].outfit {
+            Self.clearSlot(key, in: &outfit)
+            let hasContent = WeekPlanMissingSlots.contentSlots.contains {
+                !outfit[keyPath: $0.keyPath].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            }
+            if !hasContent {
+                outfit.summary = ""
+            }
+            let hasSummary = !outfit.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            plan.days[idx].outfit = (hasContent || hasSummary) ? outfit : nil
+        }
+    }
+
+    private static func clearSlot(_ slotKey: String, in outfit: inout WeekPlanOutfitResponse) {
+        switch slotKey {
+        case "shirt":
+            outfit.shirt = ""
+            outfit.shirt_id = nil
+            outfit.matching_wardrobe_items = replacingMatching(outfit.matching_wardrobe_items, slotKey: slotKey, item: nil)
+        case "trouser":
+            outfit.trouser = ""
+            outfit.trouser_id = nil
+            outfit.matching_wardrobe_items = replacingMatching(outfit.matching_wardrobe_items, slotKey: slotKey, item: nil)
+        case "shoes":
+            outfit.shoes = ""
+            outfit.shoes_id = nil
+            outfit.matching_wardrobe_items = replacingMatching(outfit.matching_wardrobe_items, slotKey: slotKey, item: nil)
+        case "belt":
+            outfit.belt = ""
+            outfit.belt_id = nil
+            outfit.matching_wardrobe_items = replacingMatching(outfit.matching_wardrobe_items, slotKey: slotKey, item: nil)
+        case "blazer":
+            outfit.blazer = ""
+            outfit.blazer_id = nil
+            outfit.matching_wardrobe_items = replacingMatching(outfit.matching_wardrobe_items, slotKey: slotKey, item: nil)
+        case "sweater":
+            outfit.sweater = nil
+            outfit.sweater_id = nil
+            outfit.matching_wardrobe_items = replacingMatching(outfit.matching_wardrobe_items, slotKey: slotKey, item: nil)
+        case "outerwear":
+            outfit.outerwear = nil
+            outfit.outerwear_id = nil
+            outfit.matching_wardrobe_items = replacingMatching(outfit.matching_wardrobe_items, slotKey: slotKey, item: nil)
+        case "tie":
+            outfit.tie = nil
+            outfit.tie_id = nil
+            outfit.matching_wardrobe_items = replacingMatching(outfit.matching_wardrobe_items, slotKey: slotKey, item: nil)
+        default:
+            break
+        }
+        outfit.wardrobe_item_ids = syncedWardrobeItemIds(from: outfit)
     }
 
     private static func displayText(for item: WardrobeItem) -> String {
@@ -338,17 +404,17 @@ final class WeekPlannerViewModel: ObservableObject {
     private static func replacingMatching(
         _ existing: MatchingWardrobeItems?,
         slotKey: String,
-        item: MatchingWardrobeItem
+        item: MatchingWardrobeItem?
     ) -> MatchingWardrobeItems {
         MatchingWardrobeItems(
-            shirt: slotKey == "shirt" ? [item] : existing?.shirt,
-            trouser: slotKey == "trouser" ? [item] : existing?.trouser,
-            blazer: slotKey == "blazer" ? [item] : existing?.blazer,
-            shoes: slotKey == "shoes" ? [item] : existing?.shoes,
-            belt: slotKey == "belt" ? [item] : existing?.belt,
-            sweater: slotKey == "sweater" ? [item] : existing?.sweater,
-            outerwear: slotKey == "outerwear" ? [item] : existing?.outerwear,
-            tie: slotKey == "tie" ? [item] : existing?.tie
+            shirt: slotKey == "shirt" ? (item.map { [$0] }) : existing?.shirt,
+            trouser: slotKey == "trouser" ? (item.map { [$0] }) : existing?.trouser,
+            blazer: slotKey == "blazer" ? (item.map { [$0] }) : existing?.blazer,
+            shoes: slotKey == "shoes" ? (item.map { [$0] }) : existing?.shoes,
+            belt: slotKey == "belt" ? (item.map { [$0] }) : existing?.belt,
+            sweater: slotKey == "sweater" ? (item.map { [$0] }) : existing?.sweater,
+            outerwear: slotKey == "outerwear" ? (item.map { [$0] }) : existing?.outerwear,
+            tie: slotKey == "tie" ? (item.map { [$0] }) : existing?.tie
         )
     }
 
@@ -442,6 +508,7 @@ final class WeekPlannerViewModel: ObservableObject {
         plan.days[idx].enabled = enabled
         if !enabled {
             plan.days[idx].outfit = nil
+            plan.days[idx].pinned_items = [:]
             dismissedMissingDays.remove(dayOfWeek)
         }
         Task { await syncNotifications() }
@@ -679,6 +746,7 @@ final class WeekPlannerViewModel: ObservableObject {
                     day.occasion,
                     day.style,
                     day.use_wardrobe_only ? "1" : "0",
+                    Self.sortedPinFingerprint(day.pinned_items),
                     outfitKey,
                 ].joined(separator: ":")
             }
@@ -800,7 +868,8 @@ final class WeekPlannerViewModel: ObservableObject {
                     enabled: $0.enabled,
                     occasion: $0.occasion.isEmpty ? WeekPlanConstants.defaultOccasion : $0.occasion,
                     style: $0.style.isEmpty ? WeekPlanConstants.defaultStyle : $0.style,
-                    use_wardrobe_only: $0.use_wardrobe_only
+                    use_wardrobe_only: $0.use_wardrobe_only,
+                    pinned_items: $0.pinned_items
                 )
             }
         )
@@ -817,6 +886,7 @@ final class WeekPlannerViewModel: ObservableObject {
                     occasion: WeekPlanConstants.defaultOccasion,
                     style: WeekPlanConstants.defaultStyle,
                     use_wardrobe_only: true,
+                    pinned_items: [:],
                     outfit: nil
                 )
             }
@@ -841,6 +911,12 @@ final class WeekPlannerViewModel: ObservableObject {
         } else {
             await notifier.reschedule(plan: plan)
         }
+    }
+
+    private static func sortedPinFingerprint(_ pinned: [String: Int]) -> String {
+        pinned.keys.sorted().map { key in
+            "\(key)=\(pinned[key] ?? 0)"
+        }.joined(separator: ",")
     }
 }
 

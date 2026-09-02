@@ -332,7 +332,7 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               'Planning templates (prefs only): use Save as… to store your week setup; Load applies it and clears outfits—tap Generate outfits when ready.',
               'Today at the top shows today’s occasion and outfit summary (with wardrobe preview thumbnails when available).',
               'Per day: toggle Use wardrobe (default on), then open the day detail for item images, a collapsed Why this outfit works section, and missing-item actions (Choose from wardrobe / Find an alternative / Continue without).',
-              'Change or Add on a week day opens Wardrobe to pick an item for that slot, then returns to that day.',
+              'Change or Add on a week day opens Wardrobe to pick an item for that slot, then returns to that day. That choice pins the slot; Generate outfits fills only the remaining slots.',
             ]}
           />
           <p>

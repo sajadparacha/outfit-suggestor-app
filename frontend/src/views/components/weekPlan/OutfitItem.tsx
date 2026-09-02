@@ -13,7 +13,9 @@ export interface OutfitItemProps {
   label: string;
   value: string;
   outfit: WeekPlanOutfit;
+  pinned?: boolean;
   onChangeItem?: (categoryKey: OutfitCategoryKey) => void;
+  onUnpin?: () => void;
 }
 
 function asSuggestion(outfit: WeekPlanOutfit): OutfitSuggestion {
@@ -67,13 +69,18 @@ const OutfitItem: React.FC<OutfitItemProps> = ({
   label,
   value,
   outfit,
+  pinned = false,
   onChangeItem,
+  onUnpin,
 }) => {
   const thumb = resolveWeekPlanItemThumbnail(outfit, categoryKey);
   const { shortName } = parseOutfitItemCardText(value);
   const displayName = shortName || value;
-  const tagLabel =
-    thumb.tag === 'wardrobe' ? MAIN_FLOW_UX_COPY.tagFromWardrobe : MAIN_FLOW_UX_COPY.tagAiSuggested;
+  const tagLabel = pinned
+    ? 'Pinned'
+    : thumb.tag === 'wardrobe'
+      ? MAIN_FLOW_UX_COPY.tagFromWardrobe
+      : MAIN_FLOW_UX_COPY.tagAiSuggested;
   const imageAlt = displayName
     ? `${label}: ${displayName}`
     : `${label} item`;
@@ -134,9 +141,11 @@ const OutfitItem: React.FC<OutfitItemProps> = ({
           </p>
           <span
             className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-medium ${
-              thumb.tag === 'ai'
-                ? 'bg-brand-blue/20 text-sky-200'
-                : 'bg-emerald-500/15 text-emerald-300'
+              pinned
+                ? 'bg-amber-500/20 text-amber-200'
+                : thumb.tag === 'ai'
+                  ? 'bg-brand-blue/20 text-sky-200'
+                  : 'bg-emerald-500/15 text-emerald-300'
             }`}
           >
             {tagLabel}
@@ -145,17 +154,30 @@ const OutfitItem: React.FC<OutfitItemProps> = ({
         <p className="text-sm font-medium leading-snug text-white line-clamp-2">
           {displayName}
         </p>
-        {onChangeItem && (
-          <button
-            type="button"
-            onClick={() => onChangeItem(categoryKey)}
-            className="mt-auto min-h-[44px] w-full rounded-lg border border-white/10 bg-white/[0.03] px-2 text-xs font-medium text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue"
-            data-testid={`week-outfit-change-${categoryKey}`}
-            aria-label={`Change ${label}`}
-          >
-            Change
-          </button>
-        )}
+        <div className="mt-auto flex flex-col gap-1.5">
+          {onUnpin && (
+            <button
+              type="button"
+              onClick={onUnpin}
+              className="min-h-[44px] w-full rounded-lg border border-amber-500/30 bg-amber-500/10 px-2 text-xs font-medium text-amber-100 transition hover:bg-amber-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+              data-testid={`week-outfit-unpin-${categoryKey}`}
+              aria-label={`Unpin ${label}`}
+            >
+              Unpin
+            </button>
+          )}
+          {onChangeItem && (
+            <button
+              type="button"
+              onClick={() => onChangeItem(categoryKey)}
+              className="min-h-[44px] w-full rounded-lg border border-white/10 bg-white/[0.03] px-2 text-xs font-medium text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue"
+              data-testid={`week-outfit-change-${categoryKey}`}
+              aria-label={`Change ${label}`}
+            >
+              Change
+            </button>
+          )}
+        </div>
       </div>
 
       {viewingImage && (

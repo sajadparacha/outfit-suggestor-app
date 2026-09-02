@@ -161,7 +161,7 @@ struct UserGuideView: View {
                         "Tap Generate outfits (primary). After outfits exist, Save plan appears when you have unsaved changes.",
                         "Review the selected day — four slots (top, bottom, shoes, accessory), Why this outfit works, and Regenerate this day.",
                         "While Generate outfits, Regenerate this day, Insights AI runs, and other server calls run, a dimmed progress panel blocks the app until the operation finishes—you cannot use other tabs until it completes (Cancel appears only when that action is available).",
-                        "Change or Add on a day opens Wardrobe to pick an item for that slot, then returns to that day.",
+                        "Change or Add on a day opens Wardrobe to pick an item for that slot, then returns to that day. Picking a wardrobe item pins it; generating fills only the remaining slots.",
                         "Planning templates store prefs only (no outfits). Plan history keeps past weekly outfits — both stay collapsed until you expand them.",
                         "Clear plan saves a copy under Plan history. Day cards show Needs outfit / Not planned only when exceptional — not Ready on every day."
                     ],

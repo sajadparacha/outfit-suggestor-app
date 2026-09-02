@@ -55,6 +55,7 @@ export interface WeekPlannerProps {
   onSave: () => void;
   onGenerateWeek: () => void;
   onRegenerateDay: (dayOfWeek: number) => void;
+  onUnpinSlot: (dayOfWeek: number, slotKey: string) => void;
   onClearPlan?: () => void;
   onRestoreHistory?: (historyId: number) => void;
   onDismissMessage?: () => void;
@@ -154,6 +155,7 @@ const WeekPlanner: React.FC<WeekPlannerProps> = ({
   onSave,
   onGenerateWeek,
   onRegenerateDay,
+  onUnpinSlot,
   onClearPlan,
   onRestoreHistory,
   onDismissMessage,
@@ -237,13 +239,27 @@ const WeekPlanner: React.FC<WeekPlannerProps> = ({
   };
 
   const handleChooseFromWardrobe = (slots: Array<{ key: string; label: string }>) => {
-    const slot = slots[0];
-    if (!slot) return;
+    if (!slots.length) return;
+    const dayOfWeek = selectedDayPlan?.day_of_week ?? selectedDay;
+    if (slots.length === 1) {
+      const [invokedSlot] = slots;
+      if (!invokedSlot) return;
+      navigate(
+        wardrobePickPath({
+          dayOfWeek,
+          slotKey: invokedSlot.key,
+          category: invokedSlot.key,
+        })
+      );
+      return;
+    }
+    const firstMissing = slots[0];
+    if (!firstMissing) return;
     navigate(
       wardrobePickPath({
-        dayOfWeek: selectedDay,
-        slotKey: slot.key,
-        category: slot.key,
+        dayOfWeek,
+        slotKey: firstMissing.key,
+        category: firstMissing.key,
       })
     );
   };
@@ -358,6 +374,7 @@ const WeekPlanner: React.FC<WeekPlannerProps> = ({
           onUpdateDay={onUpdateDay}
           onRegenerateDay={onRegenerateDay}
           onChooseFromWardrobe={handleChooseFromWardrobe}
+          onUnpinSlot={onUnpinSlot}
           onFindAlternative={handleFindAlternative}
           onContinueWithout={handleContinueWithout}
         />

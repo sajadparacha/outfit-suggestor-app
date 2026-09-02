@@ -726,11 +726,13 @@ struct WeekPlannerView: View {
     }
 
     private func fourSlotGallery(_ day: WeekPlanDayResponse) -> some View {
-        let slots = WeekPlanOutfitDisplay.fourSlotRows(for: day.outfit)
+        let slots = WeekPlanOutfitDisplay.fourSlotRows(for: day)
         let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 2)
         return LazyVGrid(columns: columns, spacing: 10) {
             ForEach(slots, id: \.category) { slot in
                 let wardrobeCategory = slot.category == "accessory" ? "belt" : slot.category
+                let pinSlotKey = wardrobeCategory
+                let isPinned = viewModel.isSlotPinned(dayOfWeek: day.day_of_week, slotKey: pinSlotKey)
                 VStack(spacing: 6) {
                     if slot.isPlaceholder {
                         Button {
@@ -782,6 +784,18 @@ struct WeekPlannerView: View {
                             size: isRegularWidth ? 72 : 64,
                             allowsEnlarge: true
                         )
+                    } else if isPinned {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color.white.opacity(0.06))
+                            .frame(height: isRegularWidth ? 72 : 64)
+                            .overlay(
+                                Image(systemName: "tshirt.fill")
+                                    .foregroundColor(AppTheme.textSecondary)
+                            )
+                    }
+                    if isPinned {
+                        badge(WeekPlanCopy.pinnedBadge)
+                            .accessibilityIdentifier("week.slot.\(slot.category).pinned")
                     }
                     Text(slot.isPlaceholder && slot.category == "accessory" ? "Accessory" : slot.label)
                         .font(.caption2.weight(.semibold))
@@ -795,6 +809,27 @@ struct WeekPlannerView: View {
                             .multilineTextAlignment(.center)
                     }
                     if !slot.isPlaceholder {
+                        if isPinned {
+                            Button {
+                                viewModel.unpinSlot(dayOfWeek: day.day_of_week, slot: pinSlotKey)
+                            } label: {
+                                Text(WeekPlanCopy.unpin)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundColor(AppTheme.textPrimary)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(AppTheme.surface)
+                                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                            .stroke(AppTheme.border, lineWidth: 1)
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            .frame(minHeight: 44)
+                            .accessibilityIdentifier("week.slot.\(slot.category).unpin")
+                            .accessibilityLabel("\(WeekPlanCopy.unpin) \(slot.label)")
+                        }
                         Button {
                             openWardrobe(
                                 category: wardrobeCategory,

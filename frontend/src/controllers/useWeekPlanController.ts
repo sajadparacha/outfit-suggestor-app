@@ -93,6 +93,7 @@ function planFingerprint(plan: WeekPlan): string {
       trouser: d.outfit?.trouser ?? null,
       shoes: d.outfit?.shoes ?? null,
       belt: d.outfit?.belt ?? null,
+      pinned_items: d.pinned_items ?? null,
     })),
   });
 }
@@ -274,10 +275,71 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
 
             return {
               ...d,
+              pinned_items: { ...(d.pinned_items ?? {}), [key]: item.id },
               outfit: {
                 ...base,
                 [textField]: wardrobeItemSlotText(item),
                 [idField]: item.id,
+                matching_wardrobe_items: matching,
+                wardrobe_item_ids,
+              },
+            };
+          }),
+        };
+        planRef.current = next;
+        markDirtyFromPlan(next);
+        return next;
+      });
+    },
+    [markDirtyFromPlan]
+  );
+
+  /** Remove a pin and clear that slot in the local outfit if it matches the pin. */
+  const unpinDaySlot = useCallback(
+    (dayOfWeek: number, slotKey: string) => {
+      const key = slotKey as SlotKey;
+      const textField = SLOT_TEXT_FIELDS[key];
+      const idField = SLOT_ID_FIELDS[key];
+      if (!textField || !idField) return;
+
+      setPlan((prev) => {
+        if (!prev) return prev;
+        const next: WeekPlan = {
+          ...prev,
+          days: prev.days.map((d) => {
+            if (d.day_of_week !== dayOfWeek) return d;
+            const pinned = { ...(d.pinned_items ?? {}) };
+            const prevPinId = pinned[key];
+            delete pinned[key];
+            const pinned_items =
+              Object.keys(pinned).length > 0 ? pinned : undefined;
+
+            if (!d.outfit || prevPinId == null) {
+              return { ...d, pinned_items };
+            }
+
+            const base = { ...d.outfit };
+            const slotId = base[idField] as number | null | undefined;
+            if (slotId !== prevPinId) {
+              return { ...d, pinned_items };
+            }
+
+            const matching: MatchingWardrobeItems = {
+              ...emptyMatching(),
+              ...(base.matching_wardrobe_items ?? {}),
+            };
+            matching[key] = [];
+
+            let wardrobe_item_ids = [...(base.wardrobe_item_ids ?? [])];
+            wardrobe_item_ids = wardrobe_item_ids.filter((id) => id !== prevPinId);
+
+            return {
+              ...d,
+              pinned_items,
+              outfit: {
+                ...base,
+                [textField]: '',
+                [idField]: null,
                 matching_wardrobe_items: matching,
                 wardrobe_item_ids,
               },
@@ -637,6 +699,7 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
     loadPresets,
     updateDay,
     applyWardrobeItemToDaySlot,
+    unpinDaySlot,
     setReminderTime,
     setSharedStyle,
     setSharedSeason,

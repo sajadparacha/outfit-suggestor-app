@@ -7,6 +7,8 @@ import {
   WeekPlanOutfit,
   getMissingOutfitSlots,
   getWeekDayStatus,
+  isSlotPinned,
+  isUngeneratedWeekPlanDay,
 } from '../../../models/WeekPlanModels';
 import { FILTER_OPTIONS } from '../../../utils/constants';
 import { MAIN_FLOW_UX_COPY } from '../../../utils/mainFlowUxCopy';
@@ -74,6 +76,7 @@ export interface OutfitPreviewProps {
   ) => void;
   onRegenerateDay: (dayOfWeek: number) => void;
   onChooseFromWardrobe: (slots: Array<{ key: string; label: string }>) => void;
+  onUnpinSlot: (dayOfWeek: number, slotKey: string) => void;
   onFindAlternative: (dayOfWeek: number) => void;
   onContinueWithout: (dayOfWeek: number) => void;
 }
@@ -87,6 +90,7 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
   onUpdateDay,
   onRegenerateDay,
   onChooseFromWardrobe,
+  onUnpinSlot,
   onFindAlternative,
   onContinueWithout,
 }) => {
@@ -94,7 +98,8 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
   const useWardrobe = day.use_wardrobe_only !== false;
   const status = getWeekDayStatus(day);
   const outfit = day.outfit;
-  const missingSlots = outfit && !dismissedMissing ? getMissingOutfitSlots(outfit) : [];
+  const ungenerated = isUngeneratedWeekPlanDay(day);
+  const missingSlots = outfit && !ungenerated && !dismissedMissing ? getMissingOutfitSlots(outfit) : [];
   const testIdPrefix = `week-day-summary-${day.day_of_week}`;
   const layerOpts = {
     season: season ?? null,
@@ -117,13 +122,136 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
       : [];
 
   const handleRegenerate = () => {
-    if (day.outfit) {
+    if (day.outfit && !ungenerated) {
       const ok = window.confirm(
         `Regenerate ${label}? The current outfit for this day will be replaced.`
       );
       if (!ok) return;
     }
     onRegenerateDay(day.day_of_week);
+  };
+
+  const renderAddSlotCard = (
+    key: string,
+    slotLabel: string,
+    options?: { optional?: boolean; missing?: boolean }
+  ) => {
+    const optional = options?.optional ?? false;
+    const missing = options?.missing ?? false;
+    if (optional) {
+      return (
+        <button
+          key={key}
+          type="button"
+          className="flex min-h-[11rem] min-w-0 flex-col items-center justify-center rounded-xl border border-dashed border-white/25 bg-white/[0.03] p-3 text-center transition hover:border-brand-blue/40 hover:bg-brand-blue/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue"
+          data-testid="week-outfit-add-accessory"
+          aria-label="Add accessory"
+          onClick={() => onChooseFromWardrobe([{ key: 'belt', label: 'Accessory' }])}
+        >
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+            Accessory
+          </span>
+          <span className="mt-2 text-sm font-medium text-slate-200">Add accessory</span>
+          <span className="mt-1 text-xs text-slate-400">Optional</span>
+        </button>
+      );
+    }
+    if (missing) {
+      return (
+        <button
+          key={key}
+          type="button"
+          onClick={() => onChooseFromWardrobe([{ key, label: slotLabel }])}
+          className="flex min-h-[11rem] min-w-0 flex-col items-center justify-center rounded-xl border border-dashed border-brand-purple/40 bg-brand-purple/5 p-3 text-center transition hover:bg-brand-purple/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-purple"
+          data-testid={`week-outfit-missing-slot-${key}`}
+          aria-label={`Add ${slotLabel}`}
+        >
+          <p className="text-xs font-medium text-purple-100">{slotLabel}</p>
+          <p className="mt-2 text-sm font-semibold text-purple-50">Add {slotLabel}</p>
+        </button>
+      );
+    }
+    return (
+      <button
+        key={key}
+        type="button"
+        onClick={() => onChooseFromWardrobe([{ key, label: slotLabel }])}
+        className="flex min-h-[11rem] min-w-0 flex-col items-center justify-center rounded-xl border border-dashed border-white/25 bg-white/[0.03] p-3 text-center transition hover:border-brand-blue/40 hover:bg-brand-blue/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue"
+        data-testid={`week-outfit-add-slot-${key}`}
+        aria-label={`Add ${slotLabel}`}
+      >
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+          {slotLabel}
+        </span>
+        <span className="mt-2 text-sm font-medium text-slate-200">Add {slotLabel}</span>
+      </button>
+    );
+  };
+
+  const renderEditorSlot = (
+    key: (typeof WEEK_PLAN_EDITOR_SLOTS)[number]['key'],
+    slotLabel: string,
+    field: (typeof WEEK_PLAN_EDITOR_SLOTS)[number]['field'],
+    slotOutfit: WeekPlanOutfit | null | undefined
+  ) => {
+    const pinned = isSlotPinned(day, key);
+    const value = slotOutfit?.[field];
+    const filled = typeof value === 'string' && value.trim();
+    const isAccessory = key === 'belt';
+    const isMissing = missingSlots.some((s) => s.key === key);
+
+    if (pinned) {
+      const displayOutfit: WeekPlanOutfit =
+        slotOutfit ??
+        ({
+          summary: '',
+          shirt: '',
+          trouser: '',
+          blazer: '',
+          shoes: '',
+          belt: '',
+          reasoning: '',
+        } as WeekPlanOutfit);
+      return (
+        <OutfitItem
+          key={key}
+          categoryKey={key}
+          label={slotLabel}
+          value={filled ? String(value) : 'Pinned item'}
+          outfit={displayOutfit}
+          pinned
+          onUnpin={() => onUnpinSlot(day.day_of_week, key)}
+          onChangeItem={
+            !ungenerated
+              ? (cat) => onChooseFromWardrobe([{ key: cat, label: slotLabel }])
+              : undefined
+          }
+        />
+      );
+    }
+
+    if (filled) {
+      return (
+        <OutfitItem
+          key={key}
+          categoryKey={key}
+          label={slotLabel}
+          value={String(value)}
+          outfit={slotOutfit!}
+          onChangeItem={(cat) => onChooseFromWardrobe([{ key: cat, label: slotLabel }])}
+        />
+      );
+    }
+
+    if (isAccessory) {
+      return renderAddSlotCard(key, slotLabel, { optional: true });
+    }
+
+    if (isMissing) {
+      return renderAddSlotCard(key, slotLabel, { missing: true });
+    }
+
+    return renderAddSlotCard(key, slotLabel);
   };
 
   return (
@@ -218,13 +346,23 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
         </p>
       )}
 
-      {day.enabled && !outfit && (
-        <p className="text-sm text-slate-400">
-          Not generated yet. Tap Generate outfits or Regenerate this day.
-        </p>
+      {day.enabled && ungenerated && (
+        <div className="space-y-3">
+          <p className="text-sm text-slate-400">
+            Add wardrobe items to pin slots, then Generate outfits to fill the rest.
+          </p>
+          <div
+            className="grid grid-cols-2 gap-2 min-[640px]:grid-cols-4"
+            data-testid="week-outfit-slots"
+          >
+            {WEEK_PLAN_EDITOR_SLOTS.map(({ key, label: slotLabel, field }) =>
+              renderEditorSlot(key, slotLabel, field, outfit)
+            )}
+          </div>
+        </div>
       )}
 
-      {day.enabled && outfit && (
+      {day.enabled && outfit && !ungenerated && (
         <div className="grid grid-cols-1 gap-5 min-[900px]:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
           {/* Outfit left */}
           <div className="space-y-3">
@@ -232,77 +370,9 @@ const OutfitPreview: React.FC<OutfitPreviewProps> = ({
               className="grid grid-cols-2 gap-2 min-[640px]:grid-cols-4"
               data-testid="week-outfit-slots"
             >
-              {WEEK_PLAN_EDITOR_SLOTS.map(({ key, label: slotLabel, field }) => {
-                const value = outfit[field];
-                const filled = typeof value === 'string' && value.trim();
-                const isAccessory = key === 'belt';
-                const isMissing = missingSlots.some((s) => s.key === key);
-
-                if (filled) {
-                  return (
-                    <OutfitItem
-                      key={key}
-                      categoryKey={key}
-                      label={slotLabel}
-                      value={String(value)}
-                      outfit={outfit}
-                      onChangeItem={(cat) =>
-                        onChooseFromWardrobe([{ key: cat, label: slotLabel }])
-                      }
-                    />
-                  );
-                }
-
-                if (isAccessory) {
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      className="flex min-h-[11rem] min-w-0 flex-col items-center justify-center rounded-xl border border-dashed border-white/25 bg-white/[0.03] p-3 text-center transition hover:border-brand-blue/40 hover:bg-brand-blue/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue"
-                      data-testid="week-outfit-add-accessory"
-                      aria-label="Add accessory"
-                      onClick={() =>
-                        onChooseFromWardrobe([{ key: 'belt', label: 'Accessory' }])
-                      }
-                    >
-                      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                        Accessory
-                      </span>
-                      <span className="mt-2 text-sm font-medium text-slate-200">
-                        Add accessory
-                      </span>
-                      <span className="mt-1 text-xs text-slate-400">Optional</span>
-                    </button>
-                  );
-                }
-
-                if (isMissing) {
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() =>
-                        onChooseFromWardrobe([{ key, label: slotLabel }])
-                      }
-                      className="flex min-h-[11rem] min-w-0 flex-col items-center justify-center rounded-xl border border-dashed border-brand-purple/40 bg-brand-purple/5 p-3 text-center transition hover:bg-brand-purple/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-purple"
-                      data-testid={`week-outfit-missing-slot-${key}`}
-                      aria-label={`Add ${slotLabel}`}
-                    >
-                      <p className="text-xs font-medium text-purple-100">{slotLabel}</p>
-                      <p className="mt-2 text-sm font-semibold text-purple-50">Add {slotLabel}</p>
-                    </button>
-                  );
-                }
-
-                return (
-                  <div
-                    key={key}
-                    className="flex min-h-[11rem] min-w-0 flex-col items-center justify-center rounded-xl border border-dashed border-white/10 bg-white/[0.02] p-3 text-center"
-                  >
-                    <p className="text-xs text-slate-400">{slotLabel}</p>
-                  </div>
-                );
-              })}
+              {WEEK_PLAN_EDITOR_SLOTS.map(({ key, label: slotLabel, field }) =>
+                renderEditorSlot(key, slotLabel, field, outfit)
+              )}
             </div>
 
             {showBlazer && outfit.blazer?.trim() && (

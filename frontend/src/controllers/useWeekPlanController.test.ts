@@ -2,6 +2,7 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { useWeekPlanController } from './useWeekPlanController';
 import apiService from '../services/ApiService';
 import { WeekPlan, WeekPlanPresetItem, WeekPlanToday } from '../models/WeekPlanModels';
+import { WardrobeItem } from '../models/WardrobeModels';
 
 jest.mock('../services/ApiService', () => ({
   __esModule: true,
@@ -335,5 +336,91 @@ describe('useWeekPlanController', () => {
     expect(mockApi.deleteWeekPlanPreset).toHaveBeenCalledWith(9);
     expect(result.current.presetCount).toBe(0);
     expect(result.current.presetAtLimit).toBe(false);
+  });
+
+  const sampleWardrobeItem: WardrobeItem = {
+    id: 42,
+    category: 'shirt',
+    color: 'Blue',
+    description: 'Oxford shirt',
+    image_data: 'data:image/jpeg;base64,abc',
+    name: 'Oxford',
+    brand: null,
+    size: null,
+    tags: null,
+    condition: null,
+    wear_count: 0,
+    created_at: '2026-01-01',
+    updated_at: '2026-01-01',
+  };
+
+  it('applyWardrobeItemToDaySlot sets pinned_items on the day', async () => {
+    const { result } = renderHook(() =>
+      useWeekPlanController({ isAuthenticated: true, userId: 1 })
+    );
+    await waitFor(() => expect(result.current.plan).not.toBeNull());
+
+    act(() => {
+      result.current.updateDay(0, { enabled: true });
+    });
+
+    act(() => {
+      result.current.applyWardrobeItemToDaySlot(0, 'shirt', sampleWardrobeItem);
+    });
+
+    const monday = result.current.plan?.days[0];
+    expect(monday?.pinned_items?.shirt).toBe(42);
+    expect(monday?.outfit?.shirt_id).toBe(42);
+    expect(monday?.outfit?.shirt).toContain('Oxford');
+  });
+
+  it('unpinDaySlot clears pin and outfit slot', async () => {
+    const { result } = renderHook(() =>
+      useWeekPlanController({ isAuthenticated: true, userId: 1 })
+    );
+    await waitFor(() => expect(result.current.plan).not.toBeNull());
+
+    act(() => {
+      result.current.updateDay(0, { enabled: true });
+    });
+
+    act(() => {
+      result.current.applyWardrobeItemToDaySlot(0, 'shirt', sampleWardrobeItem);
+    });
+
+    act(() => {
+      result.current.unpinDaySlot(0, 'shirt');
+    });
+
+    const monday = result.current.plan?.days[0];
+    expect(monday?.pinned_items?.shirt).toBeUndefined();
+    expect(monday?.pinned_items).toBeUndefined();
+    expect(monday?.outfit?.shirt_id).toBeNull();
+    expect(monday?.outfit?.shirt).toBe('');
+  });
+
+  it('savePlan sends pinned_items in upsert payload', async () => {
+    const { result } = renderHook(() =>
+      useWeekPlanController({ isAuthenticated: true, userId: 1 })
+    );
+    await waitFor(() => expect(result.current.plan).not.toBeNull());
+
+    act(() => {
+      result.current.updateDay(0, { enabled: true });
+      result.current.applyWardrobeItemToDaySlot(0, 'trouser', {
+        ...sampleWardrobeItem,
+        id: 7,
+        category: 'trouser',
+        description: 'Chinos',
+      });
+    });
+
+    await act(async () => {
+      await result.current.savePlan();
+    });
+
+    const putBody = mockApi.putWeekPlan.mock.calls.at(-1)?.[0];
+    const monday = putBody?.days.find((d) => d.day_of_week === 0);
+    expect(monday?.pinned_items).toEqual({ trouser: 7 });
   });
 });

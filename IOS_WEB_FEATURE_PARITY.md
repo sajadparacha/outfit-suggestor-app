@@ -36,7 +36,7 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 | **Guest limit auth UX** | ✅ | ✅ | At 3/3 free tries: single auth surface on Suggest; nav Sign Up/Login hidden; no duplicate CTAs |
 | **Logout clears main flow** | ✅ | ✅ | Logout resets image, result, prefs on Suggest |
 | **Admin Reports** | ✅ | ✅ | Four tabs (Overview, Utilization, Users, Searches); timeline + search APIs; Recharts (web) / Swift Charts (iOS); city filter web-only |
-| **Week Outfit Planner** | ✅ | ✅ | Main nav label **Week Planner** (web + iOS tab); route `/week`; Mon–Sun day toggles + occasions; per-day style + wardrobe-only; reminder + timezone; primary CTA **Generate outfits** / **Save plan** (dirty); exceptional day status only; regenerate day; Today surface; login required; **Planning templates** (prefs/presets, collapsed) with server-resolved limit (**default 10**); **Plan history** (past outfits, collapsed) distinct; toast for load/save; **admin preset-limit override web-only** (API enforced for all); daily wake-up reminders iOS-first; web Today in-app |
+| **Week Outfit Planner** | ✅ | ✅ | Main nav label **Week Planner** (web + iOS tab); route `/week`; Mon–Sun day toggles + occasions; per-day style + wardrobe-only; **per-day pinned wardrobe slots** (pick to pin; generate fills remaining); reminder + timezone; primary CTA **Generate outfits** / **Save plan** (dirty); exceptional day status only; regenerate day; Today surface; login required; **Planning templates** (prefs/presets, collapsed) with server-resolved limit (**default 10**); **Plan history** (past outfits, collapsed) distinct; toast for load/save; **admin preset-limit override web-only** (API enforced for all); daily wake-up reminders iOS-first; web Today in-app |
 
 ---
 

@@ -30,6 +30,8 @@ from services.week_plan_service import (
     extract_outfit_colors,
     extract_wardrobe_item_ids,
     outfit_summary,
+    parse_pinned_items,
+    pinned_item_ids,
     plan_to_response,
     scrub_reused_slot_ids,
 )
@@ -302,8 +304,29 @@ class WeekPlanController:
                 )
 
         outfit_controller = self._require_outfit_controller()
-        # Full-week regenerate only tracks IDs within this run; single-day
-        # regenerate still avoids items already planned on other days.
+
+        pin_messages = self.week_plan_service.prune_invalid_pins(
+            db,
+            current_user.id,
+            plan,
+            target_days=target_days,
+        )
+        if pin_messages:
+            db.commit()
+            plan = self.week_plan_service.get_plan(db, current_user.id)
+            assert plan is not None
+            if body.day_of_week is not None:
+                target_days = [
+                    d
+                    for d in plan.days
+                    if d.day_of_week == body.day_of_week and d.enabled
+                ]
+            else:
+                target_days = [d for d in plan.days if d.enabled]
+
+        # Full-week regenerate seeds all days' pins first so an early day cannot
+        # take a later day's pinned item. Single-day regenerate avoids other days'
+        # outfit IDs and pins via collect_used_item_ids.
         if body.day_of_week is not None:
             used_ids = self.week_plan_service.collect_used_item_ids(
                 plan,
@@ -314,7 +337,13 @@ class WeekPlanController:
                 exclude_day=body.day_of_week,
             )
         else:
-            used_ids = []
+            used_ids: list[int] = []
+            seen_pin: set[int] = set()
+            for d in plan.days:
+                for i in pinned_item_ids(d):
+                    if i not in seen_pin:
+                        seen_pin.add(i)
+                        used_ids.append(i)
             used_colors = []
         avoid_texts: list[str] = []
         is_admin = bool(getattr(current_user, "is_admin", False))
@@ -327,7 +356,11 @@ class WeekPlanController:
 
         for day in days_to_generate:
             use_wardrobe = bool(getattr(day, "use_wardrobe_only", True))
-            exclude_set = set(used_ids)
+            day_pin_ids = set(parse_pinned_items(day).values())
+            selected_wardrobe_item_ids = (
+                pinned_item_ids(day) if day_pin_ids else None
+            )
+            exclude_set = set(used_ids) - day_pin_ids
             avoid_note = ""
             if used_ids and use_wardrobe:
                 avoid_note = (
@@ -358,7 +391,7 @@ class WeekPlanController:
                     style=getattr(day, "style", None) or plan.shared_style or "classic",
                     db=db,
                     current_user=current_user,
-                    selected_wardrobe_item_ids=None,
+                    selected_wardrobe_item_ids=selected_wardrobe_item_ids,
                     previous_outfit_text=avoid_texts[-1] if avoid_texts else None,
                     avoid_outfit_texts=avoid_texts[-5:] if avoid_texts else None,
                     exclude_wardrobe_item_ids=list(exclude_set),
@@ -407,14 +440,15 @@ class WeekPlanController:
         db.commit()
         refreshed = self.week_plan_service.get_plan(db, current_user.id)
         assert refreshed is not None
-        message = None
+        message = " ".join(pin_messages) if pin_messages else None
         wardrobe_empty = False
         if wardrobe_days and not has_wardrobe and open_days:
             wardrobe_empty = True
-            message = (
+            extra = (
                 "Some days use wardrobe only — add wardrobe items for those days. "
                 "Other days were generated without wardrobe-only."
             )
+            message = f"{message} {extra}".strip() if message else extra
         return plan_to_response(
             refreshed,
             wardrobe_empty=wardrobe_empty,
