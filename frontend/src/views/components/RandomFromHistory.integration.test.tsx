@@ -15,8 +15,9 @@ jest.mock('../../utils/imageUtils', () => {
   return {
     ...actual,
     compressImageForOutfit: async (file: File) => file,
-    dataUrlToFile: async (dataUrl: string, filename: string) =>
-      new File(['hydrated'], filename, { type: 'image/jpeg' }),
+    // globalThis.File: jest.mock factories cannot close over the File identifier
+    dataUrlToFile: async (_dataUrl: string, filename: string) =>
+      new globalThis.File(['hydrated'], filename, { type: 'image/jpeg' }),
   };
 });
 

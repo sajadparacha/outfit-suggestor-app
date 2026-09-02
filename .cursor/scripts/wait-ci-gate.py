@@ -65,6 +65,11 @@ def list_runs(workflow: str, limit: int = 30) -> list[dict]:
     return data or []
 
 
+def matching_runs(workflow: str, sha: str) -> list[dict]:
+    sha = sha.lower()
+    return [r for r in list_runs(workflow) if (r.get("headSha") or "").lower() == sha]
+
+
 def wait_until_sha_has_run(workflow: str, sha: str, timeout: int = 120) -> list[dict]:
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -74,8 +79,6 @@ def wait_until_sha_has_run(workflow: str, sha: str, timeout: int = 120) -> list[
         print("CI_STATUS=waiting_for_run", flush=True)
         time.sleep(5)
     return []
-    sha = sha.lower()
-    return [r for r in list_runs(workflow) if (r.get("headSha") or "").lower() == sha]
 
 
 def write_report(
