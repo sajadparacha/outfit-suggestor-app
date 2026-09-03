@@ -20,9 +20,19 @@ final class AppConfigTests: XCTestCase {
         XCTAssertEqual(AppConfig.apiBaseURL, "https://example.test")
     }
 
-    func testApiBaseURLFallsBackToLocalBackendInDebugWhenOverrideBlank() {
+    func testApiBaseURLFallsBackToDefaultWhenOverrideBlank() {
         UserDefaults.standard.set("   ", forKey: overrideKey)
 
-        XCTAssertEqual(AppConfig.apiBaseURL, AppConfig.localAPIBaseURL)
+        XCTAssertEqual(AppConfig.apiBaseURL, AppConfig.defaultAPIBaseURL)
+    }
+
+    func testDefaultAPIBaseURLIsLocalOnSimulatorInDebug() {
+#if DEBUG && targetEnvironment(simulator)
+        XCTAssertEqual(AppConfig.defaultAPIBaseURL, AppConfig.localAPIBaseURL)
+#elseif DEBUG
+        XCTAssertEqual(AppConfig.defaultAPIBaseURL, AppConfig.productionAPIBaseURL)
+#else
+        XCTAssertEqual(AppConfig.defaultAPIBaseURL, AppConfig.productionAPIBaseURL)
+#endif
     }
 }

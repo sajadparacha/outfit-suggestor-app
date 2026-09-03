@@ -38,8 +38,17 @@ enum AppConfig {
             }
         }
 
+        return defaultAPIBaseURL
+    }
+
+    /// Simulator Debug → local backend; physical device + Release → Railway production.
+    static var defaultAPIBaseURL: String {
 #if DEBUG
+#if targetEnvironment(simulator)
         return localAPIBaseURL
+#else
+        return productionAPIBaseURL
+#endif
 #else
         return productionAPIBaseURL
 #endif

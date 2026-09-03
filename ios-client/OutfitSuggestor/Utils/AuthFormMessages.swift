@@ -11,7 +11,8 @@ enum AuthFormMessages {
             switch authError {
             case .serverError(let message):
 #if DEBUG
-                if message.localizedCaseInsensitiveContains("incorrect email or password") {
+                if message.localizedCaseInsensitiveContains("incorrect email or password"),
+                   AppConfig.apiBaseURL == AppConfig.localAPIBaseURL {
                     return """
                     \(message)
 
@@ -29,7 +30,10 @@ enum AuthFormMessages {
         if let urlError = error as? URLError {
             switch urlError.code {
             case .cannotConnectToHost, .networkConnectionLost, .notConnectedToInternet:
-                return "Can't reach the API at \(AppConfig.apiBaseURL). Start the backend on port 8001, then try again."
+                if AppConfig.apiBaseURL == AppConfig.localAPIBaseURL {
+                    return "Can't reach the API at \(AppConfig.apiBaseURL). Start the backend on port 8001, then try again."
+                }
+                return "Can't reach the API at \(AppConfig.apiBaseURL). Check your network connection and try again."
             default:
                 break
             }
