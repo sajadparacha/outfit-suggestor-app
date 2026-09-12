@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main ]
 
+# Repo default GITHUB_TOKEN is read-only; Pages push needs write.
+permissions:
+  contents: write
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
