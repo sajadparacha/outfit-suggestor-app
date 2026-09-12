@@ -39,7 +39,7 @@ import { useWeekPlanController } from './controllers/useWeekPlanController';
 import ApiService from './services/ApiService';
 import WardrobeInsightsPage from './views/components/insights/WardrobeInsightsPage';
 import { WardrobeGapAnalysisResponse } from './models/WardrobeModels';
-import { LOGIN_REDIRECT_STATE, ROUTES, wardrobePath, parseWardrobePickSession, weekPath } from './navigation/routes';
+import { LOGIN_REDIRECT_STATE, ROUTES, parseWardrobePickSession, weekPath } from './navigation/routes';
 import AuthGateCard from './views/components/AuthGateCard';
 import FirstOutfitPromptBanner from './views/components/FirstOutfitPromptBanner';
 import {
@@ -50,7 +50,6 @@ import {
 } from './utils/authPromptCopy';
 import { INSIGHTS_COPY } from './utils/insightsCopy';
 import { buildInsightsAnalyzePayload, loadInsightsLifestyle } from './utils/insightsLifestyle';
-import { MICRO_HELP } from './utils/microHelpCopy';
 import { dismissFirstRunCoach, isFirstRunCoachDismissed } from './utils/firstRunCoach';
 import { MAIN_FLOW_UX_COPY } from './utils/mainFlowUxCopy';
 import { AiOperationType } from './utils/aiProgressSteps';
@@ -291,27 +290,27 @@ function App() {
     clearError();
   };
 
-  const openAuthPromptRegister = (context: AuthPromptContextKey) => {
+  const openAuthPromptRegister = useCallback((context: AuthPromptContextKey) => {
     setLoginPromptContext(context);
     clearError();
     setShowRegister(true);
     setShowLoginModal(false);
-  };
+  }, [clearError]);
 
-  const openAuthPromptSignIn = (context: AuthPromptContextKey) => {
+  const openAuthPromptSignIn = useCallback((context: AuthPromptContextKey) => {
     setLoginPromptContext(context);
     clearError();
     setShowRegister(false);
     setShowLoginModal(true);
-  };
+  }, [clearError]);
 
-  const openAuthPrompt = (context: AuthPromptContextKey) => {
+  const openAuthPrompt = useCallback((context: AuthPromptContextKey) => {
     if (prefersRegister(context)) {
       openAuthPromptRegister(context);
     } else {
       openAuthPromptSignIn(context);
     }
-  };
+  }, [openAuthPromptRegister, openAuthPromptSignIn]);
 
   React.useEffect(() => {
     const state = location.state as Record<string, unknown> | null;
@@ -322,7 +321,7 @@ function App() {
         state: null,
       });
     }
-  }, [location.pathname, location.search, location.state, navigate]);
+  }, [location.pathname, location.search, location.state, navigate, openAuthPrompt]);
 
   const authModalCopy = loginPromptContext ? getAuthPromptCopy(loginPromptContext) : null;
 

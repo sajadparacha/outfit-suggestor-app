@@ -87,15 +87,6 @@ const AnalysisPreferences: React.FC<AnalysisPreferencesProps> = ({
     setFilters({ ...filters, [key]: value });
   };
 
-  const handleClear = () => {
-    if (onClear) {
-      onClear();
-      return;
-    }
-    setFilters({ ...DEFAULT_FILTERS });
-    setPreferenceText('');
-  };
-
   const resolved = {
     occasion: filters.occasion || DEFAULT_FILTERS.occasion,
     season: filters.season || DEFAULT_FILTERS.season,
