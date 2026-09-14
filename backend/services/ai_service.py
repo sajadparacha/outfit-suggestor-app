@@ -12,6 +12,10 @@ from PIL import Image
 from models.outfit import OutfitSuggestion
 from utils.cost_calculator import CostCalculator
 from services.wardrobe_season_rules import is_heavy_outerwear_for_summer
+from services.outfit_formality_guard import (
+    filter_wardrobe_slots_for_formality,
+    formality_prompt_rule,
+)
 from utils.outfit_upload_category import text_suggests_outerwear
 
 # Try to import replicate, but make it optional
@@ -948,7 +952,19 @@ Required JSON shape:
     def _extract_season_from_text(self, text_input: str) -> Optional[str]:
         if not text_input:
             return None
-        match = re.search(r"season\s*:\s*([a-zA-Z]+)", text_input, flags=re.IGNORECASE)
+        match = re.search(r"season\s*:\s*([a-zA-Z\-]+)", text_input, flags=re.IGNORECASE)
+        if not match:
+            return None
+        return match.group(1).strip().lower()
+
+    def _extract_filter_field_from_text(self, text_input: str, field: str) -> Optional[str]:
+        if not text_input:
+            return None
+        match = re.search(
+            rf"{field}\s*:\s*([a-zA-Z\-]+)",
+            text_input,
+            flags=re.IGNORECASE,
+        )
         if not match:
             return None
         return match.group(1).strip().lower()
@@ -1123,7 +1139,15 @@ Required JSON shape:
             Formatted prompt string
         """
         season = self._extract_season_from_text(text_input)
+        occasion = self._extract_filter_field_from_text(text_input, "occasion")
+        style = self._extract_filter_field_from_text(text_input, "style")
         wardrobe_items = self._filter_wardrobe_items_for_season(wardrobe_items, season)
+        if wardrobe_only:
+            wardrobe_items = filter_wardrobe_slots_for_formality(
+                wardrobe_items,
+                occasion=occasion,
+                style=style,
+            )
 
         wardrobe_context = ""
         if wardrobe_items:
@@ -1259,6 +1283,8 @@ LAYERING RULES (strict):
 - Casual jackets and coats belong in the optional outerwear slot — never substitute them for the structured blazer slot.
 """
 
+        formality_guidance = formality_prompt_rule(occasion=occasion, style=style)
+
         normalized_source = (source_wardrobe_category or "").strip().lower()
         source_guidance = ""
         upload_intro = (
@@ -1289,7 +1315,7 @@ SOURCE ITEM CONTEXT (strict):
 
         prompt = """
 You are a professional fashion stylist. {upload_intro}
-{source_guidance}{summer_guidance}{wardrobe_context}
+{source_guidance}{summer_guidance}{formality_guidance}{wardrobe_context}
 {context}
 
 Please provide a complete outfit recommendation including:
@@ -1339,6 +1365,7 @@ Respond in JSON format with the following structure:
             upload_intro=upload_intro,
             source_guidance=source_guidance,
             summer_guidance=summer_guidance,
+            formality_guidance=formality_guidance,
             wardrobe_context=wardrobe_context,
             context=f"\n{context}" if context else ""
         )

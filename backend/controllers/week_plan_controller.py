@@ -22,6 +22,7 @@ from models.week_plan import (
     WeekPlanUpsertRequest,
 )
 from services.wardrobe_service import WardrobeService
+from services.outfit_formality_guard import apply_formality_post_check
 from services.week_plan_preset_limit import PresetLimitReachedError
 from services.week_plan_service import (
     WeekPlanService,
@@ -199,6 +200,12 @@ class WeekPlanController:
             suggestion,
             matching_items,
             season=season,
+            occasion=occasion,
+            style=style,
+        )
+        apply_formality_post_check(
+            suggestion,
+            matching_items,
             occasion=occasion,
             style=style,
         )

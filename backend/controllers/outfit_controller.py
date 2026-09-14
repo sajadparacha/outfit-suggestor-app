@@ -16,6 +16,11 @@ from services.guest_usage_service import GuestUsageService
 from services.wardrobe_matcher import WardrobeMatcher
 from utils.image_processor import encode_image, validate_image
 from utils.outfit_upload_category import slot_text_has_upload_marker, text_suggests_outerwear
+from services.outfit_formality_guard import (
+    apply_formality_post_check,
+    filter_wardrobe_slots_for_formality,
+    requires_formality_guard,
+)
 
 
 class OutfitController:
@@ -843,6 +848,12 @@ class OutfitController:
                     occasion=occasion,
                     style=style,
                 )
+                apply_formality_post_check(
+                    suggestion,
+                    matching_items,
+                    occasion=occasion,
+                    style=style,
+                )
                 
                 # Add matching items to suggestion (Pydantic will handle serialization)
                 suggestion.matching_wardrobe_items = matching_items
@@ -957,15 +968,40 @@ class OutfitController:
             # for that generation (better a repeat than an incomplete outfit).
             wardrobe_items_dict = self._group_items_by_outfit_slot(available_items)
             full_dict = self._group_items_by_outfit_slot(all_wardrobe_items)
+            formality_on = requires_formality_guard(occasion=occasion, style=style)
+            protect_ids = {item.id for item in ordered_selected_items}
             for slot in ("shirt", "trouser", "shoes"):
                 if not wardrobe_items_dict.get(slot) and full_dict.get(slot):
+                    # Formality guard: do not reintroduce athletic shoes / clash bottoms
+                    # solely to fill an empty slot — prefer a gap over a forced clash.
+                    if formality_on and slot in ("shoes", "trouser"):
+                        continue
                     wardrobe_items_dict[slot] = full_dict[slot]
                     # Allow those fallback ids back into matcher pool for this day.
                     for item in full_dict[slot]:
                         exclude_set.discard(item.id)
+            wardrobe_items_dict = filter_wardrobe_slots_for_formality(
+                wardrobe_items_dict,
+                occasion=occasion,
+                style=style,
+                protect_ids=protect_ids,
+            )
+            allowed_formality_ids = {
+                item.id
+                for slot in ("shoes", "trouser")
+                for item in (wardrobe_items_dict.get(slot) or [])
+            } | protect_ids
             matcher_pool = [
                 item for item in all_wardrobe_items if item.id not in exclude_set
             ] or all_wardrobe_items
+            if formality_on:
+                matcher_pool = [
+                    item
+                    for item in matcher_pool
+                    if self._normalize_item_category_for_outfit(item.category or "")
+                    not in {"shoes", "trouser"}
+                    or item.id in allowed_formality_ids
+                ]
 
             # Build combined context for the AI prompt
             filters_context = f"Occasion: {occasion}, Season: {season}, Style: {style}"
@@ -1041,6 +1077,13 @@ class OutfitController:
                 season=season,
                 occasion=occasion,
                 style=style,
+            )
+            apply_formality_post_check(
+                suggestion,
+                matching_items,
+                occasion=occasion,
+                style=style,
+                protect_ids=protect_ids,
             )
             suggestion.matching_wardrobe_items = matching_items
 
@@ -1475,6 +1518,13 @@ class OutfitController:
                 season=season,
                 occasion=occasion,
                 style=style,
+            )
+            apply_formality_post_check(
+                suggestion,
+                matching_items,
+                occasion=occasion,
+                style=style,
+                protect_ids={wardrobe_item.id},
             )
             suggestion.matching_wardrobe_items = matching_items
             
