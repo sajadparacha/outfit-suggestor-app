@@ -35,7 +35,7 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 | **60s first-run coach (Phase A)** | ✅ | ✅ | 3-step coach strip, collapsed optional preferences, empty-preview directional copy; `first_run_coach_dismissed` persistence |
 | **Guest limit auth UX** | ✅ | ✅ | At 3/3 free tries: single auth surface on Suggest; nav Sign Up/Login hidden; no duplicate CTAs |
 | **Logout clears main flow** | ✅ | ✅ | Logout resets image, result, prefs on Suggest |
-| **Admin Reports** | ✅ | ✅ | Four tabs (Overview, Utilization, Users, Searches); timeline + search APIs; Recharts (web) / Swift Charts (iOS); city filter web-only |
+| **Admin Reports** | ✅ | ✅ | Five tabs on web (Overview, Utilization, Users, Searches, **Errors**); four on iOS (Errors web-only); timeline + search APIs; Recharts (web) / Swift Charts (iOS); city filter web-only; Error Center web-only |
 | **Week Outfit Planner** | ✅ | ✅ | Main nav label **Week Planner** (web + iOS tab); route `/week`; Mon–Sun day toggles + occasions; per-day style + wardrobe-only; **per-day pinned wardrobe slots** (pick to pin; generate fills remaining); reminder + timezone; primary CTA **Generate outfits** / **Save plan** (dirty); exceptional day status only; regenerate day; Today surface; login required; **Planning templates** (prefs/presets, collapsed) with server-resolved limit (**default 10**); **Plan history** (past outfits, collapsed) distinct; toast for load/save; **admin preset-limit override web-only** (API enforced for all); daily wake-up reminders iOS-first; web Today in-app |
 
 ---
@@ -227,11 +227,11 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 
 ## 11. Admin Reports
 
-**Web**: Admin-only Reports tab with four sections — **Overview**, **Utilization**, **Users**, **Searches**. Shared filters (date range, user, country, **city**, operation type, endpoint). Recharts line/bar charts; timeline from `GET /api/access-logs/timeline`; search aggregates from `GET /api/reports/searches`. Network/CORS failures show friendly banner (not raw `Failed to fetch`); backend CORS allows `localhost:3000`, `127.0.0.1:3000`, `closiq.me`, `www.closiq.me`.
+**Web**: Admin-only Reports tab with five sections — **Overview**, **Utilization**, **Users**, **Searches**, **Errors**. Shared filters (date range, user, country, **city**, operation type, endpoint, error source/code). Recharts line/bar charts; timeline from `GET /api/access-logs/timeline`; search aggregates from `GET /api/reports/searches`. **Error Center** lists API + client error events (`GET /api/admin/error-events`) with curated suggested cause/solution; clients report via `POST /api/error-events`. Network/CORS failures show friendly banner (not raw `Failed to fetch`); backend CORS allows `localhost:3000`, `127.0.0.1:3000`, `closiq.me`, `www.closiq.me`.
 
-**iOS status**: **Implemented** — same four tabs, shared filters (no **city** filter — web-only), Swift Charts where practical, same APIs; network errors use same friendly copy as web via `ReportsErrorFormatter`.
+**iOS status**: **Implemented** for Overview/Utilization/Users/Searches — same shared filters (no **city** filter — web-only), Swift Charts where practical, same access-log/search APIs; network errors use same friendly copy as web via `ReportsErrorFormatter`. **Errors / Error Center is web-only** (same pattern as admin preset-limit override UI).
 
-**API**: `/api/access-logs/` (list), `/stats`, `/usage`, `/timeline`; `/api/reports/searches` (outfit_history occasion/season/style aggregates).
+**API**: `/api/access-logs/` (list), `/stats`, `/usage`, `/timeline`; `/api/reports/searches` (outfit_history occasion/season/style aggregates); `/api/error-events` (client ingest); `/api/admin/error-events` (list/detail/summary/resolve).
 
 **Parity gaps**:
 

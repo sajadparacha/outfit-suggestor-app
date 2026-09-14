@@ -139,6 +139,45 @@ export const handlers = [
     );
   }),
 
+  rest.post(`${API_BASE}/api/error-events`, (_req, res, ctx) => {
+    return res(ctx.status(201), ctx.json({ id: 1, fingerprint: 'test-fp' }));
+  }),
+
+  rest.get(`${API_BASE}/api/admin/error-events`, (_req, res, ctx) => {
+    return res(ctx.json({ total: 0, limit: 100, offset: 0, events: [] }));
+  }),
+
+  rest.get(`${API_BASE}/api/admin/error-events/:id`, (req, res, ctx) => {
+    return res(
+      ctx.json({
+        id: Number(req.params.id),
+        source: 'client',
+        error_code: 'client_render_error',
+        message: 'Mock error',
+        suggested_cause: 'A React section threw while rendering.',
+        suggested_solution: 'Use the stack and route in the event detail.',
+        resolved: false,
+        created_at: '2026-06-01T12:00:00Z',
+      })
+    );
+  }),
+
+  rest.patch(`${API_BASE}/api/admin/error-events/:id/resolved`, (req, res, ctx) => {
+    return res(
+      ctx.json({
+        id: Number(req.params.id),
+        source: 'client',
+        error_code: 'client_render_error',
+        message: 'Mock error',
+        suggested_cause: 'A React section threw while rendering.',
+        suggested_solution: 'Use the stack and route in the event detail.',
+        resolved: true,
+        resolved_at: '2026-06-02T00:00:00Z',
+        created_at: '2026-06-01T12:00:00Z',
+      })
+    );
+  }),
+
   // Week Outfit Planner defaults (tests override with server.use as needed)
   rest.get(`${API_BASE}/api/week-plan`, (_req, res, ctx) => {
     return res(

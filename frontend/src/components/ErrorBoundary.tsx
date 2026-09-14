@@ -21,10 +21,19 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Log for debugging; in production you could send this to a logging service.
+    // Log for debugging; also report to admin Error Center (deduped).
     // eslint-disable-next-line no-console
     console.error('[ErrorBoundary]', this.props.label ?? 'Error', error, errorInfo);
     this.setState({ errorInfo });
+    void import('../utils/reportClientError').then(({ reportClientError }) =>
+      reportClientError({
+        error_code: 'client_render_error',
+        message: error.message || 'Render error',
+        stack: error.stack,
+        detail: errorInfo.componentStack || undefined,
+        context: { label: this.props.label ?? null },
+      })
+    );
   }
 
   componentDidUpdate(prevProps: ErrorBoundaryProps) {

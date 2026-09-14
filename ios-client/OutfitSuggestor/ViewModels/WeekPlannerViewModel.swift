@@ -261,7 +261,11 @@ final class WeekPlannerViewModel: ObservableObject {
         guard let idx = plan.days.firstIndex(where: { $0.day_of_week == dayOfWeek }) else {
             return false
         }
-        let key = WardrobePickSession(dayOfWeek: dayOfWeek, slotKey: slotKey).normalizedSlotKey
+        let session = WardrobePickSession(dayOfWeek: dayOfWeek, slotKey: slotKey)
+        guard session.matchesWardrobeItem(item) else {
+            return false
+        }
+        let key = session.normalizedSlotKey
         var outfit = plan.days[idx].outfit ?? WeekPlanOutfitResponse()
         let text = Self.displayText(for: item)
         let match = MatchingWardrobeItem(

@@ -7,6 +7,9 @@ const mockGetAccessLogStats = jest.fn();
 const mockGetAccessLogUsage = jest.fn();
 const mockGetAccessLogTimeline = jest.fn();
 const mockGetSearchReports = jest.fn();
+const mockGetErrorEvents = jest.fn();
+const mockGetErrorEvent = jest.fn();
+const mockMarkErrorEventResolved = jest.fn();
 
 jest.mock('recharts', () => {
   const MockContainer = ({ children }: { children?: React.ReactNode }) => (
@@ -37,6 +40,9 @@ jest.mock('../../services/ApiService', () => ({
     getAccessLogUsage: (...args: unknown[]) => mockGetAccessLogUsage(...args),
     getAccessLogTimeline: (...args: unknown[]) => mockGetAccessLogTimeline(...args),
     getSearchReports: (...args: unknown[]) => mockGetSearchReports(...args),
+    getErrorEvents: (...args: unknown[]) => mockGetErrorEvents(...args),
+    getErrorEvent: (...args: unknown[]) => mockGetErrorEvent(...args),
+    markErrorEventResolved: (...args: unknown[]) => mockMarkErrorEventResolved(...args),
   },
 }));
 
@@ -100,6 +106,21 @@ const mockReportData = {
       },
     ],
   },
+  errorEvents: {
+    total: 1,
+    events: [
+      {
+        id: 99,
+        source: 'client',
+        error_code: 'client_render_error',
+        message: 'Cannot read properties of undefined',
+        created_at: '2026-06-01T12:00:00Z',
+        resolved: false,
+        suggested_cause: 'A React section threw while rendering.',
+        suggested_solution: 'Use the stack and route in the event detail.',
+      },
+    ],
+  },
 };
 
 describe('AdminReports', () => {
@@ -109,6 +130,20 @@ describe('AdminReports', () => {
     mockGetAccessLogUsage.mockResolvedValue(mockReportData.usage);
     mockGetAccessLogTimeline.mockResolvedValue(mockReportData.timeline);
     mockGetSearchReports.mockResolvedValue(mockReportData.searchReports);
+    mockGetErrorEvents.mockResolvedValue(mockReportData.errorEvents);
+    mockGetErrorEvent.mockResolvedValue({
+      ...mockReportData.errorEvents.events[0],
+      stack: 'Error: boom',
+      suggested_cause: 'A React section threw while rendering.',
+      suggested_solution: 'Use the stack and route in the event detail.',
+    });
+    mockMarkErrorEventResolved.mockResolvedValue({
+      ...mockReportData.errorEvents.events[0],
+      resolved: true,
+      resolved_at: '2026-06-02T00:00:00Z',
+      suggested_cause: 'A React section threw while rendering.',
+      suggested_solution: 'Use the stack and route in the event detail.',
+    });
   });
 
   it('shows admin-required message for non-admin user', () => {
@@ -120,7 +155,7 @@ describe('AdminReports', () => {
     expect(mockGetSearchReports).not.toHaveBeenCalled();
   });
 
-  it('renders Admin Reports header, filters, and four tabs for admin user', () => {
+  it('renders Admin Reports header, filters, and five tabs for admin user', () => {
     render(<AdminReports user={adminUser} />);
     expect(screen.getByRole('heading', { name: /Admin Reports/i })).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/User name\/email contains/i)).toBeInTheDocument();
@@ -134,6 +169,7 @@ describe('AdminReports', () => {
     expect(screen.getByRole('tab', { name: 'Utilization' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Users' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Searches' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Errors' })).toBeInTheDocument();
   });
 
   it('Search button triggers timeline and search report API calls', async () => {
@@ -147,6 +183,7 @@ describe('AdminReports', () => {
         expect.objectContaining({ group_by: 'day' })
       );
       expect(mockGetSearchReports).toHaveBeenCalled();
+      expect(mockGetErrorEvents).toHaveBeenCalled();
       expect(screen.getByRole('heading', { name: 'Overview' })).toBeInTheDocument();
     });
 
@@ -179,6 +216,7 @@ describe('AdminReports', () => {
         expect.objectContaining({ user_id: 42, group_by: 'day' })
       );
       expect(mockGetSearchReports).toHaveBeenCalledWith(expect.objectContaining({ user_id: 42 }));
+      expect(mockGetErrorEvents).toHaveBeenCalledWith(expect.objectContaining({ user_id: 42 }));
     });
   });
 
@@ -196,6 +234,7 @@ describe('AdminReports', () => {
         expect.objectContaining({ user: 'sajjad', group_by: 'day' })
       );
       expect(mockGetSearchReports).toHaveBeenCalledWith(expect.objectContaining({ user: 'sajjad' }));
+      expect(mockGetErrorEvents).toHaveBeenCalledWith(expect.objectContaining({ user: 'sajjad' }));
     });
   });
 
@@ -217,6 +256,29 @@ describe('AdminReports', () => {
     expect(screen.getByRole('heading', { name: 'Searches' })).toBeInTheDocument();
     expect(screen.getByText(/Recent searches/i)).toBeInTheDocument();
     expect(screen.getByTestId('searches-occasion-chart')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Errors' }));
+    expect(screen.getByRole('heading', { name: 'Errors' })).toBeInTheDocument();
+    expect(screen.getByTestId('errors-tab-panel')).toBeInTheDocument();
+    expect(screen.getByText('client_render_error')).toBeInTheDocument();
+    expect(screen.getByText('Unauthenticated')).toBeInTheDocument();
+  });
+
+  it('Errors tab shows curated solution when an event is selected', async () => {
+    render(<AdminReports user={adminUser} />);
+    fireEvent.click(screen.getByRole('button', { name: /Search/i }));
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Overview' })).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Errors' }));
+    fireEvent.click(screen.getByText('client_render_error'));
+
+    await waitFor(() => {
+      expect(mockGetErrorEvent).toHaveBeenCalledWith(99);
+      expect(screen.getByTestId('error-detail-panel')).toBeInTheDocument();
+      expect(screen.getByText(/Suggested cause/i)).toBeInTheDocument();
+      expect(screen.getByText(/A React section threw while rendering/i)).toBeInTheDocument();
+      expect(screen.getByText(/Suggested solution/i)).toBeInTheDocument();
+    });
   });
 
   it('Clear button resets filters and data', async () => {

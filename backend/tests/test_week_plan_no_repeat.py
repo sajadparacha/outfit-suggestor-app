@@ -225,7 +225,7 @@ def test_prune_invalid_pins_drops_unowned(db, test_user):
     assert parse_pinned_items(refreshed.days[0]) == {}
 
 
-def test_put_persists_pinned_items(client, auth_headers):
+def test_put_persists_pinned_items(client, auth_headers, wardrobe_item):
     body = {
         "reminder_time": "07:30",
         "timezone": "UTC",
@@ -238,7 +238,7 @@ def test_put_persists_pinned_items(client, auth_headers):
                 "occasion": "everyday",
                 "style": "classic",
                 "use_wardrobe_only": True,
-                "pinned_items": {"shirt": 7} if dow == 0 else {},
+                "pinned_items": {"shirt": wardrobe_item.id} if dow == 0 else {},
             }
             for dow in range(7)
         ],
@@ -246,13 +246,17 @@ def test_put_persists_pinned_items(client, auth_headers):
     res = client.put("/api/week-plan", json=body, headers=auth_headers)
     assert res.status_code == 200
     mon = res.json()["days"][0]
-    assert mon["pinned_items"] == {"shirt": 7}
+    assert mon["pinned_items"] == {"shirt": wardrobe_item.id}
 
     get = client.get("/api/week-plan", headers=auth_headers)
-    assert get.json()["days"][0]["pinned_items"] == {"shirt": 7}
+    assert get.json()["days"][0]["pinned_items"] == {"shirt": wardrobe_item.id}
 
 
-def test_generate_drops_invalid_pins_message(client, auth_headers, wardrobe_item):
+def test_generate_drops_invalid_pins_message(client, auth_headers, wardrobe_item, db, test_user):
+    """Pins for missing wardrobe IDs are pruned on generate (not accepted on PUT)."""
+    from models.week_plan import WeeklyPlan, WeeklyPlanDay
+    from services.week_plan_service import serialize_pinned_items
+
     body = {
         "reminder_time": "07:30",
         "timezone": "UTC",
@@ -265,12 +269,23 @@ def test_generate_drops_invalid_pins_message(client, auth_headers, wardrobe_item
                 "occasion": "everyday",
                 "style": "classic",
                 "use_wardrobe_only": True,
-                "pinned_items": {"shirt": 888888} if dow == 0 else {},
+                "pinned_items": {},
             }
             for dow in range(7)
         ],
     }
-    client.put("/api/week-plan", json=body, headers=auth_headers)
+    put = client.put("/api/week-plan", json=body, headers=auth_headers)
+    assert put.status_code == 200
+
+    plan = db.query(WeeklyPlan).filter(WeeklyPlan.user_id == test_user.id).one()
+    day0 = (
+        db.query(WeeklyPlanDay)
+        .filter(WeeklyPlanDay.plan_id == plan.id, WeeklyPlanDay.day_of_week == 0)
+        .one()
+    )
+    day0.pinned_items_json = serialize_pinned_items({"shirt": 888888})
+    db.commit()
+
     gen = client.post("/api/week-plan/generate", json={}, headers=auth_headers)
     assert gen.status_code == 200
     data = gen.json()

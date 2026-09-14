@@ -215,6 +215,8 @@ struct WardrobeListView: View {
                         LazyVStack(spacing: 12) {
                             ForEach(displayedItems) { item in
                                 let isSelected = completionSelection.isSelected(item)
+                                let isWeekPlanPickEligible = !isWeekPlanPickMode
+                                    || (wardrobePickSession?.matchesWardrobeItem(item) ?? false)
                                 WardrobeCardView(
                                     item: item,
                                     image: WardrobeImageData.decodeUIImage(from: item.image_data),
@@ -237,7 +239,8 @@ struct WardrobeListView: View {
                                         ? { toggleCompletionSelection(for: item) }
                                         : nil,
                                     isWeekPlanPickMode: isWeekPlanPickMode,
-                                    onPickForWeekPlan: isWeekPlanPickMode
+                                    isWeekPlanPickEligible: isWeekPlanPickEligible,
+                                    onPickForWeekPlan: isWeekPlanPickMode && isWeekPlanPickEligible
                                         ? { onPickWardrobeItemForWeekPlan?(item) }
                                         : nil
                                 )
@@ -968,6 +971,8 @@ struct WardrobeCardView: View {
     var completionSlotLabel: String? = nil
     var onToggleCompletionSelection: (() -> Void)? = nil
     var isWeekPlanPickMode: Bool = false
+    /// When week-plan pick mode is active, false means category does not match the target slot.
+    var isWeekPlanPickEligible: Bool = true
     var onPickForWeekPlan: (() -> Void)? = nil
 
     var body: some View {
@@ -978,12 +983,14 @@ struct WardrobeCardView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(WardrobeCategoryDisplay.wardrobeCategoryLabel(item.category))
                         .font(.title3.weight(.semibold))
-                        .foregroundColor(AppTheme.textPrimary)
+                        .foregroundColor(isWeekPlanPickEligible ? AppTheme.textPrimary : AppTheme.textSecondary)
                         .accessibilityIdentifier("wardrobe.row.category.\(item.id)")
 
                     if let color = item.color, !color.isEmpty {
                         (Text("Color: ").font(.subheadline.weight(.medium)).foregroundColor(AppTheme.textSecondary)
-                         + Text(color).font(.subheadline).foregroundColor(AppTheme.textPrimary))
+                         + Text(color).font(.subheadline).foregroundColor(
+                            isWeekPlanPickEligible ? AppTheme.textPrimary : AppTheme.textSecondary
+                         ))
                     }
 
                     Text(item.description?.isEmpty == false ? item.description! : "No description available.")
@@ -997,16 +1004,18 @@ struct WardrobeCardView: View {
 
             if isWeekPlanPickMode {
                 Button {
+                    guard isWeekPlanPickEligible else { return }
                     onPickForWeekPlan?()
                 } label: {
                     Text(WeekPlanCopy.wardrobePickSelect)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.white)
+                        .foregroundColor(isWeekPlanPickEligible ? .white : AppTheme.textSecondary)
                         .frame(maxWidth: .infinity, minHeight: 48)
-                        .background(AppTheme.accent)
+                        .background(isWeekPlanPickEligible ? AppTheme.accent : AppTheme.bgSecondary.opacity(0.7))
                         .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
+                .disabled(!isWeekPlanPickEligible)
                 .accessibilityLabel(WeekPlanCopy.wardrobePickSelect)
                 .accessibilityIdentifier("wardrobe.weekPick.select.\(item.id)")
             } else {
@@ -1080,6 +1089,8 @@ struct WardrobeCardView: View {
         // Rounds card chrome only. SwiftUI Menu below uses native popover presentation
         // outside this view's bounds, so overflow items are not clipped (unlike web).
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .opacity(isWeekPlanPickMode && !isWeekPlanPickEligible ? 0.45 : 1)
+        .accessibilityValue(isWeekPlanPickMode && !isWeekPlanPickEligible ? "Unavailable for this slot" : "")
     }
 
     private var completeOutfitActionButton: some View {

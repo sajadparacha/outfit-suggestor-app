@@ -19,13 +19,14 @@ type AdminReportsProps = {
   user: User;
 };
 
-type ReportTab = 'overview' | 'utilization' | 'users' | 'searches';
+type ReportTab = 'overview' | 'utilization' | 'users' | 'searches' | 'errors';
 
 const TABS: { id: ReportTab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'utilization', label: 'Utilization' },
   { id: 'users', label: 'Users' },
   { id: 'searches', label: 'Searches' },
+  { id: 'errors', label: 'Errors' },
 ];
 
 const CHART_AXIS = { stroke: '#94a3b8', fontSize: 12 };
@@ -186,6 +187,8 @@ export default function AdminReports({ user }: AdminReportsProps) {
   const [usage, setUsage] = React.useState<any>(null);
   const [timeline, setTimeline] = React.useState<any>(null);
   const [searchReports, setSearchReports] = React.useState<any>(null);
+  const [errorEvents, setErrorEvents] = React.useState<any>(null);
+  const [selectedError, setSelectedError] = React.useState<any>(null);
   const [hasSearched, setHasSearched] = React.useState<boolean>(false);
   const [loading, setLoading] = React.useState<boolean>(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -199,6 +202,8 @@ export default function AdminReports({ user }: AdminReportsProps) {
       city: '',
       operation_type: '',
       endpoint: '',
+      error_source: '',
+      error_code: '',
     }),
     []
   );
@@ -208,6 +213,7 @@ export default function AdminReports({ user }: AdminReportsProps) {
   const fetchReports = React.useCallback(async (filters: typeof draftFilters) => {
     setLoading(true);
     setError(null);
+    setSelectedError(null);
     try {
       const dateParams = {
         start_date: filters.start_date || undefined,
@@ -215,7 +221,7 @@ export default function AdminReports({ user }: AdminReportsProps) {
       };
       const userParams = parseUserFilter(filters.user);
 
-      const [s, u, t, sr] = await Promise.all([
+      const [s, u, t, sr, ev] = await Promise.all([
         ApiService.getAccessLogStats({ ...dateParams, ...userParams }),
         ApiService.getAccessLogUsage({ ...dateParams, ...userParams }),
         ApiService.getAccessLogTimeline({
@@ -226,12 +232,20 @@ export default function AdminReports({ user }: AdminReportsProps) {
           ...userParams,
         }),
         ApiService.getSearchReports({ ...dateParams, ...userParams }),
+        ApiService.getErrorEvents({
+          ...dateParams,
+          ...userParams,
+          source: filters.error_source || undefined,
+          error_code: filters.error_code || undefined,
+          limit: 100,
+        }),
       ]);
 
       setStats(s);
       setUsage(u);
       setTimeline(t);
       setSearchReports(sr);
+      setErrorEvents(ev);
       setHasSearched(true);
     } catch (e) {
       setError(formatApiErrorMessage(e));
@@ -251,6 +265,8 @@ export default function AdminReports({ user }: AdminReportsProps) {
     setUsage(null);
     setTimeline(null);
     setSearchReports(null);
+    setErrorEvents(null);
+    setSelectedError(null);
     setHasSearched(false);
   }, [emptyFilters]);
 
@@ -320,6 +336,38 @@ export default function AdminReports({ user }: AdminReportsProps) {
   const recentSearches = React.useMemo(() => {
     return Array.isArray(searchReports?.recent) ? searchReports.recent : [];
   }, [searchReports]);
+
+  const errorEventRows = React.useMemo(() => {
+    return Array.isArray(errorEvents?.events) ? errorEvents.events : [];
+  }, [errorEvents]);
+
+  const openErrorDetail = React.useCallback(async (eventId: number) => {
+    try {
+      const detail = await ApiService.getErrorEvent(eventId);
+      setSelectedError(detail);
+    } catch (e) {
+      setError(formatApiErrorMessage(e));
+    }
+  }, []);
+
+  const resolveSelectedError = React.useCallback(async () => {
+    if (!selectedError?.id) return;
+    try {
+      const updated = await ApiService.markErrorEventResolved(selectedError.id, true);
+      setSelectedError(updated);
+      setErrorEvents((prev: any) => {
+        if (!prev?.events) return prev;
+        return {
+          ...prev,
+          events: prev.events.map((row: any) =>
+            row.id === updated.id ? { ...row, resolved: true, resolved_at: updated.resolved_at } : row
+          ),
+        };
+      });
+    } catch (e) {
+      setError(formatApiErrorMessage(e));
+    }
+  }, [selectedError]);
 
   if (!user?.is_admin) {
     return (
@@ -611,6 +659,125 @@ export default function AdminReports({ user }: AdminReportsProps) {
     );
   };
 
+  const renderErrorsTab = () => {
+    if (!hasSearched) return null;
+    return (
+      <div className="space-y-6" data-testid="errors-tab-panel">
+        <h2 className="text-xl font-semibold text-white">Errors</h2>
+        <p className="text-slate-300 text-sm">
+          Total matching events: {errorEvents?.total ?? errorEventRows.length}
+        </p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-6">
+            <h3 className="text-lg font-semibold text-white mb-4">Recent errors</h3>
+            {errorEventRows.length > 0 ? (
+              <div className="overflow-auto max-h-[28rem]">
+                <table className="min-w-full text-sm">
+                  <thead className="border-b border-white/10">
+                    <tr className="text-left">
+                      <th className="py-2 pr-3 text-slate-300">Time</th>
+                      <th className="py-2 pr-3 text-slate-300">User</th>
+                      <th className="py-2 pr-3 text-slate-300">Source</th>
+                      <th className="py-2 pr-3 text-slate-300">Code</th>
+                      <th className="py-2 pr-3 text-slate-300">Message</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {errorEventRows.map((row: any) => (
+                      <tr
+                        key={row.id}
+                        className={`border-b border-white/5 last:border-b-0 cursor-pointer hover:bg-white/5 ${
+                          selectedError?.id === row.id ? 'bg-white/10' : ''
+                        }`}
+                        onClick={() => void openErrorDetail(row.id)}
+                      >
+                        <td className="py-2 pr-3 whitespace-nowrap text-slate-200">
+                          {row.created_at ? new Date(row.created_at).toLocaleString() : '—'}
+                        </td>
+                        <td className="py-2 pr-3 text-slate-200 whitespace-nowrap">
+                          {row.user_id != null
+                            ? row.user_email
+                              ? `${row.user_id} (${row.user_email})`
+                              : String(row.user_id)
+                            : 'Unauthenticated'}
+                        </td>
+                        <td className="py-2 pr-3 text-slate-200">{row.source || '—'}</td>
+                        <td className="py-2 pr-3 text-slate-200">{row.error_code || '—'}</td>
+                        <td className="py-2 pr-3 text-slate-200 truncate max-w-[12rem]">
+                          {row.message || '—'}
+                          {row.resolved ? (
+                            <span className="ml-2 text-xs text-emerald-300">resolved</span>
+                          ) : null}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <TabEmptyMessage />
+            )}
+          </div>
+          <div className="rounded-2xl bg-white/5 border border-white/10 shadow-xl backdrop-blur p-6">
+            <h3 className="text-lg font-semibold text-white mb-4">Error detail</h3>
+            {selectedError ? (
+              <div className="space-y-3 text-sm text-slate-200" data-testid="error-detail-panel">
+                <p>
+                  <span className="text-slate-400">Code:</span> {selectedError.error_code}
+                </p>
+                <p>
+                  <span className="text-slate-400">Source:</span> {selectedError.source}
+                  {selectedError.status_code != null ? ` · HTTP ${selectedError.status_code}` : ''}
+                </p>
+                <p>
+                  <span className="text-slate-400">User:</span>{' '}
+                  {selectedError.user_id != null
+                    ? selectedError.user_email
+                      ? `${selectedError.user_id} (${selectedError.user_email})`
+                      : String(selectedError.user_id)
+                    : 'Unauthenticated'}
+                </p>
+                <p>
+                  <span className="text-slate-400">Endpoint / route:</span>{' '}
+                  {selectedError.endpoint || selectedError.route || '—'}
+                </p>
+                <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                  <p className="text-xs font-semibold text-slate-300 mb-1">Message</p>
+                  <pre className="text-xs whitespace-pre-wrap break-words">{selectedError.message}</pre>
+                </div>
+                {selectedError.stack ? (
+                  <div className="rounded-xl border border-white/10 bg-black/20 p-3 max-h-40 overflow-auto">
+                    <p className="text-xs font-semibold text-slate-300 mb-1">Stack</p>
+                    <pre className="text-xs whitespace-pre-wrap break-words">{selectedError.stack}</pre>
+                  </div>
+                ) : null}
+                <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-3">
+                  <p className="text-xs font-semibold text-emerald-200 mb-1">Suggested cause</p>
+                  <p className="text-sm text-emerald-50">{selectedError.suggested_cause}</p>
+                  <p className="text-xs font-semibold text-emerald-200 mt-3 mb-1">Suggested solution</p>
+                  <p className="text-sm text-emerald-50">{selectedError.suggested_solution}</p>
+                </div>
+                {!selectedError.resolved ? (
+                  <button
+                    type="button"
+                    onClick={() => void resolveSelectedError()}
+                    className="px-4 py-2 btn-brand rounded-xl font-semibold"
+                  >
+                    Mark resolved
+                  </button>
+                ) : (
+                  <p className="text-emerald-300 text-sm">Marked resolved</p>
+                )}
+              </div>
+            ) : (
+              <p className="text-slate-400 text-center py-8">Select an error to see details and solutions.</p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderActiveTab = () => {
     switch (activeTab) {
       case 'overview':
@@ -621,6 +788,8 @@ export default function AdminReports({ user }: AdminReportsProps) {
         return renderUsersTab();
       case 'searches':
         return renderSearchesTab();
+      case 'errors':
+        return renderErrorsTab();
       default:
         return null;
     }
@@ -633,7 +802,7 @@ export default function AdminReports({ user }: AdminReportsProps) {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-white mb-1">📊 Admin Reports</h1>
-              <p className="text-slate-300">Access logs and usage analytics (admin-only)</p>
+              <p className="text-slate-300">Access logs, usage analytics, and user errors (admin-only)</p>
             </div>
           </div>
         </div>
@@ -694,6 +863,22 @@ export default function AdminReports({ user }: AdminReportsProps) {
               placeholder="Endpoint contains"
               value={draftFilters.endpoint}
               onChange={(e) => setDraftFilters((p) => ({ ...p, endpoint: e.target.value }))}
+            />
+            <select
+              className="px-4 py-3 border border-white/20 rounded-xl bg-white/5 text-white focus:ring-2 focus:ring-brand-blue focus:border-brand-blue"
+              value={draftFilters.error_source}
+              onChange={(e) => setDraftFilters((p) => ({ ...p, error_source: e.target.value }))}
+              aria-label="Error source"
+            >
+              <option value="">Error source (any)</option>
+              <option value="api">api</option>
+              <option value="client">client</option>
+            </select>
+            <input
+              className="px-4 py-3 border border-white/20 rounded-xl bg-white/5 text-white placeholder-slate-400 focus:ring-2 focus:ring-brand-blue focus:border-brand-blue"
+              placeholder="Error code"
+              value={draftFilters.error_code}
+              onChange={(e) => setDraftFilters((p) => ({ ...p, error_code: e.target.value }))}
             />
           </div>
           <div className="mt-4 flex items-center justify-end gap-3">

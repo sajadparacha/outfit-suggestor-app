@@ -35,6 +35,7 @@ import {
   WeekPlanUpsertRequest,
 } from '../models/WeekPlanModels';
 import { getGuestSessionId } from '../utils/guestSession';
+import { reportClientError, setClientErrorReporter } from '../utils/reportClientError';
 
 class ApiService {
   private baseUrl: string;
@@ -44,6 +45,9 @@ class ApiService {
     this.baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8001';
     // Load token from localStorage on initialization
     this.authToken = localStorage.getItem('auth_token');
+    setClientErrorReporter(async (payload) => {
+      await this.reportClientErrorEvent(payload);
+    });
   }
 
   /**
@@ -148,13 +152,27 @@ class ApiService {
   private async fetchWithLogging(url: string, options: RequestInit = {}): Promise<Response> {
     const method = options.method || 'GET';
     this.logRequest(method, url, options.body);
-    
-    const response = await fetch(url, options);
-    
+
+    let response: Response;
+    try {
+      response = await fetch(url, options);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Network error';
+      if (!url.includes('/api/error-events')) {
+        void reportClientError({
+          error_code: 'network_error',
+          message,
+          endpoint: url.replace(this.baseUrl, ''),
+          method,
+        });
+      }
+      throw error;
+    }
+
     // Clone response to read body without consuming it
     const clonedResponse = response.clone();
     let responseData: any = null;
-    
+
     try {
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
@@ -165,9 +183,31 @@ class ApiService {
     } catch (e) {
       // Ignore parsing errors
     }
-    
+
     this.logResponse(method, url, response.status, responseData);
-    
+
+    if (!response.ok && !url.includes('/api/error-events') && response.status >= 400) {
+      const codeFromBody =
+        responseData && typeof responseData === 'object' && typeof responseData.code === 'string'
+          ? responseData.code
+          : null;
+      const detail =
+        responseData && typeof responseData === 'object'
+          ? responseData.detail || responseData.message
+          : null;
+      void reportClientError({
+        error_code: codeFromBody || `http_${response.status}`,
+        message:
+          typeof detail === 'string'
+            ? detail
+            : `HTTP ${response.status}: ${response.statusText || 'request failed'}`,
+        status_code: response.status,
+        endpoint: url.replace(this.baseUrl, ''),
+        method,
+        context: codeFromBody ? { code: codeFromBody } : undefined,
+      });
+    }
+
     return response;
   }
 
@@ -1544,6 +1584,90 @@ class ApiService {
         detail: 'Failed to update preset limit',
       }));
       throw new Error(error.detail || 'Failed to update preset limit');
+    }
+    return await response.json();
+  }
+
+  /** POST /api/error-events — client error ingest (auth optional) */
+  async reportClientErrorEvent(payload: {
+    error_code: string;
+    message: string;
+    stack?: string;
+    detail?: string;
+    status_code?: number;
+    endpoint?: string;
+    method?: string;
+    route?: string;
+    platform?: string;
+    context?: Record<string, unknown>;
+  }): Promise<{ id: number; fingerprint: string }> {
+    const url = `${this.baseUrl}/api/error-events`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: this.getHeaders(true, false),
+      body: JSON.stringify({ platform: 'web', ...payload }),
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to report error (${response.status})`);
+    }
+    return await response.json();
+  }
+
+  /** GET /api/admin/error-events — admin error list */
+  async getErrorEvents(
+    params: {
+      source?: string;
+      error_code?: string;
+      user?: string;
+      user_id?: number;
+      start_date?: string;
+      end_date?: string;
+      resolved?: boolean;
+      limit?: number;
+      offset?: number;
+    } = {}
+  ): Promise<any> {
+    const search = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v === undefined || v === null || v === '') return;
+      search.append(k, String(v));
+    });
+    const url = `${this.baseUrl}/api/admin/error-events${search.toString() ? `?${search.toString()}` : ''}`;
+    const response = await this.fetchWithLogging(url, { headers: this.getHeaders() });
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const error: ApiError = await response.json();
+        errorMessage = error.detail || errorMessage;
+      } catch {
+        // ignore
+      }
+      throw new Error(errorMessage);
+    }
+    return await response.json();
+  }
+
+  /** GET /api/admin/error-events/{id} */
+  async getErrorEvent(eventId: number): Promise<any> {
+    const url = `${this.baseUrl}/api/admin/error-events/${eventId}`;
+    const response = await this.fetchWithLogging(url, { headers: this.getHeaders() });
+    if (!response.ok) {
+      const error: ApiError = await response.json().catch(() => ({ detail: 'Failed to load error event' }));
+      throw new Error(error.detail || 'Failed to load error event');
+    }
+    return await response.json();
+  }
+
+  /** PATCH /api/admin/error-events/{id}/resolved */
+  async markErrorEventResolved(eventId: number, resolved: boolean = true): Promise<any> {
+    const url = `${this.baseUrl}/api/admin/error-events/${eventId}/resolved?resolved=${resolved}`;
+    const response = await this.fetchWithLogging(url, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+    });
+    if (!response.ok) {
+      const error: ApiError = await response.json().catch(() => ({ detail: 'Failed to update error event' }));
+      throw new Error(error.detail || 'Failed to update error event');
     }
     return await response.json();
   }

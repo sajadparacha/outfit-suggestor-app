@@ -15,6 +15,7 @@ import {
   usesClientSideCategoryFilter,
   WARDROBE_FORM_CATEGORIES,
   wardrobeCategoryLabel,
+  wardrobeItemMatchesOutfitSlot,
 } from './wardrobeCategory';
 
 const sampleSummary = {
@@ -226,6 +227,38 @@ describe('wardrobeCategory helpers', () => {
       expect(apiCategoryParamForFilter('polo')).toBe('polo');
       expect(apiCategoryParamForFilter('jeans')).toBe('jeans');
       expect(apiCategoryParamForFilter('t_shirt')).toBeUndefined();
+    });
+  });
+
+  describe('wardrobeItemMatchesOutfitSlot', () => {
+    it('matches item to slot via complete-outfit aliases', () => {
+      expect(wardrobeItemMatchesOutfitSlot('shirt', 'shirt')).toBe(true);
+      expect(wardrobeItemMatchesOutfitSlot('polo', 'shirt')).toBe(true);
+      expect(wardrobeItemMatchesOutfitSlot('t_shirt', 'shirt')).toBe(true);
+      expect(wardrobeItemMatchesOutfitSlot('jeans', 'trouser')).toBe(true);
+      expect(wardrobeItemMatchesOutfitSlot('shorts', 'trouser')).toBe(true);
+      expect(wardrobeItemMatchesOutfitSlot('jacket', 'outerwear')).toBe(true);
+      expect(wardrobeItemMatchesOutfitSlot('coat', 'outerwear')).toBe(true);
+      expect(wardrobeItemMatchesOutfitSlot('belt', 'belt')).toBe(true);
+    });
+
+    it('maps accessory slot to belt', () => {
+      expect(wardrobeItemMatchesOutfitSlot('belt', 'accessory')).toBe(true);
+      expect(wardrobeItemMatchesOutfitSlot('belts', 'accessory')).toBe(true);
+      expect(wardrobeItemMatchesOutfitSlot('shirt', 'accessory')).toBe(false);
+    });
+
+    it('rejects category mismatches for week-plan pick eligibility', () => {
+      expect(wardrobeItemMatchesOutfitSlot('shoes', 'shirt')).toBe(false);
+      expect(wardrobeItemMatchesOutfitSlot('shirt', 'shoes')).toBe(false);
+      expect(wardrobeItemMatchesOutfitSlot('jeans', 'shirt')).toBe(false);
+      expect(wardrobeItemMatchesOutfitSlot('blazer', 'trouser')).toBe(false);
+      expect(wardrobeItemMatchesOutfitSlot('tie', 'shirt')).toBe(false);
+    });
+
+    it('matches tie on normalized key when outside complete-outfit aliases', () => {
+      expect(wardrobeItemMatchesOutfitSlot('tie', 'tie')).toBe(true);
+      expect(wardrobeItemMatchesOutfitSlot('ties', 'tie')).toBe(false);
     });
   });
 });

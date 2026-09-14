@@ -1019,6 +1019,98 @@ final class WeekPlannerViewModelTests: XCTestCase {
         XCTAssertTrue(vm.isDirty)
     }
 
+    func testApplyWardrobeItemRejectsCategoryMismatch() async {
+        let api = MockAPI()
+        let vm = WeekPlannerViewModel(api: api, notifier: MockNotifier(), timezoneProvider: { "UTC" })
+        await vm.load()
+        vm.setDayEnabled(1, enabled: true)
+
+        let shirt = WardrobeItem(
+            id: 10,
+            category: "shirt",
+            name: "Oxford",
+            description: "White oxford",
+            color: "white",
+            brand: nil,
+            size: nil,
+            image_data: nil,
+            tags: nil,
+            condition: nil,
+            wear_count: 0,
+            created_at: "2026-01-01",
+            updated_at: "2026-01-01"
+        )
+
+        XCTAssertFalse(vm.applyWardrobeItem(shirt, dayOfWeek: 1, slotKey: "shoes"))
+        XCTAssertTrue(vm.plan.days[1].pinned_items.isEmpty)
+        XCTAssertNil(vm.plan.days[1].outfit)
+        XCTAssertNotEqual(vm.lastMissingAction, .chooseFromWardrobe(dayOfWeek: 1))
+    }
+
+    func testApplyWardrobeItemAllowsCategoryAliases() async {
+        let api = MockAPI()
+        let vm = WeekPlannerViewModel(api: api, notifier: MockNotifier(), timezoneProvider: { "UTC" })
+        await vm.load()
+        vm.setDayEnabled(3, enabled: true)
+
+        let polo = WardrobeItem(
+            id: 21,
+            category: "polo",
+            name: "Navy polo",
+            description: "Navy polo shirt",
+            color: "navy",
+            brand: nil,
+            size: nil,
+            image_data: nil,
+            tags: nil,
+            condition: nil,
+            wear_count: 0,
+            created_at: "2026-01-01",
+            updated_at: "2026-01-01"
+        )
+        let jeans = WardrobeItem(
+            id: 22,
+            category: "jeans",
+            name: "Blue jeans",
+            description: "Dark wash jeans",
+            color: "blue",
+            brand: nil,
+            size: nil,
+            image_data: nil,
+            tags: nil,
+            condition: nil,
+            wear_count: 0,
+            created_at: "2026-01-01",
+            updated_at: "2026-01-01"
+        )
+        let belt = WardrobeItem(
+            id: 23,
+            category: "belt",
+            name: "Black belt",
+            description: "Leather belt",
+            color: "black",
+            brand: nil,
+            size: nil,
+            image_data: nil,
+            tags: nil,
+            condition: nil,
+            wear_count: 0,
+            created_at: "2026-01-01",
+            updated_at: "2026-01-01"
+        )
+
+        XCTAssertTrue(vm.applyWardrobeItem(polo, dayOfWeek: 3, slotKey: "shirt"))
+        XCTAssertEqual(vm.plan.days[3].pinned_items["shirt"], 21)
+        XCTAssertEqual(vm.plan.days[3].outfit?.shirt_id, 21)
+
+        XCTAssertTrue(vm.applyWardrobeItem(jeans, dayOfWeek: 3, slotKey: "trouser"))
+        XCTAssertEqual(vm.plan.days[3].pinned_items["trouser"], 22)
+
+        XCTAssertTrue(vm.applyWardrobeItem(belt, dayOfWeek: 3, slotKey: "accessory"))
+        XCTAssertEqual(vm.plan.days[3].pinned_items["belt"], 23)
+        XCTAssertNil(vm.plan.days[3].pinned_items["accessory"])
+    }
+
     func testUnpinSlotRemovesPinAndClearsOutfitSlot() async {
         let api = MockAPI()
         api.plan.days[1].enabled = true

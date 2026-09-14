@@ -21,6 +21,7 @@ import {
   toUpsertPayload,
   WEEK_PLAN_PRESET_NAME_MAX,
 } from '../models/WeekPlanModels';
+import { wardrobeItemMatchesOutfitSlot } from '../utils/wardrobeCategory';
 
 const SLOT_TEXT_FIELDS = {
   shirt: 'shirt',
@@ -242,6 +243,7 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
       const textField = SLOT_TEXT_FIELDS[key];
       const idField = SLOT_ID_FIELDS[key];
       if (!textField || !idField) return;
+      if (!wardrobeItemMatchesOutfitSlot(item.category, slotKey)) return;
 
       setPlan((prev) => {
         if (!prev) return prev;

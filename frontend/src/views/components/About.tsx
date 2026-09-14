@@ -102,8 +102,8 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
             </div>
             {isAdmin && (
               <p className="mt-6 text-sm text-slate-400 border-t border-white/10 pt-4">
-                Admin: access logs, usage reports, and premium wardrobe-analysis AI prompt/response details in Reports
-                and Settings.
+                Admin: access logs, usage reports, Error Center (user errors + suggested fixes), and premium
+                wardrobe-analysis AI prompt/response details in Reports and Settings.
               </p>
             )}
           </div>

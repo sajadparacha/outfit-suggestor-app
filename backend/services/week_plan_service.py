@@ -392,6 +392,33 @@ def outfit_row_to_response(
     )
 
 
+def normalize_outfit_slot(category: str) -> str:
+    """Map wardrobe / pin slot aliases to canonical outfit slots (parity with clients)."""
+    normalized = (category or "").strip().lower()
+    if normalized in {"shirts", "polo", "t_shirt", "t-shirt", "tshirt", "tee"}:
+        return "shirt"
+    if normalized in {"blazers"}:
+        return "blazer"
+    if normalized in {"jeans", "pants", "pant", "trousers", "shorts"}:
+        return "trouser"
+    if normalized in {"shoe"}:
+        return "shoes"
+    if normalized in {"belts", "accessory"}:
+        return "belt"
+    if normalized in {"sweater", "sweaters"}:
+        return "sweater"
+    if normalized in {"tie", "ties"}:
+        return "tie"
+    if normalized in {"jacket", "jackets", "coat", "coats", "outerwear"}:
+        return "outerwear"
+    return normalized
+
+
+def pin_slot_matches_item_category(slot: str, item_category: str) -> bool:
+    """True when wardrobe item category belongs in the pin slot (aliases included)."""
+    return normalize_outfit_slot(slot) == normalize_outfit_slot(item_category)
+
+
 def _normalize_pinned_items(raw: Any) -> dict[str, int]:
     if not isinstance(raw, dict):
         return {}
@@ -400,7 +427,8 @@ def _normalize_pinned_items(raw: Any) -> dict[str, int]:
         if not isinstance(slot, str) or not slot.strip():
             continue
         if isinstance(item_id, int) and item_id > 0:
-            pins[slot.strip()] = item_id
+            slot_key = normalize_outfit_slot(slot.strip())
+            pins[slot_key] = item_id
     return pins
 
 
@@ -573,6 +601,11 @@ class WeekPlanService:
         if body.days:
             by_dow = {d.day_of_week: d for d in plan.days}
             for day_in in body.days:
+                pins = self.validate_pinned_items_for_user(
+                    db,
+                    user_id,
+                    getattr(day_in, "pinned_items", None) or {},
+                )
                 day = by_dow.get(day_in.day_of_week)
                 if day is None:
                     day = WeeklyPlanDay(
@@ -584,9 +617,7 @@ class WeekPlanService:
                         use_wardrobe_only=bool(
                             getattr(day_in, "use_wardrobe_only", True)
                         ),
-                        pinned_items_json=serialize_pinned_items(
-                            getattr(day_in, "pinned_items", None) or {}
-                        ),
+                        pinned_items_json=serialize_pinned_items(pins),
                     )
                     plan.days.append(day)
                     by_dow[day_in.day_of_week] = day
@@ -598,9 +629,7 @@ class WeekPlanService:
                     day.use_wardrobe_only = bool(
                         getattr(day_in, "use_wardrobe_only", True)
                     )
-                    day.pinned_items_json = serialize_pinned_items(
-                        getattr(day_in, "pinned_items", None) or {}
-                    )
+                    day.pinned_items_json = serialize_pinned_items(pins)
                     # Clear outfit when day is disabled
                     if was_enabled and not day.enabled and day.outfit is not None:
                         db.delete(day.outfit)
@@ -608,6 +637,41 @@ class WeekPlanService:
 
         db.commit()
         return self.get_plan(db, user_id)  # type: ignore[return-value]
+
+    def validate_pinned_items_for_user(
+        self,
+        db: Session,
+        user_id: int,
+        raw_pins: Any,
+    ) -> dict[str, int]:
+        """Normalize pins and ensure each item is owned and matches its slot category."""
+        from models.wardrobe import WardrobeItem
+
+        pins = _normalize_pinned_items(raw_pins)
+        if not pins:
+            return {}
+
+        items = {
+            row.id: row
+            for row in db.query(WardrobeItem)
+            .filter(
+                WardrobeItem.user_id == user_id,
+                WardrobeItem.id.in_(list(pins.values())),
+            )
+            .all()
+        }
+        for slot, item_id in pins.items():
+            item = items.get(item_id)
+            if item is None:
+                raise ValueError(
+                    f"Pinned item {item_id} for slot '{slot}' was not found in your wardrobe."
+                )
+            if not pin_slot_matches_item_category(slot, item.category or ""):
+                raise ValueError(
+                    f"Pinned item {item_id} does not match slot '{slot}' "
+                    f"(item category: {item.category or 'unknown'})."
+                )
+        return pins
 
     def save_day_outfit(
         self,
@@ -700,7 +764,7 @@ class WeekPlanService:
         *,
         target_days: Optional[list[WeeklyPlanDay]] = None,
     ) -> list[str]:
-        """Drop pins for wardrobe items the user no longer owns. Returns banner lines."""
+        """Drop pins for missing items or category/slot mismatches. Returns banner lines."""
         from models.wardrobe import WardrobeItem
 
         days = target_days if target_days is not None else list(plan.days)
@@ -710,9 +774,9 @@ class WeekPlanService:
         if not all_pin_ids:
             return []
 
-        owned = {
-            row.id
-            for row in db.query(WardrobeItem.id)
+        owned: dict[int, WardrobeItem] = {
+            row.id: row
+            for row in db.query(WardrobeItem)
             .filter(
                 WardrobeItem.user_id == user_id,
                 WardrobeItem.id.in_(all_pin_ids),
@@ -725,18 +789,30 @@ class WeekPlanService:
             if not pins:
                 continue
             kept: dict[str, int] = {}
-            dropped: list[int] = []
+            dropped_missing: list[int] = []
+            dropped_mismatch: list[int] = []
             for slot, item_id in pins.items():
-                if item_id in owned:
-                    kept[slot] = item_id
-                else:
-                    dropped.append(item_id)
-            if dropped:
+                item = owned.get(item_id)
+                if item is None:
+                    dropped_missing.append(item_id)
+                    continue
+                if not pin_slot_matches_item_category(slot, item.category or ""):
+                    dropped_mismatch.append(item_id)
+                    continue
+                kept[slot] = item_id
+            if dropped_missing or dropped_mismatch:
                 day.pinned_items_json = serialize_pinned_items(kept)
-                messages.append(
-                    "Removed pinned item(s) you no longer own from "
-                    f"{self._day_label(day.day_of_week)}."
-                )
+                day_label = self._day_label(day.day_of_week)
+                if dropped_missing:
+                    messages.append(
+                        "Removed pinned item(s) you no longer own from "
+                        f"{day_label}."
+                    )
+                if dropped_mismatch:
+                    messages.append(
+                        "Removed pinned item(s) that do not match their slot on "
+                        f"{day_label}."
+                    )
         return messages
 
     def _day_label(self, day_of_week: int) -> str:

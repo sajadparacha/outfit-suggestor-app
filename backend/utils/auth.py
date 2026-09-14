@@ -120,6 +120,42 @@ def decode_access_token(token: str) -> Optional[dict]:
         return None
 
 
+def peek_user_id_from_token(token: str) -> Optional[int]:
+    """
+    Extract user id from a JWT for diagnostics.
+
+    Verifies signature but allows expired tokens so admin error logs can still
+    attribute 401s / stale-session failures to a user.
+    """
+    if not token:
+        return None
+    try:
+        try:  # Support running both as a package (backend.*) and from backend/ directly
+            from config import Config  # type: ignore
+        except ImportError:  # When imported as backend.utils.auth
+            from backend.config import Config  # type: ignore
+
+        payload = jwt.decode(
+            token,
+            Config.JWT_SECRET_KEY,
+            algorithms=[Config.JWT_ALGORITHM],
+            options={"verify_exp": False},
+        )
+        sub = payload.get("sub")
+        if sub is None:
+            return None
+        return int(sub)
+    except (JWTError, ValueError, TypeError):
+        return None
+
+
+def peek_user_id_from_authorization(authorization: Optional[str]) -> Optional[int]:
+    """Peek user id from an Authorization: Bearer … header value."""
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    return peek_user_id_from_token(authorization.split(" ", 1)[1].strip())
+
+
 def generate_activation_token() -> str:
     """
     Generate a secure random activation token.

@@ -144,6 +144,26 @@ export const normalizeCompleteOutfitSlot = (category: string): CompleteOutfitSlo
   return COMPLETE_OUTFIT_SLOT_ALIASES[normalized] ?? null;
 };
 
+/**
+ * Whether a wardrobe item's category may fill a Week Planner / outfit slot.
+ * Maps accessory → belt on the slot, then compares via normalizeCompleteOutfitSlot
+ * aliases (polo/t_shirt → shirt, jeans/shorts → trouser, etc.).
+ * Slots outside complete-outfit aliases (e.g. tie) match on normalized key equality.
+ */
+export const wardrobeItemMatchesOutfitSlot = (
+  itemCategory: string,
+  slotKey: string
+): boolean => {
+  const rawSlot = normalizeWardrobeCategory(slotKey);
+  const slotForNormalize = rawSlot === 'accessory' ? 'belt' : rawSlot;
+  const itemNorm = normalizeCompleteOutfitSlot(itemCategory);
+  const slotNorm = normalizeCompleteOutfitSlot(slotForNormalize);
+  if (itemNorm !== null && slotNorm !== null) {
+    return itemNorm === slotNorm;
+  }
+  return normalizeWardrobeCategory(itemCategory) === slotForNormalize;
+};
+
 export const isCompleteOutfitEligibleCategory = (category: string): boolean =>
   normalizeCompleteOutfitSlot(category) !== null;
 

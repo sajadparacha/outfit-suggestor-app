@@ -3,7 +3,9 @@ Main FastAPI application entry point
 Refactored with proper service architecture for multi-platform client support
 """
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
 import uvicorn
 import os
 
@@ -19,6 +21,7 @@ from routes.admin_user_routes import router as admin_user_router
 from routes.access_log_routes import router as access_log_router
 from routes.reports_routes import router as reports_router
 from routes.integration_test_routes import router as integration_test_router
+from routes.error_event_routes import router as error_event_router
 from models.database import Base, engine
 # Import models to ensure they're registered with SQLAlchemy
 from models.user import User  # noqa: F401
@@ -33,9 +36,15 @@ from models.week_plan import (  # noqa: F401
 )
 from models.access_log import AccessLog  # noqa: F401
 from models.guest_usage import GuestUsage  # noqa: F401
+from models.error_event import ErrorEvent  # noqa: F401
 from exceptions import GuestLimitReachedException
 from fastapi.responses import JSONResponse
 from fastapi import Request
+from utils.error_event_capture import (
+    record_http_exception,
+    record_unhandled_exception,
+    record_validation_error,
+)
 
 # Startup logging
 print("=" * 50)
@@ -95,7 +104,17 @@ except Exception as exc:  # pragma: no cover — never block boot on alter edge 
 
 
 @app.exception_handler(GuestLimitReachedException)
-async def guest_limit_reached_handler(_request: Request, _exc: GuestLimitReachedException):
+async def guest_limit_reached_handler(request: Request, _exc: GuestLimitReachedException):
+    record_http_exception(
+        request,
+        StarletteHTTPException(
+            status_code=403,
+            detail={
+                "detail": GuestLimitReachedException.message,
+                "code": GuestLimitReachedException.code,
+            },
+        ),
+    )
     return JSONResponse(
         status_code=403,
         content={
@@ -103,6 +122,31 @@ async def guest_limit_reached_handler(_request: Request, _exc: GuestLimitReached
             "code": GuestLimitReachedException.code,
         },
     )
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    record_http_exception(request, exc)
+    detail = exc.detail
+    if isinstance(detail, dict):
+        return JSONResponse(status_code=exc.status_code, content=detail)
+    return JSONResponse(status_code=exc.status_code, content={"detail": detail})
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    record_validation_error(request, exc)
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    record_unhandled_exception(request, exc)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )
+
 
 # Include routers
 app.include_router(auth_router)
@@ -113,6 +157,7 @@ app.include_router(admin_user_router)
 app.include_router(access_log_router)
 app.include_router(reports_router)
 app.include_router(integration_test_router)
+app.include_router(error_event_router)
 
 
 @app.get("/")

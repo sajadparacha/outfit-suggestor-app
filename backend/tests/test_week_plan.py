@@ -634,3 +634,85 @@ class TestWeekPlanPresets:
             headers=auth_headers,
         )
         assert res.status_code == 400
+
+
+class TestWeekPlanPinSlotCategory:
+    """Pinned wardrobe items must match the outfit slot category (aliases included)."""
+
+    def _add_item(self, db, user_id, category, description="Item"):
+        from models.wardrobe import WardrobeItem
+
+        item = WardrobeItem(
+            user_id=user_id,
+            category=category,
+            color="Navy",
+            description=description,
+            image_data="dGVzdA==",
+        )
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+        return item
+
+    def test_put_rejects_category_mismatch(
+        self, client, auth_headers, db, test_user
+    ):
+        jeans = self._add_item(db, test_user.id, "jeans", "Blue jeans")
+        body = _sample_plan_body()
+        body["days"][0]["pinned_items"] = {"shoes": jeans.id}
+        res = client.put(PLAN_URL, json=body, headers=auth_headers)
+        assert res.status_code == 400
+        assert "does not match slot" in res.json()["detail"]
+
+    def test_put_accepts_polo_for_shirt_slot(
+        self, client, auth_headers, db, test_user
+    ):
+        polo = self._add_item(db, test_user.id, "polo", "Navy polo")
+        body = _sample_plan_body()
+        body["days"][0]["pinned_items"] = {"shirt": polo.id}
+        res = client.put(PLAN_URL, json=body, headers=auth_headers)
+        assert res.status_code == 200
+        day0 = next(d for d in res.json()["days"] if d["day_of_week"] == 0)
+        assert day0["pinned_items"]["shirt"] == polo.id
+
+    def test_put_normalizes_accessory_pin_key_to_belt(
+        self, client, auth_headers, db, test_user
+    ):
+        belt = self._add_item(db, test_user.id, "belt", "Black belt")
+        body = _sample_plan_body()
+        body["days"][0]["pinned_items"] = {"accessory": belt.id}
+        res = client.put(PLAN_URL, json=body, headers=auth_headers)
+        assert res.status_code == 200
+        day0 = next(d for d in res.json()["days"] if d["day_of_week"] == 0)
+        assert day0["pinned_items"] == {"belt": belt.id}
+        assert "accessory" not in day0["pinned_items"]
+
+    def test_generate_prunes_mismatched_pin(
+        self, client, auth_headers, db, test_user, wardrobe_item
+    ):
+        """Existing bad pins are dropped before generate uses them."""
+        from models.week_plan import WeeklyPlan, WeeklyPlanDay
+        from services.week_plan_service import serialize_pinned_items
+
+        jeans = self._add_item(db, test_user.id, "jeans", "Blue jeans")
+        client.put(PLAN_URL, json=_sample_plan_body(), headers=auth_headers)
+
+        plan = db.query(WeeklyPlan).filter(WeeklyPlan.user_id == test_user.id).one()
+        day0 = (
+            db.query(WeeklyPlanDay)
+            .filter(
+                WeeklyPlanDay.plan_id == plan.id,
+                WeeklyPlanDay.day_of_week == 0,
+            )
+            .one()
+        )
+        day0.pinned_items_json = serialize_pinned_items({"shoes": jeans.id})
+        db.commit()
+
+        res = client.post(GENERATE_URL, json={}, headers=auth_headers)
+        assert res.status_code == 200
+        day0_out = next(d for d in res.json()["days"] if d["day_of_week"] == 0)
+        pins = day0_out.get("pinned_items") or {}
+        assert "shoes" not in pins
+        message = res.json().get("message") or ""
+        assert "do not match their slot" in message

@@ -505,6 +505,14 @@ struct WardrobePickSession: Equatable {
     var bannerText: String {
         WeekPlanCopy.wardrobePickBanner(slotLabel: slotLabel, dayOfWeek: dayOfWeek)
     }
+
+    /// True when the wardrobe item’s category aliases to this pick slot (polo→shirt, jeans→trouser, accessory→belt).
+    func matchesWardrobeItem(_ item: WardrobeItem) -> Bool {
+        guard let itemSlot = WardrobeCompletionSlot.normalized(from: item.category) else {
+            return false
+        }
+        return itemSlot.rawValue == normalizedSlotKey
+    }
 }
 
 enum WeekPlanCopy {

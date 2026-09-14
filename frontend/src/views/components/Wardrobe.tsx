@@ -31,6 +31,7 @@ import {
   normalizeCompleteOutfitSlot,
   usesClientSideCategoryFilter,
   wardrobeCategoryLabel,
+  wardrobeItemMatchesOutfitSlot,
 } from '../../utils/wardrobeCategory';
 
 const CLIENT_SIDE_FILTER_LOAD_LIMIT = 100;
@@ -1117,6 +1118,10 @@ const Wardrobe: React.FC<WardrobeProps> = ({
               const completeOutfitSlot = normalizeCompleteOutfitSlot(item.category);
               const isCompleteOutfitEligible = !!completeOutfitSlot;
               const isSelectedForCompleteOutfit = selectedCompleteOutfitIds.has(item.id);
+              const matchesWeekPlanPickSlot =
+                !isWeekPlanPickMode ||
+                !pickSession ||
+                wardrobeItemMatchesOutfitSlot(item.category, pickSession.slotKey);
               const slotAlreadySelected =
                 !!completeOutfitSlot &&
                 selectedCompleteOutfitSlots.has(completeOutfitSlot) &&
@@ -1142,10 +1147,15 @@ const Wardrobe: React.FC<WardrobeProps> = ({
               <div
                 key={item.id}
                 data-testid={`wardrobe-item-card-${item.id}`}
+                aria-disabled={isWeekPlanPickMode && !matchesWeekPlanPickSlot ? true : undefined}
                 className={`overflow-visible rounded-2xl border p-3 shadow-xl backdrop-blur transition-shadow hover:shadow-2xl sm:p-4${
                   isSelectedForCompleteOutfit
                     ? ' border-brand-blue/70 bg-brand-blue/15 ring-2 ring-brand-blue/40'
                     : ' border-white/10 bg-white/5'
+                }${
+                  isWeekPlanPickMode && !matchesWeekPlanPickSlot
+                    ? ' opacity-40 grayscale'
+                    : ''
                 }${openMenuItemId === item.id ? ' relative z-50' : ''}`}
               >
                 <div className="flex gap-3 sm:gap-4">
@@ -1205,12 +1215,29 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                       <div className="mt-3">
                         <button
                           type="button"
-                          onClick={() => onPickForWeekPlan?.(item)}
-                          className="min-h-[44px] w-full rounded-xl border border-brand-blue/40 bg-brand-blue/20 px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-blue/30 sm:w-auto"
+                          onClick={() => {
+                            if (!matchesWeekPlanPickSlot) return;
+                            onPickForWeekPlan?.(item);
+                          }}
+                          disabled={!matchesWeekPlanPickSlot}
+                          className={`min-h-[44px] w-full rounded-xl border px-3 py-2 text-sm font-semibold transition sm:w-auto ${
+                            matchesWeekPlanPickSlot
+                              ? 'border-brand-blue/40 bg-brand-blue/20 text-white hover:bg-brand-blue/30'
+                              : 'cursor-not-allowed border-white/10 bg-white/5 text-slate-500'
+                          }`}
                           data-testid={`wardrobe-week-pick-select-${item.id}`}
-                          aria-label={`Select ${wardrobeCategoryLabel(item.category)} for week plan`}
+                          aria-label={
+                            matchesWeekPlanPickSlot
+                              ? `Select ${wardrobeCategoryLabel(item.category)} for week plan`
+                              : `${wardrobeCategoryLabel(item.category)} does not match this slot`
+                          }
+                          title={
+                            matchesWeekPlanPickSlot
+                              ? undefined
+                              : 'This item category does not match the selected slot'
+                          }
                         >
-                          Select for week plan
+                          {matchesWeekPlanPickSlot ? 'Select for week plan' : 'Wrong category for slot'}
                         </button>
                       </div>
                     ) : (

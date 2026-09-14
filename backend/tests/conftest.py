@@ -50,6 +50,7 @@ from models.outfit_history import OutfitHistory
 from models.outfit import OutfitSuggestion
 from models.access_log import AccessLog  # noqa: F401 — register metadata for create_all
 from models.guest_usage import GuestUsage  # noqa: F401 — register metadata for create_all
+from models.error_event import ErrorEvent  # noqa: F401 — register metadata for create_all
 from models.week_plan import (  # noqa: F401 — register metadata for create_all
     WeeklyPlan,
     WeeklyPlanDay,
@@ -176,13 +177,17 @@ def client(db):
         finally:
             pass
 
+    from utils.error_event_capture import set_session_factory
+
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_outfit_controller] = _get_test_outfit_controller
     app.dependency_overrides[get_wardrobe_controller] = _get_test_wardrobe_controller
+    set_session_factory(TestingSessionLocal)
 
     with TestClient(app) as test_client:
         yield test_client
 
+    set_session_factory(None)
     app.dependency_overrides.clear()
 
 
