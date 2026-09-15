@@ -50,7 +50,7 @@ const PlannerActionBar: React.FC<PlannerActionBarProps> = ({
           type="button"
           onClick={() => {
             const ok = window.confirm(
-              'Clear this week’s plan? A copy is kept under Plan history so you can load it later.'
+              'Start a new plan? A copy is kept under Plan history so you can load it later.'
             );
             if (ok) onClearPlan();
           }}
@@ -58,7 +58,7 @@ const PlannerActionBar: React.FC<PlannerActionBarProps> = ({
           className="min-h-[44px] rounded-full border border-white/10 px-4 py-2.5 text-sm text-slate-400 transition hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/40 disabled:opacity-50"
           data-testid="week-clear-plan"
         >
-          Clear plan
+          New plan
         </button>
       )}
     </div>

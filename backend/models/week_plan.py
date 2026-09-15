@@ -151,7 +151,7 @@ class WeeklyPlanHistory(Base):
 
 
 class WeeklyPlanPreset(Base):
-    """User-named week configuration (settings only — no outfits)."""
+    """User-named week configuration (prefs + pins — no outfits)."""
 
     __tablename__ = "weekly_plan_presets"
 
@@ -293,10 +293,11 @@ class WeekPlanPresetConfigDay(BaseModel):
     occasion: str = DEFAULT_OCCASION
     style: str = DEFAULT_STYLE
     use_wardrobe_only: bool = True
+    pinned_items: dict[str, int] = Field(default_factory=dict)
 
 
 class WeekPlanPresetConfig(BaseModel):
-    """Config-only payload (no outfits)."""
+    """Config payload: prefs + pins (no outfits)."""
 
     reminder_time: str = Field(default=DEFAULT_REMINDER_TIME)
     shared_season: str = Field(default=DEFAULT_SEASON)

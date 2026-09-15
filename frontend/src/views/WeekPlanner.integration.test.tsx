@@ -783,11 +783,14 @@ describe('Week Outfit Planner', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('week-clear-plan')).toBeInTheDocument();
+      expect(screen.getByTestId('week-clear-plan')).toHaveTextContent('New plan');
       expect(screen.getByTestId('week-clear-plan')).not.toBeDisabled();
     });
 
     fireEvent.click(screen.getByTestId('week-clear-plan'));
-    expect(confirmSpy).toHaveBeenCalled();
+    expect(confirmSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/Plan history/i)
+    );
     expect(deleted).toBe(false);
 
     confirmSpy.mockReturnValue(true);
@@ -1004,7 +1007,7 @@ describe('Week Outfit Planner', () => {
     });
     expect(screen.getByTestId('week-plan-history-disclosure')).not.toHaveAttribute('open');
     expect(screen.getByTestId('week-plan-history-empty')).toHaveTextContent(
-      /No plan history yet.*Clear plan or regenerate/i
+      /No plan history yet.*New plan or regenerate/i
     );
   });
 

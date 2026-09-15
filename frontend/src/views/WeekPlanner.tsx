@@ -64,6 +64,8 @@ export interface WeekPlannerProps {
   presetLimit?: number;
   presetAtLimit?: boolean;
   presetBusy?: boolean;
+  loadedPresetId?: number | null;
+  loadedPresetName?: string | null;
   onSavePresetAs?: (name: string) => void | Promise<void>;
   onUpdatePreset?: (presetId: number) => void | Promise<void>;
   onRenamePreset?: (presetId: number, name: string) => void | Promise<void>;
@@ -164,6 +166,8 @@ const WeekPlanner: React.FC<WeekPlannerProps> = ({
   presetLimit = 0,
   presetAtLimit = false,
   presetBusy = false,
+  loadedPresetId = null,
+  loadedPresetName = null,
   onSavePresetAs,
   onUpdatePreset,
   onRenamePreset,
@@ -398,6 +402,8 @@ const WeekPlanner: React.FC<WeekPlannerProps> = ({
           presetAtLimit={presetAtLimit}
           busy={busy}
           presetBusy={presetBusy}
+          loadedPresetId={loadedPresetId}
+          loadedPresetName={loadedPresetName}
           onSaveAs={onSavePresetAs}
           onUpdate={onUpdatePreset}
           onRename={onRenamePreset}
@@ -427,7 +433,7 @@ const WeekPlanner: React.FC<WeekPlannerProps> = ({
           <div className="mt-4 border-t border-white/5 pt-4">
             {history.length === 0 ? (
               <p className="text-sm text-slate-400" data-testid="week-plan-history-empty">
-                No plan history yet. Clear plan or regenerate after outfits exist to keep a copy
+                No plan history yet. New plan or regenerate after outfits exist to keep a copy
                 here.
               </p>
             ) : (

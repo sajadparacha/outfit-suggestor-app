@@ -138,6 +138,7 @@
 		WP01BF0000000000000005 /* WeekPlannerViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WP01FR0000000000000005 /* WeekPlannerViewModelTests.swift */; };
 		WP01BF0000000000000006 /* WeekPlanNotificationSchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WP01FR0000000000000006 /* WeekPlanNotificationSchedulerTests.swift */; };
 		WPDCBF000000000000000001 /* WeekPlanDayCardDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WPDCFR000000000000000001 /* WeekPlanDayCardDisplayTests.swift */; };
+		WPPPBF0000000000000001 /* WeekPlanPresetPinsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WPPPFR0000000000000001 /* WeekPlanPresetPinsTests.swift */; };
 		WRS01BF0000000000000001 /* WardrobeRandomSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = WRS01FR0000000000000001 /* WardrobeRandomSession.swift */; };
 		WRS01BF0000000000000002 /* WardrobeRandomSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WRS01FR0000000000000002 /* WardrobeRandomSessionTests.swift */; };
 		WSL01BF0000000000000001 /* WardrobeInsightShoppingList.swift in Sources */ = {isa = PBXBuildFile; fileRef = WSL01FR0000000000000001 /* WardrobeInsightShoppingList.swift */; };
@@ -298,6 +299,7 @@
 		WP01FR0000000000000005 /* WeekPlannerViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekPlannerViewModelTests.swift; sourceTree = "<group>"; };
 		WP01FR0000000000000006 /* WeekPlanNotificationSchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekPlanNotificationSchedulerTests.swift; sourceTree = "<group>"; };
 		WPDCFR000000000000000001 /* WeekPlanDayCardDisplayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekPlanDayCardDisplayTests.swift; sourceTree = "<group>"; };
+		WPPPFR0000000000000001 /* WeekPlanPresetPinsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekPlanPresetPinsTests.swift; sourceTree = "<group>"; };
 		WRS01FR0000000000000001 /* WardrobeRandomSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeRandomSession.swift; sourceTree = "<group>"; };
 		WRS01FR0000000000000002 /* WardrobeRandomSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeRandomSessionTests.swift; sourceTree = "<group>"; };
 		WSL01FR0000000000000001 /* WardrobeInsightShoppingList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeInsightShoppingList.swift; sourceTree = "<group>"; };
@@ -321,6 +323,7 @@
 			children = (
 				WP01FR0000000000000005 /* WeekPlannerViewModelTests.swift */,
 				WPDCFR000000000000000001 /* WeekPlanDayCardDisplayTests.swift */,
+				WPPPFR0000000000000001 /* WeekPlanPresetPinsTests.swift */,
 				WP01FR0000000000000006 /* WeekPlanNotificationSchedulerTests.swift */,
 				A4ED51E6300690222125BE0F /* APIServiceIntegrationTests.swift */,
 				A1V2I3S4B5I6L7I8T9Y0A04 /* AdminVisibilityTests.swift */,
@@ -791,6 +794,7 @@
 			files = (
 				WP01BF0000000000000005 /* WeekPlannerViewModelTests.swift in Sources */,
 				WPDCBF000000000000000001 /* WeekPlanDayCardDisplayTests.swift in Sources */,
+				WPPPBF0000000000000001 /* WeekPlanPresetPinsTests.swift in Sources */,
 				WP01BF0000000000000006 /* WeekPlanNotificationSchedulerTests.swift in Sources */,
 				0D0FFD43456FF9B083A5AE92 /* APIServiceIntegrationTests.swift in Sources */,
 				A1V2I3S4B5I6L7I8T9Y0A03 /* AdminVisibilityTests.swift in Sources */,

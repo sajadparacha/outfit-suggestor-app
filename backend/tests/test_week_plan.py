@@ -635,6 +635,168 @@ class TestWeekPlanPresets:
         )
         assert res.status_code == 400
 
+    def _add_wardrobe_item(self, db, user_id, category, description="Item"):
+        from models.wardrobe import WardrobeItem
+
+        item = WardrobeItem(
+            user_id=user_id,
+            category=category,
+            color="Navy",
+            description=description,
+            image_data="dGVzdA==",
+        )
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+        return item
+
+    def test_preset_persists_and_applies_pinned_items(
+        self, client, auth_headers, db, test_user, wardrobe_item
+    ):
+        shoes = self._add_wardrobe_item(db, test_user.id, "shoes", "Black shoes")
+        config = _preset_config()
+        config["days"][0]["pinned_items"] = {
+            "shirt": wardrobe_item.id,
+            "shoes": shoes.id,
+        }
+        config["days"][1]["pinned_items"] = {"shoes": shoes.id}
+
+        created = client.post(
+            PRESETS_URL,
+            json={"name": "Weekly shoes", "config": config},
+            headers=auth_headers,
+        )
+        assert created.status_code == 200, created.text
+        preset = created.json()
+        assert preset["config"]["days"][0]["pinned_items"] == {
+            "shirt": wardrobe_item.id,
+            "shoes": shoes.id,
+        }
+        assert preset["config"]["days"][1]["pinned_items"] == {"shoes": shoes.id}
+
+        # Seed plan with outfit so apply must clear it
+        body = _sample_plan_body()
+        body["days"][0]["enabled"] = True
+        client.put(PLAN_URL, json=body, headers=auth_headers)
+        gen = client.post(GENERATE_URL, json={}, headers=auth_headers)
+        assert gen.json()["days"][0]["outfit"] is not None
+
+        applied = client.post(
+            f"{PRESETS_URL}/{preset['id']}/apply", headers=auth_headers
+        )
+        assert applied.status_code == 200
+        plan = applied.json()
+        day0 = next(d for d in plan["days"] if d["day_of_week"] == 0)
+        day1 = next(d for d in plan["days"] if d["day_of_week"] == 1)
+        assert day0["outfit"] is None
+        assert day0["pinned_items"] == {
+            "shirt": wardrobe_item.id,
+            "shoes": shoes.id,
+        }
+        assert day1["pinned_items"] == {"shoes": shoes.id}
+
+        # Update preset pins
+        config["days"][0]["pinned_items"] = {"shirt": wardrobe_item.id}
+        updated = client.put(
+            f"{PRESETS_URL}/{preset['id']}",
+            json={"config": config},
+            headers=auth_headers,
+        )
+        assert updated.status_code == 200
+        assert updated.json()["config"]["days"][0]["pinned_items"] == {
+            "shirt": wardrobe_item.id
+        }
+
+    def test_preset_create_rejects_invalid_pin(
+        self, client, auth_headers, db, test_user
+    ):
+        jeans = self._add_wardrobe_item(db, test_user.id, "jeans", "Blue jeans")
+        config = _preset_config()
+        config["days"][0]["pinned_items"] = {"shoes": jeans.id}
+        res = client.post(
+            PRESETS_URL,
+            json={"name": "Bad pin", "config": config},
+            headers=auth_headers,
+        )
+        assert res.status_code == 400
+        assert "does not match slot" in res.json()["detail"]
+
+        missing = _preset_config()
+        missing["days"][0]["pinned_items"] = {"shirt": 999999}
+        res2 = client.post(
+            PRESETS_URL,
+            json={"name": "Missing pin", "config": missing},
+            headers=auth_headers,
+        )
+        assert res2.status_code == 400
+        assert "not found" in res2.json()["detail"]
+
+    def test_preset_apply_drops_deleted_pin_quietly(
+        self, client, auth_headers, db, test_user, wardrobe_item
+    ):
+        from models.wardrobe import WardrobeItem
+
+        shoes = self._add_wardrobe_item(db, test_user.id, "shoes", "Black shoes")
+        config = _preset_config()
+        config["days"][0]["pinned_items"] = {
+            "shirt": wardrobe_item.id,
+            "shoes": shoes.id,
+        }
+        created = client.post(
+            PRESETS_URL,
+            json={"name": "Mix", "config": config},
+            headers=auth_headers,
+        )
+        assert created.status_code == 200
+        preset_id = created.json()["id"]
+
+        db.delete(shoes)
+        db.commit()
+        assert db.query(WardrobeItem).filter(WardrobeItem.id == shoes.id).first() is None
+
+        applied = client.post(
+            f"{PRESETS_URL}/{preset_id}/apply", headers=auth_headers
+        )
+        assert applied.status_code == 200
+        day0 = next(d for d in applied.json()["days"] if d["day_of_week"] == 0)
+        assert day0["pinned_items"] == {"shirt": wardrobe_item.id}
+        assert "shoes" not in day0["pinned_items"]
+
+    def test_legacy_preset_without_pins_still_applies(
+        self, client, auth_headers, db, test_user
+    ):
+        from models.week_plan import WeeklyPlanPreset
+        import json
+        from datetime import datetime
+
+        config = _preset_config()
+        # Legacy shape: no pinned_items keys
+        for day in config["days"]:
+            day.pop("pinned_items", None)
+
+        row = WeeklyPlanPreset(
+            user_id=test_user.id,
+            name="Legacy",
+            config_json=json.dumps(config),
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        )
+        db.add(row)
+        db.commit()
+        db.refresh(row)
+
+        listed = client.get(PRESETS_URL, headers=auth_headers)
+        assert listed.status_code == 200
+        item = next(i for i in listed.json()["items"] if i["id"] == row.id)
+        assert item["config"]["days"][0]["pinned_items"] == {}
+
+        applied = client.post(
+            f"{PRESETS_URL}/{row.id}/apply", headers=auth_headers
+        )
+        assert applied.status_code == 200
+        day0 = next(d for d in applied.json()["days"] if d["day_of_week"] == 0)
+        assert day0["pinned_items"] == {}
+
 
 class TestWeekPlanPinSlotCategory:
     """Pinned wardrobe items must match the outfit slot category (aliases included)."""

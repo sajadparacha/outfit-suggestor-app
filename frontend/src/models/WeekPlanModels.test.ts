@@ -1,6 +1,7 @@
 import {
   createEmptyWeekPlan,
   normalizeWeekPlanDays,
+  planToPresetConfig,
   toUpsertPayload,
   getDeviceTimezone,
   getMissingOutfitSlots,
@@ -78,6 +79,34 @@ describe('WeekPlanModels helpers', () => {
       use_wardrobe_only: false,
     });
     expect('outfit' in payload.days[0]).toBe(false);
+  });
+
+  it('planToPresetConfig includes pinned_items from plan days', () => {
+    const plan = createEmptyWeekPlan('UTC');
+    plan.days[0] = {
+      ...plan.days[0],
+      enabled: true,
+      occasion: 'work',
+      style: 'classic',
+      pinned_items: { shoes: 12, shirt: 34 },
+    };
+    plan.days[1] = {
+      ...plan.days[1],
+      enabled: true,
+      pinned_items: {},
+    };
+    const config = planToPresetConfig(plan);
+    expect(config.days[0].pinned_items).toEqual({ shoes: 12, shirt: 34 });
+    expect(config.days[1].pinned_items).toBeUndefined();
+    expect('outfit' in config.days[0]).toBe(false);
+  });
+
+  it('planToPresetConfig omits empty or missing pinned_items', () => {
+    const plan = createEmptyWeekPlan('UTC');
+    plan.days[0] = { ...plan.days[0], pinned_items: {} };
+    plan.days[1] = { ...plan.days[1], pinned_items: undefined };
+    const config = planToPresetConfig(plan);
+    expect(config.days.every((d) => d.pinned_items === undefined)).toBe(true);
   });
 
   it('getDeviceTimezone returns a non-empty string', () => {

@@ -19,6 +19,8 @@ export interface WeekPlanPresetsProps {
   presetAtLimit: boolean;
   busy: boolean;
   presetBusy: boolean;
+  loadedPresetId?: number | null;
+  loadedPresetName?: string | null;
   onSaveAs: (name: string) => void | Promise<void>;
   onUpdate: (presetId: number) => void | Promise<void>;
   onRename: (presetId: number, name: string) => void | Promise<void>;
@@ -34,6 +36,8 @@ const WeekPlanPresets: React.FC<WeekPlanPresetsProps> = ({
   presetAtLimit,
   busy,
   presetBusy,
+  loadedPresetId = null,
+  loadedPresetName = null,
   onSaveAs,
   onUpdate,
   onRename,
@@ -46,7 +50,16 @@ const WeekPlanPresets: React.FC<WeekPlanPresetsProps> = ({
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const disabled = busy || presetBusy;
   const hasOutfits = planHasGeneratedOutfits(plan);
-  const visible = showAll ? presets : presets.slice(0, RECENT_LIMIT);
+  let visible = showAll ? presets : presets.slice(0, RECENT_LIMIT);
+  if (
+    loadedPresetId != null &&
+    !visible.some((p) => p.id === loadedPresetId)
+  ) {
+    const loaded = presets.find((p) => p.id === loadedPresetId);
+    if (loaded) {
+      visible = [loaded, ...visible];
+    }
+  }
 
   const handleSaveAs = async () => {
     const trimmed = saveAsName.trim();
@@ -95,8 +108,16 @@ const WeekPlanPresets: React.FC<WeekPlanPresetsProps> = ({
           <div className="min-w-0 flex-1">
             <h2 className="text-lg font-semibold text-white">Planning templates</h2>
             <p className="mt-1 text-sm text-slate-400">
-              Prefs only (days, occasions, styles)—not outfits.
+              Prefs and pins (days, occasions, styles)—not full outfits.
             </p>
+            {loadedPresetName ? (
+              <p
+                className="mt-1 text-sm font-medium text-brand-blue"
+                data-testid="week-plan-presets-loaded-label"
+              >
+                Loaded: {loadedPresetName}
+              </p>
+            ) : null}
           </div>
           {presetLimit > 0 && (
             <p
@@ -182,14 +203,28 @@ const WeekPlanPresets: React.FC<WeekPlanPresetsProps> = ({
                 {visible.map((preset) => {
                   const enabledDays = countEnabledDaysInPresetConfig(preset.config);
                   const updated = formatLocalizedDateTime(preset.updated_at);
+                  const isLoaded = loadedPresetId === preset.id;
                   return (
                     <li
                       key={preset.id}
-                      className="relative flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#0A0E1A]/50 px-4 py-3"
+                      className={
+                        isLoaded
+                          ? 'relative flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand-blue/50 bg-brand-blue/10 px-4 py-3 ring-1 ring-brand-blue/30'
+                          : 'relative flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#0A0E1A]/50 px-4 py-3'
+                      }
                       data-testid={`week-plan-preset-item-${preset.id}`}
+                      data-loaded={isLoaded ? 'true' : undefined}
+                      aria-current={isLoaded ? 'true' : undefined}
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-white">{preset.name}</p>
+                        <p className="text-sm font-medium text-white">
+                          {preset.name}
+                          {isLoaded ? (
+                            <span className="ml-2 text-xs font-semibold uppercase tracking-wide text-brand-blue">
+                              Loaded
+                            </span>
+                          ) : null}
+                        </p>
                         <p className="mt-0.5 text-xs text-slate-500">
                           {enabledDays} day{enabledDays === 1 ? '' : 's'}
                           {updated ? ` · ${updated}` : ''}

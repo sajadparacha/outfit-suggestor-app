@@ -1041,16 +1041,24 @@ struct WeekPlannerView: View {
                 }
             }
         } label: {
-            HStack {
-                Text(WeekPlanCopy.planningTemplates)
-                    .font(.headline)
-                    .foregroundColor(AppTheme.textPrimary)
-                Spacer(minLength: 8)
-                if viewModel.presetLimit > 0 {
-                    Text(viewModel.presetUsageText)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(WeekPlanCopy.planningTemplates)
+                        .font(.headline)
+                        .foregroundColor(AppTheme.textPrimary)
+                    Spacer(minLength: 8)
+                    if viewModel.presetLimit > 0 {
+                        Text(viewModel.presetUsageText)
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(AppTheme.textSecondary)
+                            .accessibilityIdentifier("week.presets.usage")
+                    }
+                }
+                if let loadedName = viewModel.loadedPresetName {
+                    Text("Loaded: \(loadedName)")
                         .font(.caption.weight(.semibold))
-                        .foregroundColor(AppTheme.textSecondary)
-                        .accessibilityIdentifier("week.presets.usage")
+                        .foregroundColor(AppTheme.gradientStart)
+                        .accessibilityIdentifier("week.presets.loadedLabel")
                 }
             }
         }
@@ -1062,11 +1070,20 @@ struct WeekPlannerView: View {
     private func presetRow(_ preset: WeekPlanPresetItem) -> some View {
         let enabledDays = preset.config.days.filter(\.enabled).count
         let daysLabel = enabledDays == 1 ? "1 day" : "\(enabledDays) days"
+        let isLoaded = viewModel.loadedPresetId == preset.id
         return HStack(alignment: .center, spacing: isRegularWidth ? 16 : 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(preset.name)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(AppTheme.textPrimary)
+                HStack(spacing: 8) {
+                    Text(preset.name)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(AppTheme.textPrimary)
+                    if isLoaded {
+                        Text("Loaded")
+                            .font(.caption2.weight(.bold))
+                            .foregroundColor(AppTheme.gradientStart)
+                            .accessibilityIdentifier("week.presets.\(preset.id).loadedBadge")
+                    }
+                }
                 Text("\(daysLabel) · \(WeekPlanDateFormatting.humanReadable(preset.updated_at))")
                     .font(.caption)
                     .foregroundColor(AppTheme.textSecondary)
@@ -1107,13 +1124,14 @@ struct WeekPlannerView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Self.elevatedCard)
+        .background(isLoaded ? AppTheme.accentSoft : Self.elevatedCard)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(AppTheme.border, lineWidth: 1)
+                .stroke(isLoaded ? AppTheme.gradientStart.opacity(0.55) : AppTheme.border, lineWidth: isLoaded ? 1.5 : 1)
         )
         .accessibilityIdentifier("week.presets.\(preset.id)")
+        .accessibilityAddTraits(isLoaded ? [.isSelected] : [])
     }
 
     private func beginApplyPreset(_ preset: WeekPlanPresetItem) {

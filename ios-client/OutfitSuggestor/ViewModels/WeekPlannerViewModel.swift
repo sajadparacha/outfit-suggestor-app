@@ -20,6 +20,8 @@ protocol WeekPlanAPIClient {
     func updateWeekPlanPreset(id: Int, body: WeekPlanPresetUpdateRequest) async throws -> WeekPlanPresetItem
     func deleteWeekPlanPreset(id: Int) async throws -> WeekPlanDeleteResponse
     func applyWeekPlanPreset(id: Int) async throws -> WeekPlanResponse
+    /// Resolve a wardrobe item by id (used to hydrate pinned slots after Load template).
+    func getWardrobeItem(id: Int) async throws -> WardrobeItem
 }
 
 protocol WeekPlanNotificationScheduling {
@@ -52,6 +54,8 @@ final class WeekPlannerViewModel: ObservableObject {
     @Published var isGenerating = false
     @Published var isRestoring = false
     @Published var isPresetBusy = false
+    /// Last loaded or newly saved planning template (client-side selection).
+    @Published private(set) var loadedPresetId: Int?
     @Published var errorMessage: String?
     @Published var infoMessage: String?
     /// Transient feedback (saved / loaded) — not a permanent banner.
@@ -162,7 +166,13 @@ final class WeekPlannerViewModel: ObservableObject {
     }
 
     var recentPresets: [WeekPlanPresetItem] {
-        Array(presets.prefix(3))
+        var items = Array(presets.prefix(3))
+        if let loadedPresetId,
+           !items.contains(where: { $0.id == loadedPresetId }),
+           let loaded = presets.first(where: { $0.id == loadedPresetId }) {
+            items.insert(loaded, at: 0)
+        }
+        return items
     }
 
     var showsViewAllHistory: Bool {
@@ -192,6 +202,13 @@ final class WeekPlannerViewModel: ObservableObject {
     var presetAtLimitMessage: String? {
         guard isPresetAtLimit else { return nil }
         return WeekPlanCopy.configurationAtLimit(limit: presetLimit)
+    }
+
+    var loadedPresetName: String? {
+        guard let loadedPresetId else { return nil }
+        let name = presets.first(where: { $0.id == loadedPresetId })?.name
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return (name?.isEmpty == false) ? name : nil
     }
 
     var hasGeneratedOutfits: Bool {
@@ -266,57 +283,7 @@ final class WeekPlannerViewModel: ObservableObject {
             return false
         }
         let key = session.normalizedSlotKey
-        var outfit = plan.days[idx].outfit ?? WeekPlanOutfitResponse()
-        let text = Self.displayText(for: item)
-        let match = MatchingWardrobeItem(
-            id: item.id,
-            category: item.category,
-            color: item.color,
-            description: item.description,
-            image_data: item.image_data
-        )
-
-        switch key {
-        case "shirt":
-            outfit.shirt = text
-            outfit.shirt_id = item.id
-        case "trouser":
-            outfit.trouser = text
-            outfit.trouser_id = item.id
-        case "shoes":
-            outfit.shoes = text
-            outfit.shoes_id = item.id
-        case "belt":
-            outfit.belt = text
-            outfit.belt_id = item.id
-        case "blazer":
-            outfit.blazer = text
-            outfit.blazer_id = item.id
-        case "sweater":
-            outfit.sweater = text
-            outfit.sweater_id = item.id
-        case "outerwear":
-            outfit.outerwear = text
-            outfit.outerwear_id = item.id
-        case "tie":
-            outfit.tie = text
-            outfit.tie_id = item.id
-        default:
-            return false
-        }
-
-        outfit.matching_wardrobe_items = Self.replacingMatching(
-            outfit.matching_wardrobe_items,
-            slotKey: key,
-            item: match
-        )
-        outfit.wardrobe_item_ids = Self.syncedWardrobeItemIds(from: outfit)
-        if outfit.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            outfit.summary = text
-        }
-
-        plan.days[idx].enabled = true
-        plan.days[idx].outfit = outfit
+        fillPinnedOutfitSlot(item: item, dayIndex: idx, slotKey: key)
         plan.days[idx].pinned_items[key] = item.id
         dismissedMissingDays.remove(dayOfWeek)
         selectedDayOfWeek = dayOfWeek
@@ -496,6 +463,7 @@ final class WeekPlannerViewModel: ObservableObject {
             let restored = try await api.restoreWeekPlanHistory(id: id)
             plan = normalize(restored)
             today = try? await api.getWeekPlanToday()
+            loadedPresetId = nil
             presentToast(WeekPlanCopy.planRestored)
             dismissedMissingDays.removeAll()
             markBaseline(persisted: true)
@@ -600,7 +568,8 @@ final class WeekPlannerViewModel: ObservableObject {
         defer { isPresetBusy = false }
         do {
             let body = WeekPlanPresetCreateRequest(name: trimmed, config: presetConfigFromPlan())
-            _ = try await api.createWeekPlanPreset(body)
+            let created = try await api.createWeekPlanPreset(body)
+            loadedPresetId = created.id
             presentToast(WeekPlanCopy.configurationSaved)
             await refreshPresets()
         } catch {
@@ -616,6 +585,7 @@ final class WeekPlannerViewModel: ObservableObject {
         do {
             let body = WeekPlanPresetUpdateRequest(name: nil, config: presetConfigFromPlan())
             _ = try await api.updateWeekPlanPreset(id: id, body: body)
+            loadedPresetId = id
             presentToast(WeekPlanCopy.configurationUpdated)
             await refreshPresets()
         } catch {
@@ -655,6 +625,9 @@ final class WeekPlannerViewModel: ObservableObject {
         defer { isPresetBusy = false }
         do {
             _ = try await api.deleteWeekPlanPreset(id: id)
+            if loadedPresetId == id {
+                loadedPresetId = nil
+            }
             presentToast(WeekPlanCopy.configurationDeleted)
             await refreshPresets()
         } catch {
@@ -670,8 +643,12 @@ final class WeekPlannerViewModel: ObservableObject {
         do {
             let applied = try await api.applyWeekPlanPreset(id: id)
             plan = normalize(applied)
+            await hydratePinnedSlotsFromWardrobe()
             today = try? await api.getWeekPlanToday()
-            presentToast(WeekPlanCopy.configurationLoaded)
+            loadedPresetId = id
+            let name = presets.first(where: { $0.id == id })?.name
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            presentToast(WeekPlanCopy.configurationLoaded(name: name))
             dismissedMissingDays.removeAll()
             markBaseline(persisted: true)
             syncSelectedDayAfterLoad()
@@ -689,6 +666,7 @@ final class WeekPlannerViewModel: ObservableObject {
             _ = try await api.deleteWeekPlan()
             plan = .empty(timezone: timezoneProvider())
             today = nil
+            loadedPresetId = nil
             presentToast("Plan cleared.")
             dismissedMissingDays.removeAll()
             markBaseline(persisted: true)
@@ -701,6 +679,95 @@ final class WeekPlannerViewModel: ObservableObject {
     }
 
     // MARK: - Private
+
+    /// After Load template: fill pinned slot labels / ids / matching thumbnails from wardrobe.
+    /// Missing wardrobe IDs are dropped quietly from `pinned_items`.
+    private func hydratePinnedSlotsFromWardrobe() async {
+        var uniqueIds = Set<Int>()
+        for day in plan.days {
+            for (_, itemId) in day.pinned_items {
+                uniqueIds.insert(itemId)
+            }
+        }
+        guard !uniqueIds.isEmpty else { return }
+
+        var byId: [Int: WardrobeItem] = [:]
+        for itemId in uniqueIds {
+            if let item = try? await api.getWardrobeItem(id: itemId) {
+                byId[itemId] = item
+            }
+        }
+
+        for dayIdx in plan.days.indices {
+            let dayOfWeek = plan.days[dayIdx].day_of_week
+            let pins = plan.days[dayIdx].pinned_items
+            guard !pins.isEmpty else { continue }
+
+            var kept: [String: Int] = [:]
+            for (rawKey, itemId) in pins {
+                let key = WardrobePickSession(dayOfWeek: dayOfWeek, slotKey: rawKey).normalizedSlotKey
+                guard let item = byId[itemId] else { continue }
+                fillPinnedOutfitSlot(item: item, dayIndex: dayIdx, slotKey: key)
+                kept[key] = itemId
+            }
+            plan.days[dayIdx].pinned_items = kept
+        }
+    }
+
+    /// Same slot field shape as `applyWardrobeItem`, without selection / missing-action side effects.
+    private func fillPinnedOutfitSlot(item: WardrobeItem, dayIndex: Int, slotKey: String) {
+        var outfit = plan.days[dayIndex].outfit ?? WeekPlanOutfitResponse()
+        let text = Self.displayText(for: item)
+        let match = MatchingWardrobeItem(
+            id: item.id,
+            category: item.category,
+            color: item.color,
+            description: item.description,
+            image_data: item.image_data
+        )
+
+        switch slotKey {
+        case "shirt":
+            outfit.shirt = text
+            outfit.shirt_id = item.id
+        case "trouser":
+            outfit.trouser = text
+            outfit.trouser_id = item.id
+        case "shoes":
+            outfit.shoes = text
+            outfit.shoes_id = item.id
+        case "belt":
+            outfit.belt = text
+            outfit.belt_id = item.id
+        case "blazer":
+            outfit.blazer = text
+            outfit.blazer_id = item.id
+        case "sweater":
+            outfit.sweater = text
+            outfit.sweater_id = item.id
+        case "outerwear":
+            outfit.outerwear = text
+            outfit.outerwear_id = item.id
+        case "tie":
+            outfit.tie = text
+            outfit.tie_id = item.id
+        default:
+            return
+        }
+
+        outfit.matching_wardrobe_items = Self.replacingMatching(
+            outfit.matching_wardrobe_items,
+            slotKey: slotKey,
+            item: match
+        )
+        outfit.wardrobe_item_ids = Self.syncedWardrobeItemIds(from: outfit)
+        if outfit.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            outfit.summary = text
+        }
+
+        plan.days[dayIndex].enabled = true
+        plan.days[dayIndex].outfit = outfit
+    }
 
     private func presentToast(_ message: String) {
         infoMessage = message
@@ -791,7 +858,8 @@ final class WeekPlannerViewModel: ObservableObject {
                     enabled: $0.enabled,
                     occasion: $0.occasion.isEmpty ? WeekPlanConstants.defaultOccasion : $0.occasion,
                     style: $0.style.isEmpty ? WeekPlanConstants.defaultStyle : $0.style,
-                    use_wardrobe_only: $0.use_wardrobe_only
+                    use_wardrobe_only: $0.use_wardrobe_only,
+                    pinned_items: $0.pinned_items
                 )
             }
         )

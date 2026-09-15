@@ -19,6 +19,8 @@ jest.mock('../services/ApiService', () => ({
     updateWeekPlanPreset: jest.fn(),
     deleteWeekPlanPreset: jest.fn(),
     applyWeekPlanPreset: jest.fn(),
+    getWardrobe: jest.fn(),
+    getWardrobeItem: jest.fn(),
   },
 }));
 
@@ -61,6 +63,8 @@ describe('useWeekPlanController', () => {
       ...body,
       days: body.days.map((d) => ({ ...d, outfit: null })),
     }));
+    mockApi.getWardrobe.mockResolvedValue({ items: [], total: 0, limit: 500, offset: 0 });
+    mockApi.getWardrobeItem.mockRejectedValue(new Error('not found'));
   });
 
   it('loads plan and today when authenticated', async () => {
@@ -298,8 +302,147 @@ describe('useWeekPlanController', () => {
 
     expect(mockApi.applyWeekPlanPreset).toHaveBeenCalledWith(5);
     expect(mockApi.generateWeekPlan).not.toHaveBeenCalled();
+    expect(mockApi.getWardrobe).not.toHaveBeenCalled();
     expect(result.current.plan?.days[1].enabled).toBe(true);
     expect(result.current.plan?.days[1].outfit).toBeNull();
+    expect(result.current.loadedPresetId).toBe(5);
+    expect(result.current.message).toMatch(/loaded/i);
+  });
+
+  it('applyPreset hydrates pinned slots from wardrobe', async () => {
+    const pinnedItem: WardrobeItem = {
+      id: 42,
+      category: 'shirt',
+      color: 'Blue',
+      description: 'Oxford shirt',
+      image_data: 'data:image/jpeg;base64,abc',
+      name: 'Oxford',
+      brand: null,
+      size: null,
+      tags: null,
+      condition: null,
+      wear_count: 0,
+      created_at: '2026-01-01',
+      updated_at: '2026-01-01',
+    };
+    const applied: WeekPlan = {
+      ...emptyPlan,
+      days: emptyPlan.days.map((d, i) =>
+        i === 0
+          ? {
+              ...d,
+              enabled: true,
+              occasion: 'work',
+              pinned_items: { shirt: 42 },
+              outfit: null,
+            }
+          : d
+      ),
+    };
+    mockApi.applyWeekPlanPreset.mockResolvedValue(applied);
+    mockApi.getWardrobe.mockResolvedValue({
+      items: [pinnedItem],
+      total: 1,
+      limit: 500,
+      offset: 0,
+    });
+
+    const { result } = renderHook(() =>
+      useWeekPlanController({ isAuthenticated: true, userId: 1 })
+    );
+    await waitFor(() => expect(result.current.plan).not.toBeNull());
+
+    await act(async () => {
+      await result.current.applyPreset(3);
+    });
+
+    expect(mockApi.generateWeekPlan).not.toHaveBeenCalled();
+    expect(mockApi.getWardrobe).toHaveBeenCalled();
+    const monday = result.current.plan?.days[0];
+    expect(monday?.pinned_items?.shirt).toBe(42);
+    expect(monday?.outfit?.shirt).toBe('Blue Oxford shirt');
+    expect(monday?.outfit?.shirt_id).toBe(42);
+    expect(monday?.outfit?.matching_wardrobe_items?.shirt).toEqual([
+      expect.objectContaining({
+        id: 42,
+        category: 'shirt',
+        color: 'Blue',
+        description: 'Oxford shirt',
+        image_data: 'data:image/jpeg;base64,abc',
+      }),
+    ]);
+    expect(monday?.outfit?.summary).toBe('');
+    expect(monday?.outfit?.trouser).toBe('');
+  });
+
+  it('applyPreset drops missing pinned wardrobe IDs quietly', async () => {
+    const applied: WeekPlan = {
+      ...emptyPlan,
+      days: emptyPlan.days.map((d, i) =>
+        i === 2
+          ? {
+              ...d,
+              enabled: true,
+              pinned_items: { shoes: 999 },
+              outfit: null,
+            }
+          : d
+      ),
+    };
+    mockApi.applyWeekPlanPreset.mockResolvedValue(applied);
+    mockApi.getWardrobe.mockResolvedValue({ items: [], total: 0, limit: 500, offset: 0 });
+    mockApi.getWardrobeItem.mockRejectedValue(new Error('not found'));
+
+    const { result } = renderHook(() =>
+      useWeekPlanController({ isAuthenticated: true, userId: 1 })
+    );
+    await waitFor(() => expect(result.current.plan).not.toBeNull());
+
+    await act(async () => {
+      await result.current.applyPreset(8);
+    });
+
+    const wednesday = result.current.plan?.days[2];
+    expect(wednesday?.pinned_items).toBeUndefined();
+    expect(wednesday?.outfit).toBeNull();
+    expect(result.current.error).toBeNull();
+  });
+
+  it('applyPreset message and highlight use the template name', async () => {
+    mockApi.getWeekPlanPresets.mockResolvedValue({
+      items: [
+        {
+          id: 5,
+          name: 'Weekly shoes',
+          config: {
+            reminder_time: '07:30',
+            shared_season: 'all-season',
+            days: emptyPlan.days,
+          },
+          created_at: '2026-01-01',
+          updated_at: '2026-01-01',
+        },
+      ],
+      count: 1,
+      limit: 10,
+      limit_source: 'default',
+    });
+    mockApi.applyWeekPlanPreset.mockResolvedValue(emptyPlan);
+
+    const { result } = renderHook(() =>
+      useWeekPlanController({ isAuthenticated: true, userId: 1 })
+    );
+    await waitFor(() => expect(result.current.presets).toHaveLength(1));
+
+    await act(async () => {
+      await result.current.applyPreset(5);
+    });
+
+    expect(result.current.loadedPresetId).toBe(5);
+    expect(result.current.loadedPresetName).toBe('Weekly shoes');
+    expect(result.current.message).toBe(
+      '“Weekly shoes” loaded. Generate outfits when ready.'
+    );
   });
 
   it('deletePreset removes preset and refreshes count', async () => {

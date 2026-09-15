@@ -330,6 +330,38 @@ struct WeekPlanPresetConfigDay: Codable, Equatable {
     var occasion: String
     var style: String
     var use_wardrobe_only: Bool
+    /// Slot key → wardrobe item id (persisted with template prefs).
+    var pinned_items: [String: Int] = [:]
+
+    enum CodingKeys: String, CodingKey {
+        case day_of_week, enabled, occasion, style, use_wardrobe_only, pinned_items
+    }
+
+    init(
+        day_of_week: Int,
+        enabled: Bool,
+        occasion: String,
+        style: String,
+        use_wardrobe_only: Bool,
+        pinned_items: [String: Int] = [:]
+    ) {
+        self.day_of_week = day_of_week
+        self.enabled = enabled
+        self.occasion = occasion
+        self.style = style
+        self.use_wardrobe_only = use_wardrobe_only
+        self.pinned_items = pinned_items
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        day_of_week = try c.decode(Int.self, forKey: .day_of_week)
+        enabled = try c.decode(Bool.self, forKey: .enabled)
+        occasion = try c.decode(String.self, forKey: .occasion)
+        style = try c.decode(String.self, forKey: .style)
+        use_wardrobe_only = try c.decode(Bool.self, forKey: .use_wardrobe_only)
+        pinned_items = try c.decodeIfPresent([String: Int].self, forKey: .pinned_items) ?? [:]
+    }
 }
 
 struct WeekPlanPresetConfig: Codable, Equatable {
@@ -551,10 +583,10 @@ enum WeekPlanCopy {
     static let planned = "Planned"
     static let includeDay = "Include day"
     static let notPlanned = "Not planned"
-    static let clearPlan = "Clear plan"
-    static let clearConfirmTitle = "Clear this week’s plan?"
+    static let clearPlan = "New plan"
+    static let clearConfirmTitle = "Start a new plan?"
     static let clearConfirmMessage = "A copy is saved under Plan history. You can Load it later, or set days and generate again."
-    static let clearConfirmDelete = "Clear plan"
+    static let clearConfirmDelete = "New plan"
     static let previousPlans = "Plan history"
     static let planHistory = "Plan history"
     static let previousPlansHint =
@@ -562,7 +594,7 @@ enum WeekPlanCopy {
     static let loadPlan = "Load"
     static let viewAll = "View all"
     static let emptyHistory =
-        "No plan history yet. Clear plan or regenerate after outfits exist to keep a copy here."
+        "No plan history yet. New plan or regenerate after outfits exist to keep a copy here."
     static let planRestored = "Plan loaded."
     static let planSaved = "Plan saved."
     static let documentSaved = "Saved"
@@ -594,7 +626,7 @@ enum WeekPlanCopy {
     static let savedConfigurations = "Planning templates"
     static let planningTemplates = "Planning templates"
     static let savedConfigurationsHint =
-        "Prefs only (days, occasions, season) — no outfits. Load one, then Generate outfits. Not the same as Plan history."
+        "Prefs and pins (days, occasions, season, pinned items) — no full outfits. Load one, then Generate outfits. Not the same as Plan history."
     static let saveConfiguration = "Save template…"
     static let updateConfiguration = "Update"
     static let renameConfiguration = "Rename"
@@ -606,7 +638,15 @@ enum WeekPlanCopy {
     static let configurationUpdated = "Template updated."
     static let configurationRenamed = "Template renamed."
     static let configurationDeleted = "Template deleted."
-    static let configurationLoaded = "Template loaded. Tap Generate outfits when ready."
+
+    static func configurationLoaded(name: String? = nil) -> String {
+        let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if trimmed.isEmpty {
+            return "Template loaded. Tap Generate outfits when ready."
+        }
+        return "“\(trimmed)” loaded. Tap Generate outfits when ready."
+    }
+
     static let configurationNameRequired = "Enter a name for this template."
     static let configurationApplyTitle = "Load this template?"
     static let configurationApplyMessage =

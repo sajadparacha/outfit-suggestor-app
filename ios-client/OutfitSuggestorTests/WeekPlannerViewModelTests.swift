@@ -37,6 +37,8 @@ final class WeekPlannerViewModelTests: XCTestCase {
         var deletePresetIds: [Int] = []
         var applyPresetIds: [Int] = []
         var nextPresetId = 1
+        /// Stub wardrobe items keyed by id for pin hydration after applyPreset.
+        var wardrobeItemsById: [Int: WardrobeItem] = [:]
 
         func getWeekPlan() async throws -> WeekPlanResponse {
             getCount += 1
@@ -178,12 +180,19 @@ final class WeekPlannerViewModelTests: XCTestCase {
                     occasion: $0.occasion,
                     style: $0.style,
                     use_wardrobe_only: $0.use_wardrobe_only,
-                    pinned_items: [:],
+                    pinned_items: $0.pinned_items,
                     outfit: nil
                 )
             }
             plan = applied
             return applied
+        }
+
+        func getWardrobeItem(id: Int) async throws -> WardrobeItem {
+            guard let item = wardrobeItemsById[id] else {
+                throw APIServiceError.serverError("Wardrobe item not found")
+            }
+            return item
         }
     }
 
@@ -736,11 +745,14 @@ final class WeekPlannerViewModelTests: XCTestCase {
         XCTAssertTrue(vm.plan.days[0].enabled)
         XCTAssertEqual(vm.plan.shared_season, "winter")
         XCTAssertNil(vm.plan.days[0].outfit)
-        XCTAssertEqual(vm.infoMessage, WeekPlanCopy.configurationLoaded)
+        XCTAssertEqual(vm.loadedPresetId, 1)
+        XCTAssertEqual(vm.loadedPresetName, "Winter work")
+        XCTAssertEqual(vm.infoMessage, WeekPlanCopy.configurationLoaded(name: "Winter work"))
 
         await vm.deletePreset(id: 1)
         XCTAssertEqual(api.deletePresetIds, [1])
         XCTAssertEqual(vm.presetCount, 0)
+        XCTAssertNil(vm.loadedPresetId)
         XCTAssertEqual(vm.infoMessage, WeekPlanCopy.configurationDeleted)
     }
 
@@ -857,6 +869,14 @@ final class WeekPlannerViewModelTests: XCTestCase {
         XCTAssertEqual(WeekPlanCopy.previousPlans, "Plan history")
         XCTAssertEqual(WeekPlanCopy.generateOutfits, "Generate outfits")
         XCTAssertEqual(WeekPlanCopy.savePlan, "Save plan")
+        XCTAssertEqual(WeekPlanCopy.clearPlan, "New plan")
+        XCTAssertEqual(WeekPlanCopy.clearConfirmTitle, "Start a new plan?")
+        XCTAssertEqual(WeekPlanCopy.clearConfirmDelete, "New plan")
+        XCTAssertTrue(WeekPlanCopy.clearConfirmMessage.contains("Plan history"))
+        XCTAssertEqual(
+            WeekPlanCopy.emptyHistory,
+            "No plan history yet. New plan or regenerate after outfits exist to keep a copy here."
+        )
     }
 
     func testNoOutfitsTipCopy() {
@@ -1164,6 +1184,90 @@ final class WeekPlannerViewModelTests: XCTestCase {
         let rows = WeekPlanOutfitDisplay.fourSlotRows(for: day)
         XCTAssertFalse(rows.first(where: { $0.category == "shirt" })?.isPlaceholder ?? true)
         XCTAssertTrue(rows.first(where: { $0.category == "trouser" })?.isPlaceholder ?? false)
+    }
+
+    // MARK: - Hydrate pinned slots after Load template
+
+    func testApplyPresetHydratesPinnedSlotFromWardrobe() async throws {
+        let api = MockAPI()
+        var config = samplePresetConfig()
+        config.days[0].pinned_items = ["shirt": 42]
+        api.presetList = WeekPlanPresetListResponse(
+            items: [
+                WeekPlanPresetItem(
+                    id: 5,
+                    name: "Pinned shirt week",
+                    config: config,
+                    created_at: "2026-07-25T10:00:00Z",
+                    updated_at: "2026-07-25T10:00:00Z"
+                ),
+            ],
+            count: 1,
+            limit: 4,
+            limit_source: "default"
+        )
+        api.wardrobeItemsById[42] = WardrobeItem(
+            id: 42,
+            category: "shirt",
+            name: "Blue Oxford",
+            description: "Light blue oxford shirt",
+            color: "blue",
+            brand: nil,
+            size: nil,
+            image_data: "thumb-abc",
+            tags: nil,
+            condition: nil,
+            wear_count: 0,
+            created_at: "2026-01-01",
+            updated_at: "2026-01-01"
+        )
+        let vm = WeekPlannerViewModel(api: api, notifier: MockNotifier(), timezoneProvider: { "UTC" })
+        await vm.load()
+
+        await vm.applyPreset(id: 5)
+
+        XCTAssertEqual(api.applyPresetIds, [5])
+        XCTAssertEqual(vm.plan.days[0].pinned_items["shirt"], 42)
+        XCTAssertEqual(vm.plan.days[0].outfit?.shirt, "Light blue oxford shirt")
+        XCTAssertEqual(vm.plan.days[0].outfit?.shirt_id, 42)
+        let match = try XCTUnwrap(vm.plan.days[0].outfit?.matching_wardrobe_items?.shirt?.first)
+        XCTAssertEqual(match.id, 42)
+        XCTAssertEqual(match.image_data, "thumb-abc")
+        XCTAssertEqual(match.description, "Light blue oxford shirt")
+        // Unpinned slots stay empty — no invented full outfit.
+        XCTAssertEqual(vm.plan.days[0].outfit?.trouser ?? "", "")
+        XCTAssertNil(vm.plan.days[0].outfit?.trouser_id)
+    }
+
+    func testApplyPresetDropsMissingWardrobePinQuietly() async {
+        let api = MockAPI()
+        var config = samplePresetConfig()
+        config.days[1].pinned_items = ["shoes": 999]
+        api.presetList = WeekPlanPresetListResponse(
+            items: [
+                WeekPlanPresetItem(
+                    id: 8,
+                    name: "Missing pin",
+                    config: config,
+                    created_at: "2026-07-25T10:00:00Z",
+                    updated_at: "2026-07-25T10:00:00Z"
+                ),
+            ],
+            count: 1,
+            limit: 4,
+            limit_source: "default"
+        )
+        // No wardrobeItemsById[999] — resolve fails.
+        let vm = WeekPlannerViewModel(api: api, notifier: MockNotifier(), timezoneProvider: { "UTC" })
+        await vm.load()
+
+        await vm.applyPreset(id: 8)
+
+        XCTAssertEqual(api.applyPresetIds, [8])
+        XCTAssertNil(vm.plan.days[1].pinned_items["shoes"])
+        XCTAssertTrue(vm.plan.days[1].pinned_items.isEmpty)
+        XCTAssertNil(vm.plan.days[1].outfit)
+        XCTAssertNil(vm.errorMessage)
     }
 }
 

@@ -638,6 +638,38 @@ class WeekPlanService:
         db.commit()
         return self.get_plan(db, user_id)  # type: ignore[return-value]
 
+    def filter_pinned_items_for_user(
+        self,
+        db: Session,
+        user_id: int,
+        raw_pins: Any,
+    ) -> dict[str, int]:
+        """Normalize pins; keep only owned items that match slot category."""
+        from models.wardrobe import WardrobeItem
+
+        pins = _normalize_pinned_items(raw_pins)
+        if not pins:
+            return {}
+
+        items = {
+            row.id: row
+            for row in db.query(WardrobeItem)
+            .filter(
+                WardrobeItem.user_id == user_id,
+                WardrobeItem.id.in_(list(pins.values())),
+            )
+            .all()
+        }
+        kept: dict[str, int] = {}
+        for slot, item_id in pins.items():
+            item = items.get(item_id)
+            if item is None:
+                continue
+            if not pin_slot_matches_item_category(slot, item.category or ""):
+                continue
+            kept[slot] = item_id
+        return kept
+
     def validate_pinned_items_for_user(
         self,
         db: Session,
@@ -1084,6 +1116,7 @@ class WeekPlanService:
     def _validate_preset_config(
         self, config: WeekPlanPresetConfig
     ) -> WeekPlanPresetConfig:
+        """Normalize shape; does not check wardrobe ownership (see create/update/apply)."""
         reminder = validate_reminder_time(
             config.reminder_time or DEFAULT_REMINDER_TIME
         )
@@ -1100,6 +1133,7 @@ class WeekPlanService:
                         occasion=DEFAULT_OCCASION,
                         style=DEFAULT_STYLE,
                         use_wardrobe_only=True,
+                        pinned_items={},
                     )
                 )
             else:
@@ -1110,6 +1144,9 @@ class WeekPlanService:
                         occasion=raw.occasion or DEFAULT_OCCASION,
                         style=raw.style or DEFAULT_STYLE,
                         use_wardrobe_only=bool(raw.use_wardrobe_only),
+                        pinned_items=_normalize_pinned_items(
+                            getattr(raw, "pinned_items", None) or {}
+                        ),
                     )
                 )
         return WeekPlanPresetConfig(
@@ -1117,6 +1154,38 @@ class WeekPlanService:
             shared_season=config.shared_season or DEFAULT_SEASON,
             days=days,
         )
+
+    def _validate_preset_config_pins_for_user(
+        self,
+        db: Session,
+        user_id: int,
+        config: WeekPlanPresetConfig,
+    ) -> WeekPlanPresetConfig:
+        """Hard-validate every pin (create/update)."""
+        base = self._validate_preset_config(config)
+        days: list[WeekPlanPresetConfigDay] = []
+        for day in base.days:
+            pins = self.validate_pinned_items_for_user(
+                db, user_id, day.pinned_items or {}
+            )
+            days.append(day.model_copy(update={"pinned_items": pins}))
+        return base.model_copy(update={"days": days})
+
+    def _soft_filter_preset_config_pins(
+        self,
+        db: Session,
+        user_id: int,
+        config: WeekPlanPresetConfig,
+    ) -> WeekPlanPresetConfig:
+        """Drop missing/mismatched pins quietly (apply/load)."""
+        base = self._validate_preset_config(config)
+        days: list[WeekPlanPresetConfigDay] = []
+        for day in base.days:
+            pins = self.filter_pinned_items_for_user(
+                db, user_id, day.pinned_items or {}
+            )
+            days.append(day.model_copy(update={"pinned_items": pins}))
+        return base.model_copy(update={"days": days})
 
     def _preset_to_item(self, row: WeeklyPlanPreset) -> WeekPlanPresetItem:
         try:
@@ -1161,7 +1230,7 @@ class WeekPlanService:
         self, db: Session, user: User, body: WeekPlanPresetCreateRequest
     ) -> WeekPlanPresetItem:
         name = self._normalize_preset_name(body.name)
-        config = self._validate_preset_config(body.config)
+        config = self._validate_preset_config_pins_for_user(db, user.id, body.config)
         limit, _source = resolve_week_plan_preset_limit(user)
         count = self._count_presets(db, user.id)
         if count >= limit:
@@ -1200,7 +1269,9 @@ class WeekPlanService:
         if body.name is not None:
             row.name = self._normalize_preset_name(body.name)
         if body.config is not None:
-            config = self._validate_preset_config(body.config)
+            config = self._validate_preset_config_pins_for_user(
+                db, user.id, body.config
+            )
             row.config_json = json.dumps(config.model_dump())
         row.updated_at = datetime.utcnow()
         db.commit()
@@ -1225,7 +1296,7 @@ class WeekPlanService:
     def apply_preset(
         self, db: Session, user: User, preset_id: int
     ) -> WeeklyPlan:
-        """Apply config to current plan and clear all outfits. No auto-generate."""
+        """Apply config (prefs + pins) to current plan and clear all outfits. No auto-generate."""
         row = (
             db.query(WeeklyPlanPreset)
             .filter(
@@ -1240,13 +1311,15 @@ class WeekPlanService:
             raw = json.loads(row.config_json or "{}")
         except json.JSONDecodeError as exc:
             raise ValueError("Corrupt preset config") from exc
-        config = self._validate_preset_config(WeekPlanPresetConfig(**raw))
+        config = self._soft_filter_preset_config_pins(
+            db, user.id, WeekPlanPresetConfig(**raw)
+        )
         existing = self.get_plan(db, user.id)
         timezone = existing.timezone if existing is not None else "UTC"
         shared_style = (
             existing.shared_style if existing is not None else DEFAULT_STYLE
         )
-        # Config-only payload — outfits omitted so apply_plan_payload clears them
+        # Prefs + pins — outfits omitted so apply_plan_payload clears them
         payload = {
             "reminder_time": config.reminder_time,
             "timezone": timezone,

@@ -951,6 +951,8 @@ function App() {
                 presetLimit={weekPlan.presetLimit}
                 presetAtLimit={weekPlan.presetAtLimit}
                 presetBusy={weekPlan.presetBusy}
+                loadedPresetId={weekPlan.loadedPresetId}
+                loadedPresetName={weekPlan.loadedPresetName}
                 onSavePresetAs={(name) => weekPlan.savePresetAs(name)}
                 onUpdatePreset={(id) => weekPlan.updatePreset(id)}
                 onRenamePreset={(id, name) => weekPlan.renamePreset(id, name)}

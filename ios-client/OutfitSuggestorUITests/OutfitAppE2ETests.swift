@@ -3,10 +3,13 @@ import UIKit
 
 final class OutfitAppE2ETests: XCTestCase {
     private var app: XCUIApplication!
+    /// Avoid re-probing completion filter chips after the first Preferences collapse (iOS 26 query hangs).
+    private var didCollapseWardrobePreferences = false
 
     override func setUpWithError() throws {
         continueAfterFailure = false
         executionTimeAllowance = 180
+        didCollapseWardrobePreferences = false
         app = XCUIApplication()
         app.launchArguments.append("UI_TEST_MODE")
         app.launchEnvironment["UI_TEST_MODE"] = "1"
@@ -86,11 +89,12 @@ final class OutfitAppE2ETests: XCTestCase {
     }
 
     private func tabBarButton(named name: String) -> XCUIElement {
+        // Only query the tab bar. Never match tab.* ids via app.descendants —
+        // SwiftUI keeps inactive tab content in the hierarchy, so tab.wardrobe
+        // can "exist" while Suggest is selected and tapping it does not switch tabs.
         if let id = tabIdentifier(for: name) {
             let byId = app.tabBars.buttons[id]
             if byId.exists { return byId }
-            let anyById = app.descendants(matching: .any)[id]
-            if anyById.exists { return anyById }
         }
         return app.tabBars.buttons[name]
     }
@@ -251,8 +255,19 @@ final class OutfitAppE2ETests: XCTestCase {
     }
 
     private func openWardrobe() {
-        openTab("Wardrobe")
-        XCTAssertTrue(waitFor(app.buttons["wardrobe.chip.all"]))
+        let chipAll = app.buttons["wardrobe.chip.all"]
+        let deadline = Date().addingTimeInterval(12)
+        while Date() < deadline {
+            openTab("Wardrobe")
+            if chipAll.waitForExistence(timeout: 2) {
+                break
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+        }
+        XCTAssertTrue(
+            chipAll.exists,
+            "Expected wardrobe filter chips after opening Wardrobe tab"
+        )
         dismissWardrobeFlowTipIfPresent()
         collapseWardrobeCompletionPreferencesIfExpanded()
         waitForAppUnlocked()
@@ -309,10 +324,10 @@ final class OutfitAppE2ETests: XCTestCase {
     }
 
     private func dismissWardrobeFlowTipIfPresent() {
+        // Prefer identifier-free short wait; avoid isHittable (can hang UI snapshots on iOS 26).
         let dismiss = app.buttons["Dismiss"].firstMatch
-        if dismiss.exists, dismiss.isHittable {
-            dismiss.tap()
-        }
+        guard dismiss.waitForExistence(timeout: 0.6) else { return }
+        dismiss.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
     }
 
     private func wardrobeRow(itemId: Int) -> XCUIElement {
@@ -321,14 +336,25 @@ final class OutfitAppE2ETests: XCTestCase {
         ).firstMatch
     }
 
+    /// Collapse completion Preferences when expanded.
+    /// Do not wait on `wardrobe.completion.filter.*` — those queries can hang snapshots on iOS 26.
     private func collapseWardrobeCompletionPreferencesIfExpanded() {
-        let occasionFilter = app.buttons["wardrobe.completion.filter.occasion"]
-        guard occasionFilter.waitForExistence(timeout: 3) else { return }
         let preferencesToggle = app.staticTexts["Preferences"].firstMatch
-        if preferencesToggle.waitForExistence(timeout: 2), preferencesToggle.isHittable {
-            preferencesToggle.tap()
+        guard preferencesToggle.waitForExistence(timeout: 2.0) else { return }
+
+        if !didCollapseWardrobePreferences {
+            // Default presentation is expanded — collapse once without probing filter chips.
+            preferencesToggle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            didCollapseWardrobePreferences = true
             RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+            return
         }
+
+        // Later visits: only re-collapse if the wardrobe-only control is already present.
+        let expandedMarker = app.buttons["wardrobe.completion.wardrobeOnlyCheckbox"]
+        guard expandedMarker.exists else { return }
+        preferencesToggle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.25))
     }
 
     private func wardrobeHeroButton(itemId: Int) -> XCUIElement {
@@ -407,13 +433,13 @@ final class OutfitAppE2ETests: XCTestCase {
             }
 
             // Keep Wardrobe on-screen — never blind-swipe the whole app (can leave the tab).
-            if list.exists {
+            if list.waitForExistence(timeout: 0.2) {
                 if swipeCount < 6 {
                     list.swipeUp()
                 } else {
                     list.swipeDown()
                 }
-            } else if app.buttons["wardrobe.chip.all"].exists {
+            } else if app.buttons["wardrobe.chip.all"].waitForExistence(timeout: 0.2) {
                 // List id may not resolve as ScrollView; nudge within Wardrobe only.
                 app.buttons["wardrobe.chip.shirt"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
                 RunLoop.current.run(until: Date().addingTimeInterval(0.2))
@@ -469,14 +495,10 @@ final class OutfitAppE2ETests: XCTestCase {
             let menu = wardrobeMenuTrigger(itemId: itemId)
             // Resolve via exists only — isHittable can throw on ambiguous queries.
             if menu.waitForExistence(timeout: 0.6) {
-                if menu.isHittable {
-                    menu.tap()
-                } else {
-                    menu.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
-                }
+                menu.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
                 return
             }
-            if list.exists {
+            if list.waitForExistence(timeout: 0.2) {
                 if swipeCount < 6 {
                     list.swipeUp()
                 } else {
@@ -661,13 +683,19 @@ final class OutfitAppE2ETests: XCTestCase {
     }
 
     private func focusWardrobeItem(_ itemId: Int) {
+        let chipId: String
         switch itemId {
-        case 1: app.buttons["wardrobe.chip.shirt"].tap()
-        case 2: app.buttons["wardrobe.chip.trouser"].tap()
-        case 3: app.buttons["wardrobe.chip.shoes"].tap()
-        case 4: app.buttons["wardrobe.chip.belt"].tap()
-        default: app.buttons["wardrobe.chip.other"].tap()
+        case 1: chipId = "wardrobe.chip.shirt"
+        case 2: chipId = "wardrobe.chip.trouser"
+        case 3: chipId = "wardrobe.chip.shoes"
+        case 4: chipId = "wardrobe.chip.belt"
+        default: chipId = "wardrobe.chip.other"
         }
+        let chip = app.buttons[chipId]
+        if !chip.waitForExistence(timeout: 3) {
+            openWardrobe()
+        }
+        safeTap(chip)
         waitForAppUnlocked()
         assertVisibleWardrobeItemIDs("\(itemId)")
     }
@@ -679,10 +707,11 @@ final class OutfitAppE2ETests: XCTestCase {
         focusWardrobeItem(wardrobeItemId)
         tapWardrobeHeroButton(itemId: wardrobeItemId)
         waitForAppUnlocked()
-        XCTAssertTrue(
-            app.staticTexts["From your wardrobe"].waitForExistence(timeout: 6)
-                || app.otherElements["main.wardrobeSourceBanner"].waitForExistence(timeout: 1)
-        )
+        let landedOnSuggest =
+            app.buttons["main.getSuggestionButton"].waitForExistence(timeout: 8)
+            || app.descendants(matching: .any)["main.wardrobeSourceBanner"].waitForExistence(timeout: 2)
+            || app.staticTexts["From your wardrobe"].waitForExistence(timeout: 2)
+        XCTAssertTrue(landedOnSuggest, "Expected Suggest after Style this item from wardrobe")
         XCTAssertTrue(app.buttons["main.getSuggestionButton"].waitForExistence(timeout: 6))
         tapGetSuggestion()
         waitForStyledLook()

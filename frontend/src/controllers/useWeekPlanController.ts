@@ -78,6 +78,119 @@ function wardrobeItemSlotText(item: WardrobeItem): string {
   return item.category;
 }
 
+/** Fill one day slot from a wardrobe item (same shape as interactive pin). */
+function fillPinnedSlotOnOutfit(
+  outfit: WeekPlanOutfit,
+  slotKey: SlotKey,
+  item: WardrobeItem
+): WeekPlanOutfit {
+  const textField = SLOT_TEXT_FIELDS[slotKey];
+  const idField = SLOT_ID_FIELDS[slotKey];
+  const matching: MatchingWardrobeItems = {
+    ...emptyMatching(),
+    ...(outfit.matching_wardrobe_items ?? {}),
+  };
+  matching[slotKey] = [
+    {
+      id: item.id,
+      category: item.category,
+      color: item.color,
+      description: item.description,
+      image_data: item.image_data,
+    },
+  ];
+  let wardrobe_item_ids = [...(outfit.wardrobe_item_ids ?? [])];
+  if (!wardrobe_item_ids.includes(item.id)) {
+    wardrobe_item_ids.push(item.id);
+  }
+  return {
+    ...outfit,
+    [textField]: wardrobeItemSlotText(item),
+    [idField]: item.id,
+    matching_wardrobe_items: matching,
+    wardrobe_item_ids,
+  };
+}
+
+/**
+ * After Load template: resolve pinned wardrobe IDs into slot text/id/thumbnail.
+ * Missing IDs are dropped quietly from pinned_items.
+ */
+function hydratePinnedSlotsOnDay(
+  day: WeekPlanDay,
+  itemsById: Map<number, WardrobeItem>
+): WeekPlanDay {
+  const pinned = day.pinned_items;
+  if (!pinned || Object.keys(pinned).length === 0) {
+    return day;
+  }
+
+  const nextPinned: Record<string, number> = {};
+  let outfit: WeekPlanOutfit | null = day.outfit ? { ...day.outfit } : null;
+  let hydratedAny = false;
+
+  for (const [slotKey, itemId] of Object.entries(pinned)) {
+    const key = slotKey as SlotKey;
+    if (!SLOT_TEXT_FIELDS[key] || !SLOT_ID_FIELDS[key]) continue;
+
+    const item = itemsById.get(itemId);
+    if (!item) continue;
+
+    nextPinned[key] = itemId;
+    const base = outfit ?? emptyOutfitShell();
+    outfit = fillPinnedSlotOnOutfit(base, key, item);
+    hydratedAny = true;
+  }
+
+  const pinned_items =
+    Object.keys(nextPinned).length > 0 ? nextPinned : undefined;
+
+  if (!hydratedAny) {
+    return { ...day, pinned_items, outfit: day.outfit ?? null };
+  }
+
+  return { ...day, pinned_items, outfit };
+}
+
+/** Collect pinned IDs, fetch wardrobe, hydrate all days. No-op if no pins. */
+async function hydratePinnedSlotsFromWardrobe(plan: WeekPlan): Promise<WeekPlan> {
+  const ids = new Set<number>();
+  for (const day of plan.days) {
+    if (!day.pinned_items) continue;
+    for (const id of Object.values(day.pinned_items)) {
+      if (typeof id === 'number') ids.add(id);
+    }
+  }
+  if (ids.size === 0) return plan;
+
+  const itemsById = new Map<number, WardrobeItem>();
+  try {
+    const { items } = await apiService.getWardrobe(undefined, undefined, 500, 0);
+    for (const item of items) {
+      if (ids.has(item.id)) itemsById.set(item.id, item);
+    }
+  } catch {
+    // Fall through to per-item fetch for unresolved IDs
+  }
+
+  const missing = [...ids].filter((id) => !itemsById.has(id));
+  await Promise.all(
+    missing.map(async (id) => {
+      try {
+        const item = await apiService.getWardrobeItem(id);
+        itemsById.set(id, item);
+      } catch {
+        // Soft-drop: pin removed in hydratePinnedSlotsOnDay
+      }
+    })
+  );
+
+  return {
+    ...plan,
+    days: plan.days.map((d) => hydratePinnedSlotsOnDay(d, itemsById)),
+  };
+}
+
 interface UseWeekPlanControllerOptions {
   isAuthenticated?: boolean;
   userId?: number | null;
@@ -110,6 +223,8 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
   const [presetCount, setPresetCount] = useState(0);
   const [presetLimit, setPresetLimit] = useState(0);
   const [presetBusy, setPresetBusy] = useState(false);
+  /** Last loaded or newly saved planning template (client-side selection). */
+  const [loadedPresetId, setLoadedPresetId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -240,9 +355,8 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
   const applyWardrobeItemToDaySlot = useCallback(
     (dayOfWeek: number, slotKey: string, item: WardrobeItem) => {
       const key = slotKey as SlotKey;
-      const textField = SLOT_TEXT_FIELDS[key];
       const idField = SLOT_ID_FIELDS[key];
-      if (!textField || !idField) return;
+      if (!SLOT_TEXT_FIELDS[key] || !idField) return;
       if (!wardrobeItemMatchesOutfitSlot(item.category, slotKey)) return;
 
       setPlan((prev) => {
@@ -253,38 +367,19 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
             if (d.day_of_week !== dayOfWeek) return d;
             const base = d.outfit ? { ...d.outfit } : emptyOutfitShell();
             const prevId = base[idField] as number | null | undefined;
-            const matching: MatchingWardrobeItems = {
-              ...emptyMatching(),
-              ...(base.matching_wardrobe_items ?? {}),
-            };
-            matching[key] = [
-              {
-                id: item.id,
-                category: item.category,
-                color: item.color,
-                description: item.description,
-                image_data: item.image_data,
-              },
-            ];
-
-            let wardrobe_item_ids = [...(base.wardrobe_item_ids ?? [])];
-            if (prevId != null) {
-              wardrobe_item_ids = wardrobe_item_ids.filter((id) => id !== prevId);
+            let filled = fillPinnedSlotOnOutfit(base, key, item);
+            if (prevId != null && prevId !== item.id) {
+              filled = {
+                ...filled,
+                wardrobe_item_ids: (filled.wardrobe_item_ids ?? []).filter(
+                  (id) => id !== prevId
+                ),
+              };
             }
-            if (!wardrobe_item_ids.includes(item.id)) {
-              wardrobe_item_ids.push(item.id);
-            }
-
             return {
               ...d,
               pinned_items: { ...(d.pinned_items ?? {}), [key]: item.id },
-              outfit: {
-                ...base,
-                [textField]: wardrobeItemSlotText(item),
-                [idField]: item.id,
-                matching_wardrobe_items: matching,
-                wardrobe_item_ids,
-              },
+              outfit: filled,
             };
           }),
         };
@@ -488,6 +583,7 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
       replacePlan(empty);
       markClean(empty, { saved: true });
       setToday(null);
+      setLoadedPresetId(null);
       setMessage('Plan cleared.');
       await loadHistory();
     } catch (err) {
@@ -507,6 +603,7 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
       try {
         const restored = await apiService.restoreWeekPlanHistory(historyId);
         applyPlan(restored, { saved: true });
+        setLoadedPresetId(null);
         await refreshToday();
         await loadHistory();
         setMessage('Plan loaded.');
@@ -542,10 +639,11 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
       setMessage(null);
       try {
         const normalizedName = normalizePresetName(name);
-        await apiService.createWeekPlanPreset({
+        const created = await apiService.createWeekPlanPreset({
           name: normalizedName,
           config: planToPresetConfig(current),
         });
+        setLoadedPresetId(created.id);
         await loadPresets({ soft: false });
         setMessage(`Template “${normalizedName}” saved.`);
       } catch (err) {
@@ -571,6 +669,7 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
         await apiService.updateWeekPlanPreset(presetId, {
           config: planToPresetConfig(current),
         });
+        setLoadedPresetId(presetId);
         await loadPresets({ soft: false });
         setMessage('Planning template updated.');
       } catch (err) {
@@ -614,6 +713,7 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
       setMessage(null);
       try {
         await apiService.deleteWeekPlanPreset(presetId);
+        setLoadedPresetId((prev) => (prev === presetId ? null : prev));
         await loadPresets({ soft: false });
         setMessage('Planning template deleted.');
       } catch (err) {
@@ -635,9 +735,14 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
       setMessage(null);
       try {
         const applied = await apiService.applyWeekPlanPreset(presetId);
-        applyPlan(applied);
+        const hydrated = await hydratePinnedSlotsFromWardrobe(applied);
+        applyPlan(hydrated);
+        setLoadedPresetId(presetId);
         await refreshToday();
-        setMessage('Planning template loaded. Generate outfits when ready.');
+        const name =
+          presets.find((p) => p.id === presetId)?.name?.trim() ||
+          `Template #${presetId}`;
+        setMessage(`“${name}” loaded. Generate outfits when ready.`);
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to load planning template';
@@ -647,7 +752,7 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
         setPresetBusy(false);
       }
     },
-    [applyPlan, refreshToday]
+    [applyPlan, refreshToday, presets]
   );
 
   useEffect(() => {
@@ -662,6 +767,7 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
       setPresets([]);
       setPresetCount(0);
       setPresetLimit(0);
+      setLoadedPresetId(null);
       setError(null);
       setMessage(null);
       setIsDirty(false);
@@ -676,6 +782,10 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
   const enabledDayCount = plan?.days.filter((d) => d.enabled).length ?? 0;
   const presetAtLimit = presetLimit > 0 && presetCount >= presetLimit;
   const hasGeneratedOutfits = plan ? planHasGeneratedOutfits(plan) : false;
+  const loadedPresetName =
+    loadedPresetId == null
+      ? null
+      : presets.find((p) => p.id === loadedPresetId)?.name?.trim() || null;
 
   return {
     plan,
@@ -686,6 +796,8 @@ export const useWeekPlanController = (options?: UseWeekPlanControllerOptions) =>
     presetLimit,
     presetAtLimit,
     presetBusy,
+    loadedPresetId,
+    loadedPresetName,
     loading,
     generating,
     saving,
