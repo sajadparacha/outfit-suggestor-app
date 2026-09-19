@@ -447,3 +447,94 @@ struct WardrobeGapAnalysisResponse: Codable {
     let ai_raw_response: String?
     let cost: WardrobeGapAnalysisCost?
 }
+
+// MARK: - Wardrobe Fit Evaluate
+
+struct WardrobeFitEvaluateRequest: Codable {
+    let wardrobe_item_id: Int?
+    let category: String?
+    let color: String?
+    let description: String?
+    let dress_code: String?
+    let lifestyle_mix: [String]?
+    let primary_lifestyle: String?
+    let style_primary: String?
+    let text_input: String
+
+    init(
+        wardrobe_item_id: Int? = nil,
+        category: String? = nil,
+        color: String? = nil,
+        description: String? = nil,
+        dress_code: String? = "smart-casual",
+        lifestyle_mix: [String]? = ["work", "everyday"],
+        primary_lifestyle: String? = "work",
+        style_primary: String? = "classic",
+        text_input: String = ""
+    ) {
+        self.wardrobe_item_id = wardrobe_item_id
+        self.category = category
+        self.color = color
+        self.description = description
+        self.dress_code = dress_code
+        self.lifestyle_mix = lifestyle_mix
+        self.primary_lifestyle = primary_lifestyle
+        self.style_primary = style_primary
+        self.text_input = text_input
+    }
+}
+
+struct WardrobeFitPairItem: Codable, Identifiable {
+    let id: Int
+    let label: String
+    let color: String?
+    let image_data: String?
+}
+
+struct WardrobeFitPairCategory: Codable, Identifiable {
+    let category: String
+    let count: Int
+    let items: [WardrobeFitPairItem]
+
+    var id: String { category }
+}
+
+struct WardrobeFitCandidate: Codable {
+    let id: Int?
+    let category: String
+    let label: String
+    let color: String?
+    let image_data: String?
+}
+
+struct WardrobeFitGoal: Codable {
+    let label: String
+    let dress_code: String
+    let lifestyle_mix: [String]
+    let primary_lifestyle: String
+    let style_primary: String?
+    let text_input: String
+}
+
+struct WardrobeFitMissing: Codable {
+    let category: String?
+    let label: String
+    let reason: String
+    let candidate_fills_this_gap: Bool
+}
+
+enum WardrobeFitVerdict: String, Codable {
+    case strongFit = "strong_fit"
+    case weakFit = "weak_fit"
+    case redundant = "redundant"
+}
+
+struct WardrobeFitEvaluateResponse: Codable {
+    let candidate: WardrobeFitCandidate
+    let goal: WardrobeFitGoal
+    let pairs_with: [WardrobeFitPairCategory]
+    let outfit_multiplier: Int
+    let verdict: WardrobeFitVerdict
+    let missing_for_goal: WardrobeFitMissing
+    let summary_text: String
+}

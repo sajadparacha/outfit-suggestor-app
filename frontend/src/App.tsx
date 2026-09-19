@@ -809,6 +809,7 @@ function App() {
                 }}
                 onAnalyzeWardrobe={handleAnalyzeWardrobe}
                 analyzingWardrobe={wardrobeGapLoading}
+                onOpenInsights={isAuthenticated ? () => navigate(ROUTES.INSIGHTS) : undefined}
                 onSuggestionReady={(suggestion) => {
                   // Suggestion is already set by the outfit controller's getSuggestion
                   setCurrentSuggestion(suggestion);

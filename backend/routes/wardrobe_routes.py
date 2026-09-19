@@ -10,6 +10,8 @@ from models.wardrobe_schemas import (
     WardrobeSummaryResponse,
     WardrobeGapAnalysisRequest,
     WardrobeGapAnalysisResponse,
+    WardrobeFitEvaluateRequest,
+    WardrobeFitEvaluateResponse,
 )
 from models.user import User
 from models.database import get_db
@@ -149,6 +151,24 @@ async def analyze_wardrobe_gaps(
     Requires authentication.
     """
     return await wardrobe_controller.analyze_wardrobe_gaps(
+        request=request,
+        db=db,
+        current_user=current_user,
+    )
+
+
+@router.post("/evaluate-fit", response_model=WardrobeFitEvaluateResponse)
+async def evaluate_wardrobe_fit(
+    request: WardrobeFitEvaluateRequest,
+    wardrobe_controller: WardrobeController = Depends(get_wardrobe_controller),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Evaluate how a candidate item pairs with owned pieces and what is missing for a lifestyle goal.
+    Requires authentication. Pair counts are deterministic (not LLM-invented).
+    """
+    return await wardrobe_controller.evaluate_fit(
         request=request,
         db=db,
         current_user=current_user,

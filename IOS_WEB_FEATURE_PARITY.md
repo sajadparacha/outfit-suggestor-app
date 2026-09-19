@@ -2,7 +2,7 @@
 
 This document tracks feature parity between the **web app** and the **iOS app** so both offer the same functionality. Use it as a checklist when implementing or syncing features.
 
-**Branch**: `oauth-google-apple`
+**Branch**: `feature/wardrobe-fit-evaluate`
 
 ---
 
@@ -10,7 +10,7 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 
 | Area | Web | iOS | Notes |
 |------|-----|-----|--------|
-| **Auth** | ✅ | ✅ | Register, login, logout, change password (Settings); **Google + Sign in with Apple** via `POST /api/auth/oauth` (Facebook skipped) |
+| **Auth** | ✅ | ✅ | Register, login, logout, change password (Settings); **Google + Sign in with Apple** via `POST /api/auth/oauth` (Facebook skipped)
 | **UX coherence (product story)** | ✅ | ✅ | Men's stylist promise on Suggest; three-ring empty states (Wardrobe → Insights/Week; History → Suggest); Guide demoted from web primary nav (footer/Settings); iOS Guide stays under Profile; About story-first on both |
 | **Main flow simplified UX** | ✅ | ✅ | Shared contract `docs/main-flow-ux-contract.md`; creation → result; 3 actions (Generate Another, Save Look, Refine); advanced options input-side only; `productPromiseHeadline` / `productPromiseSubline` on empty creation |
 | **Random picks thumbnails + input sync** | ✅ | ✅ | Item card thumbs from `matching_wardrobe_items`; left preview replaces stale upload; wardrobe-only **checkbox** (not switch) |
@@ -20,9 +20,9 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 | **Filters / preference text** | ✅ | ✅ | Occasion, season, style use shared recommended option vocabulary; free text |
 | **Wardrobe-only mode** | ✅ | ✅ | Toggle when logged in (Main flow) |
 | **Model image generation** | ✅ | ✅ | Toggle + model picker (DALL-E 3, Stable Diffusion, Nano Banana); full-screen view |
-| **Wardrobe** | ✅ | ✅ | List, add, edit, delete, category filter (core chips: shirt/trouser/blazer/shoes/belt + extended chips when owned: polo, T-shirt, jeans, shorts, sweater, jacket, coat, tie, other), human-readable category badges, search, "Get suggestion" from item, select 1-5 items (one per slot) to complete outfit with AI; **completion panel shows clickable selection thumbnails** (tap to full-screen) beside Complete outfit with AI; completion slots: polo/T-shirt→shirt, pants/jeans/shorts→trouser, jacket/coat→**outerwear**, sweater→**sweater**, plus blazer/shoes/belt; **upper-body exclusivity** (only one of blazer, outerwear, sweater); max 5 items total; **blazer filter chip counts blazer/suit only** (jacket/coat have extended chips); inline **Preferences** (occasion/season/style/notes + wardrobe-only) synced with Suggest |
-| **Outfit history** | ✅ | ✅ | List, search, sort (newest/oldest), delete, load into main view |
-| **Random from wardrobe** | ✅ | ✅ | AI via `POST /api/suggest-outfit-from-wardrobe`; session variety (`previous_outfit_text`, fingerprint retry). `GET /api/wardrobe/random-outfit` legacy/non-user-facing. |
+| **Wardrobe** | ✅ | ✅ | List, add, edit, delete, category filter (core chips: shirt/trouser/blazer/shoes/belt + extended chips when owned: polo, T-shirt, jeans, shorts, sweater, jacket, coat, tie, other), human-readable category badges, search, "Get suggestion" from item, select 1-5 items (one per slot) to complete outfit with AI; **completion panel shows clickable selection thumbnails** (tap to full-screen) beside Complete outfit with AI; completion slots: polo/T-shirt→shirt, pants/jeans/shorts→trouser, jacket/coat→**outerwear**, sweater→**sweater**, plus blazer/shoes/belt; **upper-body exclusivity** (only one of blazer, outerwear, sweater); max 5 items total; **blazer filter chip counts blazer/suit only** (jacket/coat have extended chips); inline **Preferences** (occasion/season/style/notes + wardrobe-only) synced with Suggest; **How this fits** (`POST /api/wardrobe/evaluate-fit`) — pair counts vs owned items + missing-for-goal for Insights-style lifestyle defaults |
+| **Wardrobe fit evaluate** | ✅ | ✅ | Auth-only **How this fits** on wardrobe items; result panel/sheet with `summary_text`, verdict (Strong fit / Weak fit / Already covered), Works with what you own (counts + thumbs), Missing for your goal; goal defaults smart-casual · work+everyday · classic; About + Guide updated |
+| **Outfit history** | ✅ | ✅ | List, search, sort (newest/oldest), delete, load into main view| **Random from wardrobe** | ✅ | ✅ | AI via `POST /api/suggest-outfit-from-wardrobe`; session variety (`previous_outfit_text`, fingerprint retry). `GET /api/wardrobe/random-outfit` legacy/non-user-facing. |
 | **Random from history** | ✅ | ✅ | Button on Main; client picks from history; **Your inputs** syncs preview + **From history** caption + entry filters |
 | **Duplicate detection** | ✅ | ✅ | Check before suggestion; use cached or force new |
 | **Next / Alternate outfit** | ✅ | ✅ | Button after suggestion; requests a different outfit |

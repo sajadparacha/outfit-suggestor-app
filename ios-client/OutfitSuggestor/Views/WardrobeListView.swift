@@ -37,6 +37,7 @@ struct WardrobeListView: View {
     @Binding var useWardrobeOnly: Bool
     var isAuthenticated: Bool = false
     @StateObject private var pastSuggestionsLoader = WardrobePastSuggestionsLoader()
+    @StateObject private var fitEvaluateViewModel = WardrobeFitEvaluateViewModel()
     @State private var editingItem: WardrobeItem?
     @State private var fullScreenImage: UIImage?
     @AppStorage("wardrobe_flow_tip_dismissed") private var flowTipDismissed = false
@@ -223,6 +224,9 @@ struct WardrobeListView: View {
                                     onGetSuggestion: isWeekPlanPickMode
                                         ? nil
                                         : (onGetSuggestionFromItem == nil ? nil : { onGetSuggestionFromItem?(item) }),
+                                    onEvaluateFit: isWeekPlanPickMode || !isAuthenticated
+                                        ? nil
+                                        : { fitEvaluateViewModel.open(for: item) },
                                     onPastSuggestions: { Task { await pastSuggestionsLoader.open(for: item) } },
                                     isPastSuggestionsLoading: pastSuggestionsLoader.loadingItemId == item.id,
                                     onEdit: { editingItem = item },
@@ -355,6 +359,13 @@ struct WardrobeListView: View {
         }
         .sheet(isPresented: $pastSuggestionsLoader.showSheet) {
             historySuggestionsSheet
+        }
+        .sheet(isPresented: $fitEvaluateViewModel.isPresented) {
+            WardrobeFitResultSheet(
+                viewModel: fitEvaluateViewModel,
+                onGetOutfitWithItem: onGetSuggestionFromItem,
+                onOpenInsights: nil
+            )
         }
         .sheet(item: $editingItem) { item in
             WardrobeFormView(
@@ -960,6 +971,7 @@ struct WardrobeCardView: View {
     let item: WardrobeItem
     let image: UIImage?
     let onGetSuggestion: (() -> Void)?
+    var onEvaluateFit: (() -> Void)? = nil
     let onPastSuggestions: () -> Void
     var isPastSuggestionsLoading: Bool = false
     let onEdit: () -> Void
@@ -1062,6 +1074,10 @@ struct WardrobeCardView: View {
 
                             wardrobeOverflowMenu
                         }
+
+                        if let onEvaluateFit {
+                            howThisFitsButton(action: onEvaluateFit)
+                        }
                     }
                     .padding(.top, 4)
                     .overlay(alignment: .top) {
@@ -1073,9 +1089,14 @@ struct WardrobeCardView: View {
                 } else if isCompletionSelectionMode {
                     completionSelectionRow
                 } else {
-                    HStack {
-                        Spacer(minLength: 0)
-                        wardrobeOverflowMenu
+                    VStack(alignment: .leading, spacing: 8) {
+                        if let onEvaluateFit {
+                            howThisFitsButton(action: onEvaluateFit)
+                        }
+                        HStack {
+                            Spacer(minLength: 0)
+                            wardrobeOverflowMenu
+                        }
                     }
                 }
             }
@@ -1091,6 +1112,28 @@ struct WardrobeCardView: View {
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .opacity(isWeekPlanPickMode && !isWeekPlanPickEligible ? 0.45 : 1)
         .accessibilityValue(isWeekPlanPickMode && !isWeekPlanPickEligible ? "Unavailable for this slot" : "")
+    }
+
+    private func howThisFitsButton(action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: "square.grid.2x2")
+                Text(WardrobeFitEvaluateCopy.action)
+                    .fontWeight(.semibold)
+            }
+            .font(.subheadline)
+            .foregroundColor(AppTheme.textPrimary)
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .background(AppTheme.accentSoft)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(AppTheme.accent.opacity(0.35), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(WardrobeFitEvaluateCopy.action)
+        .accessibilityIdentifier("wardrobe.fit.action.\(item.id)")
     }
 
     private var completeOutfitActionButton: some View {

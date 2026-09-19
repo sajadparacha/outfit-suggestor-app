@@ -70,6 +70,7 @@ struct UserGuideView: View {
                         "Use search to find specific items by name, color, or description.",
                         "Swipe left on an item to delete, or tap to edit.",
                         GuideCopy.wardrobeSingleItemStep,
+                        GuideCopy.wardrobeFitEvaluateStep,
                         "Tap Select items, choose 1 to 5 pieces with one item per slot (shirt, trousers, blazer, outerwear, sweater, shoes, belt). Jackets and coats count as outerwear; sweaters have their own slot. Only one of blazer, outerwear, or sweater at a time. Expand Preferences, then tap Complete outfit with AI."
                     ],
                     tip: "Preferences on Wardrobe stay in sync with Suggest and Insights. Picking a second item in the same slot shows Choose one item per outfit slot; blazer plus jacket or sweater shows Choose only one of blazer, outerwear, or sweater."

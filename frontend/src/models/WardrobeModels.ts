@@ -114,3 +114,65 @@ export interface WardrobeGapAnalysisResponse {
   cost?: WardrobeAnalysisCost;
 }
 
+/** Verdict from POST /api/wardrobe/evaluate-fit */
+export type WardrobeFitVerdict = 'strong_fit' | 'weak_fit' | 'redundant';
+
+export interface WardrobeFitEvaluateRequest {
+  wardrobe_item_id?: number | null;
+  category?: string | null;
+  color?: string | null;
+  description?: string | null;
+  dress_code?: string | null;
+  lifestyle_mix?: string[] | null;
+  primary_lifestyle?: string | null;
+  style_primary?: string | null;
+  text_input?: string;
+}
+
+export interface WardrobeFitPairItem {
+  id: number;
+  label: string;
+  color: string | null;
+  image_data: string | null;
+}
+
+export interface WardrobeFitPairCategory {
+  category: string;
+  count: number;
+  items: WardrobeFitPairItem[];
+}
+
+export interface WardrobeFitCandidate {
+  id: number | null;
+  category: string;
+  label: string;
+  color: string | null;
+  image_data: string | null;
+}
+
+export interface WardrobeFitGoal {
+  label: string;
+  dress_code: string;
+  lifestyle_mix: string[];
+  primary_lifestyle: string;
+  style_primary: string | null;
+  text_input: string;
+}
+
+export interface WardrobeFitMissing {
+  category: string | null;
+  label: string;
+  reason: string;
+  candidate_fills_this_gap: boolean;
+}
+
+export interface WardrobeFitEvaluateResponse {
+  candidate: WardrobeFitCandidate;
+  goal: WardrobeFitGoal;
+  pairs_with: WardrobeFitPairCategory[];
+  outfit_multiplier: number;
+  verdict: WardrobeFitVerdict;
+  missing_for_goal: WardrobeFitMissing;
+  summary_text: string;
+}
+

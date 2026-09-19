@@ -123,6 +123,10 @@
 		TMI01BF0000000000000001 /* TopMissingItemsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TMI01FR0000000000000001 /* TopMissingItemsView.swift */; };
 		W1A2B3C4D5E6F708192A3B51 /* WardrobeCardUx.swift in Sources */ = {isa = PBXBuildFile; fileRef = W1A2B3C4D5E6F708192A3B50 /* WardrobeCardUx.swift */; };
 		W2A3B4C5D6E7F809293A4B61 /* WardrobeCardUxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = W2A3B4C5D6E7F809293A4B60 /* WardrobeCardUxTests.swift */; };
+		WFE01BF0000000000000001 /* WardrobeFitEvaluateCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFE01FR0000000000000001 /* WardrobeFitEvaluateCopy.swift */; };
+		WFE02BF0000000000000001 /* WardrobeFitEvaluateViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFE02FR0000000000000001 /* WardrobeFitEvaluateViewModel.swift */; };
+		WFE03BF0000000000000001 /* WardrobeFitResultSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFE03FR0000000000000001 /* WardrobeFitResultSheet.swift */; };
+		WFE04BF0000000000000001 /* WardrobeFitEvaluateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFE04FR0000000000000001 /* WardrobeFitEvaluateTests.swift */; };
 		WCF01BF0000000000000001 /* WardrobeCategoryDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCF01FR0000000000000001 /* WardrobeCategoryDisplay.swift */; };
 		WCF01BF0000000000000002 /* WardrobeCategoryFilterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCF01FR0000000000000002 /* WardrobeCategoryFilterTests.swift */; };
 		WCG01BF0000000000000001 /* WardrobeCoverageGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCG01FR0000000000000001 /* WardrobeCoverageGridView.swift */; };
@@ -284,6 +288,10 @@
 		TMI01FR0000000000000001 /* TopMissingItemsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopMissingItemsView.swift; sourceTree = "<group>"; };
 		W1A2B3C4D5E6F708192A3B50 /* WardrobeCardUx.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCardUx.swift; sourceTree = "<group>"; };
 		W2A3B4C5D6E7F809293A4B60 /* WardrobeCardUxTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCardUxTests.swift; sourceTree = "<group>"; };
+		WFE01FR0000000000000001 /* WardrobeFitEvaluateCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeFitEvaluateCopy.swift; sourceTree = "<group>"; };
+		WFE02FR0000000000000001 /* WardrobeFitEvaluateViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeFitEvaluateViewModel.swift; sourceTree = "<group>"; };
+		WFE03FR0000000000000001 /* WardrobeFitResultSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeFitResultSheet.swift; sourceTree = "<group>"; };
+		WFE04FR0000000000000001 /* WardrobeFitEvaluateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeFitEvaluateTests.swift; sourceTree = "<group>"; };
 		WCF01FR0000000000000001 /* WardrobeCategoryDisplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCategoryDisplay.swift; sourceTree = "<group>"; };
 		WCF01FR0000000000000002 /* WardrobeCategoryFilterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCategoryFilterTests.swift; sourceTree = "<group>"; };
 		WCG01FR0000000000000001 /* WardrobeCoverageGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCoverageGridView.swift; sourceTree = "<group>"; };
@@ -337,6 +345,7 @@
 				APP01FR0000000000000001 /* AiProgressPanelViewTests.swift */,
 				D86343F4A060EB70A1831EAA /* OutfitViewModelIntegrationTests.swift */,
 				W2A3B4C5D6E7F809293A4B60 /* WardrobeCardUxTests.swift */,
+				WFE04FR0000000000000001 /* WardrobeFitEvaluateTests.swift */,
 				RLT01FR0000000000000001 /* RecentLooksThumbnailTests.swift */,
 				ILB01FR0000000000000002 /* IosLayoutBugFixPresentationTests.swift */,
 				RLH01FR0000000000000001 /* RecentLooksHistoryIntegrationTests.swift */,
@@ -394,6 +403,7 @@
 				3C4C31A8216581E9E830B306 /* UserGuideView.swift */,
 				B35421E2E5C40F12D828A0A4 /* WardrobeFormView.swift */,
 				66828E50349EE49EE62FFFFD /* WardrobeListView.swift */,
+				WFE03FR0000000000000001 /* WardrobeFitResultSheet.swift */,
 				M1F2L3O4W5U6X7C8O9P0Y0A /* OutfitItemCardView.swift */,
 				M1F2L3O4W5U6X7C8O9P0Y0C /* RefineMenuView.swift */,
 				M1F2L3O4W5U6X7C8O9P0Y0E /* MainFlowCompactSummaryView.swift */,
@@ -423,6 +433,7 @@
 				WP01FR0000000000000003 /* WeekPlannerViewModel.swift */,
 				14E774459799783475D23A6C /* OutfitViewModel.swift */,
 				A1R2E3P4O5R6T7M8O9D0E03 /* ReportsViewModel.swift */,
+				WFE02FR0000000000000001 /* WardrobeFitEvaluateViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -468,6 +479,7 @@
 				O1O2L3A4Y5E6R7S8V9T01 /* OutfitOptionalLayers.swift */,
 				O1L2A3Y4E5R6E7X8C9L0U01 /* OutfitLayerExclusivity.swift */,
 				W1A2B3C4D5E6F708192A3B50 /* WardrobeCardUx.swift */,
+				WFE01FR0000000000000001 /* WardrobeFitEvaluateCopy.swift */,
 				WCF01FR0000000000000001 /* WardrobeCategoryDisplay.swift */,
 				585D224C3BAB35D9CD03EA3B /* AppConfig.swift */,
 				E3016CC9235E918186E85387 /* ImagePicker.swift */,
@@ -741,6 +753,9 @@
 				309273348A8D785B69481960 /* WardrobeFormView.swift in Sources */,
 				AAE87AAF310E73964C11C7FB /* WardrobeListView.swift in Sources */,
 				W1A2B3C4D5E6F708192A3B51 /* WardrobeCardUx.swift in Sources */,
+				WFE01BF0000000000000001 /* WardrobeFitEvaluateCopy.swift in Sources */,
+				WFE02BF0000000000000001 /* WardrobeFitEvaluateViewModel.swift in Sources */,
+				WFE03BF0000000000000001 /* WardrobeFitResultSheet.swift in Sources */,
 				WCF01BF0000000000000001 /* WardrobeCategoryDisplay.swift in Sources */,
 				E4EBFCF3A8E4ECF596229B62 /* WardrobeModels.swift in Sources */,
 				F1R2U3N4C5O6A7C8H900001 /* FirstRunCoachLogic.swift in Sources */,
@@ -808,6 +823,7 @@
 				M4A5B6C7D8E9012345678A04 /* MicroHelpCopyTests.swift in Sources */,
 				BDC51E614A7C765FB3FA7572 /* OutfitViewModelIntegrationTests.swift in Sources */,
 				W2A3B4C5D6E7F809293A4B61 /* WardrobeCardUxTests.swift in Sources */,
+				WFE04BF0000000000000001 /* WardrobeFitEvaluateTests.swift in Sources */,
 				RLT01BF0000000000000001 /* RecentLooksThumbnailTests.swift in Sources */,
 				ILB01BF0000000000000002 /* IosLayoutBugFixPresentationTests.swift in Sources */,
 				RLH01BF0000000000000001 /* RecentLooksHistoryIntegrationTests.swift in Sources */,

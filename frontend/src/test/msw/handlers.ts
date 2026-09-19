@@ -99,6 +99,54 @@ export const handlers = [
     );
   }),
 
+  rest.post(`${API_BASE}/api/wardrobe/evaluate-fit`, async (req, res, ctx) => {
+    const body = await req.json();
+    const itemId = body.wardrobe_item_id ?? 1;
+    return res(
+      ctx.json({
+        candidate: {
+          id: itemId,
+          category: body.category ?? 'shirt',
+          label: 'Blue shirt',
+          color: body.color ?? 'Blue',
+          image_data: null,
+        },
+        goal: {
+          label: 'business-casual',
+          dress_code: body.dress_code ?? 'smart-casual',
+          lifestyle_mix: body.lifestyle_mix ?? ['work', 'everyday'],
+          primary_lifestyle: body.primary_lifestyle ?? 'work',
+          style_primary: body.style_primary ?? 'classic',
+          text_input: body.text_input ?? '',
+        },
+        pairs_with: [
+          {
+            category: 'trouser',
+            count: 2,
+            items: [
+              { id: 12, label: 'Navy chinos', color: 'navy', image_data: null },
+              { id: 13, label: 'Gray trousers', color: 'gray', image_data: null },
+            ],
+          },
+          {
+            category: 'shoes',
+            count: 1,
+            items: [{ id: 20, label: 'Brown loafers', color: 'brown', image_data: null }],
+          },
+        ],
+        outfit_multiplier: 6,
+        verdict: 'strong_fit',
+        missing_for_goal: {
+          category: 'blazer',
+          label: 'structured blazer',
+          reason: 'A blazer would unlock more work looks with this shirt.',
+          candidate_fills_this_gap: false,
+        },
+        summary_text: 'This shirt works with 2 trousers and 1 pair of shoes you own.',
+      })
+    );
+  }),
+
   rest.get(`${API_BASE}/api/access-logs/stats`, (_req, res, ctx) => {
     return res(
       ctx.json({

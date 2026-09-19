@@ -16,7 +16,7 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
     {
       icon: '👔',
       title: 'Wardrobe',
-      text: 'Save pieces, style from what you own, and complete outfits with AI across core slots.',
+      text: 'Save pieces, style from what you own, complete outfits with AI across core slots, and evaluate how a piece fits your wardrobe—pair counts plus what’s missing for your goal.',
     },
     {
       icon: '📅',

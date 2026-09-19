@@ -11,9 +11,12 @@ from models.wardrobe_schemas import (
     WardrobeSummaryResponse,
     WardrobeGapAnalysisRequest,
     WardrobeGapAnalysisResponse,
+    WardrobeFitEvaluateRequest,
+    WardrobeFitEvaluateResponse,
 )
 from services.wardrobe_service import WardrobeService
 from services.wardrobe_ai_service import WardrobeAIService
+from services.wardrobe_fit_service import WardrobeFitService
 from services.wardrobe_gap_context import resolve_gap_analysis_context
 from utils.image_processor import encode_image, validate_image
 
@@ -542,5 +545,72 @@ class WardrobeController:
             raise HTTPException(
                 status_code=500,
                 detail=f"Error analyzing wardrobe gaps: {str(e)}",
+            )
+
+    async def evaluate_fit(
+        self,
+        request: WardrobeFitEvaluateRequest,
+        db: Session,
+        current_user: User,
+    ) -> WardrobeFitEvaluateResponse:
+        """Evaluate how a candidate item pairs with owned wardrobe for a lifestyle goal."""
+        try:
+            wardrobe_items, _ = self.wardrobe_service.get_user_wardrobe(
+                db=db,
+                user_id=current_user.id,
+                category=None,
+                search=None,
+                limit=None,
+                offset=None,
+            )
+
+            candidate = None
+            if request.wardrobe_item_id is not None:
+                for item in wardrobe_items:
+                    if item.id == request.wardrobe_item_id:
+                        candidate = item
+                        break
+                if candidate is None:
+                    raise HTTPException(
+                        status_code=404,
+                        detail="Wardrobe item not found",
+                    )
+            else:
+                if not (request.category and request.color):
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Provide wardrobe_item_id or category and color for the candidate.",
+                    )
+                candidate = {
+                    "category": request.category,
+                    "color": request.color,
+                    "description": request.description or "",
+                }
+
+            dress_code = request.dress_code or "smart-casual"
+            if isinstance(dress_code, list):
+                dress_code = dress_code[0] if dress_code else "smart-casual"
+
+            style_primary = request.style_primary or "classic"
+            if isinstance(style_primary, list):
+                style_primary = style_primary[0] if style_primary else "classic"
+
+            fit_service = WardrobeFitService(self.wardrobe_service)
+            result = fit_service.evaluate(
+                candidate=candidate,
+                wardrobe_items=wardrobe_items,
+                dress_code=dress_code,
+                lifestyle_mix=request.lifestyle_mix or ["work", "everyday"],
+                primary_lifestyle=request.primary_lifestyle or "work",
+                style_primary=style_primary,
+                text_input=request.text_input or "",
+            )
+            return WardrobeFitEvaluateResponse(**result)
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error evaluating wardrobe fit: {str(e)}",
             )
 

@@ -20,6 +20,8 @@ import {
   WardrobeSummary,
   WardrobeGapAnalysisRequest,
   WardrobeGapAnalysisResponse,
+  WardrobeFitEvaluateRequest,
+  WardrobeFitEvaluateResponse,
 } from '../models/WardrobeModels';
 import {
   WeekPlan,
@@ -977,6 +979,36 @@ class ApiService {
         throw error;
       }
       throw new Error('Failed to analyze wardrobe gaps');
+    }
+  }
+
+  /**
+   * Evaluate how a wardrobe item (or attribute candidate) pairs with owned pieces + goal.
+   */
+  async evaluateWardrobeFit(
+    request: WardrobeFitEvaluateRequest,
+    signal?: AbortSignal
+  ): Promise<WardrobeFitEvaluateResponse> {
+    try {
+      const url = `${this.baseUrl}/api/wardrobe/evaluate-fit`;
+      const response = await this.fetchWithLogging(url, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(request),
+        signal,
+      });
+
+      if (!response.ok) {
+        const error: ApiError = await response.json();
+        throw new Error(error.detail || 'Failed to evaluate wardrobe fit');
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to evaluate wardrobe fit');
     }
   }
 

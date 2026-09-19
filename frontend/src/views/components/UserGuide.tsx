@@ -299,6 +299,7 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               'Add items with the guided flow: we suggest category, color, and a description—edit anything before saving.',
               'Tap an item anytime to update details or swap the photo.',
               'For one saved piece, tap Style this item with AI to open Suggest with that item loaded—set preferences and tap Generate Outfit.',
+              'Tap How this fits on a saved piece to see how many of your items it pairs with, a Strong fit / Weak fit / Already covered verdict, and what’s missing for your goal (defaults: smart-casual, work + everyday, classic).',
               'To combine multiple pieces, use Complete an outfit from selected wardrobe pieces: tap Add to outfit completion on item cards (1 to 5 items). Core slots are shirt, trousers, blazer, shoes, and belt; jackets and coats count as outerwear, sweaters as layer. Choose only one of blazer, outerwear, or sweater at a time—one item per other slot.',
               'Expand Preferences on Wardrobe to set occasion, season, style, and notes—the same pickers as Suggest. Logged in? Toggle Use my wardrobe only if you want recommendations limited to saved items.',
               'Preferences on Wardrobe stay in sync with Suggest—change them inline without switching tabs first. Insights uses its own lifestyle mix, not these pickers.',

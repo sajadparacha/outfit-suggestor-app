@@ -159,3 +159,71 @@ class WardrobeGapAnalysisResponse(BaseModel):
     ai_raw_response: Optional[str] = None
     cost: Optional[dict] = None
 
+
+class WardrobeFitEvaluateRequest(BaseModel):
+    """Evaluate how a candidate item pairs with owned wardrobe + lifestyle goal."""
+    wardrobe_item_id: Optional[int] = Field(
+        default=None,
+        description="Owned wardrobe item to evaluate (preferred)",
+    )
+    category: Optional[str] = Field(default=None, description="Candidate category when no item id")
+    color: Optional[str] = Field(default=None, description="Candidate color when no item id")
+    description: Optional[str] = Field(default=None, description="Candidate description when no item id")
+    dress_code: Optional[str] = Field(default="smart-casual")
+    lifestyle_mix: Optional[List[str]] = Field(default=None)
+    primary_lifestyle: Optional[str] = Field(default=None)
+    style_primary: Optional[str] = Field(default="classic")
+    text_input: str = Field(default="")
+
+    @field_validator("lifestyle_mix", mode="before")
+    @classmethod
+    def coerce_lifestyle_mix(cls, value: Any) -> Optional[List[str]]:
+        return _coerce_str_or_list(value)
+
+
+class WardrobeFitPairItem(BaseModel):
+    id: int
+    label: str
+    color: Optional[str] = None
+    image_data: Optional[str] = None
+
+
+class WardrobeFitPairCategory(BaseModel):
+    category: str
+    count: int
+    items: List[WardrobeFitPairItem]
+
+
+class WardrobeFitCandidate(BaseModel):
+    id: Optional[int] = None
+    category: str
+    label: str
+    color: Optional[str] = None
+    image_data: Optional[str] = None
+
+
+class WardrobeFitGoal(BaseModel):
+    label: str
+    dress_code: str
+    lifestyle_mix: List[str]
+    primary_lifestyle: str
+    style_primary: Optional[str] = None
+    text_input: str = ""
+
+
+class WardrobeFitMissing(BaseModel):
+    category: Optional[str] = None
+    label: str
+    reason: str
+    candidate_fills_this_gap: bool
+
+
+class WardrobeFitEvaluateResponse(BaseModel):
+    candidate: WardrobeFitCandidate
+    goal: WardrobeFitGoal
+    pairs_with: List[WardrobeFitPairCategory]
+    outfit_multiplier: int
+    verdict: Literal["strong_fit", "weak_fit", "redundant"]
+    missing_for_goal: WardrobeFitMissing
+    summary_text: str
+

@@ -895,6 +895,29 @@ class APIService {
         return try JSONDecoder().decode(WardrobeGapAnalysisResponse.self, from: data)
     }
 
+    // MARK: - Wardrobe Fit Evaluate
+
+    /// Evaluate how a wardrobe item pairs with owned pieces + lifestyle goal (auth required)
+    func evaluateWardrobeFit(request body: WardrobeFitEvaluateRequest) async throws -> WardrobeFitEvaluateResponse {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
+        if AppConfig.isUITestMode {
+            return uiTestStore.makeFitEvaluate(for: body)
+        }
+        guard let url = URL(string: "\(baseURL)/api/wardrobe/evaluate-fit") else { throw APIServiceError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        setAuthIfNeeded(&request)
+        request.httpBody = try JSONEncoder().encode(body)
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
+            throw APIServiceError.invalidResponse
+        }
+        return try JSONDecoder().decode(WardrobeFitEvaluateResponse.self, from: data)
+    }
+
     // MARK: - Week Plan
 
     func getWeekPlan() async throws -> WeekPlanResponse {
@@ -1455,6 +1478,51 @@ final class UITestDataStore {
                     output_tokens: 220
                 )
                 : nil
+        )
+    }
+
+    func makeFitEvaluate(for request: WardrobeFitEvaluateRequest) -> WardrobeFitEvaluateResponse {
+        let item = request.wardrobe_item_id.flatMap { wardrobeItem(id: $0) }
+        let category = item?.category ?? request.category ?? "blazer"
+        let label = item?.name
+            ?? item?.description
+            ?? request.description
+            ?? "\(category.capitalized) candidate"
+        let color = item?.color ?? request.color
+        return WardrobeFitEvaluateResponse(
+            candidate: WardrobeFitCandidate(
+                id: item?.id ?? request.wardrobe_item_id,
+                category: category,
+                label: label,
+                color: color,
+                image_data: item?.image_data
+            ),
+            goal: WardrobeFitGoal(
+                label: request.dress_code ?? "smart-casual",
+                dress_code: request.dress_code ?? "smart-casual",
+                lifestyle_mix: request.lifestyle_mix ?? ["work", "everyday"],
+                primary_lifestyle: request.primary_lifestyle ?? "work",
+                style_primary: request.style_primary ?? "classic",
+                text_input: request.text_input
+            ),
+            pairs_with: [
+                WardrobeFitPairCategory(
+                    category: "trouser",
+                    count: 1,
+                    items: [
+                        WardrobeFitPairItem(id: 12, label: "Charcoal trousers", color: "charcoal", image_data: nil)
+                    ]
+                )
+            ],
+            outfit_multiplier: 2,
+            verdict: .strongFit,
+            missing_for_goal: WardrobeFitMissing(
+                category: "shoes",
+                label: "pair of shoes",
+                reason: "UI-test gap for shoes.",
+                candidate_fills_this_gap: false
+            ),
+            summary_text: "This \(category) works with 1 item you own."
         )
     }
 

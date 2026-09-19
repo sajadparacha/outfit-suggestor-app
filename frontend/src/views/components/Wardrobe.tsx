@@ -15,8 +15,10 @@ import { UI_CONFIG } from '../../utils/constants';
 import ConfirmationModal from './ConfirmationModal';
 import AnalysisPreferences from './AnalysisPreferences';
 import LoadingOverlay from './LoadingOverlay';
+import WardrobeFitPanel from './wardrobe/WardrobeFitPanel';
 import { historyEntryToSuggestion } from '../../utils/historyUtils';
 import { MAIN_FLOW_UX_COPY } from '../../utils/mainFlowUxCopy';
+import { WARDROBE_FIT_COPY } from '../../utils/wardrobeFitCopy';
 import {
   WARDROBE_FORM_CATEGORIES,
   apiCategoryParamForFilter,
@@ -55,6 +57,7 @@ interface WardrobeProps {
   onSourceImageLoaded?: () => void; // Callback after source wardrobe image is preloaded in main flow
   onAnalyzeWardrobe?: () => void;
   analyzingWardrobe?: boolean;
+  onOpenInsights?: () => void;
   outfitController?: {
     setImage: (image: File | null) => void;
     setSourceWardrobeItem?: (item: SourceWardrobeItem | null) => void;
@@ -90,6 +93,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
   outfitController,
   onAnalyzeWardrobe,
   analyzingWardrobe = false,
+  onOpenInsights,
 }) => {
   const isWeekPlanPickMode = !!pickSession;
   const {
@@ -172,6 +176,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
 
   const [hiddenItemIds, setHiddenItemIds] = useState<Set<number>>(new Set());
   const [openMenuItemId, setOpenMenuItemId] = useState<number | null>(null);
+  const [fitEvaluateItem, setFitEvaluateItem] = useState<WardrobeItem | null>(null);
   const [showDeleteUndoToast, setShowDeleteUndoToast] = useState(false);
   const pendingDeleteRef = useRef<{
     itemId: number;
@@ -1351,6 +1356,21 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                           >
                             Edit
                           </button>
+                          {isAuthenticated && (
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => {
+                                setFitEvaluateItem(item);
+                                setOpenMenuItemId(null);
+                              }}
+                              className="flex w-full min-h-[44px] touch-manipulation items-center px-4 py-2.5 text-left text-sm text-slate-200 transition hover:bg-white/10"
+                              aria-label={WARDROBE_FIT_COPY.action}
+                              data-testid={`wardrobe-menu-how-this-fits-${item.id}`}
+                            >
+                              {WARDROBE_FIT_COPY.action}
+                            </button>
+                          )}
                           <button
                             type="button"
                             role="menuitem"
@@ -2127,6 +2147,26 @@ const Wardrobe: React.FC<WardrobeProps> = ({
           operationType="past-suggestions"
           message={historyLoadingMessage ?? 'Loading past suggestions for this item…'}
         />
+
+        {fitEvaluateItem && (
+          <WardrobeFitPanel
+            item={fitEvaluateItem}
+            isOpen={!!fitEvaluateItem}
+            onClose={() => setFitEvaluateItem(null)}
+            onGetOutfit={(item) => {
+              setFitEvaluateItem(null);
+              void handleGetAISuggestion(item);
+            }}
+            onOpenInsights={
+              onOpenInsights
+                ? () => {
+                    setFitEvaluateItem(null);
+                    onOpenInsights();
+                  }
+                : undefined
+            }
+          />
+        )}
 
         {showDeleteUndoToast && (
           <div
