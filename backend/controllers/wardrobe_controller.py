@@ -576,14 +576,14 @@ class WardrobeController:
                         detail="Wardrobe item not found",
                     )
             else:
-                if not (request.category and request.color):
+                if not (request.category and request.category.strip()):
                     raise HTTPException(
                         status_code=400,
-                        detail="Provide wardrobe_item_id or category and color for the candidate.",
+                        detail="Provide wardrobe_item_id or a category for the candidate.",
                     )
                 candidate = {
                     "category": request.category,
-                    "color": request.color,
+                    "color": request.color or "",
                     "description": request.description or "",
                 }
 
@@ -595,8 +595,15 @@ class WardrobeController:
             if isinstance(style_primary, list):
                 style_primary = style_primary[0] if style_primary else "classic"
 
+            from config import Config
+
+            pair_ranker = None
+            if Config.WARDROBE_FIT_AI_ENABLED:
+                pair_ranker = getattr(self.wardrobe_ai_service, "rank_pairings", None)
+
             fit_service = WardrobeFitService(self.wardrobe_service)
             result = fit_service.evaluate(
+                pair_ranker=pair_ranker,
                 candidate=candidate,
                 wardrobe_items=wardrobe_items,
                 dress_code=dress_code,

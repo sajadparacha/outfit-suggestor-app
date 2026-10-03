@@ -300,3 +300,20 @@ struct InsightsLifestyle: Equatable {
         return cleaned.isEmpty ? fallback : cleaned
     }
 }
+
+extension InsightsLifestyle: Codable {}
+
+/// Persists the last Insights preferences used for an analysis.
+enum InsightsLifestyleStore {
+    static let key = "insightsLifestylePrefs"
+
+    static func load(from defaults: UserDefaults = .standard) -> InsightsLifestyle? {
+        guard let data = defaults.data(forKey: key) else { return nil }
+        return try? JSONDecoder().decode(InsightsLifestyle.self, from: data)
+    }
+
+    static func save(_ lifestyle: InsightsLifestyle, to defaults: UserDefaults = .standard) {
+        guard let data = try? JSONEncoder().encode(lifestyle) else { return }
+        defaults.set(data, forKey: key)
+    }
+}

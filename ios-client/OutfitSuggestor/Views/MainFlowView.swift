@@ -30,6 +30,9 @@ struct MainFlowView: View {
     @AppStorage(FirstRunCoachCopy.storageKeyPrefsExpanded) private var firstRunPrefsExpanded = false
     @State private var showFirstOutfitBanner = false
     @State private var guestAuthPresentation: GuestAuthSheetPresentation?
+    @StateObject private var fitEvaluateViewModel = WardrobeFitEvaluateViewModel()
+    @State private var pendingCheckBeforeBuyPrefill: CheckBeforeBuyPrefill?
+    @State private var checkBeforeBuyPrefill: CheckBeforeBuyPrefill?
 
     private let resultScrollAnchor = "main.resultAnchor"
 
@@ -211,6 +214,30 @@ struct MainFlowView: View {
         }
         .sheet(isPresented: $showAdminOptionsSheet) {
             adminOptionsSheet
+        }
+        .sheet(isPresented: $fitEvaluateViewModel.isPresented, onDismiss: {
+            if let pending = pendingCheckBeforeBuyPrefill {
+                pendingCheckBeforeBuyPrefill = nil
+                checkBeforeBuyPrefill = pending
+            }
+        }) {
+            WardrobeFitResultSheet(
+                viewModel: fitEvaluateViewModel,
+                onOpenInsights: { RouteCoordinator.shared.selectedTab = .insights },
+                onAddToWardrobe: { image, attributes in
+                    pendingCheckBeforeBuyPrefill = CheckBeforeBuyPrefill(image: image, attributes: attributes)
+                }
+            )
+        }
+        .sheet(item: $checkBeforeBuyPrefill) { prefill in
+            WardrobeFormView(
+                initialCategory: prefill.attributes?.category,
+                initialColor: prefill.attributes?.color,
+                initialDescription: prefill.attributes?.description,
+                initialImage: prefill.image,
+                onSaved: { checkBeforeBuyPrefill = nil },
+                onCancel: { checkBeforeBuyPrefill = nil }
+            )
         }
         .sheet(isPresented: $showRefineSheet) {
             RefineMenuView(
@@ -512,6 +539,19 @@ struct MainFlowView: View {
                     try? await Task.sleep(nanoseconds: 8_000_000_000)
                     viewModel.highlightGenerateButton = false
                 }
+            }
+
+            if viewModel.selectedImage != nil {
+                Button(action: handleCheckBeforeBuyTap) {
+                    Label(WardrobeFitEvaluateCopy.checkBeforeBuyAction, systemImage: "checklist")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, isRegularWidth ? 12 : 10)
+                }
+                .buttonStyle(.bordered)
+                .tint(AppTheme.accent)
+                .disabled(viewModel.isLoading || fitEvaluateViewModel.isLoading)
+                .accessibilityIdentifier("main.checkBeforeBuyButton")
             }
 
             if let helperText = creationHelperText {
@@ -1035,6 +1075,15 @@ struct MainFlowView: View {
         viewModel.startGetSuggestion()
     }
 
+    private func handleCheckBeforeBuyTap() {
+        guard auth.isAuthenticated else {
+            openGuestAuthSheet(context: .wardrobe, destination: .login)
+            return
+        }
+        guard let image = viewModel.selectedImage else { return }
+        fitEvaluateViewModel.startCheckBeforeBuy(image: image)
+    }
+
     private func handleSaveLookTap() {
         if auth.isAuthenticated {
             let generator = UIImpactFeedbackGenerator(style: .light)
@@ -1089,5 +1138,11 @@ struct MainFlowView: View {
         default: return nil
         }
     }
+}
+
+struct CheckBeforeBuyPrefill: Identifiable {
+    let id = UUID()
+    let image: UIImage
+    let attributes: WardrobeAnalyzeResponse?
 }
 

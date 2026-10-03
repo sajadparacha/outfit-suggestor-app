@@ -42,6 +42,11 @@ class Config:
     # Premium wardrobe insights: allow full structured JSON (shopping list + per-category detail)
     WARDROBE_GAP_MAX_TOKENS = int(os.getenv("WARDROBE_GAP_MAX_TOKENS", "8000"))
 
+    # "How this fits": AI ranks rule-prefiltered pairings; falls back to rules on failure.
+    WARDROBE_FIT_AI_ENABLED = os.getenv("WARDROBE_FIT_AI_ENABLED", "true").lower() == "true"
+    WARDROBE_FIT_AI_MODEL = os.getenv("WARDROBE_FIT_AI_MODEL", "gpt-4o-mini")
+    WARDROBE_FIT_AI_TIMEOUT_SECONDS = float(os.getenv("WARDROBE_FIT_AI_TIMEOUT_SECONDS", "20"))
+
     # Database settings
     # Railway provides DATABASE_URL, fallback to local for development
     DATABASE_URL = os.getenv("DATABASE_URL")
@@ -259,7 +264,11 @@ def get_wardrobe_ai_service():
             api_key = Config.OPENAI_API_KEY
             if not api_key:
                 raise ValueError("OPENAI_API_KEY environment variable is not set")
-            _wardrobe_ai_service_instance = WardrobeAIService(api_key=api_key)
+            _wardrobe_ai_service_instance = WardrobeAIService(
+                api_key=api_key,
+                fit_model=Config.WARDROBE_FIT_AI_MODEL,
+                fit_timeout_seconds=Config.WARDROBE_FIT_AI_TIMEOUT_SECONDS,
+            )
             print("✅ Using OpenAI GPT-4o for wardrobe analysis")
     
     return _wardrobe_ai_service_instance

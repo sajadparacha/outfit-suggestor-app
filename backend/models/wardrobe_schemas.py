@@ -186,6 +186,11 @@ class WardrobeFitPairItem(BaseModel):
     label: str
     color: Optional[str] = None
     image_data: Optional[str] = None
+    reason: Optional[str] = Field(default=None, description="Why it pairs (AI ranking only)")
+    weak_match: bool = Field(
+        default=False,
+        description="Best available option in this category, but below the pairing bar",
+    )
 
 
 class WardrobeFitPairCategory(BaseModel):
@@ -226,4 +231,5 @@ class WardrobeFitEvaluateResponse(BaseModel):
     verdict: Literal["strong_fit", "weak_fit", "redundant"]
     missing_for_goal: WardrobeFitMissing
     summary_text: str
+    ranking_source: Literal["ai", "rules"] = "rules"
 

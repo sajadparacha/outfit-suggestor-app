@@ -23,6 +23,8 @@ struct AboutView: View {
                         .font(.headline)
                     Text(AboutCopy.outfitSuggestionsFeature)
                     Text(AboutCopy.wardrobeFeature)
+                    Text(AboutCopy.wardrobeFitFeature)
+                    Text(AboutCopy.checkBeforeBuyFeature)
                     Text(AboutCopy.historyFeature)
                     Text(aboutInsightsFeature)
                     Text(InsightsCopy.aboutStylesCatalogNote)

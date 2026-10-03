@@ -43,7 +43,8 @@ struct UserGuideView: View {
                         "Add any free-text notes about your preferences.",
                         "Tap \"Generate Outfit\" to receive AI-powered recommendations.",
                         "View the five core pieces (shirt, trousers, blazer, shoes, belt). Blazer is your structured layer; jackets and coats are separate categories and may appear as optional outerwear in Also wear when the season fits.",
-                        "Read the AI's reasoning in Why this works."
+                        "Read the AI's reasoning in Why this works.",
+                        GuideCopy.checkBeforeBuyStep
                     ],
                     tip: "Upload shirts, blazers, jackets, coats, or shoes—the AI adapts to what you provide. Blazers complete structured outfits; jackets and coats are optional layering."
                 )

@@ -40,6 +40,7 @@ enum GuideCopy {
     static let wardrobeSingleItemStep =
         "Tap Style this item with AI on any card to open Suggest with that piece loaded—set preferences and tap Generate Outfit."
     static let wardrobeFitEvaluateStep = WardrobeFitEvaluateCopy.guideStep
+    static let checkBeforeBuyStep = WardrobeFitEvaluateCopy.checkBeforeBuyGuideStep
     static let wardrobeMultiSelectStep =
         "Tap Select items, choose 1 to 5 pieces with one item per outfit slot (shirt, trousers, blazer, shoes, belt), expand Preferences to set occasion, season, style, and notes, then tap Complete outfit with AI."
     static let wardrobeMultiSelectTip =
@@ -63,6 +64,8 @@ enum AboutCopy {
         "• Suggest — upload a photo and get a complete men's outfit with occasion, season, and style filters."
     static let wardrobeFeature =
         "• Wardrobe — save pieces, style one item, complete an outfit from what you own, or check how a piece fits your wardrobe and goal with pair counts and gap hints."
+    static let wardrobeFitFeature = WardrobeFitEvaluateCopy.aboutFitFeature
+    static let checkBeforeBuyFeature = WardrobeFitEvaluateCopy.aboutCheckBeforeBuyFeature
     static let historyFeature =
         "• Looks — revisit saved outfits and load them back into Suggest."
     static let insightsFeature =

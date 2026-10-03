@@ -1,8 +1,14 @@
-"""Deterministic wardrobe fit evaluation: pair counts + goal gap + fact-bound summary."""
+"""Wardrobe fit evaluation: pair counts + goal gap + fact-bound summary.
+
+Pairings are rule-prefiltered, then optionally ranked by an AI callable; on any AI
+failure the deterministic rule scoring is used. Counts and summary are always
+computed server-side from validated item ids.
+"""
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
+import logging
+from typing import Any, Callable, Dict, List, Optional, Sequence, Set, Tuple
 
 from models.wardrobe import WardrobeItem
 from services.wardrobe_gap_context import DRESS_CODE_LABELS, LIFESTYLE_LABELS
@@ -95,6 +101,48 @@ CATEGORY_LABEL_SINGULAR = {
     "belt": "belt",
     "tie": "tie",
 }
+
+# Non-neutral color pairs that read as intentional rather than clashing.
+COMPLEMENTARY_COLORS: Set[frozenset] = {
+    frozenset({"blue", "burgundy"}),
+    frozenset({"blue", "maroon"}),
+    frozenset({"blue", "olive"}),
+    frozenset({"blue", "cognac"}),
+    frozenset({"blue", "pink"}),
+    frozenset({"blue", "yellow"}),
+    frozenset({"olive", "burgundy"}),
+    frozenset({"olive", "cognac"}),
+    frozenset({"burgundy", "cognac"}),
+}
+
+# Category combos that don't belong in the same outfit.
+CATEGORY_CLASHES: Set[frozenset] = {
+    frozenset({"tie", "t-shirt"}),
+    frozenset({"tie", "polo"}),
+    frozenset({"tie", "shorts"}),
+    frozenset({"blazer", "shorts"}),
+}
+
+logger = logging.getLogger(__name__)
+
+# (candidate, owned_items, goal) -> [{"id", "score", "reason"}]
+PairRanker = Callable[[Dict[str, Any], List[Dict[str, Any]], Dict[str, Any]], List[Dict[str, Any]]]
+
+# Minimum pair score for an item to count as "pairs with".
+PAIR_THRESHOLD = 2
+# Formality gap that rules out a pairing before AI ranking.
+HARD_FORMALITY_GAP = 3
+# Cap on owned items sent to the AI ranker (highest rule score first).
+AI_MAX_ITEMS = 80
+# AI score (0-10) needed to count as "pairs with".
+AI_PAIR_MIN_SCORE = 6
+# Best item in an owned category is still shown (as weak_match) at or above this score.
+AI_WEAK_MIN_SCORE = 3
+# Verdict thresholds.
+STRONG_MULTIPLIER = 5
+STRONG_MIN_CATEGORIES = 2
+GAP_FILL_MIN_PAIRS = 2
+SOFT_GAP_MAX_OWNED = 2
 
 FOUNDATIONAL_ORDER = (
     "shoes",
@@ -207,6 +255,7 @@ class WardrobeFitService:
         primary_lifestyle: Optional[str] = None,
         style_primary: Optional[str] = None,
         text_input: str = "",
+        pair_ranker: Optional[PairRanker] = None,
     ) -> Dict[str, Any]:
         cand = self._as_candidate_dict(candidate)
         cand_id = cand.get("id")
@@ -218,7 +267,20 @@ class WardrobeFitService:
             if cand_id is None or item.id != cand_id
         ]
 
-        pairs_with = self._compute_pairs(cand, others)
+        pairs_with: Optional[List[Dict[str, Any]]] = None
+        ranking_source = "rules"
+        if pair_ranker is not None:
+            ai_goal = {
+                "label": build_goal_label(dress_code, primary_lifestyle),
+                "lifestyle_mix": list(lifestyle_mix or ["work", "everyday"]),
+                "style": style_primary or "classic",
+                "notes": (text_input or "")[:200],
+            }
+            pairs_with = self._compute_pairs_ai(cand, others, ai_goal, pair_ranker)
+            if pairs_with is not None:
+                ranking_source = "ai"
+        if pairs_with is None:
+            pairs_with = self._compute_pairs(cand, others)
         outfit_multiplier = sum(row["count"] for row in pairs_with)
 
         gap = self._missing_for_goal(
@@ -232,6 +294,7 @@ class WardrobeFitService:
 
         verdict = self._verdict(
             outfit_multiplier=outfit_multiplier,
+            pair_categories=len(pairs_with),
             candidate_fills=gap["candidate_fills_this_gap"],
             same_category_owned=self._same_slot_count(cand_cat, others),
         )
@@ -268,6 +331,7 @@ class WardrobeFitService:
             "verdict": verdict,
             "missing_for_goal": gap,
             "summary_text": summary,
+            "ranking_source": ranking_source,
         }
 
     def _as_candidate_dict(self, candidate: WardrobeItem | Dict[str, Any]) -> Dict[str, Any]:
@@ -318,18 +382,22 @@ class WardrobeFitService:
                 n += 1
         return n
 
-    def _compute_pairs(
+    def _eligible_pairs(
         self,
         candidate: Dict[str, Any],
         others: Sequence[WardrobeItem],
-    ) -> List[Dict[str, Any]]:
+    ) -> List[Tuple[str, int, int, WardrobeItem]]:
+        """Items that may pair: (display_category, rule_score, formality_gap, item).
+
+        Excludes same-slot items, unknown categories, and hard category clashes.
+        """
         cand_cat = self.normalize_category(candidate.get("category") or "")
         same_slot = self._same_slot_set(cand_cat)
         cand_colors = _extract_color_tokens(candidate.get("color"), candidate.get("description"))
         cand_text = f"{candidate.get('color') or ''} {candidate.get('description') or ''}"
         cand_formality = _formality_score(cand_text)
 
-        by_cat: Dict[str, List[Tuple[int, WardrobeItem]]] = {}
+        eligible: List[Tuple[str, int, int, WardrobeItem]] = []
         for item in others:
             item_cat = self.normalize_category(item.category or "")
             if item_cat in same_slot:
@@ -352,18 +420,117 @@ class WardrobeFitService:
             elif item_cat == "coat":
                 display_cat = "jacket"
 
-            score = self._pair_score(cand_colors, cand_formality, item)
-            if score <= 0:
+            if frozenset({cand_cat, item_cat}) in CATEGORY_CLASHES:
                 continue
-            by_cat.setdefault(display_cat, []).append((score, item))
+            score = self._pair_score(cand_colors, cand_formality, item)
+            item_formality = _formality_score(f"{item.color or ''} {item.description or ''}")
+            gap = abs(cand_formality - item_formality)
+            eligible.append((display_cat, score, gap, item))
+        return eligible
 
+    def _compute_pairs(
+        self,
+        candidate: Dict[str, Any],
+        others: Sequence[WardrobeItem],
+    ) -> List[Dict[str, Any]]:
+        by_cat: Dict[str, List[Tuple[float, WardrobeItem, Optional[str], bool]]] = {}
+        for display_cat, score, _gap, item in self._eligible_pairs(candidate, others):
+            if score < PAIR_THRESHOLD:
+                continue
+            by_cat.setdefault(display_cat, []).append((score, item, None, False))
+        return self._build_rows(by_cat)
+
+    def _compute_pairs_ai(
+        self,
+        candidate: Dict[str, Any],
+        others: Sequence[WardrobeItem],
+        goal: Dict[str, Any],
+        pair_ranker: PairRanker,
+    ) -> Optional[List[Dict[str, Any]]]:
+        """Rank rule-prefiltered items with AI. Returns None when AI is unusable."""
+        prefiltered = [
+            row
+            for row in self._eligible_pairs(candidate, others)
+            if row[2] < HARD_FORMALITY_GAP and row[3].id is not None
+        ]
+        if not prefiltered:
+            return []
+        prefiltered.sort(key=lambda t: (-t[1], t[3].id or 0))
+        prefiltered = prefiltered[:AI_MAX_ITEMS]
+        by_id = {row[3].id: row for row in prefiltered}
+
+        owned_payload = [
+            {
+                "id": item.id,
+                "category": display_cat,
+                "color": item.color,
+                "description": item.description,
+                "name": item.name,
+            }
+            for display_cat, _score, _gap, item in prefiltered
+        ]
+        cand_cat = self.normalize_category(candidate.get("category") or "")
+        try:
+            ranked = pair_ranker(candidate, owned_payload, goal)
+        except Exception as e:  # noqa: BLE001 — any AI failure falls back to rules
+            logger.warning(
+                "[fit-ai] ranking failed for %s, using rules (sent=%d): %s",
+                cand_cat, len(owned_payload), e,
+            )
+            return None
+        if not isinstance(ranked, list):
+            logger.warning("[fit-ai] non-list ranking for %s, using rules", cand_cat)
+            return None
+
+        scored_by_cat: Dict[str, List[Tuple[float, WardrobeItem, Optional[str]]]] = {}
+        seen: Set[int] = set()
+        dropped_ids: List[Any] = []
+        for row in ranked:
+            item_id = row.get("id") if isinstance(row, dict) else None
+            if item_id not in by_id or item_id in seen:
+                dropped_ids.append(item_id)
+                continue
+            seen.add(item_id)
+            display_cat, _score, _gap, item = by_id[item_id]
+            scored_by_cat.setdefault(display_cat, []).append(
+                (float(row.get("score") or 0), item, row.get("reason"))
+            )
+
+        by_cat: Dict[str, List[Tuple[float, WardrobeItem, Optional[str], bool]]] = {}
+        for cat, scored in scored_by_cat.items():
+            strong = [(s, i, r, False) for s, i, r in scored if s >= AI_PAIR_MIN_SCORE]
+            if strong:
+                by_cat[cat] = strong
+                continue
+            # Owned category with no strong pairing: surface the best option as a weak match
+            # so a whole category never silently disappears.
+            best = max(scored, key=lambda t: (t[0], -(t[1].id or 0)))
+            if best[0] >= AI_WEAK_MIN_SCORE:
+                by_cat[cat] = [(best[0], best[1], best[2], True)]
+
+        kept = {
+            cat: [(t[1].id, t[0], "weak" if t[3] else "strong") for t in rows]
+            for cat, rows in by_cat.items()
+        }
+        sent_by_cat: Dict[str, int] = {}
+        for row in owned_payload:
+            sent_by_cat[row["category"]] = sent_by_cat.get(row["category"], 0) + 1
+        print(
+            f"[fit-ai] {cand_cat}: sent={sent_by_cat} scored={len(seen)} "
+            f"dropped_ids={dropped_ids} kept={kept}"
+        )
+        return self._build_rows(by_cat)
+
+    def _build_rows(
+        self,
+        by_cat: Dict[str, List[Tuple[float, WardrobeItem, Optional[str], bool]]],
+    ) -> List[Dict[str, Any]]:
         rows: List[Dict[str, Any]] = []
         for cat in PAIRABLE_SLOTS:
             scored = by_cat.get(cat) or []
             if not scored:
                 continue
             scored.sort(key=lambda t: (-t[0], t[1].id or 0))
-            top = scored[:3]
             items_payload = [
                 {
                     "id": item.id,
@@ -371,8 +538,10 @@ class WardrobeFitService:
                     or self._default_label(item.category or cat, item.color or ""),
                     "color": item.color,
                     "image_data": item.image_data,
+                    "reason": reason,
+                    "weak_match": weak,
                 }
-                for _, item in top
+                for _, item, reason, weak in scored
             ]
             rows.append(
                 {
@@ -393,23 +562,28 @@ class WardrobeFitService:
         item_text = f"{item.color or ''} {item.description or ''}"
         item_formality = _formality_score(item_text)
 
-        score = 1  # same wardrobe, different slot → at least weak pairing baseline
+        score = 0
 
         if cand_colors and item_colors:
             if cand_colors & item_colors:
                 score += 2
             elif cand_colors & NEUTRAL_COLORS or item_colors & NEUTRAL_COLORS:
                 score += 2
-            else:
-                # Different non-neutral colors can still work (e.g. navy + grey)
+            elif any(
+                frozenset({a, b}) in COMPLEMENTARY_COLORS
+                for a in cand_colors
+                for b in item_colors
+            ):
                 score += 1
-        elif not cand_colors or not item_colors:
+            else:
+                score -= 1
+        else:
             score += 1
 
-        # Formality clash penalty (sneaker vs tuxedo blazer)
-        if abs(cand_formality - item_formality) >= 3:
-            score -= 2
-        elif abs(cand_formality - item_formality) <= 1:
+        formality_gap = abs(cand_formality - item_formality)
+        if formality_gap >= 3:
+            score -= 3
+        elif formality_gap <= 1:
             score += 1
 
         return score
@@ -452,15 +626,11 @@ class WardrobeFitService:
 
         if missing_cat is None:
             # Soft gap: sparsest foundational category
-            soft = min(priority, key=lambda c: counts.get(c, 0))
-            if counts.get(soft, 0) < 2:
-                missing_cat = soft
-            else:
-                missing_cat = soft
+            missing_cat = min(priority, key=lambda c: counts.get(c, 0))
 
-        fills = cand_cat == missing_cat or (
-            cand_cat in self._same_slot_set(missing_cat) if missing_cat else False
-        )
+        fills = (
+            cand_cat == missing_cat or cand_cat in self._same_slot_set(missing_cat)
+        ) and counts.get(missing_cat, 0) < SOFT_GAP_MAX_OWNED
 
         label = CATEGORY_LABEL_SINGULAR.get(missing_cat or "item", missing_cat or "item")
         if fills:
@@ -485,18 +655,23 @@ class WardrobeFitService:
         self,
         *,
         outfit_multiplier: int,
+        pair_categories: int,
         candidate_fills: bool,
         same_category_owned: int,
     ) -> str:
-        if same_category_owned >= 2 and not candidate_fills and outfit_multiplier < 3:
+        if candidate_fills and outfit_multiplier >= GAP_FILL_MIN_PAIRS:
+            return "strong_fit"
+        if not candidate_fills and (
+            same_category_owned >= 3
+            or (same_category_owned >= 2 and outfit_multiplier < STRONG_MULTIPLIER)
+        ):
             return "redundant"
-        if outfit_multiplier >= 3 or candidate_fills:
+        if (
+            outfit_multiplier >= STRONG_MULTIPLIER
+            and pair_categories >= STRONG_MIN_CATEGORIES
+        ):
             return "strong_fit"
-        if outfit_multiplier >= 1:
-            return "weak_fit"
-        if candidate_fills:
-            return "strong_fit"
-        return "redundant" if same_category_owned >= 1 else "weak_fit"
+        return "weak_fit"
 
     def _build_summary(
         self,
@@ -513,8 +688,11 @@ class WardrobeFitService:
         for row in pairs_with:
             count = int(row["count"])
             cat = row["category"]
-            plural = CATEGORY_LABEL_PLURAL.get(cat, f"{cat}s")
-            pair_bits.append(f"{_number_word(count)} {plural}")
+            if count == 1:
+                noun = "pair of trousers" if cat == "trouser" else CATEGORY_LABEL_SINGULAR.get(cat, cat)
+            else:
+                noun = CATEGORY_LABEL_PLURAL.get(cat, f"{cat}s")
+            pair_bits.append(f"{_number_word(count)} {noun}")
 
         cand_ref = candidate_label.strip() or CATEGORY_LABEL_SINGULAR.get(
             candidate_category, "item"

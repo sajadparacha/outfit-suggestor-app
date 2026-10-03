@@ -1,25 +1,157 @@
 """AI Service for analyzing wardrobe items and extracting properties"""
+import hashlib
 import json
-from typing import Optional, Dict
+from collections import OrderedDict
+from typing import Any, Dict, List, Optional, Tuple
 from fastapi import HTTPException
 
 import openai
+
+FIT_RANK_CACHE_SIZE = 256
+FIT_RANK_DESCRIPTION_CHARS = 160
+FIT_RANK_PROMPT_VERSION = "v4"
+
+FIT_RANK_SYSTEM_PROMPT = """You are a practical menswear stylist. Given one CANDIDATE clothing item and a
+list of items the user OWNS, score how well each owned item works worn in the same outfit as the candidate.
+
+Ask: "Would a reasonably well-dressed person wear these two together in real life?"
+- Judge color harmony, pattern mixing, and formality compatibility.
+- The user's goal is context, not a hard filter. Smart-casual and business-casual outfits commonly
+  include clean sneakers, chinos, overshirts, and casual jackets.
+- Neutral color alone does not make a good pairing.
+- If an owned item's text does not describe a clothing item, score it 0.
+
+Scoring: 8-10 great pairing, 6-7 works well, 3-5 possible but not ideal, 0-2 does not work.
+
+Return ONLY compact JSON. "scores" has an entry for EVERY owned item. "reasons" only for items
+scoring 3 or more, max 8 words each:
+{"scores": {"<id>": <integer 0-10>}, "reasons": {"<id>": "<max 8 words>"}}
+
+Use only ids from the OWNED list."""
 
 
 class WardrobeAIService:
     """Service for AI-powered wardrobe item analysis"""
     
-    def __init__(self, api_key: str):
+    def __init__(
+        self,
+        api_key: str,
+        fit_model: str = "gpt-4o-mini",
+        fit_timeout_seconds: float = 20.0,
+    ):
         """
         Initialize Wardrobe AI Service
         
         Args:
             api_key: OpenAI API key
+            fit_model: Model used to rank "How this fits" pairings
+            fit_timeout_seconds: Request timeout for pairing ranking
         """
         self.client = openai.OpenAI(api_key=api_key)
         self.model = "gpt-4o"
         self.max_tokens = 1000
         self.temperature = 0.1  # Low temperature for consistent extraction
+        self.fit_model = fit_model
+        self.fit_timeout_seconds = fit_timeout_seconds
+        self._fit_cache: "OrderedDict[str, List[Dict[str, Any]]]" = OrderedDict()
+
+    def rank_pairings(
+        self,
+        candidate: Dict[str, Any],
+        owned_items: List[Dict[str, Any]],
+        goal: Dict[str, Any],
+    ) -> List[Dict[str, Any]]:
+        """
+        Rank which owned items pair well with a candidate (text only, no images).
+
+        Returns a score for every item the model rated: [{"id", "score", "reason"}].
+        Callers must validate ids and apply score thresholds.
+        Raises on API / parse failure so callers can fall back to rule scoring.
+        """
+        payload = {
+            "goal": goal,
+            "candidate": self._fit_item_text(candidate),
+            "owned": [self._fit_item_text(item) for item in owned_items],
+        }
+        user_content = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+        cache_key = hashlib.sha256(
+            f"{self.fit_model}|{FIT_RANK_PROMPT_VERSION}|{user_content}".encode()
+        ).hexdigest()
+        cached = self._fit_cache.get(cache_key)
+        if cached is not None:
+            self._fit_cache.move_to_end(cache_key)
+            return cached
+
+        # No automatic retries: a timed-out ranking falls back to rules instead of
+        # multiplying the user's wait.
+        client = self.client.with_options(timeout=self.fit_timeout_seconds, max_retries=0)
+        response = client.chat.completions.create(
+            model=self.fit_model,
+            messages=[
+                {"role": "system", "content": FIT_RANK_SYSTEM_PROMPT},
+                {"role": "user", "content": user_content},
+            ],
+            max_tokens=1500,
+            temperature=0.1,
+            response_format={"type": "json_object"},
+        )
+        parsed = json.loads(response.choices[0].message.content or "{}")
+        pairs = self._parse_fit_ranking(parsed)
+
+        self._fit_cache[cache_key] = pairs
+        if len(self._fit_cache) > FIT_RANK_CACHE_SIZE:
+            self._fit_cache.popitem(last=False)
+        return pairs
+
+    @staticmethod
+    def _parse_fit_ranking(parsed: Any) -> List[Dict[str, Any]]:
+        """Accept {"scores": {id: n}, "reasons": {id: s}} or legacy {"pairs": [...]}."""
+        if not isinstance(parsed, dict):
+            raise ValueError("AI pairing response is not an object")
+
+        rows: List[Tuple[Any, Any, Any]] = []
+        scores = parsed.get("scores")
+        if isinstance(scores, dict):
+            reasons = parsed.get("reasons") if isinstance(parsed.get("reasons"), dict) else {}
+            rows = [(k, v, reasons.get(k)) for k, v in scores.items()]
+        elif isinstance(parsed.get("pairs"), list):
+            rows = [
+                (r.get("id"), r.get("score", 0), r.get("reason"))
+                for r in parsed["pairs"]
+                if isinstance(r, dict)
+            ]
+        else:
+            raise ValueError("AI pairing response missing 'scores'")
+
+        pairs: List[Dict[str, Any]] = []
+        for raw_id, raw_score, reason in rows:
+            try:
+                item_id = int(raw_id)
+                score = float(raw_score)
+            except (TypeError, ValueError):
+                continue
+            pairs.append(
+                {
+                    "id": item_id,
+                    "score": score,
+                    "reason": reason.strip()[:120] if isinstance(reason, str) and reason.strip() else None,
+                }
+            )
+        return pairs
+
+    @staticmethod
+    def _fit_item_text(item: Dict[str, Any]) -> Dict[str, Any]:
+        description = (item.get("description") or "").strip()
+        out: Dict[str, Any] = {
+            "category": item.get("category") or "other",
+            "color": item.get("color") or "",
+            "description": description[:FIT_RANK_DESCRIPTION_CHARS],
+        }
+        if item.get("id") is not None:
+            out["id"] = item["id"]
+        if item.get("name"):
+            out["name"] = str(item["name"])[:60]
+        return out
     
     def extract_item_properties(self, image_base64: str) -> Dict[str, Optional[str]]:
         """

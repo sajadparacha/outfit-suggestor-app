@@ -201,6 +201,7 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               'Logged in? In the Wardrobe block, switch Use my wardrobe only on to only mix pieces you own—or leave it off for fresh ideas from anywhere.',
               'If model image generation is on, you may see a short confirmation before the app creates a preview image.',
               'Press Generate Outfit and watch the right panel—your outfit appears when ready.',
+              'Logged in? Tap Check before you buy to upload a piece you’re considering and see what it pairs with in your wardrobe and what’s missing. It’s not saved unless you tap Add to wardrobe.',
             ]}
           />
           <TipBox>

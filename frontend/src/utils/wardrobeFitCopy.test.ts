@@ -1,10 +1,61 @@
 import {
   DEFAULT_FIT_GOAL,
   WARDROBE_FIT_COPY,
+  WARDROBE_FIT_LAST_GOAL_KEY,
+  loadInitialFitGoal,
+  saveLastFitGoal,
+  wardrobeFitGoalHint,
+  wardrobeFitPairCountLabel,
   wardrobeFitVerdictLabel,
 } from './wardrobeFitCopy';
 
 describe('wardrobeFitCopy', () => {
+  afterEach(() => localStorage.clear());
+
+  it('formats pair counts with units', () => {
+    expect(wardrobeFitPairCountLabel(3)).toBe('Pairs with 3');
+    expect(wardrobeFitPairCountLabel(1)).toBe('Pairs with 1');
+  });
+
+  it('formats the goal hint', () => {
+    expect(wardrobeFitGoalHint(DEFAULT_FIT_GOAL)).toBe(
+      'Goal: smart-casual · work + everyday · classic'
+    );
+  });
+
+  it('initial goal falls back to defaults with no saved prefs', () => {
+    expect(loadInitialFitGoal()).toEqual(DEFAULT_FIT_GOAL);
+  });
+
+  it('initial goal uses Insights prefs, then last-used goal wins', () => {
+    localStorage.setItem(
+      'insights_lifestyle_preferences',
+      JSON.stringify({
+        lifestyleMix: ['social'],
+        primaryLifestyle: 'social',
+        dressCodes: ['casual', 'formal'],
+        stylePrimaries: ['streetwear'],
+      })
+    );
+    expect(loadInitialFitGoal()).toEqual({
+      dress_code: 'casual',
+      lifestyle_mix: ['social'],
+      primary_lifestyle: 'social',
+      style_primary: 'streetwear',
+      text_input: '',
+    });
+
+    const last = { ...DEFAULT_FIT_GOAL, dress_code: 'formal', lifestyle_mix: ['formal'], primary_lifestyle: 'formal' };
+    saveLastFitGoal(last);
+    expect(localStorage.getItem(WARDROBE_FIT_LAST_GOAL_KEY)).not.toBeNull();
+    expect(loadInitialFitGoal()).toEqual(last);
+  });
+
+  it('ignores a corrupt last-used goal', () => {
+    localStorage.setItem(WARDROBE_FIT_LAST_GOAL_KEY, '{bad');
+    expect(loadInitialFitGoal()).toEqual(DEFAULT_FIT_GOAL);
+  });
+
   it('maps verdicts to shared labels', () => {
     expect(wardrobeFitVerdictLabel('strong_fit')).toBe('Strong fit');
     expect(wardrobeFitVerdictLabel('weak_fit')).toBe('Weak fit');

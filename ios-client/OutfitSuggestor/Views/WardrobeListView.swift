@@ -166,52 +166,52 @@ struct WardrobeListView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .accessibilityIdentifier("wardrobe.emptyState")
             } else if response != nil {
-                VStack(spacing: 0) {
-                    if let session = wardrobePickSession, isWeekPlanPickMode {
-                        weekPlanPickBanner(session)
+                ScrollView {
+                    VStack(spacing: 0) {
+                        if let session = wardrobePickSession, isWeekPlanPickMode {
+                            weekPlanPickBanner(session)
+                                .padding(.horizontal)
+                                .padding(.top, 8)
+                                .padding(.bottom, 6)
+                        } else {
+                            wardrobeFlowTip
+                                .padding(.horizontal)
+                                .padding(.top, 8)
+                        }
+
+                        categoryFilterChips
                             .padding(.horizontal)
                             .padding(.top, 8)
                             .padding(.bottom, 6)
-                    } else {
-                        wardrobeFlowTip
-                            .padding(.horizontal)
-                            .padding(.top, 8)
-                    }
-
-                    categoryFilterChips
-                        .padding(.horizontal)
-                        .padding(.top, 8)
-                        .padding(.bottom, 6)
                     
-                    if let categoryInfoMessage, !categoryInfoMessage.isEmpty {
-                        HStack(spacing: 8) {
-                            Image(systemName: "info.circle.fill")
-                                .foregroundColor(AppTheme.accent)
-                            Text(categoryInfoMessage)
-                                .font(.footnote)
-                                .foregroundColor(AppTheme.textSecondary)
-                                .accessibilityIdentifier("wardrobe.categoryInfoToastText")
-                            Spacer()
+                        if let categoryInfoMessage, !categoryInfoMessage.isEmpty {
+                            HStack(spacing: 8) {
+                                Image(systemName: "info.circle.fill")
+                                    .foregroundColor(AppTheme.accent)
+                                Text(categoryInfoMessage)
+                                    .font(.footnote)
+                                    .foregroundColor(AppTheme.textSecondary)
+                                    .accessibilityIdentifier("wardrobe.categoryInfoToastText")
+                                Spacer()
+                            }
+                            .padding(.horizontal)
+                            .padding(.bottom, 6)
+                            .accessibilityElement(children: .combine)
+                            .accessibilityIdentifier("wardrobe.categoryInfoToast")
                         }
-                        .padding(.horizontal)
-                        .padding(.bottom, 6)
-                        .accessibilityElement(children: .combine)
-                        .accessibilityIdentifier("wardrobe.categoryInfoToast")
-                    }
                     
-                    TextField("Search wardrobe...", text: $searchText)
-                        .textFieldStyle(.roundedBorder)
-                        .padding(.horizontal)
-                        .padding(.vertical, 8)
-                        .accessibilityIdentifier("wardrobe.searchField")
-
-                    if !isWeekPlanPickMode {
-                        completionSelectionPanel
+                        TextField("Search wardrobe...", text: $searchText)
+                            .textFieldStyle(.roundedBorder)
                             .padding(.horizontal)
-                            .padding(.bottom, 8)
-                    }
+                            .padding(.vertical, 8)
+                            .accessibilityIdentifier("wardrobe.searchField")
+
+                        if !isWeekPlanPickMode {
+                            completionSelectionPanel
+                                .padding(.horizontal)
+                                .padding(.bottom, 8)
+                        }
                     
-                    ScrollView {
                         // Native Menu popover stacks above LazyVStack siblings (no web z-index fix needed).
                         LazyVStack(spacing: 12) {
                             ForEach(displayedItems) { item in
@@ -255,16 +255,17 @@ struct WardrobeListView: View {
                         .padding(.horizontal)
                         .padding(.bottom, 32)
                     }
-                    .accessibilityIdentifier("wardrobe.itemsList")
-                    .overlay(alignment: .topLeading) {
-                        Color.clear
-                            .frame(width: 1, height: 1)
-                            .accessibilityElement(children: .ignore)
-                            .accessibilityIdentifier("wardrobe.visibleItemIDs")
-                            .accessibilityLabel(visibleWardrobeItemIDsLabel)
-                    }
+                    .adaptiveContent(maxWidth: 1080)
                 }
-                .adaptiveContent(maxWidth: 1080)
+                .scrollDismissesKeyboard(.interactively)
+                .accessibilityIdentifier("wardrobe.itemsList")
+                .overlay(alignment: .topLeading) {
+                    Color.clear
+                        .frame(width: 1, height: 1)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityIdentifier("wardrobe.visibleItemIDs")
+                        .accessibilityLabel(visibleWardrobeItemIDsLabel)
+                }
                 .overlay(alignment: .bottom) {
                     if pendingDeleteItem != nil {
                         HStack(spacing: 12) {
@@ -364,7 +365,7 @@ struct WardrobeListView: View {
             WardrobeFitResultSheet(
                 viewModel: fitEvaluateViewModel,
                 onGetOutfitWithItem: onGetSuggestionFromItem,
-                onOpenInsights: nil
+                onOpenInsights: { RouteCoordinator.shared.selectedTab = .insights }
             )
         }
         .sheet(item: $editingItem) { item in
@@ -968,6 +969,7 @@ struct WardrobeListView: View {
 }
 
 struct WardrobeCardView: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let item: WardrobeItem
     let image: UIImage?
     let onGetSuggestion: (() -> Void)?
@@ -1122,16 +1124,17 @@ struct WardrobeCardView: View {
                     .fontWeight(.semibold)
             }
             .font(.subheadline)
-            .foregroundColor(AppTheme.textPrimary)
-            .frame(maxWidth: .infinity, minHeight: 44)
-            .background(AppTheme.accentSoft)
+            .foregroundColor(AppTheme.accent)
+            .padding(.horizontal, horizontalSizeClass == .regular ? 18 : 14)
+            .frame(minHeight: 40)
             .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(AppTheme.accent.opacity(0.35), lineWidth: 1)
+                Capsule()
+                    .stroke(AppTheme.accent.opacity(0.55), lineWidth: 1)
             )
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
         .accessibilityLabel(WardrobeFitEvaluateCopy.action)
         .accessibilityIdentifier("wardrobe.fit.action.\(item.id)")
     }

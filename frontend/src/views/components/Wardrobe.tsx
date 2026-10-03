@@ -1402,6 +1402,16 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                       )}
                     </div>
                   </div>
+                  {isAuthenticated && (
+                    <button
+                      type="button"
+                      onClick={() => setFitEvaluateItem(item)}
+                      className="mt-2 min-h-[40px] touch-manipulation rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/20"
+                      data-testid={`wardrobe-how-this-fits-${item.id}`}
+                    >
+                      {WARDROBE_FIT_COPY.action}
+                    </button>
+                  )}
                 </div>
                 )}
               </div>

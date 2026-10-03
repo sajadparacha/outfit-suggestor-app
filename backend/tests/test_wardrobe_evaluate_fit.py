@@ -220,6 +220,116 @@ class TestWardrobeEvaluateFitEndpoint:
         assert payload["missing_for_goal"]["candidate_fills_this_gap"] is True
 
 
+class TestWardrobeEvaluateFitAttributeCandidate:
+    """Check before you buy: candidate from analyze-image attributes, not saved."""
+
+    def _seed(self, db, user_id, specs):
+        items = [
+            WardrobeItem(user_id=user_id, category=c, color=col, description=d)
+            for c, col, d in specs
+        ]
+        db.add_all(items)
+        db.commit()
+        return items
+
+    def test_attribute_candidate_counts_full_wardrobe(self, client, auth_headers, db, test_user):
+        self._seed(
+            db,
+            test_user.id,
+            [
+                ("shirt", "White", "Oxford shirt"),
+                ("shirt", "Light blue", "Business shirt"),
+                ("trouser", "Gray", "Wool trouser"),
+            ],
+        )
+        response = client.post(
+            "/api/wardrobe/evaluate-fit",
+            headers=auth_headers,
+            json={"category": "blazer", "color": "Navy", "description": "Single-breasted blazer"},
+        )
+        assert response.status_code == status.HTTP_200_OK
+        payload = response.json()
+        assert payload["candidate"]["id"] is None
+        assert payload["candidate"]["category"] == "blazer"
+        by_cat = {r["category"]: r["count"] for r in payload["pairs_with"]}
+        assert by_cat.get("shirt") == 2
+        assert by_cat.get("trouser") == 1
+        assert payload["outfit_multiplier"] == 3
+
+    def test_attribute_candidate_is_not_saved(self, client, auth_headers, db, test_user):
+        before = db.query(WardrobeItem).filter(WardrobeItem.user_id == test_user.id).count()
+        response = client.post(
+            "/api/wardrobe/evaluate-fit",
+            headers=auth_headers,
+            json={"category": "shoes", "color": "Brown", "description": "Loafers"},
+        )
+        assert response.status_code == status.HTTP_200_OK
+        after = db.query(WardrobeItem).filter(WardrobeItem.user_id == test_user.id).count()
+        assert after == before
+
+    def test_attribute_candidate_redundant_when_slot_owned(self, client, auth_headers, db, test_user):
+        self._seed(
+            db,
+            test_user.id,
+            [
+                ("shirt", "Blue", "Shirt"),
+                ("shirt", "Gray", "Shirt"),
+                ("trouser", "Navy", "Trouser"),
+                ("shoes", "Black", "Shoes"),
+                ("blazer", "Navy", "Blazer"),
+                ("belt", "Brown", "Belt"),
+            ],
+        )
+        response = client.post(
+            "/api/wardrobe/evaluate-fit",
+            headers=auth_headers,
+            json={"category": "shirt", "color": "White", "description": "Shirt"},
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["verdict"] == "redundant"
+
+    def test_attribute_candidate_strong_fit(self, client, auth_headers, db, test_user):
+        self._seed(
+            db,
+            test_user.id,
+            [
+                ("shirt", "White", "Shirt"),
+                ("shirt", "Blue", "Shirt"),
+                ("shirt", "Gray", "Shirt"),
+                ("trouser", "Gray", "Trouser"),
+                ("trouser", "Beige", "Trouser"),
+                ("shoes", "Brown", "Shoes"),
+                ("belt", "Brown", "Belt"),
+            ],
+        )
+        response = client.post(
+            "/api/wardrobe/evaluate-fit",
+            headers=auth_headers,
+            json={"category": "blazer", "color": "Navy", "description": "Blazer"},
+        )
+        assert response.status_code == status.HTTP_200_OK
+        payload = response.json()
+        assert payload["outfit_multiplier"] >= 5
+        assert payload["verdict"] == "strong_fit"
+
+    def test_attribute_candidate_without_color_is_accepted(self, client, auth_headers):
+        response = client.post(
+            "/api/wardrobe/evaluate-fit",
+            headers=auth_headers,
+            json={"category": "shoes", "description": "Leather shoes"},
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["candidate"]["id"] is None
+
+    def test_attribute_candidate_requires_category(self, client, auth_headers):
+        response = client.post(
+            "/api/wardrobe/evaluate-fit",
+            headers=auth_headers,
+            json={"color": "Black", "description": "Something"},
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
 class TestWardrobeFitServiceUnit:
     def test_build_goal_label(self):
         assert build_goal_label("smart-casual", "work") == "business-casual"
@@ -251,3 +361,109 @@ class TestWardrobeFitServiceUnit:
         summary = result["summary_text"].lower()
         assert "two shirts" in summary
         assert "two trousers" in summary
+
+
+def _item(id_, category, color, description=""):
+    return WardrobeItem(id=id_, user_id=1, category=category, color=color, description=description)
+
+
+class TestWardrobeFitCalibration:
+    def test_clashing_colors_do_not_pair(self):
+        service = WardrobeFitService()
+        cand = _item(1, "shirt", "Red", "Shirt")
+        items = [
+            _item(2, "trouser", "Green", "Trouser"),
+            _item(3, "trouser", "Navy", "Trouser"),
+        ]
+        result = service.evaluate(candidate=cand, wardrobe_items=[cand] + items)
+        trouser = next(r for r in result["pairs_with"] if r["category"] == "trouser")
+        assert trouser["count"] == 1
+        assert trouser["items"][0]["id"] == 3
+
+    def test_formality_clash_does_not_pair(self):
+        service = WardrobeFitService()
+        cand = _item(1, "blazer", "Black", "Formal tailored business suit blazer")
+        items = [_item(2, "shirt", "White", "Casual graphic sport hoodie")]
+        result = service.evaluate(candidate=cand, wardrobe_items=[cand] + items)
+        assert result["pairs_with"] == []
+        assert result["outfit_multiplier"] == 0
+
+    def test_category_clash_does_not_pair(self):
+        service = WardrobeFitService()
+        cand = _item(1, "tie", "Navy", "Silk tie")
+        items = [
+            _item(2, "t-shirt", "White", "Tee"),
+            _item(3, "shirt", "White", "Shirt"),
+        ]
+        result = service.evaluate(candidate=cand, wardrobe_items=[cand] + items)
+        shirt = next(r for r in result["pairs_with"] if r["category"] == "shirt")
+        assert shirt["count"] == 1
+        assert shirt["items"][0]["id"] == 3
+
+    def test_not_every_item_pairs(self):
+        service = WardrobeFitService()
+        cand = _item(1, "shirt", "Pink", "Shirt")
+        items = [
+            _item(2, "trouser", "Gray", "Trouser"),
+            _item(3, "trouser", "Red", "Trouser"),
+            _item(4, "shoes", "Green", "Shoes"),
+            _item(5, "blazer", "Navy", "Blazer"),
+        ]
+        result = service.evaluate(candidate=cand, wardrobe_items=[cand] + items)
+        assert 0 < result["outfit_multiplier"] < len(items)
+
+    def test_few_pairs_is_weak_fit_not_strong(self):
+        service = WardrobeFitService()
+        cand = _item(1, "sweater", "Gray", "Sweater")
+        items = [
+            _item(2, "shirt", "White", "Shirt"),
+            _item(3, "trouser", "Navy", "Trouser"),
+            _item(4, "shoes", "Black", "Shoes"),
+            _item(5, "blazer", "Navy", "Blazer"),
+        ]
+        result = service.evaluate(candidate=cand, wardrobe_items=[cand] + items)
+        assert result["missing_for_goal"]["candidate_fills_this_gap"] is False
+        assert result["outfit_multiplier"] < 5
+        assert result["verdict"] == "weak_fit"
+
+    def test_broad_pairs_is_strong_fit(self):
+        service = WardrobeFitService()
+        cand = _item(1, "blazer", "Navy", "Blazer")
+        items = [
+            _item(2, "shirt", "White", "Shirt"),
+            _item(3, "shirt", "Blue", "Shirt"),
+            _item(4, "shirt", "Gray", "Shirt"),
+            _item(5, "trouser", "Gray", "Trouser"),
+            _item(6, "trouser", "Beige", "Trouser"),
+            _item(7, "shoes", "Brown", "Shoes"),
+            _item(8, "belt", "Brown", "Belt"),
+        ]
+        result = service.evaluate(candidate=cand, wardrobe_items=[cand] + items)
+        assert result["outfit_multiplier"] >= 5
+        assert result["verdict"] == "strong_fit"
+
+    def test_duplicate_slot_is_redundant(self):
+        service = WardrobeFitService()
+        cand = _item(1, "shirt", "White", "Shirt")
+        items = [
+            _item(2, "shirt", "Blue", "Shirt"),
+            _item(3, "shirt", "Gray", "Shirt"),
+            _item(4, "trouser", "Navy", "Trouser"),
+            _item(5, "shoes", "Black", "Shoes"),
+            _item(6, "blazer", "Navy", "Blazer"),
+            _item(7, "belt", "Brown", "Belt"),
+        ]
+        result = service.evaluate(candidate=cand, wardrobe_items=[cand] + items)
+        assert result["verdict"] == "redundant"
+
+    def test_soft_gap_with_enough_owned_does_not_fill(self):
+        service = WardrobeFitService()
+        cand = _item(1, "shoes", "Black", "Shoes")
+        items = [_item(10 + i, cat, "Navy", cat) for i, cat in enumerate(
+            ["shoes", "shoes", "shirt", "shirt", "shirt", "trouser", "trouser", "trouser",
+             "blazer", "blazer", "blazer", "belt", "belt", "belt", "sweater", "sweater",
+             "sweater", "jacket", "jacket", "jacket", "tie", "tie", "tie"]
+        )]
+        result = service.evaluate(candidate=cand, wardrobe_items=[cand] + items)
+        assert result["missing_for_goal"]["candidate_fills_this_gap"] is False
+        assert result["verdict"] != "strong_fit" or result["outfit_multiplier"] >= 5

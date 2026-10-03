@@ -12,7 +12,7 @@ struct InsightsView: View {
     @ObservedObject private var auth = AuthService.shared
 
     @State private var analysisMode = "free"
-    @State private var lifestyle = InsightsLifestyle.default
+    @State private var lifestyle = InsightsLifestyleStore.load() ?? InsightsLifestyle.default
     @State private var rawResult: WardrobeGapAnalysisResponse?
     @State private var isLoading = false
     @State private var errorMessage: String?
@@ -151,6 +151,7 @@ struct InsightsView: View {
         }
         do {
             try Task.checkCancellation()
+            InsightsLifestyleStore.save(lifestyle)
             let request = lifestyle.makeRequest(
                 textInput: viewModel.preferenceText,
                 analysisMode: analysisMode

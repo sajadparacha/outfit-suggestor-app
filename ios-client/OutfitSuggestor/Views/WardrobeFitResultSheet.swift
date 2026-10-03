@@ -11,9 +11,12 @@ struct WardrobeFitResultSheet: View {
     @ObservedObject var viewModel: WardrobeFitEvaluateViewModel
     var onGetOutfitWithItem: ((WardrobeItem) -> Void)?
     var onOpenInsights: (() -> Void)?
+    var onAddToWardrobe: ((UIImage, WardrobeAnalyzeResponse?) -> Void)?
 
     @Environment(\.openURL) private var openURL
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @State private var imageViewer = WardrobeFitImageViewer()
+    @State private var expandedCategories: Set<String> = []
 
     private var isRegularWidth: Bool {
         horizontalSizeClass == .regular
@@ -41,7 +44,7 @@ struct WardrobeFitResultSheet: View {
                 )
                 .ignoresSafeArea()
             )
-            .navigationTitle(WardrobeFitEvaluateCopy.action)
+            .navigationTitle(viewModel.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -53,6 +56,13 @@ struct WardrobeFitResultSheet: View {
             }
         }
         .accessibilityIdentifier("wardrobe.fit.sheet")
+        .fullScreenCover(isPresented: Binding(get: { imageViewer.isOpen }, set: { if !$0 { imageViewer.dismiss() } })) {
+            if let image = imageViewer.image {
+                FullScreenImageView(image: image) {
+                    imageViewer.dismiss()
+                }
+            }
+        }
     }
 
     private var goalStrip: some View {
@@ -159,7 +169,7 @@ struct WardrobeFitResultSheet: View {
         if viewModel.isLoading {
             HStack(spacing: 12) {
                 ProgressView()
-                Text(WardrobeFitEvaluateCopy.loading)
+                Text(viewModel.loadingMessage)
                     .font(.subheadline)
                     .foregroundColor(AppTheme.textSecondary)
             }
@@ -206,7 +216,34 @@ struct WardrobeFitResultSheet: View {
 
     private func candidateHeader(_ result: WardrobeFitEvaluateResponse) -> some View {
         HStack(spacing: 12) {
-            fitThumb(imageData: result.candidate.image_data, size: isRegularWidth ? 72 : 64)
+            let candidateFullImage = WardrobeFitImageViewer.resolveImage(
+                imageData: result.candidate.image_data,
+                localImage: viewModel.candidateImage
+            )
+            if candidateFullImage != nil {
+                Button {
+                    imageViewer.selectCandidate(
+                        imageData: result.candidate.image_data,
+                        localImage: viewModel.candidateImage
+                    )
+                } label: {
+                    fitThumb(
+                        imageData: result.candidate.image_data,
+                        localImage: viewModel.candidateImage,
+                        size: isRegularWidth ? 72 : 64
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(WardrobeFitEvaluateCopy.viewFullImage)
+                .accessibilityIdentifier("wardrobe.fit.candidateThumb")
+            } else {
+                fitThumb(
+                    imageData: result.candidate.image_data,
+                    localImage: viewModel.candidateImage,
+                    size: isRegularWidth ? 72 : 64
+                )
+                .accessibilityIdentifier("wardrobe.fit.candidateThumb")
+            }
             VStack(alignment: .leading, spacing: 4) {
                 Text(result.candidate.label)
                     .font(.title3.weight(.semibold))
@@ -285,18 +322,67 @@ struct WardrobeFitResultSheet: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(AppTheme.textPrimary)
                 Spacer()
-                Text("\(row.count)")
+                Text(WardrobeFitEvaluateCopy.pairsWithLabel(count: row.count))
                     .font(.subheadline.weight(.bold))
                     .foregroundColor(AppTheme.accent)
+                    .accessibilityIdentifier("wardrobe.fit.pairCount.\(row.category)")
             }
-            HStack(spacing: 8) {
-                ForEach(Array(row.items.prefix(3))) { item in
-                    fitThumb(imageData: item.image_data, size: isRegularWidth ? 48 : 44)
-                        .accessibilityLabel(item.label)
+            let expanded = expandedCategories.contains(row.category)
+            let visible = WardrobeFitPairExpansion.visibleItems(for: row, expanded: expanded)
+            if expanded {
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: thumbSize, maximum: thumbSize), spacing: 8, alignment: .leading)],
+                    alignment: .leading,
+                    spacing: 8
+                ) {
+                    ForEach(visible) { item in
+                        pairThumb(item)
+                    }
                 }
+                .accessibilityIdentifier("wardrobe.fit.pairGrid.\(row.category)")
+            } else {
+                HStack(spacing: 8) {
+                    ForEach(visible) { item in
+                        pairThumb(item)
+                    }
+                }
+            }
+            if WardrobeFitPairExpansion.showsToggle(count: row.count) {
+                Button(WardrobeFitPairExpansion.toggleTitle(count: row.count, expanded: expanded)) {
+                    if expanded {
+                        expandedCategories.remove(row.category)
+                    } else {
+                        expandedCategories.insert(row.category)
+                    }
+                }
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(AppTheme.accent)
+                .frame(minHeight: 44)
+                .accessibilityIdentifier("wardrobe.fit.pairToggle.\(row.category)")
             }
         }
         .accessibilityIdentifier("wardrobe.fit.pair.\(row.category)")
+    }
+
+    private var thumbSize: CGFloat {
+        isRegularWidth ? 48 : 44
+    }
+
+    @ViewBuilder
+    private func pairThumb(_ item: WardrobeFitPairItem) -> some View {
+        if WardrobeFitPairExpansion.opensViewer(item) {
+            Button {
+                imageViewer.selectPair(item)
+            } label: {
+                fitThumb(imageData: item.image_data, size: thumbSize)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(WardrobeFitEvaluateCopy.viewFullImageLabel(itemLabel: item.label))
+            .accessibilityIdentifier("wardrobe.fit.pairThumb.\(item.id)")
+        } else {
+            fitThumb(imageData: item.image_data, size: thumbSize)
+                .accessibilityLabel(item.label)
+        }
     }
 
     private func missingSection(_ missing: WardrobeFitMissing, stylePrimary: String) -> some View {
@@ -335,10 +421,10 @@ struct WardrobeFitResultSheet: View {
                     .foregroundColor(AppTheme.accent)
                     .accessibilityIdentifier("wardrobe.fit.shopSimilar")
                 }
-                if let onOpenInsights {
+                if let onOpenInsights, viewModel.showsOpenInsights(hasHandler: true) {
                     Button(WardrobeFitEvaluateCopy.openInsights) {
-                        onOpenInsights()
                         viewModel.dismiss()
+                        onOpenInsights()
                     }
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(AppTheme.accent)
@@ -369,6 +455,23 @@ struct WardrobeFitResultSheet: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("wardrobe.fit.getOutfit")
+            }
+
+            if viewModel.isCheckBeforeBuy, let image = viewModel.candidateImage, let onAddToWardrobe {
+                Button {
+                    let attributes = viewModel.analyzedAttributes
+                    viewModel.dismiss()
+                    onAddToWardrobe(image, attributes)
+                } label: {
+                    Label(WardrobeFitEvaluateCopy.addToWardrobe, systemImage: "plus.circle")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(AppTheme.accent)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .background(AppTheme.accentSoft)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("wardrobe.fit.addToWardrobe")
             }
 
             Button(WardrobeFitEvaluateCopy.close) {
@@ -402,9 +505,9 @@ struct WardrobeFitResultSheet: View {
         .buttonStyle(.plain)
     }
 
-    private func fitThumb(imageData: String?, size: CGFloat) -> some View {
+    private func fitThumb(imageData: String?, localImage: UIImage? = nil, size: CGFloat) -> some View {
         Group {
-            if let image = WardrobeImageData.decodeUIImage(from: imageData) {
+            if let image = localImage ?? WardrobeImageData.decodeUIImage(from: imageData) {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
@@ -416,5 +519,51 @@ struct WardrobeFitResultSheet: View {
         .frame(width: size, height: size)
         .background(AppTheme.bgSecondary.opacity(0.7))
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+}
+
+/// Collapsed/expanded visibility for a "Works with what you own" category.
+enum WardrobeFitPairExpansion {
+    static let collapsedLimit = 3
+
+    static func visibleItems(for row: WardrobeFitPairCategory, expanded: Bool) -> [WardrobeFitPairItem] {
+        expanded ? row.items : Array(row.items.prefix(collapsedLimit))
+    }
+
+    static func showsToggle(count: Int) -> Bool {
+        count > collapsedLimit
+    }
+
+    static func toggleTitle(count: Int, expanded: Bool) -> String {
+        expanded ? WardrobeFitEvaluateCopy.showLess : WardrobeFitEvaluateCopy.viewAll(count)
+    }
+
+    static func opensViewer(_ item: WardrobeFitPairItem) -> Bool {
+        WardrobeFitImageViewer.resolveImage(imageData: item.image_data) != nil
+    }
+}
+
+/// Full-screen viewer state for fit-sheet thumbnails; items without image data never open.
+struct WardrobeFitImageViewer {
+    private(set) var image: UIImage?
+
+    var isOpen: Bool { image != nil }
+
+    static func resolveImage(imageData: String?, localImage: UIImage? = nil) -> UIImage? {
+        localImage ?? WardrobeImageData.decodeUIImage(from: imageData)
+    }
+
+    mutating func selectCandidate(imageData: String?, localImage: UIImage? = nil) {
+        guard let resolved = Self.resolveImage(imageData: imageData, localImage: localImage) else { return }
+        image = resolved
+    }
+
+    mutating func selectPair(_ item: WardrobeFitPairItem) {
+        guard let resolved = Self.resolveImage(imageData: item.image_data) else { return }
+        image = resolved
+    }
+
+    mutating func dismiss() {
+        image = nil
     }
 }

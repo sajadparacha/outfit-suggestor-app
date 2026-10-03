@@ -11,7 +11,7 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
     {
       icon: '🎯',
       title: 'Suggest',
-      text: 'Upload any clothing photo and get a complete outfit with optional AI model visualization.',
+      text: 'Upload any clothing photo and get a complete outfit with optional AI model visualization. Check before you buy shows how a piece you’re considering would fit your wardrobe—without saving it.',
     },
     {
       icon: '👔',

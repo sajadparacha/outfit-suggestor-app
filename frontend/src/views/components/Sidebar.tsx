@@ -10,6 +10,7 @@ import RecentLooksSection from './RecentLooksSection';
 import { DEFAULT_FILTERS } from '../../utils/outfitPreferences';
 import { MICRO_HELP } from '../../utils/microHelpCopy';
 import { MAIN_FLOW_UX_COPY } from '../../utils/mainFlowUxCopy';
+import { WARDROBE_FIT_COPY } from '../../utils/wardrobeFitCopy';
 import {
   canGenerateAnotherFromResult,
   shouldShowCompactUploadActions,
@@ -149,6 +150,7 @@ interface SidebarProps {
   recentLooksHistory?: OutfitHistoryEntry[];
   recentLooksLoading?: boolean;
   onViewAllRecentLooks?: () => void;
+  onCheckBeforeBuy?: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -196,6 +198,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   recentLooksHistory = [],
   recentLooksLoading = false,
   onViewAllRecentLooks,
+  onCheckBeforeBuy,
 }) => {
   const generateButtonRef = useRef<HTMLButtonElement>(null);
   const generateDisabled = !image || loading || guestLimitReached;
@@ -781,6 +784,22 @@ const Sidebar: React.FC<SidebarProps> = ({
               {MAIN_FLOW_UX_COPY.primaryCta}
             </>
           )}
+        </button>
+      )}
+
+      {!compactMode && image && onCheckBeforeBuy && (
+        <button
+          type="button"
+          onClick={onCheckBeforeBuy}
+          disabled={loading}
+          className={`mt-3 flex w-full min-h-[44px] touch-manipulation items-center justify-center rounded-xl border px-4 py-3 text-sm font-semibold transition ${
+            loading
+              ? 'cursor-not-allowed border-white/10 bg-white/10 text-slate-500'
+              : 'border-brand-blue/40 bg-brand-blue/10 text-white hover:bg-brand-blue/20'
+          }`}
+          data-testid="main.checkBeforeBuy"
+        >
+          {WARDROBE_FIT_COPY.checkBeforeBuyAction}
         </button>
       )}
 

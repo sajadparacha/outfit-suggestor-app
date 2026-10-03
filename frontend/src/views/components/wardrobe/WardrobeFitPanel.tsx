@@ -2,7 +2,7 @@
  * Modal panel: evaluate how a wardrobe item fits owned pieces + lifestyle goal.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ApiService from '../../../services/ApiService';
 import type {
   WardrobeFitEvaluateResponse,
@@ -11,6 +11,10 @@ import type {
 import {
   DEFAULT_FIT_GOAL,
   WARDROBE_FIT_COPY,
+  loadInitialFitGoal,
+  saveLastFitGoal,
+  wardrobeFitGoalHint,
+  wardrobeFitPairCountLabel,
   wardrobeFitVerdictLabel,
 } from '../../../utils/wardrobeFitCopy';
 import { INSIGHTS_DRESS_CODE_OPTIONS, INSIGHTS_LIFESTYLE_OPTIONS } from '../../../utils/constants';
@@ -24,12 +28,24 @@ export interface FitGoalDraft {
   text_input: string;
 }
 
+export interface WardrobeFitAttributeCandidate {
+  category: string;
+  color: string;
+  description: string;
+}
+
 interface WardrobeFitPanelProps {
-  item: WardrobeItem;
+  /** Owned item to evaluate. Omit for attribute-only (check before you buy) mode. */
+  item?: WardrobeItem;
   isOpen: boolean;
   onClose: () => void;
   onGetOutfit?: (item: WardrobeItem) => void;
   onOpenInsights?: () => void;
+  /** Attribute-only mode: resolves the candidate (e.g. by analyzing an uploaded photo). */
+  resolveAttributeCandidate?: () => Promise<WardrobeFitAttributeCandidate>;
+  /** Local preview (object/data URL) shown as the candidate thumb in attribute-only mode. */
+  localImageUrl?: string | null;
+  onAddToWardrobe?: (candidate: WardrobeFitAttributeCandidate) => void;
 }
 
 function thumbSrc(imageData: string | null | undefined): string | null {
@@ -44,13 +60,30 @@ const WardrobeFitPanel: React.FC<WardrobeFitPanelProps> = ({
   onClose,
   onGetOutfit,
   onOpenInsights,
+  resolveAttributeCandidate,
+  localImageUrl = null,
+  onAddToWardrobe,
 }) => {
+  const isAttributeMode = !item && !!resolveAttributeCandidate;
   const [goal, setGoal] = useState<FitGoalDraft>({ ...DEFAULT_FIT_GOAL });
   const [draftGoal, setDraftGoal] = useState<FitGoalDraft>({ ...DEFAULT_FIT_GOAL });
   const [showGoalEditor, setShowGoalEditor] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<WardrobeFitEvaluateResponse | null>(null);
+  const [attributeCandidate, setAttributeCandidate] =
+    useState<WardrobeFitAttributeCandidate | null>(null);
+  const attributeCandidateRef = useRef<WardrobeFitAttributeCandidate | null>(null);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(() => new Set());
+
+  const toggleCategory = (category: string) => {
+    setExpandedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(category)) next.delete(category);
+      else next.add(category);
+      return next;
+    });
+  };
 
   const runEvaluate = useCallback(
     async (goalOverride?: FitGoalDraft) => {
@@ -58,14 +91,32 @@ const WardrobeFitPanel: React.FC<WardrobeFitPanelProps> = ({
       setLoading(true);
       setError(null);
       try {
-        const data = await ApiService.evaluateWardrobeFit({
-          wardrobe_item_id: item.id,
+        const goalFields = {
           dress_code: active.dress_code,
           lifestyle_mix: active.lifestyle_mix,
           primary_lifestyle: active.primary_lifestyle,
           style_primary: active.style_primary,
           text_input: active.text_input,
-        });
+        };
+        let data: WardrobeFitEvaluateResponse;
+        if (item) {
+          data = await ApiService.evaluateWardrobeFit({ wardrobe_item_id: item.id, ...goalFields });
+        } else if (resolveAttributeCandidate) {
+          let candidate = attributeCandidateRef.current;
+          if (!candidate) {
+            candidate = await resolveAttributeCandidate();
+            attributeCandidateRef.current = candidate;
+            setAttributeCandidate(candidate);
+          }
+          data = await ApiService.evaluateWardrobeFit({
+            category: candidate.category,
+            color: candidate.color || null,
+            description: candidate.description,
+            ...goalFields,
+          });
+        } else {
+          throw new Error(WARDROBE_FIT_COPY.error);
+        }
         setResult(data);
       } catch (err) {
         setResult(null);
@@ -74,24 +125,89 @@ const WardrobeFitPanel: React.FC<WardrobeFitPanelProps> = ({
         setLoading(false);
       }
     },
-    [item.id, goal]
+    [item, resolveAttributeCandidate, goal]
   );
 
   useEffect(() => {
     if (!isOpen) return;
-    const defaults = { ...DEFAULT_FIT_GOAL };
-    setGoal(defaults);
-    setDraftGoal(defaults);
+    const initial = isAttributeMode
+      ? { ...DEFAULT_FIT_GOAL, lifestyle_mix: [...DEFAULT_FIT_GOAL.lifestyle_mix] }
+      : loadInitialFitGoal();
+    setGoal(initial);
+    setDraftGoal(initial);
     setShowGoalEditor(false);
     setResult(null);
     setError(null);
-    void runEvaluate(defaults);
+    setExpandedCategories(new Set());
+    attributeCandidateRef.current = null;
+    setAttributeCandidate(null);
+    void runEvaluate(initial);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- evaluate once per open/item
-  }, [isOpen, item.id]);
+  }, [isOpen, item?.id]);
+
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const viewingImageRef = useRef<string | null>(null);
+  viewingImageRef.current = viewingImage;
+
+  useEffect(() => {
+    if (!isOpen) setViewingImage(null);
+  }, [isOpen]);
+
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const trigger = document.activeElement as HTMLElement | null;
+    const focusables = () =>
+      Array.from(
+        dialogRef.current?.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        ) ?? []
+      );
+    focusables()[0]?.focus();
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (viewingImageRef.current) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          setViewingImage(null);
+        }
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const list = focusables();
+      if (!list.length) return;
+      const first = list[0];
+      const last = list[list.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      const inside = !!active && !!dialogRef.current?.contains(active);
+      if (e.shiftKey && (active === first || !inside)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (active === last || !inside)) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      if (trigger && document.contains(trigger)) trigger.focus();
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const candidateThumb = thumbSrc(result?.candidate.image_data ?? item.image_data);
+  const candidateThumb = isAttributeMode
+    ? localImageUrl ?? thumbSrc(result?.candidate.image_data)
+    : thumbSrc(result?.candidate.image_data ?? item?.image_data);
   const pairs = result?.pairs_with ?? [];
   const hasPairs = pairs.some((p) => p.count > 0);
 
@@ -106,6 +222,7 @@ const WardrobeFitPanel: React.FC<WardrobeFitPanelProps> = ({
       <div className="fixed inset-0 bg-black/60 transition-opacity" onClick={onClose} aria-hidden />
       <div className="flex min-h-full items-end justify-center p-0 sm:items-center sm:p-4">
         <div
+          ref={dialogRef}
           role="dialog"
           aria-modal="true"
           aria-labelledby="wardrobe-fit-title"
@@ -114,9 +231,11 @@ const WardrobeFitPanel: React.FC<WardrobeFitPanelProps> = ({
           <div className="mb-4 flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h2 id="wardrobe-fit-title" className="text-lg font-semibold text-white">
-                {WARDROBE_FIT_COPY.action}
+                {isAttributeMode ? WARDROBE_FIT_COPY.checkBeforeBuyAction : WARDROBE_FIT_COPY.action}
               </h2>
-              <p className="mt-1 text-xs text-slate-400">{WARDROBE_FIT_COPY.goalDefaultsHint}</p>
+              <p className="mt-1 text-xs text-slate-400" data-testid="wardrobe-fit-goal-hint">
+                {wardrobeFitGoalHint(goal)}
+              </p>
             </div>
             <button
               type="button"
@@ -204,6 +323,7 @@ const WardrobeFitPanel: React.FC<WardrobeFitPanelProps> = ({
                 type="button"
                 onClick={() => {
                   setGoal(draftGoal);
+                  saveLastFitGoal(draftGoal);
                   setShowGoalEditor(false);
                   void runEvaluate(draftGoal);
                 }}
@@ -221,7 +341,9 @@ const WardrobeFitPanel: React.FC<WardrobeFitPanelProps> = ({
               data-testid="wardrobe-fit-loading"
             >
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-blue border-t-transparent" />
-              <p className="text-sm text-slate-300">{WARDROBE_FIT_COPY.loading}</p>
+              <p className="text-sm text-slate-300">
+                {isAttributeMode ? WARDROBE_FIT_COPY.checkBeforeBuyLoading : WARDROBE_FIT_COPY.loading}
+              </p>
             </div>
           )}
 
@@ -246,11 +368,20 @@ const WardrobeFitPanel: React.FC<WardrobeFitPanelProps> = ({
             <div className="space-y-4" data-testid="wardrobe-fit-result">
               <div className="flex items-start gap-3">
                 {candidateThumb ? (
-                  <img
-                    src={candidateThumb}
-                    alt=""
-                    className="h-16 w-16 flex-shrink-0 rounded-xl object-cover ring-1 ring-white/15"
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setViewingImage(candidateThumb)}
+                    className="flex-shrink-0 cursor-pointer rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue"
+                    aria-label="View full image"
+                    data-testid="wardrobe-fit-candidate-thumb-button"
+                  >
+                    <img
+                      src={candidateThumb}
+                      alt=""
+                      className="h-16 w-16 rounded-xl object-cover ring-1 ring-white/15"
+                      data-testid="wardrobe-fit-candidate-thumb"
+                    />
+                  </button>
                 ) : (
                   <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-white/10 text-2xl ring-1 ring-white/15">
                     👔
@@ -279,7 +410,11 @@ const WardrobeFitPanel: React.FC<WardrobeFitPanelProps> = ({
                   </p>
                 ) : (
                   <ul className="space-y-2" data-testid="wardrobe-fit-pairs">
-                    {pairs.map((row) => (
+                    {pairs.map((row) => {
+                      const isExpanded = expandedCategories.has(row.category);
+                      const canExpand = row.count > 3;
+                      const visibleItems = isExpanded ? row.items : row.items.slice(0, 3);
+                      return (
                       <li
                         key={row.category}
                         className="rounded-xl border border-white/10 bg-white/5 p-3"
@@ -289,21 +424,34 @@ const WardrobeFitPanel: React.FC<WardrobeFitPanelProps> = ({
                           <span className="text-sm font-medium capitalize text-slate-100">
                             {wardrobeCategoryLabel(row.category)}
                           </span>
-                          <span className="text-xs font-semibold text-brand-blue">
-                            {row.count}
+                          <span
+                            className="text-xs font-semibold text-brand-blue"
+                            data-testid={`wardrobe-fit-pair-count-${row.category}`}
+                          >
+                            {wardrobeFitPairCountLabel(row.count)}
                           </span>
                         </div>
-                        <div className="flex gap-2 overflow-x-auto">
-                          {row.items.slice(0, 3).map((thumb) => {
+                        <div
+                          className={`flex items-center gap-2 ${isExpanded ? 'flex-wrap' : 'overflow-x-auto'}`}
+                          data-testid={`wardrobe-fit-pair-thumbs-${row.category}`}
+                        >
+                          {visibleItems.map((thumb) => {
                             const src = thumbSrc(thumb.image_data);
                             return src ? (
-                              <img
+                              <button
                                 key={thumb.id}
-                                src={src}
-                                alt={thumb.label}
+                                type="button"
+                                onClick={() => setViewingImage(src)}
+                                className="flex-shrink-0 cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue"
+                                aria-label={`View full image of ${thumb.label}`}
                                 title={thumb.label}
-                                className="h-10 w-10 rounded-lg object-cover ring-1 ring-white/10"
-                              />
+                              >
+                                <img
+                                  src={src}
+                                  alt={thumb.label}
+                                  className="h-10 w-10 rounded-lg object-cover ring-1 ring-white/10"
+                                />
+                              </button>
                             ) : (
                               <div
                                 key={thumb.id}
@@ -314,9 +462,21 @@ const WardrobeFitPanel: React.FC<WardrobeFitPanelProps> = ({
                               </div>
                             );
                           })}
+                          {canExpand && (
+                            <button
+                              type="button"
+                              onClick={() => toggleCategory(row.category)}
+                              aria-expanded={isExpanded}
+                              className="min-h-[40px] flex-shrink-0 rounded-lg border border-white/15 bg-white/5 px-3 text-xs font-medium text-slate-200 transition hover:bg-white/10"
+                              data-testid={`wardrobe-fit-pair-toggle-${row.category}`}
+                            >
+                              {isExpanded ? 'Show less' : `View all (${row.count})`}
+                            </button>
+                          )}
                         </div>
                       </li>
-                    ))}
+                      );
+                    })}
                   </ul>
                 )}
               </section>
@@ -345,7 +505,17 @@ const WardrobeFitPanel: React.FC<WardrobeFitPanelProps> = ({
               </section>
 
               <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                {onGetOutfit && (
+                {isAttributeMode && onAddToWardrobe && attributeCandidate && (
+                  <button
+                    type="button"
+                    onClick={() => onAddToWardrobe(attributeCandidate)}
+                    className="min-h-[44px] rounded-xl border border-brand-blue/40 bg-brand-blue/15 px-4 text-sm font-semibold text-white transition hover:bg-brand-blue/25"
+                    data-testid="wardrobe-fit-add-to-wardrobe"
+                  >
+                    {WARDROBE_FIT_COPY.addToWardrobe}
+                  </button>
+                )}
+                {onGetOutfit && item && (
                   <button
                     type="button"
                     onClick={() => onGetOutfit(item)}
@@ -368,6 +538,39 @@ const WardrobeFitPanel: React.FC<WardrobeFitPanelProps> = ({
           )}
         </div>
       </div>
+
+      {viewingImage && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-90 p-4"
+          onClick={() => setViewingImage(null)}
+          data-testid="wardrobe-fit-image-viewer"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Full size image"
+        >
+          <div className="relative flex h-full max-h-[90vh] w-full max-w-7xl items-center justify-center">
+            <img
+              src={viewingImage}
+              alt="Full size view"
+              className="max-h-full max-w-full rounded-lg object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setViewingImage(null);
+              }}
+              className="absolute right-4 top-4 rounded-full bg-black bg-opacity-50 p-3 text-2xl text-white transition-all hover:bg-opacity-70"
+              title="Close"
+              aria-label="Close"
+              data-testid="wardrobe-fit-image-viewer-close"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

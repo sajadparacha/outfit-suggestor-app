@@ -53,6 +53,8 @@ import { buildInsightsAnalyzePayload, loadInsightsLifestyle } from './utils/insi
 import { dismissFirstRunCoach, isFirstRunCoachDismissed } from './utils/firstRunCoach';
 import { MAIN_FLOW_UX_COPY } from './utils/mainFlowUxCopy';
 import { AiOperationType } from './utils/aiProgressSteps';
+import WardrobeFitPanel, { WardrobeFitAttributeCandidate } from './views/components/wardrobe/WardrobeFitPanel';
+import { createImagePreviewUrl, revokeImagePreviewUrl } from './utils/imageUtils';
 
 function App() {
   const navigate = useNavigate();
@@ -106,6 +108,25 @@ function App() {
   const [wardrobeImageToAdd, setWardrobeImageToAdd] = useState<File | null>(null);
   const [showWardrobeDuplicateModal, setShowWardrobeDuplicateModal] = useState(false);
   const [duplicateWardrobeItem, setDuplicateWardrobeItem] = useState<any>(null);
+  const [checkBeforeBuyImage, setCheckBeforeBuyImage] = useState<File | null>(null);
+  const checkBeforeBuyPreviewUrl = React.useMemo(
+    () => (checkBeforeBuyImage ? createImagePreviewUrl(checkBeforeBuyImage) : null),
+    [checkBeforeBuyImage]
+  );
+  React.useEffect(() => {
+    return () => {
+      if (checkBeforeBuyPreviewUrl) revokeImagePreviewUrl(checkBeforeBuyPreviewUrl);
+    };
+  }, [checkBeforeBuyPreviewUrl]);
+  const resolveCheckBeforeBuyCandidate = useCallback(async (): Promise<WardrobeFitAttributeCandidate> => {
+    if (!checkBeforeBuyImage) throw new Error('No image to check');
+    const properties = await ApiService.analyzeWardrobeImage(checkBeforeBuyImage, 'blip');
+    return {
+      category: properties.category || 'shirt',
+      color: properties.color || '',
+      description: properties.description || '',
+    };
+  }, [checkBeforeBuyImage]);
   const [showIntroOverlay, setShowIntroOverlay] = useState(false);
   const [showAiPromptResponse, setShowAiPromptResponse] = useState<boolean>(() => {
     const saved = localStorage.getItem('show_ai_prompt_response');
@@ -733,6 +754,33 @@ function App() {
                 recentLooksHistory={history}
                 recentLooksLoading={historyLoading}
                 onViewAllRecentLooks={() => navigate(ROUTES.HISTORY)}
+                onCheckBeforeBuy={() => {
+                  if (!image) return;
+                  if (!isAuthenticated) {
+                    openAuthPrompt('wardrobe');
+                    return;
+                  }
+                  setCheckBeforeBuyImage(image);
+                }}
+              />
+
+              <WardrobeFitPanel
+                isOpen={!!checkBeforeBuyImage && isAuthenticated}
+                onClose={() => setCheckBeforeBuyImage(null)}
+                resolveAttributeCandidate={resolveCheckBeforeBuyCandidate}
+                localImageUrl={checkBeforeBuyPreviewUrl}
+                onAddToWardrobe={(candidate) => {
+                  const file = checkBeforeBuyImage;
+                  setCheckBeforeBuyImage(null);
+                  if (!file) return;
+                  setWardrobeFormData({ ...candidate });
+                  setWardrobeImageToAdd(file);
+                  setShowAddWardrobeModal(true);
+                }}
+                onOpenInsights={() => {
+                  setCheckBeforeBuyImage(null);
+                  navigate(ROUTES.INSIGHTS);
+                }}
               />
 
               <div className="flex h-full min-h-0 flex-col">
