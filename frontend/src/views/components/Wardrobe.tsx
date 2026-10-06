@@ -11,7 +11,7 @@ import type { WardrobePickSession } from '../../navigation/routes';
 import ApiService from '../../services/ApiService';
 import { isValidImageSize, formatFileSize } from '../../utils/imageUtils';
 import { WARDROBE_MAX_SIZE_MB } from '../../constants/imageLimits';
-import { UI_CONFIG } from '../../utils/constants';
+import { FILTER_OPTIONS, UI_CONFIG } from '../../utils/constants';
 import ConfirmationModal from './ConfirmationModal';
 import AnalysisPreferences from './AnalysisPreferences';
 import LoadingOverlay from './LoadingOverlay';
@@ -43,6 +43,50 @@ const PICK_SLOT_LABELS: Record<string, string> = {
   sweater: MAIN_FLOW_UX_COPY.layerLabel,
   outerwear: MAIN_FLOW_UX_COPY.outerwearLabel,
   tie: MAIN_FLOW_UX_COPY.tieLabel,
+};
+
+export const COMPLETION_CLEAR_SELECTION_LABEL = 'Clear selection';
+export const COMPLETION_STICKY_BAR_SUFFIX = ' — AI will pick the rest';
+
+const toTitleCase = (value: string): string =>
+  value.replace(/\b([a-z])/g, (match) => match.toUpperCase());
+
+const completionSlotDisplayLabel = (category: string): string => {
+  const slot = normalizeCompleteOutfitSlot(category);
+  return toTitleCase(slot ? formatCompleteOutfitSlotLabel(slot) : category);
+};
+
+/** `<N> picked: <Slots>` (Title Case slots); bar variant appends the AI suffix. */
+export const formatCompletionPickedCount = (
+  items: ReadonlyArray<Pick<WardrobeItem, 'category'>>,
+  options: { withSuffix?: boolean } = {}
+): string => {
+  const slots = items.map((item) => completionSlotDisplayLabel(item.category)).join(', ');
+  const base = `${items.length} picked${slots ? `: ${slots}` : ''}`;
+  return options.withSuffix ? `${base}${COMPLETION_STICKY_BAR_SUFFIX}` : base;
+};
+
+const filterOptionLabel = (
+  options: ReadonlyArray<{ value: string; label: string }>,
+  value: string | undefined
+): string | null => {
+  if (!value) return null;
+  return options.find((opt) => opt.value === value)?.label ?? value;
+};
+
+export const formatCompletionPreferenceSummary = (
+  filters: Filters,
+  preferenceText: string = '',
+  useWardrobeOnly: boolean = false
+): string => {
+  const parts = [
+    filterOptionLabel(FILTER_OPTIONS.occasions, filters.occasion),
+    filterOptionLabel(FILTER_OPTIONS.seasons, filters.season),
+    filterOptionLabel(FILTER_OPTIONS.styles, filters.style),
+  ].filter((part): part is string => !!part);
+  if (preferenceText.trim()) parts.push('+ notes');
+  if (useWardrobeOnly) parts.push('Wardrobe only');
+  return parts.join(' · ');
 };
 
 interface WardrobeProps {
@@ -173,6 +217,23 @@ const Wardrobe: React.FC<WardrobeProps> = ({
   );
   const [selectedCompleteOutfitItems, setSelectedCompleteOutfitItems] = useState<WardrobeItem[]>([]);
   const [completionLoading, setCompletionLoading] = useState(false);
+  const [completionPanelEl, setCompletionPanelEl] = useState<HTMLDivElement | null>(null);
+  const [isCompletionPanelInView, setIsCompletionPanelInView] = useState(false);
+  const completionPreferencesRef = useRef<HTMLDetailsElement>(null);
+
+  useEffect(() => {
+    // Without IntersectionObserver, treat the panel as out of view so the bar still works.
+    if (!completionPanelEl || typeof IntersectionObserver === 'undefined') {
+      setIsCompletionPanelInView(false);
+      return;
+    }
+    const observer = new IntersectionObserver((entries) => {
+      const entry = entries[entries.length - 1];
+      if (entry) setIsCompletionPanelInView(entry.isIntersecting);
+    });
+    observer.observe(completionPanelEl);
+    return () => observer.disconnect();
+  }, [completionPanelEl]);
 
   const [hiddenItemIds, setHiddenItemIds] = useState<Set<number>>(new Set());
   const [openMenuItemId, setOpenMenuItemId] = useState<number | null>(null);
@@ -789,12 +850,29 @@ const Wardrobe: React.FC<WardrobeProps> = ({
     : selectedCompleteOutfitItems.length < 1
       ? 'Select at least 1 item'
       : 'Complete outfit with AI';
-  const selectedSlotSummary = selectedCompleteOutfitItems
-    .map((item) => {
-      const slot = normalizeCompleteOutfitSlot(item.category);
-      return slot ? formatCompleteOutfitSlotLabel(slot) : item.category;
-    })
-    .join(', ');
+  const hasCompletionSelection = !isWeekPlanPickMode && selectedCompleteOutfitItems.length > 0;
+  const showSelectionStickyBar = hasCompletionSelection && !isCompletionPanelInView;
+  const selectionPanelStatus = formatCompletionPickedCount(selectedCompleteOutfitItems);
+  const selectionStickyBarSummary = formatCompletionPickedCount(selectedCompleteOutfitItems, {
+    withSuffix: true,
+  });
+  const selectionStickyPreferenceSummary = outfitController?.filters
+    ? formatCompletionPreferenceSummary(
+        outfitController.filters,
+        outfitController.preferenceText ?? '',
+        outfitController.useWardrobeOnly ?? false
+      )
+    : '';
+  const clearCompleteOutfitSelection = () => {
+    setSelectedCompleteOutfitItems([]);
+    setSuggestionError(null);
+  };
+  const handleEditCompletionPreferences = () => {
+    if (completionPreferencesRef.current) {
+      completionPreferencesRef.current.open = true;
+    }
+    completionPanelEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   const pickSlotLabel = pickSession
     ? PICK_SLOT_LABELS[pickSession.slotKey] ?? pickSession.slotKey
@@ -963,12 +1041,15 @@ const Wardrobe: React.FC<WardrobeProps> = ({
           <div
             className="mb-4 rounded-2xl border border-brand-blue/25 bg-brand-gradient-soft p-4 shadow-xl backdrop-blur sm:mb-6 sm:p-5"
             data-testid="wardrobe-completion-panel"
+            ref={setCompletionPanelEl}
           >
             <div>
-              <p className="text-base font-semibold text-white">Complete an outfit from selected wardrobe pieces</p>
+              <p className="text-base font-semibold text-white">Build an outfit around pieces you love</p>
               <p className="mt-1 text-sm text-slate-200">
-                Select 1 to 5 items across different slots: shirt, trousers, blazer, shoes, belt, jacket or coat
-                (outerwear), or sweater (layer). Choose only one of blazer, outerwear, or sweater.
+                Pick 1–5 items you want to wear. AI picks the rest from your style.
+              </p>
+              <p className="mt-1 text-xs text-slate-400" data-testid="wardrobe-completion-rules">
+                One item per slot. Choose only one of blazer, outerwear, or sweater.
               </p>
               <p
                 className="mt-2 text-xs font-medium text-slate-300"
@@ -977,7 +1058,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
               >
                 {selectedCompleteOutfitItems.length === 0
                   ? 'No items selected'
-                  : `${selectedCompleteOutfitItems.length} selected${selectedSlotSummary ? `: ${selectedSlotSummary}` : ''}`}
+                  : selectionPanelStatus}
               </p>
             </div>
 
@@ -985,6 +1066,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
               <details
                 className="group mt-4 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]"
                 open={selectedCompleteOutfitItems.length > 0}
+                ref={completionPreferencesRef}
                 data-testid="wardrobe-completion-preferences"
               >
                 <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-slate-300 [&::-webkit-details-marker]:hidden">
@@ -1064,13 +1146,11 @@ const Wardrobe: React.FC<WardrobeProps> = ({
               {selectedCompleteOutfitItems.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setSelectedCompleteOutfitItems([]);
-                    setSuggestionError(null);
-                  }}
+                  onClick={clearCompleteOutfitSelection}
                   className="min-h-[40px] rounded-xl border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/20 sm:min-w-[140px]"
+                  data-testid="wardrobe-completion-clear"
                 >
-                  Clear selection
+                  {COMPLETION_CLEAR_SELECTION_LABEL}
                 </button>
               )}
             </div>
@@ -1118,7 +1198,10 @@ const Wardrobe: React.FC<WardrobeProps> = ({
             </button>
           </div>
         ) : (
-          <div className="space-y-4 pb-6 sm:pb-8">
+          <div
+            className={`space-y-4 ${hasCompletionSelection ? 'pb-40 sm:pb-32' : 'pb-6 sm:pb-8'}`}
+            data-testid="wardrobe-items-list"
+          >
             {visibleWardrobeItems.map((item) => {
               const completeOutfitSlot = normalizeCompleteOutfitSlot(item.category);
               const isCompleteOutfitEligible = !!completeOutfitSlot;
@@ -1139,15 +1222,16 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                   const selectedSlot = normalizeCompleteOutfitSlot(selected.category);
                   return selectedSlot && isUpperBodyExclusiveCompleteOutfitSlot(selectedSlot);
                 });
-              const completeOutfitSelectionAction = isSelectedForCompleteOutfit ? 'Remove' : 'Add';
               const completeOutfitSelectionAriaLabel = isSelectedForCompleteOutfit
-                ? `${completeOutfitSelectionAction} ${item.category} from outfit completion`
-                : `${completeOutfitSelectionAction} ${item.category} to outfit completion`;
-              const completeOutfitSelectionCopy = isSelectedForCompleteOutfit
-                ? 'Remove from outfit completion'
+                ? `Remove ${item.category} from outfit`
                 : isCompleteOutfitEligible
-                  ? 'Add to outfit completion'
-                  : 'Outfit completion unavailable';
+                  ? `Use ${item.category} in outfit`
+                  : `${item.category} can't be used in outfits`;
+              const completeOutfitSelectionCopy = isSelectedForCompleteOutfit
+                ? '✓ In outfit'
+                : isCompleteOutfitEligible
+                  ? '+ Use in outfit'
+                  : "Can't be used in outfits";
               return (
               <div
                 key={item.id}
@@ -1193,11 +1277,6 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                       <h3 className="text-base font-bold text-white sm:text-lg">{wardrobeCategoryLabel(item.category)}</h3>
-                      {isSelectedForCompleteOutfit && (
-                        <span className="inline-flex w-fit items-center rounded-full border border-brand-blue/30 bg-brand-blue/20 px-2.5 py-1 text-xs font-semibold text-brand-blue">
-                          ✓ Selected
-                        </span>
-                      )}
                     </div>
                     {item.color && (
                       <p className="mt-1 text-sm text-slate-300">
@@ -1262,7 +1341,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                         }`}
                         title={
                           !isCompleteOutfitEligible
-                            ? 'Unsupported item category for outfit completion'
+                            ? "This item category can't be used in outfits"
                             : upperBodySlotTaken
                               ? 'Choose only one of blazer, outerwear, or sweater'
                               : slotAlreadySelected
@@ -2199,6 +2278,60 @@ const Wardrobe: React.FC<WardrobeProps> = ({
           </div>
         )}
       </div>
+
+      {showSelectionStickyBar && (
+        <div
+          className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-slate-900/95 px-3 pt-3 shadow-2xl backdrop-blur sm:px-4"
+          style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+          data-testid="wardrobe-selection-sticky-bar"
+        >
+          <div className="mx-auto flex w-full max-w-4xl flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <div className="min-w-0 flex-1">
+              <p
+                className="text-sm font-medium text-slate-100"
+                aria-live="polite"
+                data-testid="wardrobe-selection-sticky-summary"
+              >
+                {selectionStickyBarSummary}
+              </p>
+              {selectionStickyPreferenceSummary && (
+                <div className="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-slate-400">
+                  <span className="truncate" data-testid="wardrobe-selection-sticky-prefs">
+                    {selectionStickyPreferenceSummary}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleEditCompletionPreferences}
+                    className="shrink-0 rounded px-1 font-semibold text-brand-blue transition-opacity hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-brand-blue/50"
+                    data-testid="wardrobe-selection-sticky-edit"
+                  >
+                    Edit
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2 sm:flex-shrink-0">
+              <button
+                type="button"
+                onClick={clearCompleteOutfitSelection}
+                className="min-h-[44px] rounded-xl border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/20"
+                data-testid="wardrobe-selection-sticky-clear"
+              >
+                {COMPLETION_CLEAR_SELECTION_LABEL}
+              </button>
+              <button
+                type="button"
+                onClick={handleCompleteOutfitWithAI}
+                disabled={completeOutfitActionDisabled}
+                className="min-h-[44px] flex-1 rounded-xl px-5 py-2 text-sm font-semibold shadow-md btn-brand transition-all disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none sm:min-w-[200px]"
+                data-testid="wardrobe-selection-sticky-complete"
+              >
+                {completeOutfitActionCopy}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

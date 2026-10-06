@@ -90,9 +90,9 @@ final class IosLayoutBugFixPresentationTests: XCTestCase {
             WardrobeCompleteOutfitCardAction.resolve(isEligible: false, isSelected: false),
             .unavailable
         )
-        XCTAssertEqual(WardrobeCompleteOutfitCardAction.add.title, "Add to outfit completion")
-        XCTAssertEqual(WardrobeCompleteOutfitCardAction.remove.title, "Remove from outfit completion")
-        XCTAssertEqual(WardrobeCompleteOutfitCardAction.unavailable.title, "Outfit completion unavailable")
+        XCTAssertEqual(WardrobeCompleteOutfitCardAction.add.title, "+ Use in outfit")
+        XCTAssertEqual(WardrobeCompleteOutfitCardAction.remove.title, "✓ In outfit")
+        XCTAssertEqual(WardrobeCompleteOutfitCardAction.unavailable.title, "Can't be used in outfits")
     }
 
     func testCompleteOutfitButtonVisibilityAndSelectionEntry() {

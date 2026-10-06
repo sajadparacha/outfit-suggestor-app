@@ -63,7 +63,15 @@ enum WardrobeCompleteOutfitCardAction: Equatable {
         switch self {
         case .add: return WardrobeCardUx.addToOutfitCompletion
         case .remove: return WardrobeCardUx.removeFromOutfitCompletion
-        case .unavailable: return "Outfit completion unavailable"
+        case .unavailable: return WardrobeCardUx.outfitCompletionUnavailable
+        }
+    }
+
+    func accessibilityLabel(category: String) -> String {
+        switch self {
+        case .add: return WardrobeCardUx.useInOutfitAccessibilityLabel(category: category)
+        case .remove: return WardrobeCardUx.removeFromOutfitAccessibilityLabel(category: category)
+        case .unavailable: return WardrobeCardUx.unavailableForOutfitAccessibilityLabel(category: category)
         }
     }
 

@@ -301,10 +301,10 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               'Tap an item anytime to update details or swap the photo.',
               'For one saved piece, tap Style this item with AI to open Suggest with that item loaded—set preferences and tap Generate Outfit.',
               WARDROBE_FIT_COPY.guideStep,
-              'To combine multiple pieces, use Complete an outfit from selected wardrobe pieces: tap Add to outfit completion on item cards (1 to 5 items). Core slots are shirt, trousers, blazer, shoes, and belt; jackets and coats count as outerwear, sweaters as layer. Choose only one of blazer, outerwear, or sweater at a time—one item per other slot.',
+              'To combine multiple pieces, use Build an outfit around pieces you love: tap + Use in outfit on item cards (1 to 5 items). Tapped cards show ✓ In outfit, and a bar at the bottom shows how many pieces you picked—AI will pick the rest. Core slots are shirt, trousers, blazer, shoes, and belt; jackets and coats count as outerwear, sweaters as layer. Choose only one of blazer, outerwear, or sweater at a time—one item per other slot.',
               'Expand Preferences on Wardrobe to set occasion, season, style, and notes—the same pickers as Suggest. Logged in? Toggle Use my wardrobe only if you want recommendations limited to saved items.',
               'Preferences on Wardrobe stay in sync with Suggest—change them inline without switching tabs first. Insights uses its own lifestyle mix, not these pickers.',
-              'Tap Complete outfit with AI when at least one item is selected. The AI keeps your picks and fills any missing slots.',
+              'Tap Complete outfit with AI (in the panel or the bottom bar) when at least one item is picked. The AI keeps your picks and fills any missing slots. The bottom bar appears once the panel scrolls out of view, showing your picks and current preferences (tap Edit to jump back to them). Tap Clear selection to start over.',
               'We warn you if a new photo looks like something you already saved—no accidental twins.',
             ]}
           />

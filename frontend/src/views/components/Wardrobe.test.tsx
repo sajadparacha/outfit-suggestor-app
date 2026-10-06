@@ -1,6 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import Wardrobe from './Wardrobe';
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
+import Wardrobe, { formatCompletionPickedCount, formatCompletionPreferenceSummary } from './Wardrobe';
 import type { WardrobeItem } from '../../models/WardrobeModels';
 import ApiService from '../../services/ApiService';
 
@@ -96,6 +96,9 @@ const clickPastSuggestionsFromMenu = (itemId = 1) => {
   fireEvent.click(screen.getByTestId(`wardrobe-menu-past-suggestions-${itemId}`));
 };
 
+const getPanelCompleteButton = () =>
+  within(screen.getByTestId('wardrobe-completion-panel')).getByRole('button', { name: /Complete outfit with AI/i });
+
 describe('Wardrobe page', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -155,16 +158,16 @@ describe('Wardrobe page', () => {
     const card = screen.getByTestId('wardrobe-item-card-1');
     const outfitCompletionButtons = within(card)
       .getAllByRole('button')
-      .filter((button) => /outfit completion/i.test(button.getAttribute('aria-label') ?? ''));
+      .filter((button) => /in outfit|from outfit/i.test(button.getAttribute('aria-label') ?? ''));
 
     expect(outfitCompletionButtons).toHaveLength(1);
-    expect(within(card).getByRole('button', { name: /Add shirt to outfit completion/i }))
-      .toHaveTextContent('Add to outfit completion');
+    expect(within(card).getByRole('button', { name: /Use shirt in outfit/i }))
+      .toHaveTextContent('+ Use in outfit');
 
     const styleButton = within(card).getByRole('button', { name: /Style this item with AI/i });
     expect(styleButton).toHaveTextContent('Style this item');
     expect(styleButton).toHaveTextContent('Single-item Suggest flow');
-    expect(styleButton).not.toHaveTextContent(/Add to outfit completion|Remove from outfit completion/i);
+    expect(styleButton).not.toHaveTextContent(/Use in outfit|In outfit/i);
   });
 
   it('opens overflow menu with View image, Edit, Past Suggestions, and Delete in order', () => {
@@ -348,8 +351,8 @@ describe('Wardrobe page', () => {
     const action = screen.getByRole('button', { name: /Select at least 1 item/i });
     expect(action).toBeDisabled();
 
-    fireEvent.click(screen.getByRole('button', { name: /Add shirt to outfit completion/i }));
-    const readyAction = screen.getByRole('button', { name: /Complete outfit with AI/i });
+    fireEvent.click(screen.getByRole('button', { name: /Use shirt in outfit/i }));
+    const readyAction = getPanelCompleteButton();
     expect(readyAction).not.toBeDisabled();
 
     fireEvent.click(readyAction);
@@ -373,36 +376,36 @@ describe('Wardrobe page', () => {
     render(<Wardrobe />);
 
     const aliasSlots = [
-      { category: 'polo', summary: '1 selected: shirt' },
-      { category: 't-shirt', summary: '1 selected: shirt' },
-      { category: 't_shirt', summary: '1 selected: shirt' },
-      { category: 'pants', summary: '1 selected: trousers' },
-      { category: 'jeans', summary: '1 selected: trousers' },
-      { category: 'shorts', summary: '1 selected: trousers' },
+      { category: 'polo', summary: '1 picked: Shirt' },
+      { category: 't-shirt', summary: '1 picked: Shirt' },
+      { category: 't_shirt', summary: '1 picked: Shirt' },
+      { category: 'pants', summary: '1 picked: Trousers' },
+      { category: 'jeans', summary: '1 picked: Trousers' },
+      { category: 'shorts', summary: '1 picked: Trousers' },
     ];
 
     aliasSlots.forEach(({ category }) => {
-      const button = screen.getByRole('button', { name: new RegExp(`Add ${category} to outfit completion`, 'i') });
+      const button = screen.getByRole('button', { name: new RegExp(`Use ${category} in outfit`, 'i') });
       expect(button).toBeEnabled();
-      expect(button).toHaveTextContent('Add to outfit completion');
+      expect(button).toHaveTextContent('+ Use in outfit');
     });
-    expect(screen.queryByText('Outfit completion unavailable')).not.toBeInTheDocument();
+    expect(screen.queryByText("Can't be used in outfits")).not.toBeInTheDocument();
 
     aliasSlots.forEach(({ category, summary }) => {
-      fireEvent.click(screen.getByRole('button', { name: new RegExp(`Add ${category} to outfit completion`, 'i') }));
+      fireEvent.click(screen.getByRole('button', { name: new RegExp(`Use ${category} in outfit`, 'i') }));
 
-      const selectedButton = screen.getByRole('button', { name: new RegExp(`Remove ${category} from outfit completion`, 'i') });
-      expect(selectedButton).toHaveTextContent('Remove from outfit completion');
+      const selectedButton = screen.getByRole('button', { name: new RegExp(`Remove ${category} from outfit`, 'i') });
+      expect(selectedButton).toHaveTextContent('✓ In outfit');
       expect(selectedButton).toHaveAttribute('aria-pressed', 'true');
       expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent(summary);
 
       fireEvent.click(selectedButton);
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Add polo to outfit completion/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Add pants to outfit completion/i }));
-    expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('2 selected: shirt, trousers');
-    expect(screen.getByRole('button', { name: /Complete outfit with AI/i })).not.toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: /Use polo in outfit/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Use pants in outfit/i }));
+    expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('2 picked: Shirt, Trousers');
+    expect(getPanelCompleteButton()).not.toBeDisabled();
   });
 
   it('prevents duplicate outfit-slot selections with clear copy', () => {
@@ -413,12 +416,12 @@ describe('Wardrobe page', () => {
 
     render(<Wardrobe />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Add shirt to outfit completion/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Add polo to outfit completion/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Use shirt in outfit/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Use polo in outfit/i }));
 
     expect(screen.getByText('Choose one item per outfit slot')).toBeInTheDocument();
-    expect(screen.getAllByText('Remove from outfit completion')).toHaveLength(1);
-    expect(screen.getByRole('button', { name: /Complete outfit with AI/i })).not.toBeDisabled();
+    expect(screen.getAllByText('✓ In outfit')).toHaveLength(1);
+    expect(getPanelCompleteButton()).not.toBeDisabled();
   });
 
   it('shows undo toast on delete via menu and restores item when undo is tapped', async () => {
@@ -722,10 +725,302 @@ describe('Wardrobe page', () => {
 
     render(<Wardrobe outfitController={outfitControllerWithPrefs()} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Add shirt to outfit completion/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Add trouser to outfit completion/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Use shirt in outfit/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Use trouser in outfit/i }));
 
-    expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('2 selected: shirt, trousers');
+    expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('2 picked: Shirt, Trousers');
+  });
+
+  describe('outfit completion UX clarity', () => {
+    it('shows new card toggle copy, no Selected badge, and ineligible copy', () => {
+      mockWardrobeItems.push(
+        { ...mockWardrobeItem, id: 1, category: 'shirt', description: 'Blue shirt' },
+        { ...mockWardrobeItem, id: 2, category: 'scarf', description: 'Wool scarf', color: 'Gray' }
+      );
+
+      render(<Wardrobe />);
+
+      const shirtCard = screen.getByTestId('wardrobe-item-card-1');
+      const useButton = within(shirtCard).getByRole('button', { name: 'Use shirt in outfit' });
+      expect(useButton).toHaveTextContent('+ Use in outfit');
+      expect(useButton).toHaveAttribute('aria-pressed', 'false');
+
+      fireEvent.click(useButton);
+
+      const inOutfitButton = within(shirtCard).getByRole('button', { name: 'Remove shirt from outfit' });
+      expect(inOutfitButton).toHaveTextContent('✓ In outfit');
+      expect(inOutfitButton).toHaveAttribute('aria-pressed', 'true');
+      expect(within(shirtCard).queryByText('✓ Selected')).not.toBeInTheDocument();
+      expect(screen.queryByText(/✓ Selected/)).not.toBeInTheDocument();
+      expect(shirtCard).toHaveClass('ring-2');
+
+      const scarfButton = within(screen.getByTestId('wardrobe-item-card-2')).getByRole('button', {
+        name: "scarf can't be used in outfits",
+      });
+      expect(scarfButton).toHaveTextContent("Can't be used in outfits");
+      expect(scarfButton).toBeDisabled();
+      expect(screen.queryByText(/outfit completion/i)).not.toBeInTheDocument();
+    });
+
+    it('shows new completion panel title, subtitle, and secondary rules line', () => {
+      mockWardrobeItems.push({ ...mockWardrobeItem, id: 1, category: 'shirt' });
+
+      render(<Wardrobe />);
+
+      const panel = screen.getByTestId('wardrobe-completion-panel');
+      expect(within(panel).getByText('Build an outfit around pieces you love')).toBeInTheDocument();
+      expect(
+        within(panel).getByText('Pick 1–5 items you want to wear. AI picks the rest from your style.')
+      ).toBeInTheDocument();
+      expect(screen.getByTestId('wardrobe-completion-rules')).toHaveTextContent(
+        'One item per slot. Choose only one of blazer, outerwear, or sweater.'
+      );
+      expect(screen.queryByText('Complete an outfit from selected wardrobe pieces')).not.toBeInTheDocument();
+    });
+
+    it('hides sticky bar with 0 selected and shows Title Case picked count with slot names', () => {
+      mockWardrobeItems.push(
+        { ...mockWardrobeItem, id: 1, category: 'shirt', description: 'Blue shirt' },
+        { ...mockWardrobeItem, id: 2, category: 'trouser', description: 'Navy trousers', color: 'Navy' }
+      );
+
+      render(<Wardrobe />);
+
+      expect(screen.queryByTestId('wardrobe-selection-sticky-bar')).not.toBeInTheDocument();
+      expect(screen.getByTestId('wardrobe-items-list')).toHaveClass('pb-6');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Use shirt in outfit' }));
+      const bar = screen.getByTestId('wardrobe-selection-sticky-bar');
+      expect(bar).toHaveClass('fixed', 'bottom-0');
+      expect(within(bar).getByTestId('wardrobe-selection-sticky-summary')).toHaveTextContent(
+        '1 picked: Shirt — AI will pick the rest'
+      );
+      expect(screen.getByTestId('wardrobe-items-list')).toHaveClass('pb-40');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Use trouser in outfit' }));
+      expect(screen.getByTestId('wardrobe-selection-sticky-summary')).toHaveTextContent(
+        '2 picked: Shirt, Trousers — AI will pick the rest'
+      );
+    });
+
+    it('Clear selection in sticky bar deselects all and hides the bar', () => {
+      mockWardrobeItems.push(
+        { ...mockWardrobeItem, id: 1, category: 'shirt', description: 'Blue shirt' },
+        { ...mockWardrobeItem, id: 2, category: 'trouser', description: 'Navy trousers', color: 'Navy' }
+      );
+
+      render(<Wardrobe />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Use shirt in outfit' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Use trouser in outfit' }));
+
+      const bar = screen.getByTestId('wardrobe-selection-sticky-bar');
+      fireEvent.click(within(bar).getByRole('button', { name: 'Clear selection' }));
+
+      expect(screen.queryByTestId('wardrobe-selection-sticky-bar')).not.toBeInTheDocument();
+      expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('No items selected');
+      expect(screen.getByRole('button', { name: 'Use shirt in outfit' })).toHaveAttribute('aria-pressed', 'false');
+      expect(screen.getByRole('button', { name: 'Use trouser in outfit' })).toHaveAttribute('aria-pressed', 'false');
+    });
+
+    it('sticky bar CTA calls completion with selected ids', async () => {
+      mockWardrobeItems.push(
+        { ...mockWardrobeItem, id: 1, category: 'shirt', description: 'Blue shirt' },
+        { ...mockWardrobeItem, id: 2, category: 'trouser', description: 'Navy trousers', color: 'Navy' }
+      );
+      const completeOutfitFromWardrobeSelection = jest.fn().mockResolvedValue(undefined);
+      const onNavigateToMain = jest.fn();
+
+      render(
+        <Wardrobe
+          onNavigateToMain={onNavigateToMain}
+          outfitController={outfitControllerWithPrefs({ completeOutfitFromWardrobeSelection })}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Use shirt in outfit' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Use trouser in outfit' }));
+
+      const cta = within(screen.getByTestId('wardrobe-selection-sticky-bar')).getByRole('button', {
+        name: 'Complete outfit with AI',
+      });
+      expect(cta).not.toBeDisabled();
+      fireEvent.click(cta);
+
+      await waitFor(() => {
+        expect(completeOutfitFromWardrobeSelection).toHaveBeenCalledWith([1, 2]);
+        expect(onNavigateToMain).toHaveBeenCalledTimes(1);
+      });
+      expect(screen.queryByTestId('wardrobe-selection-sticky-bar')).not.toBeInTheDocument();
+    });
+
+    it('sticky bar CTA shows loading copy and is disabled while outfit controller is loading', () => {
+      mockWardrobeItems.push({ ...mockWardrobeItem, id: 1, category: 'shirt' });
+
+      const { rerender } = render(<Wardrobe outfitController={outfitControllerWithPrefs()} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Use shirt in outfit' }));
+
+      rerender(<Wardrobe outfitController={outfitControllerWithPrefs({ loading: true })} />);
+
+      const cta = within(screen.getByTestId('wardrobe-selection-sticky-bar')).getByRole('button', {
+        name: 'Completing your outfit...',
+      });
+      expect(cta).toBeDisabled();
+    });
+  });
+
+  describe('sticky bar complements the completion panel', () => {
+    type ObserverCallback = (entries: Array<Partial<IntersectionObserverEntry>>) => void;
+    let observerCallbacks: ObserverCallback[] = [];
+    const originalIntersectionObserver = (window as any).IntersectionObserver;
+
+    const setPanelIntersecting = (isIntersecting: boolean) => {
+      act(() => {
+        observerCallbacks.forEach((cb) => cb([{ isIntersecting }]));
+      });
+    };
+
+    beforeEach(() => {
+      observerCallbacks = [];
+      (window as any).IntersectionObserver = jest.fn((cb: ObserverCallback) => {
+        observerCallbacks.push(cb);
+        return { observe: jest.fn(), unobserve: jest.fn(), disconnect: jest.fn() };
+      });
+    });
+
+    afterEach(() => {
+      (window as any).IntersectionObserver = originalIntersectionObserver;
+    });
+
+    const pushOuterwearAndShirt = () => {
+      mockWardrobeItems.push(
+        { ...mockWardrobeItem, id: 1, category: 'outerwear', description: 'Rain jacket' },
+        { ...mockWardrobeItem, id: 2, category: 'shirt', description: 'Blue shirt' }
+      );
+    };
+
+    it('hides the bar while the panel is intersecting and shows it once the panel leaves view', () => {
+      pushOuterwearAndShirt();
+      render(<Wardrobe outfitController={outfitControllerWithPrefs()} />);
+
+      setPanelIntersecting(true);
+      expect(screen.queryByTestId('wardrobe-selection-sticky-bar')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Use outerwear in outfit' }));
+      expect(screen.queryByTestId('wardrobe-selection-sticky-bar')).not.toBeInTheDocument();
+
+      setPanelIntersecting(false);
+      expect(screen.getByTestId('wardrobe-selection-sticky-bar')).toBeInTheDocument();
+
+      setPanelIntersecting(true);
+      expect(screen.queryByTestId('wardrobe-selection-sticky-bar')).not.toBeInTheDocument();
+    });
+
+    it('keeps the bar hidden with 0 selected even when the panel is out of view', () => {
+      pushOuterwearAndShirt();
+      render(<Wardrobe outfitController={outfitControllerWithPrefs()} />);
+
+      setPanelIntersecting(false);
+      expect(screen.queryByTestId('wardrobe-selection-sticky-bar')).not.toBeInTheDocument();
+    });
+
+    it('shows "2 picked: Outerwear, Shirt" in the panel and bar, with Clear selection in both', () => {
+      pushOuterwearAndShirt();
+      render(<Wardrobe outfitController={outfitControllerWithPrefs()} />);
+      setPanelIntersecting(false);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Use outerwear in outfit' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Use shirt in outfit' }));
+
+      expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent(/^2 picked: Outerwear, Shirt$/);
+      expect(screen.getByTestId('wardrobe-selection-sticky-summary')).toHaveTextContent(
+        /^2 picked: Outerwear, Shirt — AI will pick the rest$/
+      );
+      expect(
+        within(screen.getByTestId('wardrobe-completion-panel')).getByRole('button', { name: 'Clear selection' })
+      ).toBeInTheDocument();
+      expect(
+        within(screen.getByTestId('wardrobe-selection-sticky-bar')).getByRole('button', { name: 'Clear selection' })
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/piece(s)? picked/)).not.toBeInTheDocument();
+    });
+
+    it('shows the shared preference summary in the bar (base, notes, wardrobe only)', () => {
+      pushOuterwearAndShirt();
+      const filters = { occasion: 'work', season: 'all-season', style: 'smart-casual' };
+      const { rerender } = render(<Wardrobe outfitController={outfitControllerWithPrefs({ filters })} />);
+      setPanelIntersecting(false);
+      fireEvent.click(screen.getByRole('button', { name: 'Use shirt in outfit' }));
+
+      expect(screen.getByTestId('wardrobe-selection-sticky-prefs')).toHaveTextContent(
+        /^Work · All Season · Smart Casual$/
+      );
+
+      rerender(
+        <Wardrobe outfitController={outfitControllerWithPrefs({ filters, preferenceText: 'no ties' })} />
+      );
+      expect(screen.getByTestId('wardrobe-selection-sticky-prefs')).toHaveTextContent(
+        /^Work · All Season · Smart Casual · \+ notes$/
+      );
+
+      rerender(
+        <Wardrobe
+          outfitController={outfitControllerWithPrefs({ filters, preferenceText: 'no ties', useWardrobeOnly: true })}
+        />
+      );
+      expect(screen.getByTestId('wardrobe-selection-sticky-prefs')).toHaveTextContent(
+        /^Work · All Season · Smart Casual · \+ notes · Wardrobe only$/
+      );
+
+      const bar = screen.getByTestId('wardrobe-selection-sticky-bar');
+      expect(within(bar).queryByRole('combobox')).not.toBeInTheDocument();
+      expect(within(bar).queryByRole('checkbox')).not.toBeInTheDocument();
+    });
+
+    it('Edit scrolls the panel into view and expands Preferences', () => {
+      pushOuterwearAndShirt();
+      const scrollIntoView = jest.fn();
+      const originalScrollIntoView = Element.prototype.scrollIntoView;
+      Element.prototype.scrollIntoView = scrollIntoView;
+      try {
+        render(<Wardrobe outfitController={outfitControllerWithPrefs()} />);
+        setPanelIntersecting(false);
+        fireEvent.click(screen.getByRole('button', { name: 'Use shirt in outfit' }));
+
+        const details = screen.getByTestId('wardrobe-completion-preferences') as HTMLDetailsElement;
+        details.open = false;
+        expect(details.open).toBe(false);
+
+        fireEvent.click(
+          within(screen.getByTestId('wardrobe-selection-sticky-bar')).getByRole('button', { name: 'Edit' })
+        );
+
+        expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+        expect(scrollIntoView.mock.instances[0]).toBe(screen.getByTestId('wardrobe-completion-panel'));
+        expect(details.open).toBe(true);
+      } finally {
+        Element.prototype.scrollIntoView = originalScrollIntoView;
+      }
+    });
+
+    it('formats helpers for count and preference summary', () => {
+      expect(formatCompletionPickedCount([{ category: 'outerwear' }, { category: 'shirt' }])).toBe(
+        '2 picked: Outerwear, Shirt'
+      );
+      expect(formatCompletionPickedCount([{ category: 'sweater' }], { withSuffix: true })).toBe(
+        '1 picked: Layer — AI will pick the rest'
+      );
+      expect(
+        formatCompletionPreferenceSummary({ occasion: 'work', season: 'all-season', style: 'smart-casual' })
+      ).toBe('Work · All Season · Smart Casual');
+      expect(
+        formatCompletionPreferenceSummary(
+          { occasion: 'work', season: 'all-season', style: 'smart-casual' },
+          '  ',
+          true
+        )
+      ).toBe('Work · All Season · Smart Casual · Wardrobe only');
+    });
   });
 
   describe('completion selection thumbnails', () => {
@@ -739,12 +1034,12 @@ describe('Wardrobe page', () => {
 
       expect(screen.queryByTestId('wardrobe-selection-thumbnails')).not.toBeInTheDocument();
 
-      fireEvent.click(screen.getByRole('button', { name: /Add shirt to outfit completion/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Use shirt in outfit/i }));
       expect(screen.getByTestId('wardrobe-selection-thumbnails')).toBeInTheDocument();
       expect(screen.getByTestId('wardrobe-selection-thumb-1')).toBeInTheDocument();
       expect(screen.queryByTestId('wardrobe-selection-thumb-2')).not.toBeInTheDocument();
 
-      fireEvent.click(screen.getByRole('button', { name: /Add trouser to outfit completion/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Use trouser in outfit/i }));
 
       const row = screen.getByTestId('wardrobe-selection-thumbnails');
       expect(screen.getByTestId('wardrobe-selection-thumb-1')).toBeInTheDocument();
@@ -763,7 +1058,7 @@ describe('Wardrobe page', () => {
 
       render(<Wardrobe />);
 
-      fireEvent.click(screen.getByRole('button', { name: /Add shirt to outfit completion/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Use shirt in outfit/i }));
       fireEvent.click(screen.getByTestId('wardrobe-selection-thumb-1'));
 
       expect(screen.getByAltText('Full size view')).toHaveAttribute(
@@ -780,10 +1075,10 @@ describe('Wardrobe page', () => {
 
       render(<Wardrobe />);
 
-      fireEvent.click(screen.getByRole('button', { name: /Add shirt to outfit completion/i }));
-      fireEvent.click(screen.getByRole('button', { name: /Add trouser to outfit completion/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Use shirt in outfit/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Use trouser in outfit/i }));
 
-      expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('2 selected: shirt, trousers');
+      expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('2 picked: Shirt, Trousers');
       expect(screen.getByTestId('wardrobe-selection-thumbnails')).toBeInTheDocument();
       expect(screen.getByTestId('wardrobe-selection-thumb-1')).toBeInTheDocument();
       expect(screen.queryByTestId('wardrobe-selection-thumb-2')).not.toBeInTheDocument();
@@ -799,22 +1094,22 @@ describe('Wardrobe page', () => {
 
       render(<Wardrobe />);
 
-      fireEvent.click(screen.getByRole('button', { name: /Add shirt to outfit completion/i }));
-      fireEvent.click(screen.getByRole('button', { name: /Add trouser to outfit completion/i }));
-      expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('2 selected: shirt, trousers');
+      fireEvent.click(screen.getByRole('button', { name: /Use shirt in outfit/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Use trouser in outfit/i }));
+      expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('2 picked: Shirt, Trousers');
 
       expect(screen.getByRole('button', { name: 'Remove shirt' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Remove trousers' })).toBeInTheDocument();
       // Card toggle keeps a distinct accessible name from the thumbnail ✕.
-      expect(screen.getByRole('button', { name: /Remove shirt from outfit completion/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Remove shirt from outfit/i })).toBeInTheDocument();
 
       fireEvent.click(screen.getByTestId('wardrobe-selection-remove-1'));
 
-      expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('1 selected: trousers');
+      expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('1 picked: Trousers');
       expect(screen.queryByTestId('wardrobe-selection-thumb-1')).not.toBeInTheDocument();
       expect(screen.getByTestId('wardrobe-selection-thumb-2')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Add shirt to outfit completion/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Complete outfit with AI/i })).not.toBeDisabled();
+      expect(screen.getByRole('button', { name: /Use shirt in outfit/i })).toBeInTheDocument();
+      expect(getPanelCompleteButton()).not.toBeDisabled();
 
       fireEvent.click(screen.getByTestId('wardrobe-selection-thumb-2'));
       expect(screen.getByAltText('Full size view')).toHaveAttribute(

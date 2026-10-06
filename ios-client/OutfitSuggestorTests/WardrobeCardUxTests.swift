@@ -8,9 +8,177 @@ final class WardrobeCardUxTests: XCTestCase {
         XCTAssertEqual(WardrobeCardUx.styleThisItemSubtitle, "Single-item Suggest flow")
         XCTAssertEqual(WardrobeCardUx.styleThisItemAccessibilityLabel, "Style this item with AI")
         XCTAssertEqual(WardrobeCardUx.singleItemStylingSection, "Single-item styling")
-        XCTAssertEqual(WardrobeCardUx.addToOutfitCompletion, "Add to outfit completion")
-        XCTAssertEqual(WardrobeCardUx.removeFromOutfitCompletion, "Remove from outfit completion")
         XCTAssertEqual(WardrobeCardUx.completeOutfitActionIdentifier(itemId: 7), "wardrobe.completeOutfit.7")
+    }
+
+    func testUseInOutfitCardCopy() {
+        XCTAssertEqual(WardrobeCardUx.addToOutfitCompletion, "+ Use in outfit")
+        XCTAssertEqual(WardrobeCardUx.removeFromOutfitCompletion, "✓ In outfit")
+        XCTAssertEqual(WardrobeCardUx.outfitCompletionUnavailable, "Can't be used in outfits")
+        XCTAssertEqual(WardrobeCompleteOutfitCardAction.add.title, "+ Use in outfit")
+        XCTAssertEqual(WardrobeCompleteOutfitCardAction.remove.title, "✓ In outfit")
+        XCTAssertEqual(WardrobeCompleteOutfitCardAction.unavailable.title, "Can't be used in outfits")
+        XCTAssertEqual(
+            WardrobeCompleteOutfitCardAction.add.accessibilityLabel(category: "Shirt"),
+            "Use Shirt in outfit"
+        )
+        XCTAssertEqual(
+            WardrobeCompleteOutfitCardAction.remove.accessibilityLabel(category: "Shirt"),
+            "Remove Shirt from outfit"
+        )
+        XCTAssertEqual(
+            WardrobeCompleteOutfitCardAction.unavailable.accessibilityLabel(category: "Hat"),
+            "Hat can't be used in outfits"
+        )
+    }
+
+    func testCompletionPanelCopy() {
+        XCTAssertEqual(WardrobeCompletionCopy.panelTitle, "Build an outfit around pieces you love")
+        XCTAssertEqual(
+            WardrobeCompletionCopy.panelSubtitle,
+            "Pick 1–5 items you want to wear. AI picks the rest from your style."
+        )
+        XCTAssertEqual(
+            WardrobeCompletionCopy.panelRules,
+            "One item per slot. Choose only one of blazer, outerwear, or sweater."
+        )
+        XCTAssertTrue(WardrobeCompletionCopy.emptyEligibleHint.contains("Use in outfit"))
+        XCTAssertEqual(WardrobeCompletionCopy.completeOutfitButton, "Complete outfit with AI")
+        XCTAssertEqual(WardrobeCompletionCopy.clearSelection, "Clear selection")
+        XCTAssertEqual(WardrobeCompletionCopy.stickyBarClear, "Clear selection")
+        XCTAssertEqual(WardrobeCompletionCopy.stickyBarEditPreferences, "Edit")
+    }
+
+    func testStickyBarSummarySingularAndPlural() {
+        XCTAssertEqual(
+            WardrobeCompletionCopy.stickyBarSummary(selectedCount: 1, slotLabels: ["Shirt"]),
+            "1 picked: Shirt — AI will pick the rest"
+        )
+        XCTAssertEqual(
+            WardrobeCompletionCopy.stickyBarSummary(selectedCount: 2, slotLabels: ["Outerwear", "Shirt"]),
+            "2 picked: Outerwear, Shirt — AI will pick the rest"
+        )
+    }
+
+    func testPickedSummaryPanelHasNoSuffix() {
+        XCTAssertEqual(
+            WardrobeCompletionCopy.pickedSummary(selectedCount: 2, slotLabels: ["Outerwear", "Shirt"]),
+            "2 picked: Outerwear, Shirt"
+        )
+        XCTAssertEqual(
+            WardrobeCompletionCopy.pickedSummary(selectedCount: 1, slotLabels: ["Shirt"]),
+            "1 picked: Shirt"
+        )
+    }
+
+    func testPanelPickedSummaryUsesTitleCaseSlots() {
+        let jacket = wardrobeItem(id: 1, category: "outerwear")
+        let shirt = wardrobeItem(id: 2, category: "shirt")
+        var state = WardrobeMultiSelectState()
+        XCTAssertEqual(
+            WardrobeCompletionCopy.panelPickedSummary(state: state, items: [jacket, shirt]),
+            "No items selected"
+        )
+        XCTAssertEqual(state.toggle(jacket), .selected)
+        XCTAssertEqual(
+            WardrobeCompletionCopy.panelPickedSummary(state: state, items: [jacket, shirt]),
+            "1 picked: Outerwear"
+        )
+        XCTAssertEqual(state.toggle(shirt), .selected)
+        XCTAssertEqual(
+            WardrobeCompletionCopy.panelPickedSummary(state: state, items: [jacket, shirt]),
+            "2 picked: Outerwear, Shirt"
+        )
+        XCTAssertEqual(
+            WardrobeCompletionCopy.stickyBarSummary(state: state, items: [jacket, shirt]),
+            "2 picked: Outerwear, Shirt — AI will pick the rest"
+        )
+    }
+
+    func testPreferenceSummaryBase() {
+        let filters = OutfitFilters(occasion: "work", season: "all-season", style: "smart-casual")
+        XCTAssertEqual(
+            WardrobeCompletionCopy.preferenceSummary(filters: filters, notes: "", useWardrobeOnly: false),
+            "Work · All Season · Smart Casual"
+        )
+        XCTAssertEqual(
+            WardrobeCompletionCopy.preferenceSummary(filters: OutfitFilters(), notes: "", useWardrobeOnly: false),
+            "Everyday · All Season · Classic"
+        )
+    }
+
+    func testPreferenceSummaryWithNotesAndWardrobeOnly() {
+        let filters = OutfitFilters(occasion: "work", season: "all-season", style: "smart-casual")
+        XCTAssertEqual(
+            WardrobeCompletionCopy.preferenceSummary(filters: filters, notes: "no ties", useWardrobeOnly: false),
+            "Work · All Season · Smart Casual · + notes"
+        )
+        XCTAssertEqual(
+            WardrobeCompletionCopy.preferenceSummary(filters: filters, notes: "", useWardrobeOnly: true),
+            "Work · All Season · Smart Casual · Wardrobe only"
+        )
+        XCTAssertEqual(
+            WardrobeCompletionCopy.preferenceSummary(filters: filters, notes: "x", useWardrobeOnly: true),
+            "Work · All Season · Smart Casual · + notes · Wardrobe only"
+        )
+    }
+
+    func testPreferenceSummaryIgnoresWhitespaceOnlyNotes() {
+        let filters = OutfitFilters(occasion: "work", season: "all-season", style: "smart-casual")
+        XCTAssertEqual(
+            WardrobeCompletionCopy.preferenceSummary(filters: filters, notes: "  \n\t ", useWardrobeOnly: false),
+            "Work · All Season · Smart Casual"
+        )
+    }
+
+    func testStickyBarSummaryFromSelectionStateUsesSlotOrder() {
+        let shirt = wardrobeItem(id: 1, category: "shirt")
+        let jeans = wardrobeItem(id: 2, category: "jeans")
+        let shoes = wardrobeItem(id: 3, category: "shoes")
+        var state = WardrobeMultiSelectState()
+        XCTAssertEqual(state.toggle(jeans), .selected)
+        XCTAssertEqual(state.toggle(shirt), .selected)
+        XCTAssertEqual(state.toggle(shoes), .selected)
+        XCTAssertEqual(
+            WardrobeCompletionCopy.stickyBarSummary(state: state, items: [shirt, jeans, shoes]),
+            "3 picked: Trousers, Shirt, Shoes — AI will pick the rest"
+        )
+        XCTAssertEqual(state.actionTitle, "Complete outfit with AI")
+    }
+
+    func testStickyBarVisibilityTruthTable() {
+        for count in [0, 1, 3] {
+            for panelVisible in [false, true] {
+                for weekPlan in [false, true] {
+                    let expected = count > 0 && !panelVisible && !weekPlan
+                    XCTAssertEqual(
+                        WardrobeCompletionCopy.shouldShowStickyBar(
+                            selectedCount: count,
+                            isPanelVisible: panelVisible,
+                            isWeekPlanPickMode: weekPlan
+                        ),
+                        expected,
+                        "count=\(count) panelVisible=\(panelVisible) weekPlan=\(weekPlan)"
+                    )
+                }
+            }
+        }
+        XCTAssertTrue(
+            WardrobeCompletionCopy.shouldShowStickyBar(selectedCount: 1, isPanelVisible: false, isWeekPlanPickMode: false)
+        )
+        XCTAssertFalse(
+            WardrobeCompletionCopy.shouldShowStickyBar(selectedCount: 1, isPanelVisible: true, isWeekPlanPickMode: false)
+        )
+        var state = WardrobeMultiSelectState()
+        _ = state.toggle(wardrobeItem(id: 9, category: "shirt"))
+        state.clear()
+        XCTAssertFalse(
+            WardrobeCompletionCopy.shouldShowStickyBar(
+                selectedCount: state.selectedCount,
+                isPanelVisible: false,
+                isWeekPlanPickMode: false
+            )
+        )
     }
 
     func testWardrobeEmptyCopy() {

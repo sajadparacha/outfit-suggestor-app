@@ -46,6 +46,7 @@ struct WardrobeListView: View {
     @State private var completionSelectionMessage: String?
     @State private var completionPreferencesExpanded = true
     @State private var categoryFiltersExpanded = true
+    @State private var isCompletionPanelVisible = false
 
     private var isWeekPlanPickMode: Bool {
         wardrobePickSession != nil && onPickWardrobeItemForWeekPlan != nil
@@ -110,7 +111,7 @@ struct WardrobeListView: View {
     }
 
     private var completionSelectionSummary: String {
-        completionSelection.selectionSummary(for: allWardrobeItems)
+        WardrobeCompletionCopy.panelPickedSummary(state: completionSelection, items: allWardrobeItems)
     }
 
     private var completionStatusText: String? {
@@ -166,6 +167,7 @@ struct WardrobeListView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .accessibilityIdentifier("wardrobe.emptyState")
             } else if response != nil {
+                ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: 0) {
                         if let session = wardrobePickSession, isWeekPlanPickMode {
@@ -210,6 +212,9 @@ struct WardrobeListView: View {
                             completionSelectionPanel
                                 .padding(.horizontal)
                                 .padding(.bottom, 8)
+                                .id(WardrobeCompletionCopy.panelScrollId)
+                                .onAppear { isCompletionPanelVisible = true }
+                                .onDisappear { isCompletionPanelVisible = false }
                         }
                     
                         // Native Menu popover stacks above LazyVStack siblings (no web z-index fix needed).
@@ -259,6 +264,14 @@ struct WardrobeListView: View {
                 }
                 .scrollDismissesKeyboard(.interactively)
                 .accessibilityIdentifier("wardrobe.itemsList")
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    if showsSelectionStickyBar {
+                        selectionStickyBar(proxy: proxy)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
+                }
+                .animation(.easeInOut(duration: 0.2), value: showsSelectionStickyBar)
+                }
                 .overlay(alignment: .topLeading) {
                     Color.clear
                         .frame(width: 1, height: 1)
@@ -441,6 +454,115 @@ struct WardrobeListView: View {
         }
     }
 
+    private var showsSelectionStickyBar: Bool {
+        onCompleteOutfitFromSelection != nil
+            && WardrobeCompletionCopy.shouldShowStickyBar(
+                selectedCount: completionSelection.selectedCount,
+                isPanelVisible: isCompletionPanelVisible,
+                isWeekPlanPickMode: isWeekPlanPickMode
+            )
+    }
+
+    private var selectionStickyBarSummary: String {
+        WardrobeCompletionCopy.stickyBarSummary(state: completionSelection, items: allWardrobeItems)
+    }
+
+    private var selectionStickyBarPreferenceSummary: String {
+        WardrobeCompletionCopy.preferenceSummary(
+            filters: filters,
+            notes: preferenceText,
+            useWardrobeOnly: isAuthenticated && useWardrobeOnly
+        )
+    }
+
+    private func editPreferencesFromStickyBar(proxy: ScrollViewProxy) {
+        withAnimation {
+            completionPreferencesExpanded = true
+            proxy.scrollTo(WardrobeCompletionCopy.panelScrollId, anchor: .top)
+        }
+    }
+
+    private func selectionStickyBarText(proxy: ScrollViewProxy) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(selectionStickyBarSummary)
+                .font((isRegularWidth ? Font.subheadline : Font.footnote).weight(.semibold))
+                .foregroundColor(AppTheme.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier(WardrobeCompletionCopy.stickyBarSummaryAccessibilityId)
+            HStack(spacing: 8) {
+                Text(selectionStickyBarPreferenceSummary)
+                    .font(.caption)
+                    .foregroundColor(AppTheme.textSecondary)
+                    .lineLimit(2)
+                    .accessibilityIdentifier(WardrobeCompletionCopy.stickyBarPreferencesAccessibilityId)
+                Button(WardrobeCompletionCopy.stickyBarEditPreferences) {
+                    editPreferencesFromStickyBar(proxy: proxy)
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundColor(AppTheme.accent)
+                .frame(minHeight: 32)
+                .accessibilityIdentifier(WardrobeCompletionCopy.stickyBarEditAccessibilityId)
+            }
+        }
+    }
+
+    private var selectionStickyBarButtons: some View {
+        HStack(spacing: 10) {
+            Button(WardrobeCompletionCopy.clearSelection) {
+                withAnimation {
+                    completionSelection.clear()
+                    completionSelectionMessage = nil
+                }
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundColor(AppTheme.textSecondary)
+            .frame(minWidth: 44, minHeight: 44)
+            .accessibilityIdentifier(WardrobeCompletionCopy.stickyBarClearAccessibilityId)
+
+            Button(action: completeSelectedOutfit) {
+                Label(completionSelection.actionTitle, systemImage: "sparkles")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: isRegularWidth ? nil : .infinity)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 11)
+            }
+            .buttonStyle(GradientButtonStyle(isEnabled: completionSelection.canCompleteOutfit))
+            .disabled(!completionSelection.canCompleteOutfit)
+            .accessibilityLabel(completionSelection.actionTitle)
+            .accessibilityIdentifier(WardrobeCompletionCopy.stickyBarCompleteAccessibilityId)
+        }
+    }
+
+    private func selectionStickyBar(proxy: ScrollViewProxy) -> some View {
+        Group {
+            if isRegularWidth {
+                HStack(spacing: 12) {
+                    selectionStickyBarText(proxy: proxy)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    selectionStickyBarButtons
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    selectionStickyBarText(proxy: proxy)
+                    selectionStickyBarButtons
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .adaptiveContent(maxWidth: 1080)
+        .frame(maxWidth: .infinity)
+        .background(
+            AppTheme.bgSecondary.opacity(0.97)
+                .overlay(alignment: .top) {
+                    Rectangle().fill(AppTheme.border).frame(height: 1)
+                }
+                .ignoresSafeArea(edges: .bottom)
+        )
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier(WardrobeCompletionCopy.stickyBarAccessibilityId)
+    }
+
     @ViewBuilder
     private var completionSelectionPanel: some View {
         if onCompleteOutfitFromSelection != nil {
@@ -450,13 +572,20 @@ struct WardrobeListView: View {
                         .font(.title3)
                         .foregroundColor(AppTheme.accent)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Complete an outfit from your wardrobe")
+                        Text(WardrobeCompletionCopy.panelTitle)
                             .font(.subheadline.weight(.semibold))
                             .foregroundColor(AppTheme.textPrimary)
-                        Text("Select 1 to 5 pieces—one item per slot (shirt, trousers, blazer, outerwear, sweater, shoes, or belt). Choose only one of blazer, outerwear, or sweater.")
+                            .accessibilityIdentifier("wardrobe.multiSelect.title")
+                        Text(WardrobeCompletionCopy.panelSubtitle)
                             .font(.caption)
                             .foregroundColor(AppTheme.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("wardrobe.multiSelect.subtitle")
+                        Text(WardrobeCompletionCopy.panelRules)
+                            .font(.caption2)
+                            .foregroundColor(AppTheme.textSecondary.opacity(0.85))
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("wardrobe.multiSelect.rules")
                     }
                     Spacer()
                     Button(isCompletionSelectionMode ? "Cancel" : "Select items") {
@@ -482,7 +611,7 @@ struct WardrobeListView: View {
                                     : AppTheme.accent)
                                 .accessibilityIdentifier("wardrobe.multiSelect.status")
                             Spacer()
-                            Button("Clear selection") {
+                            Button(WardrobeCompletionCopy.clearSelection) {
                                 completionSelection.clear()
                                 completionSelectionMessage = nil
                             }
@@ -510,7 +639,7 @@ struct WardrobeListView: View {
                 } else if showsCompletionPreferences {
                     completionPreferencesSection
                 } else if !hasCompletionEligibleItems {
-                    Text("Add eligible wardrobe items to use AI outfit completion.")
+                    Text(WardrobeCompletionCopy.emptyEligibleHint)
                         .font(.caption)
                         .foregroundColor(AppTheme.textSecondary)
                 }
@@ -1172,20 +1301,25 @@ struct WardrobeCardView: View {
         }
         .buttonStyle(.plain)
         .disabled(action == .unavailable)
-        .accessibilityLabel(action.title)
+        .accessibilityLabel(action.accessibilityLabel(category: completionCategoryLabel))
         .accessibilityIdentifier(WardrobeCardUx.completeOutfitActionIdentifier(itemId: item.id))
     }
 
+    private var completionCategoryLabel: String {
+        completionSlotLabel ?? WardrobeCategoryDisplay.wardrobeCategoryLabel(item.category)
+    }
+
     private var completionSelectionRow: some View {
-        HStack(spacing: 10) {
+        let action = WardrobeCompleteOutfitCardAction.resolve(
+            isEligible: isCompletionEligible,
+            isSelected: isSelectedForCompletion
+        )
+        return HStack(spacing: 10) {
             if isCompletionEligible {
                 Button {
                     onToggleCompletionSelection?()
                 } label: {
-                    Label(
-                        isSelectedForCompletion ? "Selected" : "Select",
-                        systemImage: isSelectedForCompletion ? "checkmark.circle.fill" : "circle"
-                    )
+                    Text(action.title)
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(isSelectedForCompletion ? .white : AppTheme.textPrimary)
                     .frame(maxWidth: .infinity, minHeight: 48)
@@ -1197,10 +1331,10 @@ struct WardrobeCardView: View {
                     .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(isSelectedForCompletion ? "Selected for outfit completion" : "Select for outfit completion")
+                .accessibilityLabel(action.accessibilityLabel(category: completionCategoryLabel))
                 .accessibilityIdentifier("wardrobe.multiSelect.item.\(item.id)")
             } else {
-                Label("Not eligible for completion", systemImage: "minus.circle")
+                Text(WardrobeCardUx.outfitCompletionUnavailable)
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(AppTheme.textSecondary)
                     .frame(maxWidth: .infinity, minHeight: 48)
@@ -1319,16 +1453,6 @@ struct WardrobeCardView: View {
                             .font(.title3)
                             .foregroundColor(AppTheme.textSecondary)
                     )
-                    .accessibilityHidden(true)
-            }
-        }
-        .overlay(alignment: .topTrailing) {
-            if isSelectedForCompletion {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.title2)
-                    .foregroundColor(.white)
-                    .background(AppTheme.accent.clipShape(Circle()))
-                    .padding(6)
                     .accessibilityHidden(true)
             }
         }

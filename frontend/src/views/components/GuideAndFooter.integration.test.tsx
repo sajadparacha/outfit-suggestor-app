@@ -46,6 +46,8 @@ describe('Guide and footer navigation (App)', () => {
       expect(screen.getByRole('heading', { name: /How to use/i })).toBeInTheDocument();
     });
     expect(screen.getByText(/Suggest a look from a photo/i)).toBeInTheDocument();
+    expect(screen.getByText(/Build an outfit around pieces you love: tap \+ Use in outfit/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Add to outfit completion/i)).not.toBeInTheDocument();
   });
 
   it('opens About from footer', async () => {

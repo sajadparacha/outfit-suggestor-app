@@ -46,8 +46,21 @@ enum WardrobeCardUx {
     static let styleThisItemSubtitle = "Single-item Suggest flow"
     static let styleThisItemAccessibilityLabel = "Style this item with AI"
     static let singleItemStylingSection = "Single-item styling"
-    static let addToOutfitCompletion = "Add to outfit completion"
-    static let removeFromOutfitCompletion = "Remove from outfit completion"
+    static let addToOutfitCompletion = "+ Use in outfit"
+    static let removeFromOutfitCompletion = "✓ In outfit"
+    static let outfitCompletionUnavailable = "Can't be used in outfits"
+
+    static func useInOutfitAccessibilityLabel(category: String) -> String {
+        "Use \(category) in outfit"
+    }
+
+    static func removeFromOutfitAccessibilityLabel(category: String) -> String {
+        "Remove \(category) from outfit"
+    }
+
+    static func unavailableForOutfitAccessibilityLabel(category: String) -> String {
+        "\(category) can't be used in outfits"
+    }
     static let pastSuggestionsTitle = "Past Suggestions"
     static let pastSuggestionsAccessibilityLabel = "Past Suggestions"
     static let pastSuggestionsLoadingAccessibilityLabel = "Loading…"
@@ -97,6 +110,88 @@ enum WardrobeCompletionCopy {
     static let sharedPreferencesHint = InsightsCopy.sharedPreferencesNote
     static let preferencesPanelAccessibilityId = "wardrobe.completion.preferences"
     static let wardrobeOnlyCheckboxAccessibilityId = "wardrobe.completion.wardrobeOnlyCheckbox"
+
+    static let panelTitle = "Build an outfit around pieces you love"
+    static let panelSubtitle = "Pick 1–5 items you want to wear. AI picks the rest from your style."
+    static let panelRules = "One item per slot. Choose only one of blazer, outerwear, or sweater."
+    static let emptyEligibleHint = "Add shirts, trousers, shoes, or other outfit pieces, then tap \"Use in outfit\" on a card."
+    static let completeOutfitButton = "Complete outfit with AI"
+    static let completingOutfit = "Completing your outfit..."
+    static let clearSelection = "Clear selection"
+    static let stickyBarClear = clearSelection
+    static let stickyBarRestSuffix = " — AI will pick the rest"
+    static let stickyBarEditPreferences = "Edit"
+    static let notesSummaryFragment = "+ notes"
+    static let wardrobeOnlySummaryFragment = "Wardrobe only"
+    static let panelScrollId = "wardrobe.multiSelect.panel"
+    static let stickyBarAccessibilityId = "wardrobe.selection.stickyBar"
+    static let stickyBarSummaryAccessibilityId = "wardrobe.selection.stickyBar.summary"
+    static let stickyBarPreferencesAccessibilityId = "wardrobe.selection.stickyBar.prefs"
+    static let stickyBarEditAccessibilityId = "wardrobe.selection.stickyBar.edit"
+    static let stickyBarCompleteAccessibilityId = "wardrobe.selection.stickyBar.complete"
+    static let stickyBarClearAccessibilityId = "wardrobe.selection.stickyBar.clear"
+
+    /// e.g. `2 picked: Outerwear, Shirt` (panel) or `… — AI will pick the rest` (bar).
+    static func pickedSummary(selectedCount: Int, slotLabels: [String], includeRestSuffix: Bool = false) -> String {
+        let slots = slotLabels.joined(separator: ", ")
+        let base = slots.isEmpty ? "\(selectedCount) picked" : "\(selectedCount) picked: \(slots)"
+        return includeRestSuffix ? base + stickyBarRestSuffix : base
+    }
+
+    static func selectedSlotLabels(state: WardrobeMultiSelectState, items: [WardrobeItem]) -> [String] {
+        state.selectedItemIds.compactMap { id -> String? in
+            guard let item = items.first(where: { $0.id == id }) else { return nil }
+            return state.slot(for: item)?.displayName
+        }
+    }
+
+    static func stickyBarSummary(selectedCount: Int, slotLabels: [String]) -> String {
+        pickedSummary(selectedCount: selectedCount, slotLabels: slotLabels, includeRestSuffix: true)
+    }
+
+    static func stickyBarSummary(state: WardrobeMultiSelectState, items: [WardrobeItem]) -> String {
+        stickyBarSummary(
+            selectedCount: state.selectedCount,
+            slotLabels: selectedSlotLabels(state: state, items: items)
+        )
+    }
+
+    /// Panel status line; `No items selected` when nothing is picked.
+    static func panelPickedSummary(state: WardrobeMultiSelectState, items: [WardrobeItem]) -> String {
+        guard state.selectedCount > 0 else { return noItemsSelected }
+        return pickedSummary(
+            selectedCount: state.selectedCount,
+            slotLabels: selectedSlotLabels(state: state, items: items)
+        )
+    }
+
+    /// e.g. `Work · All Season · Smart Casual · + notes · Wardrobe only`
+    static func preferenceSummary(filters: OutfitFilters, notes: String, useWardrobeOnly: Bool) -> String {
+        var parts = [
+            displayLabel(filters.occasion, options: Occasion.allCases.map { ($0.apiValue, $0.rawValue) }),
+            displayLabel(filters.season, options: Season.allCases.map { ($0.apiValue, $0.rawValue) }),
+            displayLabel(filters.style, options: Style.allCases.map { ($0.apiValue, $0.rawValue) }),
+        ]
+        if !notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            parts.append(notesSummaryFragment)
+        }
+        if useWardrobeOnly {
+            parts.append(wardrobeOnlySummaryFragment)
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    private static func displayLabel(_ value: String, options: [(api: String, label: String)]) -> String {
+        let key = value.lowercased()
+        if let match = options.first(where: { $0.api == key || $0.label.lowercased() == key }) {
+            return match.label
+        }
+        return value
+    }
+
+    static func shouldShowStickyBar(selectedCount: Int, isPanelVisible: Bool, isWeekPlanPickMode: Bool) -> Bool {
+        selectedCount > 0 && !isPanelVisible && !isWeekPlanPickMode
+    }
 
     static func filterAccessibilityId(for title: String) -> String {
         "wardrobe.completion.filter.\(title.lowercased())"

@@ -42,7 +42,7 @@ enum GuideCopy {
     static let wardrobeFitEvaluateStep = WardrobeFitEvaluateCopy.guideStep
     static let checkBeforeBuyStep = WardrobeFitEvaluateCopy.checkBeforeBuyGuideStep
     static let wardrobeMultiSelectStep =
-        "Tap Select items, choose 1 to 5 pieces with one item per outfit slot (shirt, trousers, blazer, shoes, belt), expand Preferences to set occasion, season, style, and notes, then tap Complete outfit with AI."
+        "Tap Use in outfit on 1 to 5 cards you want to wear (or tap Select items first), with one item per outfit slot (shirt, trousers, blazer, shoes, belt). Expand Preferences to set occasion, season, style, and notes, then tap Complete outfit with AI in the bar at the bottom—AI picks the rest."
     static let wardrobeMultiSelectTip =
         "Preferences on Wardrobe stay in sync with Suggest and Insights. Only one item per slot—picking a second shirt shows Choose one item per outfit slot. Multi-select keeps your chosen pieces and AI fills missing slots."
     static let wardrobeOnlyModeStep =

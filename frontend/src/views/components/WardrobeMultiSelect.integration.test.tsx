@@ -124,8 +124,8 @@ describe('Wardrobe multi-select complete outfit integration', () => {
     expect(await screen.findByText('Blue oxford shirt')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Select at least 1 item/i })).toBeDisabled();
 
-    fireEvent.click(await screen.findByRole('button', { name: /Add shirt to outfit completion/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Complete outfit with AI/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Use shirt in outfit/i }));
+    fireEvent.click(within(screen.getByTestId('wardrobe-completion-panel')).getByRole('button', { name: /Complete outfit with AI/i }));
 
     await waitFor(() => {
       expect(capturedRequestBody?.selected_wardrobe_item_ids).toEqual([11]);
@@ -155,9 +155,9 @@ describe('Wardrobe multi-select complete outfit integration', () => {
     expect(screen.getByText('Navy trousers')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Select at least 1 item/i })).toBeDisabled();
 
-    fireEvent.click(await screen.findByRole('button', { name: /Add shirt to outfit completion/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Add trouser to outfit completion/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Complete outfit with AI/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Use shirt in outfit/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Use trouser in outfit/i }));
+    fireEvent.click(within(screen.getByTestId('wardrobe-completion-panel')).getByRole('button', { name: /Complete outfit with AI/i }));
 
     await waitFor(() => {
       expect(capturedRequestBody?.selected_wardrobe_item_ids).toEqual([11, 22]);
@@ -228,21 +228,21 @@ describe('Wardrobe multi-select complete outfit integration', () => {
 
     expect(await screen.findByText('White T-shirt')).toBeInTheDocument();
     ['t-shirt', 'polo', 'jeans', 'pants'].forEach((category) => {
-      expect(screen.getByRole('button', { name: new RegExp(`Add ${category} to outfit completion`, 'i') })).toBeEnabled();
+      expect(screen.getByRole('button', { name: new RegExp(`Use ${category} in outfit`, 'i') })).toBeEnabled();
     });
-    expect(screen.queryByText('Outfit completion unavailable')).not.toBeInTheDocument();
+    expect(screen.queryByText("Can't be used in outfits")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Add t-shirt to outfit completion/i }));
-    expect(screen.getByRole('button', { name: /Remove t-shirt from outfit completion/i }))
-      .toHaveTextContent('Remove from outfit completion');
-    expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('1 selected: shirt');
+    fireEvent.click(screen.getByRole('button', { name: /Use t-shirt in outfit/i }));
+    expect(screen.getByRole('button', { name: /Remove t-shirt from outfit/i }))
+      .toHaveTextContent('✓ In outfit');
+    expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('1 picked: Shirt');
 
-    fireEvent.click(screen.getByRole('button', { name: /Add jeans to outfit completion/i }));
-    expect(screen.getByRole('button', { name: /Remove jeans from outfit completion/i }))
-      .toHaveTextContent('Remove from outfit completion');
-    expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('2 selected: shirt, trousers');
+    fireEvent.click(screen.getByRole('button', { name: /Use jeans in outfit/i }));
+    expect(screen.getByRole('button', { name: /Remove jeans from outfit/i }))
+      .toHaveTextContent('✓ In outfit');
+    expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('2 picked: Shirt, Trousers');
 
-    fireEvent.click(screen.getByRole('button', { name: /Complete outfit with AI/i }));
+    fireEvent.click(within(screen.getByTestId('wardrobe-completion-panel')).getByRole('button', { name: /Complete outfit with AI/i }));
 
     await waitFor(() => {
       expect(capturedRequestBody?.selected_wardrobe_item_ids).toEqual([12, 44]);
@@ -367,8 +367,8 @@ describe('Wardrobe multi-select complete outfit integration', () => {
     });
 
     fireEvent.change(screen.getByLabelText('Select occasion'), { target: { value: 'party' } });
-    fireEvent.click(await screen.findByRole('button', { name: /Add shirt to outfit completion/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Complete outfit with AI/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Use shirt in outfit/i }));
+    fireEvent.click(within(screen.getByTestId('wardrobe-completion-panel')).getByRole('button', { name: /Complete outfit with AI/i }));
 
     await waitFor(() => {
       expect(capturedRequestBody).toEqual(
@@ -417,11 +417,11 @@ describe('Wardrobe multi-select complete outfit integration', () => {
       expect(screen.getByText('Blue oxford shirt')).toBeInTheDocument();
     });
 
-    fireEvent.click(await screen.findByRole('button', { name: /Add shirt to outfit completion/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Add polo to outfit completion/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Use shirt in outfit/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Use polo in outfit/i }));
 
     expect(screen.getByText('Choose one item per outfit slot')).toBeInTheDocument();
-    expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('1 selected: shirt');
+    expect(screen.getByTestId('wardrobe-selection-status')).toHaveTextContent('1 picked: Shirt');
   });
 
   it('shows selection thumbnails and opens full-size viewer on thumbnail click', async () => {
@@ -433,8 +433,8 @@ describe('Wardrobe multi-select complete outfit integration', () => {
 
     expect(screen.queryByTestId('wardrobe-selection-thumbnails')).not.toBeInTheDocument();
 
-    fireEvent.click(await screen.findByRole('button', { name: /Add shirt to outfit completion/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Add trouser to outfit completion/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Use shirt in outfit/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Use trouser in outfit/i }));
 
     const row = screen.getByTestId('wardrobe-selection-thumbnails');
     expect(within(row).getByTestId('wardrobe-selection-thumb-11')).toBeInTheDocument();
