@@ -547,6 +547,18 @@ struct WardrobePickSession: Equatable {
     }
 }
 
+/// “Today’s outfit” local reminder control (iOS-only; notifications fire on this device).
+enum WeekPlanReminderCopy {
+    static let toggleLabel = "Today’s outfit reminder"
+    static let timeLabel = "Time"
+    static let onHint = "A notification with that day’s outfit at this time on planned days. Tap it to open the day."
+    static let offHint = "Reminders are off on this device."
+    static let controlAccessibilityId = "week.reminder"
+    static let toggleAccessibilityId = "week.reminder.toggle"
+    static let timeAccessibilityId = "week.reminder.time"
+    static let dayDetailScrollId = "week.dayDetail.outfit"
+}
+
 enum WeekPlanCopy {
     static let loading = "Loading your week…"
     static let generating = "Generating outfits…"

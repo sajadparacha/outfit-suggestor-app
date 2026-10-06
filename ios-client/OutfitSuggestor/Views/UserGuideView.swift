@@ -39,12 +39,12 @@ struct UserGuideView: View {
                     color: .teal,
                     steps: [
                         "Tap the photo area or the camera icon to upload a clothing image.",
+                        GuideCopy.checkBeforeBuyStep,
                         "Optionally set your occasion, season, and style preferences using the pickers. In summer, suggestions lean lighter and skip heavy coats or wool blazers unless you ask for them.",
                         "Add any free-text notes about your preferences.",
                         "Tap \"Generate Outfit\" to receive AI-powered recommendations.",
                         "View the five core pieces (shirt, trousers, blazer, shoes, belt). Blazer is your structured layer; jackets and coats are separate categories and may appear as optional outerwear in Also wear when the season fits.",
-                        "Read the AI's reasoning in Why this works.",
-                        GuideCopy.checkBeforeBuyStep
+                        "Read the AI's reasoning in Why this works."
                     ],
                     tip: "Upload shirts, blazers, jackets, coats, or shoes—the AI adapts to what you provide. Blazers complete structured outfits; jackets and coats are optional layering."
                 )
@@ -160,6 +160,7 @@ struct UserGuideView: View {
                         "Open the Week tab (sign in required), or Week Planner from Profile.",
                         "Turn on the days you want to plan and set Occasion, Style, and Use wardrobe for each selected day.",
                         "Pick a shared Season for the week.",
+                        "Today’s outfit reminder: switch it on or off and pick the time. On planned days you get a notification with that day’s outfit; tap it to open that day’s outfit in Week Planner.",
                         "Tap Generate outfits (primary). After outfits exist, Save plan appears when you have unsaved changes.",
                         "Review the selected day — four slots (top, bottom, shoes, accessory), Why this outfit works, and Regenerate this day.",
                         "While Generate outfits, Regenerate this day, Insights AI runs, and other server calls run, a dimmed progress panel blocks the app until the operation finishes—you cannot use other tabs until it completes (Cancel appears only when that action is available).",
@@ -190,7 +191,7 @@ struct UserGuideView: View {
                         title: "Account & Navigation",
                         color: .gray,
                         steps: [
-                            "Sign in from Profile → Settings (or any auth prompt) with email and password, Continue with Google, or Continue with Apple.",
+                            "Sign in from Profile → Settings (or any auth prompt) with email and password, or Continue with Google.",
                             "Week — Week Outfit Planner (sign in required).",
                             "Looks — Your saved outfit history.",
                             "Settings — Email, name, password, and shortcuts to Week Planner, Insights, and Guide.",

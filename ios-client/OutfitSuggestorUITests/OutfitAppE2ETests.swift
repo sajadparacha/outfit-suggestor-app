@@ -374,6 +374,16 @@ final class OutfitAppE2ETests: XCTestCase {
         ).firstMatch
     }
 
+    /// `isHittable` stays true for elements behind the SwiftUI tab bar, so taps land on the bar instead.
+    private func isFullyVisibleAboveTabBar(_ element: XCUIElement) -> Bool {
+        guard element.exists else { return false }
+        let frame = element.frame
+        guard !frame.isEmpty else { return false }
+        let tabBar = app.tabBars.firstMatch
+        let visibleBottom = tabBar.exists ? tabBar.frame.minY : app.windows.firstMatch.frame.maxY
+        return frame.minY >= 0 && frame.maxY <= visibleBottom
+    }
+
     private func scrollWardrobeItemIntoView(
         itemId: Int,
         requiringHittable target: XCUIElement? = nil,
@@ -389,10 +399,9 @@ final class OutfitAppE2ETests: XCTestCase {
         let deadline = Date().addingTimeInterval(timeout)
         var upwardPasses = 0
         while Date() < deadline {
-            if required.exists, required.isHittable { return }
-            if target == nil, hero.exists, hero.isHittable { return }
-            if target == nil, row.exists, row.isHittable { return }
-            if target == nil, menu.exists, menu.isHittable { return }
+            if required.exists, required.isHittable, isFullyVisibleAboveTabBar(required) { return }
+            if target == nil, isFullyVisibleAboveTabBar(hero) { return }
+            if target == nil, isFullyVisibleAboveTabBar(menu) { return }
             // Never blind-swipe the app — that can leave the Wardrobe tab.
             guard list.exists else { return }
             if upwardPasses < 6 {
@@ -416,7 +425,7 @@ final class OutfitAppE2ETests: XCTestCase {
         var swipeCount = 0
         while Date() < deadline {
             let hero = wardrobeHeroButton(itemId: itemId)
-            if hero.waitForExistence(timeout: 0.6) {
+            if hero.waitForExistence(timeout: 0.6), isFullyVisibleAboveTabBar(hero) {
                 if hero.isHittable {
                     hero.tap()
                 } else {
@@ -427,7 +436,7 @@ final class OutfitAppE2ETests: XCTestCase {
 
             // Fallback: visible title text (when button a11y id is missing).
             let styleTitle = app.staticTexts["Style this item"].firstMatch
-            if styleTitle.exists, styleTitle.isHittable {
+            if styleTitle.exists, styleTitle.isHittable, isFullyVisibleAboveTabBar(styleTitle) {
                 styleTitle.tap()
                 return
             }
@@ -494,7 +503,7 @@ final class OutfitAppE2ETests: XCTestCase {
         while Date() < deadline {
             let menu = wardrobeMenuTrigger(itemId: itemId)
             // Resolve via exists only — isHittable can throw on ambiguous queries.
-            if menu.waitForExistence(timeout: 0.6) {
+            if menu.waitForExistence(timeout: 0.6), isFullyVisibleAboveTabBar(menu) {
                 menu.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
                 return
             }

@@ -36,6 +36,13 @@ final class WardrobeFitEvaluateTests: XCTestCase {
     func testGuideAndAboutMentionFitEvaluate() {
         XCTAssertTrue(GuideCopy.wardrobeFitEvaluateStep.contains("How this fits"))
         XCTAssertTrue(GuideCopy.wardrobeFitEvaluateStep.contains("pairs"))
+        XCTAssertTrue(GuideCopy.wardrobeFitEvaluateStep.contains("Strong fit, Weak fit, or Already covered"))
+        XCTAssertTrue(GuideCopy.wardrobeFitEvaluateStep.contains("last fit check, then your Insights preferences"))
+        XCTAssertTrue(GuideCopy.wardrobeFitEvaluateStep.contains("ranked by AI"))
+        XCTAssertTrue(GuideCopy.wardrobeFitEvaluateStep.contains("view it full screen"))
+        XCTAssertTrue(GuideCopy.wardrobeFitEvaluateStep.contains("View all (N)"))
+        XCTAssertTrue(GuideCopy.wardrobeFitEvaluateStep.contains("Show less"))
+        XCTAssertTrue(AboutCopy.wardrobeFitFeature.contains("Strong fit, Weak fit, or Already covered"))
         XCTAssertTrue(AboutCopy.wardrobeFeature.contains("fits your wardrobe"))
         XCTAssertTrue(AboutCopy.wardrobeFeature.contains("pair counts"))
     }
@@ -339,8 +346,9 @@ final class WardrobeFitEvaluateTests: XCTestCase {
             "Checking how this would fit your wardrobe…"
         )
         XCTAssertEqual(WardrobeFitEvaluateCopy.addToWardrobe, "Add to wardrobe")
-        XCTAssertTrue(GuideCopy.checkBeforeBuyStep.contains("Check before you buy"))
+        XCTAssertTrue(GuideCopy.checkBeforeBuyStep.contains("once a photo is added, Check before you buy appears under Generate Outfit"))
         XCTAssertTrue(GuideCopy.checkBeforeBuyStep.contains("Add to wardrobe"))
+        XCTAssertTrue(GuideCopy.checkBeforeBuyStep.contains("View all (N)"))
         XCTAssertTrue(AboutCopy.wardrobeFitFeature.contains("How this fits"))
         XCTAssertTrue(AboutCopy.checkBeforeBuyFeature.contains("Check before you buy"))
     }

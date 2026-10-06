@@ -105,7 +105,7 @@ describe('OAuth authentication', () => {
   });
 
   describe('Login OAuth controls', () => {
-    it('shows Google and Apple buttons and completes OAuth sign-in', async () => {
+    it('shows Google and hides Apple until Apple sign-in is implemented', async () => {
       const onOAuthLogin = jest.fn().mockResolvedValue(undefined);
 
       render(
@@ -120,7 +120,7 @@ describe('OAuth authentication', () => {
 
       expect(screen.getByRole('button', { name: /Continue with Google/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Continue with Google/i })).toHaveClass('btn-brand');
-      expect(screen.getByRole('button', { name: /Continue with Apple/i })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Continue with Apple/i })).not.toBeInTheDocument();
 
       await userEvent.click(screen.getByRole('button', { name: /Continue with Google/i }));
 

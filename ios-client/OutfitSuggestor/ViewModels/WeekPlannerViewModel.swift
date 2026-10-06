@@ -25,13 +25,13 @@ protocol WeekPlanAPIClient {
 }
 
 protocol WeekPlanNotificationScheduling {
-    func reschedule(plan: WeekPlanResponse) async
+    func reschedule(plan: WeekPlanResponse, reminderTime: String) async
     func cancelAll() async
 }
 
 struct DefaultWeekPlanNotifier: WeekPlanNotificationScheduling {
-    func reschedule(plan: WeekPlanResponse) async {
-        await WeekPlanNotificationScheduler.reschedule(plan: plan)
+    func reschedule(plan: WeekPlanResponse, reminderTime: String) async {
+        await WeekPlanNotificationScheduler.reschedule(plan: plan, reminderTime: reminderTime)
     }
 
     func cancelAll() async {
@@ -65,24 +65,73 @@ final class WeekPlannerViewModel: ObservableObject {
     @Published private(set) var dismissedMissingDays: Set<Int> = []
     /// Last missing-item action taken (for tests / navigation hooks).
     @Published private(set) var lastMissingAction: WeekPlanMissingAction?
+    /// “Today’s outfit” local reminder on/off (device-local).
+    @Published private(set) var reminderEnabled: Bool
+    /// Reminder fire time `HH:mm` (device-local).
+    @Published private(set) var reminderTime: String
+    /// Set when a reminder tap selected a day; the view scrolls to the day detail and clears it.
+    @Published var pendingDayDetailScroll = false
 
     private let api: WeekPlanAPIClient
     private let notifier: WeekPlanNotificationScheduling
+    private let reminderSettings: WeekPlanReminderSettings
     private let timezoneProvider: () -> String
+    /// Day requested by a reminder tap, applied once the plan is loaded.
+    private(set) var pendingFocusDay: Int?
+    private var hasLoadedPlan = false
     /// Fingerprint of last persisted / loaded editable plan state.
     private var baselineFingerprint: String = ""
     private var toastClearTask: Task<Void, Never>?
     /// True when `generate(dayOfWeek:)` was called with a day (regenerate), not the full week.
     private var activeGenerateIsDay = false
+    /// User whose plan is currently in memory. Mutations apply server responses locally,
+    /// so the cached plan stays current without refetching on every tab visit.
+    private(set) var loadedForUserId: Int?
 
     init(
         api: WeekPlanAPIClient = APIService.shared,
         notifier: WeekPlanNotificationScheduling = DefaultWeekPlanNotifier(),
+        reminderSettings: WeekPlanReminderSettings = WeekPlanReminderSettings(),
         timezoneProvider: @escaping () -> String = { TimeZone.current.identifier }
     ) {
         self.api = api
         self.notifier = notifier
+        self.reminderSettings = reminderSettings
+        self.reminderEnabled = reminderSettings.isEnabled
+        self.reminderTime = reminderSettings.time
         self.timezoneProvider = timezoneProvider
+    }
+
+    // MARK: - Today’s outfit reminder
+
+    func setReminderEnabled(_ enabled: Bool) async {
+        reminderSettings.isEnabled = enabled
+        reminderEnabled = enabled
+        await syncNotifications()
+    }
+
+    func updateReminderTime(_ time: String) async {
+        guard WeekPlanNotificationScheduler.parseReminderTime(time) != nil else { return }
+        reminderSettings.time = time
+        reminderTime = time
+        await syncNotifications()
+    }
+
+    /// Called when the user taps a “Today’s outfit” reminder for `dayOfWeek` (0=Mon … 6=Sun).
+    func focusDayFromReminder(_ dayOfWeek: Int) {
+        guard (0...6).contains(dayOfWeek) else { return }
+        pendingFocusDay = dayOfWeek
+        if hasLoadedPlan && !isLoading {
+            applyPendingFocus()
+        }
+    }
+
+    private func applyPendingFocus() {
+        guard let day = pendingFocusDay,
+              plan.days.contains(where: { $0.day_of_week == day }) else { return }
+        pendingFocusDay = nil
+        selectedDayOfWeek = day
+        pendingDayDetailScroll = true
     }
 
     var hasEnabledDays: Bool {
@@ -415,6 +464,16 @@ final class WeekPlannerViewModel: ObservableObject {
         lastMissingAction = .continueWithout(dayOfWeek: dayOfWeek)
     }
 
+    /// Fetch only on first visit for this user (or after a failed load).
+    func loadIfNeeded(userId: Int?) async {
+        guard let userId else { return }
+        guard loadedForUserId != userId, !isLoading else { return }
+        await load()
+        if errorMessage == nil {
+            loadedForUserId = userId
+        }
+    }
+
     func load() async {
         isLoading = true
         errorMessage = nil
@@ -434,6 +493,8 @@ final class WeekPlannerViewModel: ObservableObject {
             }
             markBaseline(persisted: true)
             syncSelectedDayAfterLoad()
+            hasLoadedPlan = true
+            applyPendingFocus()
             await syncNotifications()
         } catch {
             errorMessage = error.localizedDescription
@@ -978,10 +1039,10 @@ final class WeekPlannerViewModel: ObservableObject {
         let enabledWithOutfits = plan.days.filter {
             $0.enabled && !($0.outfit?.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
         }
-        if enabledWithOutfits.isEmpty {
+        if !reminderEnabled || enabledWithOutfits.isEmpty {
             await notifier.cancelAll()
         } else {
-            await notifier.reschedule(plan: plan)
+            await notifier.reschedule(plan: plan, reminderTime: reminderTime)
         }
     }
 

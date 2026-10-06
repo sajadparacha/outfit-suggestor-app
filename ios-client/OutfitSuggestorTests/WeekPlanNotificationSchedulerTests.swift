@@ -116,6 +116,67 @@ final class WeekPlanNotificationSchedulerTests: XCTestCase {
         XCTAssertEqual(request.identifier, "week-plan.day.3")
         XCTAssertEqual(request.content.title, WeekPlanNotificationScheduler.title)
         XCTAssertEqual(request.content.body, "Thursday look")
+        XCTAssertEqual(
+            request.content.userInfo[WeekPlanNotificationScheduler.dayOfWeekUserInfoKey] as? Int,
+            3
+        )
+    }
+
+    func testReminderTimeOverridesPlanTime() {
+        var plan = WeekPlanResponse.empty(timezone: "UTC")
+        plan.reminder_time = "07:30"
+        plan.days[0].enabled = true
+        plan.days[0].outfit = WeekPlanOutfitResponse(summary: "Look")
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = calendar.date(from: DateComponents(year: 2026, month: 7, day: 19, hour: 9))! // Sunday
+
+        let schedules = WeekPlanNotificationScheduler.buildSchedules(
+            for: plan,
+            reminderTime: "06:15",
+            now: now,
+            calendar: calendar
+        )
+        let comps = calendar.dateComponents([.hour, .minute], from: schedules[0].fireDate)
+        XCTAssertEqual(comps.hour, 6)
+        XCTAssertEqual(comps.minute, 15)
+    }
+
+    func testDayOfWeekFromUserInfoAndIdentifier() {
+        let key = WeekPlanNotificationScheduler.dayOfWeekUserInfoKey
+        XCTAssertEqual(WeekPlanNotificationScheduler.dayOfWeek(fromUserInfo: [key: 5]), 5)
+        XCTAssertEqual(
+            WeekPlanNotificationScheduler.dayOfWeek(fromUserInfo: [:], identifier: "week-plan.day.2"),
+            2
+        )
+        XCTAssertNil(WeekPlanNotificationScheduler.dayOfWeek(fromUserInfo: [key: 7]))
+        XCTAssertNil(WeekPlanNotificationScheduler.dayOfWeek(fromUserInfo: [:], identifier: "other.1"))
+    }
+
+    func testReminderSettingsPersistAndValidate() {
+        let suite = "WeekPlanReminderSettingsTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = WeekPlanReminderSettings(defaults: defaults)
+
+        XCTAssertTrue(settings.isEnabled)
+        XCTAssertEqual(settings.time, WeekPlanConstants.defaultReminderTime)
+
+        settings.isEnabled = false
+        settings.time = "21:05"
+        settings.time = "bad"
+
+        let reloaded = WeekPlanReminderSettings(defaults: defaults)
+        XCTAssertFalse(reloaded.isEnabled)
+        XCTAssertEqual(reloaded.time, "21:05")
+    }
+
+    func testReminderTimeDateRoundTrip() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let date = WeekPlanReminderSettings.date(fromTime: "08:40", calendar: calendar)
+        XCTAssertEqual(WeekPlanReminderSettings.timeString(from: date, calendar: calendar), "08:40")
     }
 
     func testAuthorizationErrorIsSwallowed() async {

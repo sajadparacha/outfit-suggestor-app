@@ -73,7 +73,7 @@ enum AboutCopy {
     static let weekPlannerFeature =
         "• Week Planner — generate outfits for selected days, Change/Add opens Wardrobe to pick a slot item then returns to that day, and save your plan. Picking a wardrobe item for a week day pins it; generating fills only the remaining slots. While Generate outfits, Regenerate this day, Insights AI runs, and other server calls run, a dimmed progress panel blocks the app until the operation finishes."
     static let accountFeature =
-        "• Account — sign in with email and password, Continue with Google, or Continue with Apple to sync wardrobe, history, Week Planner, and Insights."
+        "• Account — sign in with email and password, or Continue with Google, to sync wardrobe, history, Week Planner, and Insights."
     static let guideLocationNote =
         "Open the step-by-step Guide from Profile → Guide (not a main tab)."
     static let adminDiagnosticsSuffix = " Includes transparent admin diagnostics for administrators."

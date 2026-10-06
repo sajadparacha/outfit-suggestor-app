@@ -58,13 +58,13 @@ enum WardrobeFitEvaluateCopy {
     }
 
     static let guideStep =
-        "Tap How this fits on any item (sign in required) to see how many pieces it pairs with and what’s missing for your goal—defaults to smart casual, work + everyday, classic."
+        "Tap How this fits on a saved piece (sign in required) to see a Strong fit, Weak fit, or Already covered verdict, how many of your items it pairs with, and what’s missing for your goal. The goal starts from your last fit check, then your Insights preferences, otherwise smart-casual, work + everyday, classic. Matches are ranked by AI when available. Tap a photo to view it full screen. Under Works with what you own, each category shows the first three matches; tap View all (N) to see the rest, or Show less to collapse."
 
     static let checkBeforeBuyGuideStep =
-        "Check before you buy: on the main screen, upload a photo of a piece you’re considering and tap Check before you buy (sign in required) to see what it pairs with and what’s missing. It’s not saved unless you tap Add to wardrobe."
+        "On the main screen, once a photo is added, Check before you buy appears under Generate Outfit (sign in required). Tap it to see what that piece pairs with and what’s missing. It’s not saved unless you tap Add to wardrobe. The result works the same way as How this fits, including full-screen photos and View all (N)."
 
     static let aboutFitFeature =
-        "• How this fits — tap any wardrobe item to see how many pieces it pairs with, a fit verdict, and what’s still missing for your goal."
+        "• How this fits — tap any wardrobe item to see a Strong fit, Weak fit, or Already covered verdict, how many pieces it pairs with, and what’s still missing for your goal."
 
     static let aboutCheckBeforeBuyFeature =
         "• Check before you buy — upload a piece you’re considering to see what it pairs with in your wardrobe and what’s missing, without saving it."

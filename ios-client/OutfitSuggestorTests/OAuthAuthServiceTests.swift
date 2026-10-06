@@ -30,6 +30,7 @@ final class OAuthAuthServiceTests: XCTestCase {
     func testOAuthButtonLabelsMatchWebSpec() {
         XCTAssertEqual(OAuthCopy.googleButtonTitle, "Continue with Google")
         XCTAssertEqual(OAuthCopy.appleButtonTitle, "Continue with Apple")
+        XCTAssertFalse(OAuthCopy.showsAppleSignIn)
         XCTAssertEqual(OAuthProvider.allCases.map(\.rawValue), ["google", "apple"])
     }
 

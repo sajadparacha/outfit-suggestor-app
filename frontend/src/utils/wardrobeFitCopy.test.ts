@@ -62,6 +62,20 @@ describe('wardrobeFitCopy', () => {
     expect(wardrobeFitVerdictLabel('redundant')).toBe('Already covered');
   });
 
+  it('guide copy matches the current fit check', () => {
+    expect(WARDROBE_FIT_COPY.guideStep).toContain('Strong fit, Weak fit, or Already covered');
+    expect(WARDROBE_FIT_COPY.guideStep).toContain('last fit check, then your Insights preferences');
+    expect(WARDROBE_FIT_COPY.guideStep).toContain('ranked by AI');
+    expect(WARDROBE_FIT_COPY.guideStep).toContain('view it full screen');
+    expect(WARDROBE_FIT_COPY.guideStep).toContain('View all (N)');
+    expect(WARDROBE_FIT_COPY.guideStep).toContain('Show less');
+    expect(WARDROBE_FIT_COPY.checkBeforeBuyGuideStep).toContain(
+      'once a photo is added, Check before you buy appears under Generate Outfit'
+    );
+    expect(WARDROBE_FIT_COPY.checkBeforeBuyGuideStep).toContain('Add to wardrobe');
+    expect(WARDROBE_FIT_COPY.checkBeforeBuyGuideStep).toContain('View all (N)');
+  });
+
   it('exposes action and error copy from the spec', () => {
     expect(WARDROBE_FIT_COPY.action).toBe('How this fits');
     expect(WARDROBE_FIT_COPY.error).toBe('Couldn’t evaluate this piece. Try again.');

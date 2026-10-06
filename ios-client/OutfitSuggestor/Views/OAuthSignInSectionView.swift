@@ -27,12 +27,14 @@ struct OAuthSignInSectionView: View {
                 try await signInWithGoogle()
             }
 
-            oauthButton(
-                title: OAuthCopy.appleButtonTitle,
-                systemImage: "apple.logo",
-                accessibilityIdentifier: "auth.oauth.apple"
-            ) {
-                try await signInWithApple()
+            if OAuthCopy.showsAppleSignIn {
+                oauthButton(
+                    title: OAuthCopy.appleButtonTitle,
+                    systemImage: "apple.logo",
+                    accessibilityIdentifier: "auth.oauth.apple"
+                ) {
+                    try await signInWithApple()
+                }
             }
         }
     }

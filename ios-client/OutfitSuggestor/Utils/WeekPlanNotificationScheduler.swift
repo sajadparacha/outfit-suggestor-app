@@ -56,22 +56,84 @@ extension UNUserNotificationCenter: WeekPlanNotificationCenterProtocol {
     }
 }
 
+/// Device-local “Today’s outfit” reminder preferences (notifications only fire on this device).
+struct WeekPlanReminderSettings {
+    static let enabledKey = "weekPlanReminder.enabled"
+    static let timeKey = "weekPlanReminder.time"
+
+    private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
+
+    var isEnabled: Bool {
+        get { defaults.object(forKey: Self.enabledKey) as? Bool ?? true }
+        nonmutating set { defaults.set(newValue, forKey: Self.enabledKey) }
+    }
+
+    /// `HH:mm`; falls back to the default when unset or malformed.
+    var time: String {
+        get {
+            if let stored = defaults.string(forKey: Self.timeKey),
+               WeekPlanNotificationScheduler.parseReminderTime(stored) != nil {
+                return stored
+            }
+            return WeekPlanConstants.defaultReminderTime
+        }
+        nonmutating set {
+            guard WeekPlanNotificationScheduler.parseReminderTime(newValue) != nil else { return }
+            defaults.set(newValue, forKey: Self.timeKey)
+        }
+    }
+
+    static func date(fromTime time: String, calendar: Calendar = .current, reference: Date = Date()) -> Date {
+        let parsed = WeekPlanNotificationScheduler.parseReminderTime(time)
+            ?? WeekPlanNotificationScheduler.parseReminderTime(WeekPlanConstants.defaultReminderTime)!
+        return calendar.date(
+            bySettingHour: parsed.hour,
+            minute: parsed.minute,
+            second: 0,
+            of: reference
+        ) ?? reference
+    }
+
+    static func timeString(from date: Date, calendar: Calendar = .current) -> String {
+        let comps = calendar.dateComponents([.hour, .minute], from: date)
+        return String(format: "%02d:%02d", comps.hour ?? 0, comps.minute ?? 0)
+    }
+}
+
 enum WeekPlanNotificationScheduler {
     static let idPrefix = "week-plan.day."
     static let title = "Today’s outfit"
+    static let dayOfWeekUserInfoKey = "week_plan_day_of_week"
 
     static func identifier(for dayOfWeek: Int) -> String {
         "\(idPrefix)\(dayOfWeek)"
+    }
+
+    /// Backend day (0=Mon … 6=Sun) for a tapped reminder, or nil if it isn’t a week-plan reminder.
+    static func dayOfWeek(fromUserInfo userInfo: [AnyHashable: Any], identifier: String? = nil) -> Int? {
+        if let day = userInfo[dayOfWeekUserInfoKey] as? Int, (0...6).contains(day) {
+            return day
+        }
+        if let identifier, identifier.hasPrefix(idPrefix),
+           let day = Int(identifier.dropFirst(idPrefix.count)), (0...6).contains(day) {
+            return day
+        }
+        return nil
     }
 
     /// Builds notification payloads for enabled days that have an outfit summary.
     /// Does not touch the notification center — used by tests and `reschedule`.
     static func buildSchedules(
         for plan: WeekPlanResponse,
+        reminderTime: String? = nil,
         now: Date = Date(),
         calendar: Calendar = .current
     ) -> [WeekPlanScheduledNotification] {
-        guard let hourMinute = parseReminderTime(plan.reminder_time) else { return [] }
+        guard let hourMinute = parseReminderTime(reminderTime ?? plan.reminder_time) else { return [] }
 
         var results: [WeekPlanScheduledNotification] = []
         for day in plan.days where day.enabled {
@@ -103,6 +165,7 @@ enum WeekPlanNotificationScheduler {
     @discardableResult
     static func reschedule(
         plan: WeekPlanResponse,
+        reminderTime: String? = nil,
         center: WeekPlanNotificationCenterProtocol = UNUserNotificationCenter.current(),
         now: Date = Date(),
         calendar: Calendar = .current
@@ -117,12 +180,13 @@ enum WeekPlanNotificationScheduler {
         }
         guard granted else { return [] }
 
-        let schedules = buildSchedules(for: plan, now: now, calendar: calendar)
+        let schedules = buildSchedules(for: plan, reminderTime: reminderTime, now: now, calendar: calendar)
         for item in schedules {
             let content = UNMutableNotificationContent()
             content.title = item.title
             content.body = item.body
             content.sound = .default
+            content.userInfo = [dayOfWeekUserInfoKey: item.dayOfWeek]
 
             let comps = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: item.fireDate)
             let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)

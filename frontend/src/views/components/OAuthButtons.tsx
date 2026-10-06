@@ -57,6 +57,9 @@ declare global {
 const appleConfigHint =
   'Add REACT_APP_APPLE_CLIENT_ID to frontend/.env, then restart the app.';
 
+/** Off until Sign in with Apple is fully implemented. */
+const APPLE_SIGN_IN_VISIBLE = false;
+
 const googleButtonClassName =
   'btn-brand flex min-h-[44px] w-full cursor-pointer touch-manipulation items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold';
 
@@ -147,7 +150,7 @@ const OAuthButtons: React.FC<OAuthButtonsProps> = ({ onOAuthLogin, loading }) =>
   }, [handleCredential]);
 
   useEffect(() => {
-    if (isOAuthTestStub || !APPLE_CLIENT_ID) return;
+    if (!APPLE_SIGN_IN_VISIBLE || isOAuthTestStub || !APPLE_CLIENT_ID) return;
 
     let cancelled = false;
 
@@ -218,7 +221,7 @@ const OAuthButtons: React.FC<OAuthButtonsProps> = ({ onOAuthLogin, loading }) =>
   };
 
   const showGoogle = isOAuthTestStub || googleConfigured;
-  const showApple = isOAuthTestStub || appleConfigured;
+  const showApple = APPLE_SIGN_IN_VISIBLE && (isOAuthTestStub || appleConfigured);
   const showOAuthSection = showGoogle || showApple || missingAllSocialConfig;
 
   if (!showOAuthSection) {

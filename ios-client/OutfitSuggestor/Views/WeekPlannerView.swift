@@ -173,9 +173,9 @@ struct WeekPlannerView: View {
                 renamePresetName = ""
             }
         }
-        .task {
+        .task(id: auth.currentUser?.id) {
             guard auth.isAuthenticated else { return }
-            await viewModel.load()
+            await viewModel.loadIfNeeded(userId: auth.currentUser?.id)
         }
         .onChange(of: viewModel.selectedDayOfWeek) { _ in
             whyExpanded = false
@@ -198,6 +198,7 @@ struct WeekPlannerView: View {
             )
             .ignoresSafeArea()
 
+            ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: isRegularWidth ? 24 : 16) {
                     if let status = viewModel.statusMessage {
@@ -240,6 +241,11 @@ struct WeekPlannerView: View {
                 .adaptiveContent(maxWidth: isRegularWidth ? 1080 : 720)
                 .frame(maxWidth: .infinity)
             }
+            .onAppear { scrollToDayDetailIfRequested(proxy) }
+            .onChange(of: viewModel.pendingDayDetailScroll) { _ in
+                scrollToDayDetailIfRequested(proxy)
+            }
+            }
 
             if let toast = viewModel.toastMessage {
                 toastBanner(toast)
@@ -264,6 +270,17 @@ struct WeekPlannerView: View {
         }
         .animation(.easeInOut(duration: 0.25), value: viewModel.toastMessage)
         .animation(.easeInOut(duration: 0.25), value: viewModel.showsAiProgressPanel)
+    }
+
+    private func scrollToDayDetailIfRequested(_ proxy: ScrollViewProxy) {
+        guard viewModel.pendingDayDetailScroll else { return }
+        viewModel.pendingDayDetailScroll = false
+        // Let the tab switch and day selection lay out before scrolling.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            withAnimation(.easeInOut(duration: 0.35)) {
+                proxy.scrollTo(WeekPlanReminderCopy.dayDetailScrollId, anchor: .top)
+            }
+        }
     }
 
     private func toastBanner(_ message: String) -> some View {
@@ -352,7 +369,19 @@ struct WeekPlannerView: View {
     // MARK: - Shared controls (compact — no Generate CTA)
 
     private var sharedControlsSection: some View {
-        seasonControl
+        Group {
+            if isRegularWidth {
+                HStack(alignment: .top, spacing: 12) {
+                    seasonControl
+                    reminderControl
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    seasonControl
+                    reminderControl
+                }
+            }
+        }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Self.elevatedCard)
@@ -386,6 +415,50 @@ struct WeekPlannerView: View {
         .frame(maxWidth: .infinity, minHeight: WeekPlanSharedControlsLayout.controlMinHeight, alignment: .topLeading)
         .background(AppTheme.surface)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private var reminderControl: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Toggle(isOn: Binding(
+                get: { viewModel.reminderEnabled },
+                set: { newValue in Task { await viewModel.setReminderEnabled(newValue) } }
+            )) {
+                Text(WeekPlanReminderCopy.toggleLabel)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(AppTheme.textSecondary)
+            }
+            .tint(AppTheme.gradientStart)
+            .accessibilityIdentifier(WeekPlanReminderCopy.toggleAccessibilityId)
+
+            if viewModel.reminderEnabled {
+                DatePicker(
+                    WeekPlanReminderCopy.timeLabel,
+                    selection: Binding(
+                        get: { WeekPlanReminderSettings.date(fromTime: viewModel.reminderTime) },
+                        set: { date in
+                            let time = WeekPlanReminderSettings.timeString(from: date)
+                            Task { await viewModel.updateReminderTime(time) }
+                        }
+                    ),
+                    displayedComponents: .hourAndMinute
+                )
+                .font(.subheadline)
+                .foregroundColor(AppTheme.textPrimary)
+                .tint(AppTheme.gradientStart)
+                .accessibilityIdentifier(WeekPlanReminderCopy.timeAccessibilityId)
+            }
+
+            Text(viewModel.reminderEnabled ? WeekPlanReminderCopy.onHint : WeekPlanReminderCopy.offHint)
+                .font(.caption2)
+                .foregroundColor(AppTheme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, minHeight: WeekPlanSharedControlsLayout.controlMinHeight, alignment: .topLeading)
+        .background(AppTheme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .accessibilityIdentifier(WeekPlanReminderCopy.controlAccessibilityId)
     }
 
     // MARK: - Week overview
@@ -541,10 +614,12 @@ struct WeekPlannerView: View {
                             dayDetailRightColumn(day)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
+                        .id(WeekPlanReminderCopy.dayDetailScrollId)
                     } else {
                         VStack(alignment: .leading, spacing: 14) {
                             dayDetailLeftColumn(day)
                             dayDetailRightColumn(day)
+                                .id(WeekPlanReminderCopy.dayDetailScrollId)
                         }
                     }
                 }

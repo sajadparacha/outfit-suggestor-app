@@ -235,5 +235,20 @@ struct MainTabView: View {
                 routeCoordinator.clearWardrobePickSession()
             }
         }
+        .onChange(of: routeCoordinator.weekPlanReminderDay) { _ in
+            consumeWeekPlanReminderDay()
+        }
+        .onAppear {
+            consumeWeekPlanReminderDay()
+        }
+    }
+
+    /// A cold launch from a reminder sets the day before this view exists, so also check on appear.
+    private func consumeWeekPlanReminderDay() {
+        guard let day = routeCoordinator.weekPlanReminderDay else { return }
+        routeCoordinator.weekPlanReminderDay = nil
+        guard auth.isAuthenticated else { return }
+        routeCoordinator.selectedTab = .week
+        weekPlannerViewModel.focusDayFromReminder(day)
     }
 }

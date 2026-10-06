@@ -1,7 +1,23 @@
+import SwiftUI
 import XCTest
 @testable import OutfitSuggestor
 
 final class WardrobeInsightsViewTests: XCTestCase {
+    @MainActor
+    func testFlowLayoutWrapsLongChipWithinContainerWidth() {
+        let width: CGFloat = 300
+        let longChip = String(repeating: "Casual + Business Professional + Formal · ", count: 3)
+        let view = InsightsFlowLayout(spacing: 8) {
+            Text("Everyday")
+            Text(longChip)
+            Text("Classic")
+        }
+        let host = UIHostingController(rootView: view)
+        let fitted = host.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
+        XCTAssertLessThanOrEqual(fitted.width, width)
+        XCTAssertGreaterThan(fitted.height, 40, "Long chip should wrap onto multiple lines")
+    }
+
     // 1. Before analysis, full preferences form is visible
     func testBeforeAnalysisShowsExpandedPreferences() {
         XCTAssertTrue(

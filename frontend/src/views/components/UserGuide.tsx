@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import { WARDROBE_FIT_COPY } from '../../utils/wardrobeFitCopy';
 
 function StepList({ items }: { items: string[] }) {
   return (
@@ -176,8 +177,7 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
             <div className="rounded-2xl border border-brand-purple/20 bg-brand-purple/10 p-5 ring-1 ring-brand-purple/10">
               <p className="text-xs font-bold uppercase tracking-wider text-brand-purple mb-2">With a free account</p>
               <p className="text-slate-200">
-                Sign in with email, <span className="text-white font-medium">Google</span>, or{' '}
-                <span className="text-white font-medium">Apple</span>, then save a{' '}
+                Sign in with email or <span className="text-white font-medium">Google</span>, then save a{' '}
                 <span className="text-white font-medium">wardrobe</span>, browse{' '}
                 <span className="text-white font-medium">history</span>, use{' '}
                 <span className="text-white font-medium">wardrobe-only</span> mode, random picks, and settings.
@@ -201,9 +201,9 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               'Logged in? In the Wardrobe block, switch Use my wardrobe only on to only mix pieces you own—or leave it off for fresh ideas from anywhere.',
               'If model image generation is on, you may see a short confirmation before the app creates a preview image.',
               'Press Generate Outfit and watch the right panel—your outfit appears when ready.',
-              'Logged in? Tap Check before you buy to upload a piece you’re considering and see what it pairs with in your wardrobe and what’s missing. It’s not saved unless you tap Add to wardrobe.',
             ]}
           />
+          <p className="mt-5 text-slate-300 leading-relaxed">{WARDROBE_FIT_COPY.checkBeforeBuyGuideStep}</p>
           <TipBox>
             <strong className="text-white">From your wardrobe:</strong> start with one item via{' '}
             <span className="text-white font-medium">Style this item with AI</span>, or combine several on the Wardrobe tab
@@ -300,7 +300,7 @@ const UserGuide: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
               'Add items with the guided flow: we suggest category, color, and a description—edit anything before saving.',
               'Tap an item anytime to update details or swap the photo.',
               'For one saved piece, tap Style this item with AI to open Suggest with that item loaded—set preferences and tap Generate Outfit.',
-              'Tap How this fits on a saved piece to see how many of your items it pairs with, a Strong fit / Weak fit / Already covered verdict, and what’s missing for your goal (defaults: smart-casual, work + everyday, classic).',
+              WARDROBE_FIT_COPY.guideStep,
               'To combine multiple pieces, use Complete an outfit from selected wardrobe pieces: tap Add to outfit completion on item cards (1 to 5 items). Core slots are shirt, trousers, blazer, shoes, and belt; jackets and coats count as outerwear, sweaters as layer. Choose only one of blazer, outerwear, or sweater at a time—one item per other slot.',
               'Expand Preferences on Wardrobe to set occasion, season, style, and notes—the same pickers as Suggest. Logged in? Toggle Use my wardrobe only if you want recommendations limited to saved items.',
               'Preferences on Wardrobe stay in sync with Suggest—change them inline without switching tabs first. Insights uses its own lifestyle mix, not these pickers.',

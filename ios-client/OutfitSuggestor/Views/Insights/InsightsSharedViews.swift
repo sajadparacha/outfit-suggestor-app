@@ -313,18 +313,24 @@ struct InsightsFlowLayout: Layout {
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let result = computeLayout(proposal: proposal, subviews: subviews)
+        let result = computeLayout(proposal: ProposedViewSize(width: bounds.width, height: nil), subviews: subviews)
         for (index, offset) in result.offsets.enumerated() {
             subviews[index].place(
                 at: CGPoint(x: bounds.minX + offset.x, y: bounds.minY + offset.y),
-                proposal: .unspecified
+                proposal: ProposedViewSize(result.sizes[index])
             )
         }
     }
 
-    private func computeLayout(proposal: ProposedViewSize, subviews: Subviews) -> (offsets: [CGPoint], size: CGSize) {
+    /// Chips wider than the container are capped to its width so their text wraps
+    /// instead of widening the whole screen.
+    private func computeLayout(
+        proposal: ProposedViewSize,
+        subviews: Subviews
+    ) -> (offsets: [CGPoint], sizes: [CGSize], size: CGSize) {
         let maxWidth = proposal.width ?? .infinity
         var offsets: [CGPoint] = []
+        var sizes: [CGSize] = []
         var currentX: CGFloat = 0
         var currentY: CGFloat = 0
         var lineHeight: CGFloat = 0
@@ -332,7 +338,12 @@ struct InsightsFlowLayout: Layout {
         var totalWidth: CGFloat = 0
 
         for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
+            var size = subview.sizeThatFits(.unspecified)
+            if size.width > maxWidth {
+                size = subview.sizeThatFits(ProposedViewSize(width: maxWidth, height: nil))
+                size.width = min(size.width, maxWidth)
+            }
+            sizes.append(size)
             if currentX + size.width > maxWidth, currentX > 0 {
                 currentX = 0
                 currentY += lineHeight + spacing
@@ -344,7 +355,7 @@ struct InsightsFlowLayout: Layout {
             totalWidth = max(totalWidth, currentX - spacing)
             totalHeight = max(totalHeight, currentY + lineHeight)
         }
-        return (offsets, CGSize(width: totalWidth, height: totalHeight))
+        return (offsets, sizes, CGSize(width: min(totalWidth, maxWidth), height: totalHeight))
     }
 }
 

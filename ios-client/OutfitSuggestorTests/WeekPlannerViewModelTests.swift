@@ -29,6 +29,7 @@ final class WeekPlannerViewModelTests: XCTestCase {
         var restoreIds: [Int] = []
         var historyItems: [WeekPlanHistoryItem] = []
         var shouldFailGenerate = false
+        var shouldFailGet = false
         var wardrobeEmptyOnGenerate = false
         var restorePlan: WeekPlanResponse?
         var presetList = WeekPlanPresetListResponse(items: [], count: 0, limit: 4, limit_source: "default")
@@ -42,6 +43,9 @@ final class WeekPlannerViewModelTests: XCTestCase {
 
         func getWeekPlan() async throws -> WeekPlanResponse {
             getCount += 1
+            if shouldFailGet {
+                throw APIServiceError.serverError("load failed")
+            }
             return plan
         }
 
@@ -200,10 +204,12 @@ final class WeekPlannerViewModelTests: XCTestCase {
         var rescheduleCount = 0
         var cancelCount = 0
         var lastPlan: WeekPlanResponse?
+        var lastReminderTime: String?
 
-        func reschedule(plan: WeekPlanResponse) async {
+        func reschedule(plan: WeekPlanResponse, reminderTime: String) async {
             rescheduleCount += 1
             lastPlan = plan
+            lastReminderTime = reminderTime
         }
 
         func cancelAll() async {
@@ -235,6 +241,68 @@ final class WeekPlannerViewModelTests: XCTestCase {
         XCTAssertEqual(vm.plan.days[0].occasion, "work")
         XCTAssertEqual(vm.today?.outfit?.summary, "Navy look")
         XCTAssertEqual(notifier.cancelCount, 1) // no outfit summaries yet → cancel
+    }
+
+    func testLoadIfNeededFetchesOnlyOncePerUser() async {
+        let api = MockAPI()
+        let vm = WeekPlannerViewModel(api: api, notifier: MockNotifier(), timezoneProvider: { "UTC" })
+
+        await vm.loadIfNeeded(userId: 1)
+        await vm.loadIfNeeded(userId: 1)
+        await vm.loadIfNeeded(userId: 1)
+
+        XCTAssertEqual(api.getCount, 1)
+        XCTAssertEqual(api.historyGetCount, 1)
+        XCTAssertEqual(vm.loadedForUserId, 1)
+    }
+
+    func testLoadIfNeededKeepsLocalEditsOnRevisit() async {
+        let api = MockAPI()
+        let vm = WeekPlannerViewModel(api: api, notifier: MockNotifier(), timezoneProvider: { "UTC" })
+
+        await vm.loadIfNeeded(userId: 1)
+        vm.plan.days[2].enabled = true
+        vm.plan.days[2].occasion = "date"
+        await vm.loadIfNeeded(userId: 1)
+
+        XCTAssertEqual(api.getCount, 1)
+        XCTAssertTrue(vm.plan.days[2].enabled)
+        XCTAssertEqual(vm.plan.days[2].occasion, "date")
+    }
+
+    func testLoadIfNeededRefetchesForDifferentUser() async {
+        let api = MockAPI()
+        let vm = WeekPlannerViewModel(api: api, notifier: MockNotifier(), timezoneProvider: { "UTC" })
+
+        await vm.loadIfNeeded(userId: 1)
+        await vm.loadIfNeeded(userId: 2)
+
+        XCTAssertEqual(api.getCount, 2)
+        XCTAssertEqual(vm.loadedForUserId, 2)
+    }
+
+    func testLoadIfNeededRetriesAfterFailure() async {
+        let api = MockAPI()
+        api.shouldFailGet = true
+        let vm = WeekPlannerViewModel(api: api, notifier: MockNotifier(), timezoneProvider: { "UTC" })
+
+        await vm.loadIfNeeded(userId: 1)
+        XCTAssertNil(vm.loadedForUserId)
+
+        api.shouldFailGet = false
+        await vm.loadIfNeeded(userId: 1)
+
+        XCTAssertEqual(api.getCount, 2)
+        XCTAssertEqual(vm.loadedForUserId, 1)
+    }
+
+    func testLoadIfNeededSkipsWithoutUser() async {
+        let api = MockAPI()
+        let vm = WeekPlannerViewModel(api: api, notifier: MockNotifier(), timezoneProvider: { "UTC" })
+
+        await vm.loadIfNeeded(userId: nil)
+
+        XCTAssertEqual(api.getCount, 0)
     }
 
     func testSavePersistsUpsertBody() async throws {
@@ -1268,6 +1336,136 @@ final class WeekPlannerViewModelTests: XCTestCase {
         XCTAssertTrue(vm.plan.days[1].pinned_items.isEmpty)
         XCTAssertNil(vm.plan.days[1].outfit)
         XCTAssertNil(vm.errorMessage)
+    }
+
+    // MARK: - Today’s outfit reminder
+
+    private func isolatedReminderSettings() -> WeekPlanReminderSettings {
+        let suite = "WeekPlanReminderTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        return WeekPlanReminderSettings(defaults: defaults)
+    }
+
+    private func apiWithOutfitOnDay(_ day: Int) -> MockAPI {
+        let api = MockAPI()
+        api.plan.days[day].enabled = true
+        api.plan.days[day].outfit = WeekPlanOutfitResponse(summary: "Navy blazer look")
+        return api
+    }
+
+    func testReminderDefaultsToEnabledAt0730() {
+        let vm = WeekPlannerViewModel(
+            api: MockAPI(),
+            notifier: MockNotifier(),
+            reminderSettings: isolatedReminderSettings(),
+            timezoneProvider: { "UTC" }
+        )
+        XCTAssertTrue(vm.reminderEnabled)
+        XCTAssertEqual(vm.reminderTime, "07:30")
+    }
+
+    func testDisablingReminderCancelsAndPersists() async {
+        let settings = isolatedReminderSettings()
+        let notifier = MockNotifier()
+        let vm = WeekPlannerViewModel(
+            api: apiWithOutfitOnDay(2),
+            notifier: notifier,
+            reminderSettings: settings,
+            timezoneProvider: { "UTC" }
+        )
+        await vm.load()
+        XCTAssertEqual(notifier.rescheduleCount, 1)
+
+        await vm.setReminderEnabled(false)
+
+        XCTAssertFalse(vm.reminderEnabled)
+        XCTAssertFalse(settings.isEnabled)
+        XCTAssertEqual(notifier.cancelCount, 1)
+        XCTAssertEqual(notifier.rescheduleCount, 1)
+
+        await vm.load()
+        XCTAssertEqual(notifier.rescheduleCount, 1, "Load must not reschedule while reminders are off")
+
+        await vm.setReminderEnabled(true)
+        XCTAssertEqual(notifier.rescheduleCount, 2)
+    }
+
+    func testUpdateReminderTimeReschedulesWithoutDirtyingPlan() async {
+        let settings = isolatedReminderSettings()
+        let notifier = MockNotifier()
+        let vm = WeekPlannerViewModel(
+            api: apiWithOutfitOnDay(0),
+            notifier: notifier,
+            reminderSettings: settings,
+            timezoneProvider: { "UTC" }
+        )
+        await vm.load()
+
+        await vm.updateReminderTime("06:45")
+
+        XCTAssertEqual(vm.reminderTime, "06:45")
+        XCTAssertEqual(settings.time, "06:45")
+        XCTAssertEqual(notifier.lastReminderTime, "06:45")
+        XCTAssertFalse(vm.isDirty)
+    }
+
+    func testUpdateReminderTimeIgnoresInvalidValue() async {
+        let settings = isolatedReminderSettings()
+        let vm = WeekPlannerViewModel(
+            api: MockAPI(),
+            notifier: MockNotifier(),
+            reminderSettings: settings,
+            timezoneProvider: { "UTC" }
+        )
+        await vm.updateReminderTime("7:5")
+        XCTAssertEqual(vm.reminderTime, "07:30")
+        XCTAssertEqual(settings.time, "07:30")
+    }
+
+    func testFocusDayFromReminderBeforeLoadWinsOverToday() async {
+        let vm = WeekPlannerViewModel(
+            api: apiWithOutfitOnDay(4),
+            notifier: MockNotifier(),
+            reminderSettings: isolatedReminderSettings(),
+            timezoneProvider: { "UTC" }
+        )
+        vm.focusDayFromReminder(4)
+        XCTAssertFalse(vm.pendingDayDetailScroll)
+
+        await vm.load()
+
+        XCTAssertEqual(vm.selectedDayOfWeek, 4)
+        XCTAssertTrue(vm.pendingDayDetailScroll)
+        XCTAssertNil(vm.pendingFocusDay)
+    }
+
+    func testFocusDayFromReminderAfterLoadSelectsImmediately() async {
+        let vm = WeekPlannerViewModel(
+            api: apiWithOutfitOnDay(6),
+            notifier: MockNotifier(),
+            reminderSettings: isolatedReminderSettings(),
+            timezoneProvider: { "UTC" }
+        )
+        await vm.load()
+
+        vm.focusDayFromReminder(6)
+
+        XCTAssertEqual(vm.selectedDayOfWeek, 6)
+        XCTAssertTrue(vm.pendingDayDetailScroll)
+    }
+
+    func testFocusDayFromReminderIgnoresOutOfRangeDay() async {
+        let vm = WeekPlannerViewModel(
+            api: MockAPI(),
+            notifier: MockNotifier(),
+            reminderSettings: isolatedReminderSettings(),
+            timezoneProvider: { "UTC" }
+        )
+        await vm.load()
+        vm.focusDayFromReminder(9)
+        XCTAssertFalse(vm.pendingDayDetailScroll)
+        XCTAssertNil(vm.pendingFocusDay)
     }
 }
 

@@ -17,8 +17,18 @@ final class RouteCoordinator: ObservableObject {
     @Published var wardrobeCategoryFilter: String?
     /// When set, Wardrobe is in week-plan slot pick mode.
     @Published var wardrobePickSession: WardrobePickSession?
+    /// Day (0=Mon … 6=Sun) from a tapped “Today’s outfit” reminder; consumed by the Week tab.
+    @Published var weekPlanReminderDay: Int?
 
     private init() {}
+
+    /// Reminder tap: open the Week tab and ask it to focus `dayOfWeek`.
+    func openWeekPlanReminder(dayOfWeek: Int) {
+        guard (0...6).contains(dayOfWeek) else { return }
+        profilePath = NavigationPath()
+        selectedTab = .week
+        weekPlanReminderDay = dayOfWeek
+    }
 
     /// Start Change/Add pick: filter Wardrobe and switch to the Wardrobe tab.
     func startWardrobePick(dayOfWeek: Int, slotKey: String, category: String? = nil) {

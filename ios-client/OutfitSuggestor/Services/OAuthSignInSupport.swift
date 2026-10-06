@@ -13,6 +13,8 @@ import UIKit
 enum OAuthCopy {
     static let googleButtonTitle = "Continue with Google"
     static let appleButtonTitle = "Continue with Apple"
+    /// Off until Sign in with Apple is fully implemented.
+    static let showsAppleSignIn = false
     static let dividerTitle = "or"
 }
 
@@ -26,7 +28,7 @@ enum OAuthSignInError: LocalizedError, Equatable {
         case .missingIdentityToken:
             return "Sign-in did not return an identity token. Try again."
         case .googleSignInNotConfigured:
-            return "Google Sign-In is not configured. Set GOOGLE_IOS_CLIENT_ID in OAuth.xcconfig (and backend GOOGLE_CLIENT_IDS), or sign in with email or Apple."
+            return "Google Sign-In is not configured. Set GOOGLE_IOS_CLIENT_ID in OAuth.xcconfig (and backend GOOGLE_CLIENT_IDS), or sign in with email."
         case .missingPresenter:
             return "Unable to present Google Sign-In. Try again from the login screen."
         }

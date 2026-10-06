@@ -68,7 +68,7 @@ final class WeekPlanPresetPinsTests: XCTestCase {
     }
 
     private final class MockNotifier: WeekPlanNotificationScheduling {
-        func reschedule(plan: WeekPlanResponse) async {}
+        func reschedule(plan: WeekPlanResponse, reminderTime: String) async {}
         func cancelAll() async {}
     }
 

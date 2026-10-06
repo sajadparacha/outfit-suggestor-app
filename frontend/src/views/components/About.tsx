@@ -16,7 +16,7 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
     {
       icon: '👔',
       title: 'Wardrobe',
-      text: 'Save pieces, style from what you own, complete outfits with AI across core slots, and evaluate how a piece fits your wardrobe—pair counts plus what’s missing for your goal.',
+      text: 'Save pieces, style from what you own, complete outfits with AI across core slots, and tap How this fits for a Strong fit, Weak fit, or Already covered verdict—pair counts plus what’s missing for your goal.',
     },
     {
       icon: '📅',
@@ -36,7 +36,7 @@ const About: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
     {
       icon: '🔐',
       title: 'Accounts',
-      text: 'Sign in with email, Google, or Apple to sync wardrobe, history, and preferences across web and iOS.',
+      text: 'Sign in with email or Google to sync wardrobe, history, and preferences across web and iOS.',
     },
   ];
 
