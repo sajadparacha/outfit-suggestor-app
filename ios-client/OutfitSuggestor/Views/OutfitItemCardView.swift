@@ -67,6 +67,8 @@ struct OutfitItemCardView: View {
                 .background(AppTheme.accentSoft)
                 .clipShape(Capsule())
 
+            Spacer(minLength: 0)
+
             if description.count > 80 {
                 DisclosureGroup("Details", isExpanded: $isExpanded) {
                     Text(description)
@@ -80,6 +82,7 @@ struct OutfitItemCardView: View {
             }
         }
         .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color.white.opacity(0.04))
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)

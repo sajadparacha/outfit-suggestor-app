@@ -143,8 +143,8 @@ struct OutfitSuggestionView: View {
 
     private var itemCardsGrid: some View {
         let columns = [
-            GridItem(.flexible(), spacing: 12),
-            GridItem(.flexible(), spacing: 12),
+            GridItem(.flexible(), spacing: 12, alignment: .top),
+            GridItem(.flexible(), spacing: 12, alignment: .top),
         ]
         let resolved = displaySuggestion
 
@@ -176,8 +176,8 @@ struct OutfitSuggestionView: View {
 
     private var optionalItemsGrid: some View {
         let columns = [
-            GridItem(.flexible(), spacing: 12),
-            GridItem(.flexible(), spacing: 12),
+            GridItem(.flexible(), spacing: 12, alignment: .top),
+            GridItem(.flexible(), spacing: 12, alignment: .top),
         ]
 
         return LazyVGrid(columns: columns, spacing: 12) {
