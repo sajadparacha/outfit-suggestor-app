@@ -123,14 +123,40 @@
 		TMI01BF0000000000000001 /* TopMissingItemsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TMI01FR0000000000000001 /* TopMissingItemsView.swift */; };
 		W1A2B3C4D5E6F708192A3B51 /* WardrobeCardUx.swift in Sources */ = {isa = PBXBuildFile; fileRef = W1A2B3C4D5E6F708192A3B50 /* WardrobeCardUx.swift */; };
 		W2A3B4C5D6E7F809293A4B61 /* WardrobeCardUxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = W2A3B4C5D6E7F809293A4B60 /* WardrobeCardUxTests.swift */; };
+		WCF01BF0000000000000001 /* WardrobeCategoryDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCF01FR0000000000000001 /* WardrobeCategoryDisplay.swift */; };
+		WCF01BF0000000000000002 /* WardrobeCategoryFilterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCF01FR0000000000000002 /* WardrobeCategoryFilterTests.swift */; };
+		WCG01BF0000000000000001 /* WardrobeCoverageGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCG01FR0000000000000001 /* WardrobeCoverageGridView.swift */; };
+		WCH0BF000000000000000001 /* WatchWeekSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCH0FR000000000000000001 /* WatchWeekSnapshot.swift */; };
+		WCH0BF000000000000000002 /* WatchWeekSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCH0FR000000000000000001 /* WatchWeekSnapshot.swift */; };
+		WCH0BF000000000000000003 /* OutfitSuggestorWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCH0FR000000000000000002 /* OutfitSuggestorWatchApp.swift */; };
+		WCH0BF000000000000000004 /* WatchSnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCH0FR000000000000000003 /* WatchSnapshotStore.swift */; };
+		WCH0BF000000000000000005 /* TodayOutfitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCH0FR000000000000000004 /* TodayOutfitView.swift */; };
+		WCH0BF000000000000000006 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = WCH0FR000000000000000005 /* Assets.xcassets */; };
+		WCH0BF000000000000000007 /* OutfitSuggestorWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = WCH0FR000000000000000006 /* OutfitSuggestorWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		WCH0BF000000000000000008 /* PhoneWatchSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCH0FR000000000000000007 /* PhoneWatchSync.swift */; };
+		WCH0BF000000000000000009 /* WatchWeekSnapshotBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCH0FR000000000000000008 /* WatchWeekSnapshotBuilder.swift */; };
+		WCH0BF00000000000000000A /* WatchWeekSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCH0FR000000000000000009 /* WatchWeekSnapshotTests.swift */; };
+		WRC0BF000000000000000001 /* WatchComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = WRC0FR000000000000000001 /* WatchComplication.swift */; };
+		WRC0BF000000000000000002 /* WatchReminder.swift in Sources */ = {isa = PBXBuildFile; fileRef = WRC0FR000000000000000002 /* WatchReminder.swift */; };
+		WRC0BF000000000000000003 /* WatchSnapshotStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = WRC0FR000000000000000003 /* WatchSnapshotStorage.swift */; };
+		WRC0BF000000000000000004 /* WatchReminder.swift in Sources */ = {isa = PBXBuildFile; fileRef = WRC0FR000000000000000002 /* WatchReminder.swift */; };
+		WRC0BF000000000000000005 /* WatchSnapshotStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = WRC0FR000000000000000003 /* WatchSnapshotStorage.swift */; };
+		WRC0BF000000000000000006 /* WatchAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = WRC0FR000000000000000004 /* WatchAppDelegate.swift */; };
+		WRC0BF000000000000000007 /* WatchNotificationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WRC0FR000000000000000005 /* WatchNotificationView.swift */; };
+		WRC0BF000000000000000009 /* WatchComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = WRC0FR000000000000000001 /* WatchComplication.swift */; };
+		WRC0BF00000000000000000A /* WatchSnapshotStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = WRC0FR000000000000000003 /* WatchSnapshotStorage.swift */; };
+		WRC0BF00000000000000000B /* OutfitSuggestorWatchWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = WRC0FR000000000000000007 /* OutfitSuggestorWatchWidgets.swift */; };
+		WIM0BF000000000000000001 /* WidgetImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = WIM0FR000000000000000001 /* WidgetImage.swift */; };
+		WIM0BF000000000000000002 /* WidgetImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = WIM0FR000000000000000001 /* WidgetImage.swift */; };
+		WRC0BF00000000000000000C /* WatchReminderComplicationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WRC0FR00000000000000000B /* WatchReminderComplicationTests.swift */; };
+		WRC0BF000000000000000008 /* WatchWeekSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCH0FR000000000000000001 /* WatchWeekSnapshot.swift */; };
+		WRC0BF00000000000000000E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = WRC0FR00000000000000000C /* Assets.xcassets */; };
+		WRC0BF00000000000000000D /* OutfitSuggestorWatchWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = WRC0FR00000000000000000A /* OutfitSuggestorWatchWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		WCO01BF0000000000000001 /* WardrobeCompleteOutfitCardIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCO01FR0000000000000001 /* WardrobeCompleteOutfitCardIntegrationTests.swift */; };
 		WFE01BF0000000000000001 /* WardrobeFitEvaluateCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFE01FR0000000000000001 /* WardrobeFitEvaluateCopy.swift */; };
 		WFE02BF0000000000000001 /* WardrobeFitEvaluateViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFE02FR0000000000000001 /* WardrobeFitEvaluateViewModel.swift */; };
 		WFE03BF0000000000000001 /* WardrobeFitResultSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFE03FR0000000000000001 /* WardrobeFitResultSheet.swift */; };
 		WFE04BF0000000000000001 /* WardrobeFitEvaluateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFE04FR0000000000000001 /* WardrobeFitEvaluateTests.swift */; };
-		WCF01BF0000000000000001 /* WardrobeCategoryDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCF01FR0000000000000001 /* WardrobeCategoryDisplay.swift */; };
-		WCF01BF0000000000000002 /* WardrobeCategoryFilterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCF01FR0000000000000002 /* WardrobeCategoryFilterTests.swift */; };
-		WCG01BF0000000000000001 /* WardrobeCoverageGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCG01FR0000000000000001 /* WardrobeCoverageGridView.swift */; };
-		WCO01BF0000000000000001 /* WardrobeCompleteOutfitCardIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCO01FR0000000000000001 /* WardrobeCompleteOutfitCardIntegrationTests.swift */; };
 		WIP01BF0000000000000001 /* WardrobeInsightsPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = WIP01FR0000000000000001 /* WardrobeInsightsPresentation.swift */; };
 		WIR01BF0000000000000001 /* WardrobeInsightResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = WIR01FR0000000000000001 /* WardrobeInsightResult.swift */; };
 		WIV01BF0000000000000001 /* WardrobeInsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WIV01FR0000000000000001 /* WardrobeInsightsView.swift */; };
@@ -164,7 +190,46 @@
 			remoteGlobalIDString = 73E8DE2A1D94825B55F8B785;
 			remoteInfo = OutfitSuggestor;
 		};
+		WCH0PX000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 09B3882A3A47F24FA108F183 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = WCH0TG000000000000000001;
+			remoteInfo = OutfitSuggestorWatch;
+		};
+		WRC0PX000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 09B3882A3A47F24FA108F183 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = WRC0TG000000000000000001;
+			remoteInfo = OutfitSuggestorWatchWidgets;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		WCH0CF000000000000000001 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				WCH0BF000000000000000007 /* OutfitSuggestorWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		WRC0CF000000000000000001 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				WRC0BF00000000000000000D /* OutfitSuggestorWatchWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		07A2F4C13B6A4D91A32E7800 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -218,11 +283,11 @@
 		CAD5EBF0712C9529021C41B8 /* WardrobeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeModels.swift; sourceTree = "<group>"; };
 		CDA01FR0000000000000001 /* CategoryDetailAccordionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryDetailAccordionView.swift; sourceTree = "<group>"; };
 		CSC01FR0000000000000001 /* CoverageStatusCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverageStatusCardView.swift; sourceTree = "<group>"; };
-		D04F26D19AAD67E14DA721C1 /* OutfitSuggestorTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OutfitSuggestorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D04F26D19AAD67E14DA721C1 /* OutfitSuggestorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OutfitSuggestorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D4E5F60718293A4B5C6D8E1 /* AuthPromptCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthPromptCopy.swift; sourceTree = "<group>"; };
 		D805DBEB8393D1EF9B9EAD33 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
 		D86343F4A060EB70A1831EAA /* OutfitViewModelIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitViewModelIntegrationTests.swift; sourceTree = "<group>"; };
-		D8EB4D42770648E8A1771D11 /* OutfitSuggestorUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OutfitSuggestorUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D8EB4D42770648E8A1771D11 /* OutfitSuggestorUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OutfitSuggestorUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DE08B45FCDDE652CA1907D91 /* OutfitSuggestorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitSuggestorApp.swift; sourceTree = "<group>"; };
 		E1A2B3C4D5E6F708192A3B4C /* AppRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoute.swift; sourceTree = "<group>"; };
 		E2A3B4C5D6E7F809293A4B5D /* RouteCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteCoordinator.swift; sourceTree = "<group>"; };
@@ -288,14 +353,36 @@
 		TMI01FR0000000000000001 /* TopMissingItemsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopMissingItemsView.swift; sourceTree = "<group>"; };
 		W1A2B3C4D5E6F708192A3B50 /* WardrobeCardUx.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCardUx.swift; sourceTree = "<group>"; };
 		W2A3B4C5D6E7F809293A4B60 /* WardrobeCardUxTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCardUxTests.swift; sourceTree = "<group>"; };
+		WCF01FR0000000000000001 /* WardrobeCategoryDisplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCategoryDisplay.swift; sourceTree = "<group>"; };
+		WCF01FR0000000000000002 /* WardrobeCategoryFilterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCategoryFilterTests.swift; sourceTree = "<group>"; };
+		WCG01FR0000000000000001 /* WardrobeCoverageGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCoverageGridView.swift; sourceTree = "<group>"; };
+		WCH0FR000000000000000001 /* WatchWeekSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWeekSnapshot.swift; sourceTree = "<group>"; };
+		WCH0FR000000000000000002 /* OutfitSuggestorWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitSuggestorWatchApp.swift; sourceTree = "<group>"; };
+		WCH0FR000000000000000003 /* WatchSnapshotStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSnapshotStore.swift; sourceTree = "<group>"; };
+		WCH0FR000000000000000004 /* TodayOutfitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayOutfitView.swift; sourceTree = "<group>"; };
+		WCH0FR000000000000000005 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		WCH0FR000000000000000006 /* OutfitSuggestorWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OutfitSuggestorWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		WCH0FR000000000000000007 /* PhoneWatchSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneWatchSync.swift; sourceTree = "<group>"; };
+		WCH0FR000000000000000008 /* WatchWeekSnapshotBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWeekSnapshotBuilder.swift; sourceTree = "<group>"; };
+		WCH0FR000000000000000009 /* WatchWeekSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWeekSnapshotTests.swift; sourceTree = "<group>"; };
+		WRC0FR000000000000000001 /* WatchComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchComplication.swift; sourceTree = "<group>"; };
+		WRC0FR000000000000000002 /* WatchReminder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchReminder.swift; sourceTree = "<group>"; };
+		WRC0FR000000000000000003 /* WatchSnapshotStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSnapshotStorage.swift; sourceTree = "<group>"; };
+		WIM0FR000000000000000001 /* WidgetImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetImage.swift; sourceTree = "<group>"; };
+		WRC0FR000000000000000004 /* WatchAppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAppDelegate.swift; sourceTree = "<group>"; };
+		WRC0FR000000000000000005 /* WatchNotificationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchNotificationView.swift; sourceTree = "<group>"; };
+		WRC0FR000000000000000006 /* OutfitSuggestorWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = OutfitSuggestorWatch.entitlements; sourceTree = "<group>"; };
+		WRC0FR000000000000000007 /* OutfitSuggestorWatchWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitSuggestorWatchWidgets.swift; sourceTree = "<group>"; };
+		WRC0FR000000000000000008 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		WRC0FR000000000000000009 /* OutfitSuggestorWatchWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = OutfitSuggestorWatchWidgets.entitlements; sourceTree = "<group>"; };
+		WRC0FR00000000000000000B /* WatchReminderComplicationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchReminderComplicationTests.swift; sourceTree = "<group>"; };
+		WRC0FR00000000000000000C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		WRC0FR00000000000000000A /* OutfitSuggestorWatchWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = OutfitSuggestorWatchWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		WCO01FR0000000000000001 /* WardrobeCompleteOutfitCardIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCompleteOutfitCardIntegrationTests.swift; sourceTree = "<group>"; };
 		WFE01FR0000000000000001 /* WardrobeFitEvaluateCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeFitEvaluateCopy.swift; sourceTree = "<group>"; };
 		WFE02FR0000000000000001 /* WardrobeFitEvaluateViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeFitEvaluateViewModel.swift; sourceTree = "<group>"; };
 		WFE03FR0000000000000001 /* WardrobeFitResultSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeFitResultSheet.swift; sourceTree = "<group>"; };
 		WFE04FR0000000000000001 /* WardrobeFitEvaluateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeFitEvaluateTests.swift; sourceTree = "<group>"; };
-		WCF01FR0000000000000001 /* WardrobeCategoryDisplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCategoryDisplay.swift; sourceTree = "<group>"; };
-		WCF01FR0000000000000002 /* WardrobeCategoryFilterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCategoryFilterTests.swift; sourceTree = "<group>"; };
-		WCG01FR0000000000000001 /* WardrobeCoverageGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCoverageGridView.swift; sourceTree = "<group>"; };
-		WCO01FR0000000000000001 /* WardrobeCompleteOutfitCardIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCompleteOutfitCardIntegrationTests.swift; sourceTree = "<group>"; };
 		WIP01FR0000000000000001 /* WardrobeInsightsPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeInsightsPresentation.swift; sourceTree = "<group>"; };
 		WIR01FR0000000000000001 /* WardrobeInsightResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeInsightResult.swift; sourceTree = "<group>"; };
 		WIV01FR0000000000000001 /* WardrobeInsightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeInsightsView.swift; sourceTree = "<group>"; };
@@ -320,6 +407,20 @@
 			buildActionMask = 2147483647;
 			files = (
 				OAU04BF0000000000000001 /* GoogleSignIn in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		WCH0FW000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		WRC0FW000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -367,6 +468,8 @@
 				NWIT01FR000000000000001 /* NormalizeWardrobeInsightTests.swift */,
 				WIVT01FR000000000000001 /* WardrobeInsightsViewTests.swift */,
 				WSLT01FR000000000000001 /* WardrobeInsightShoppingListTests.swift */,
+				WCH0FR000000000000000009 /* WatchWeekSnapshotTests.swift */,
+				WRC0FR00000000000000000B /* WatchReminderComplicationTests.swift */,
 			);
 			path = OutfitSuggestorTests;
 			sourceTree = "<group>";
@@ -444,6 +547,8 @@
 				4FDE60751389D95FDB822F3E /* OutfitSuggestor.app */,
 				D04F26D19AAD67E14DA721C1 /* OutfitSuggestorTests.xctest */,
 				D8EB4D42770648E8A1771D11 /* OutfitSuggestorUITests.xctest */,
+				WCH0FR000000000000000006 /* OutfitSuggestorWatch.app */,
+				WRC0FR00000000000000000A /* OutfitSuggestorWatchWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -486,6 +591,7 @@
 				79B25D4D09B5BB781246B0DF /* LocationService.swift */,
 				54E8D18B61E9EF222656069F /* TokenStorage.swift */,
 				A4B5C6D7E8F9012345678A01 /* GuestSession.swift */,
+				WCH0FR000000000000000008 /* WatchWeekSnapshotBuilder.swift */,
 			);
 			path = Utils;
 			sourceTree = "<group>";
@@ -513,6 +619,7 @@
 				D805DBEB8393D1EF9B9EAD33 /* APIService.swift */,
 				62893A1B15D2311F3AEBA721 /* AuthService.swift */,
 				OAU01FR0000000000000001 /* OAuthSignInSupport.swift */,
+				WCH0FR000000000000000007 /* PhoneWatchSync.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -547,6 +654,9 @@
 				B50B50A04089C8C43CD2B925 /* OutfitSuggestor */,
 				384222D780F1291F491220F0 /* OutfitSuggestorTests */,
 				4A67152A50B74995A4B4E58F /* OutfitSuggestorUITests */,
+				WCH0GR000000000000000002 /* OutfitSuggestorWatch */,
+				WRC0GR000000000000000001 /* OutfitSuggestorWatchWidgets */,
+				WCH0GR000000000000000001 /* Shared */,
 				938BA973EF7395BC418FD86B /* Products */,
 			);
 			sourceTree = "<group>";
@@ -581,6 +691,43 @@
 			path = Navigation;
 			sourceTree = "<group>";
 		};
+		WCH0GR000000000000000001 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				WCH0FR000000000000000001 /* WatchWeekSnapshot.swift */,
+				WRC0FR000000000000000001 /* WatchComplication.swift */,
+				WRC0FR000000000000000002 /* WatchReminder.swift */,
+				WRC0FR000000000000000003 /* WatchSnapshotStorage.swift */,
+				WIM0FR000000000000000001 /* WidgetImage.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		WCH0GR000000000000000002 /* OutfitSuggestorWatch */ = {
+			isa = PBXGroup;
+			children = (
+				WCH0FR000000000000000002 /* OutfitSuggestorWatchApp.swift */,
+				WCH0FR000000000000000004 /* TodayOutfitView.swift */,
+				WCH0FR000000000000000003 /* WatchSnapshotStore.swift */,
+				WRC0FR000000000000000004 /* WatchAppDelegate.swift */,
+				WRC0FR000000000000000005 /* WatchNotificationView.swift */,
+				WRC0FR000000000000000006 /* OutfitSuggestorWatch.entitlements */,
+				WCH0FR000000000000000005 /* Assets.xcassets */,
+			);
+			path = OutfitSuggestorWatch;
+			sourceTree = "<group>";
+		};
+		WRC0GR000000000000000001 /* OutfitSuggestorWatchWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				WRC0FR000000000000000007 /* OutfitSuggestorWatchWidgets.swift */,
+				WRC0FR000000000000000008 /* Info.plist */,
+				WRC0FR000000000000000009 /* OutfitSuggestorWatchWidgets.entitlements */,
+				WRC0FR00000000000000000C /* Assets.xcassets */,
+			);
+			path = OutfitSuggestorWatchWidgets;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -609,10 +756,12 @@
 				OAU04FW0000000000000001 /* Frameworks */,
 				07A2F4C13B6A4D91A32E7802 /* Resources */,
 				87962CA4676270CF174F5C0D /* Sources */,
+				WCH0CF000000000000000001 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				WCH0TD000000000000000001 /* PBXTargetDependency */,
 			);
 			name = OutfitSuggestor;
 			packageProductDependencies = (
@@ -640,6 +789,46 @@
 			productReference = D8EB4D42770648E8A1771D11 /* OutfitSuggestorUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		WCH0TG000000000000000001 /* OutfitSuggestorWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = WCH0CL000000000000000001 /* Build configuration list for PBXNativeTarget "OutfitSuggestorWatch" */;
+			buildPhases = (
+				WCH0SP000000000000000001 /* Sources */,
+				WCH0FW000000000000000001 /* Frameworks */,
+				WCH0RP000000000000000001 /* Resources */,
+				WRC0CF000000000000000001 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				WRC0TD000000000000000001 /* PBXTargetDependency */,
+			);
+			name = OutfitSuggestorWatch;
+			packageProductDependencies = (
+			);
+			productName = OutfitSuggestorWatch;
+			productReference = WCH0FR000000000000000006 /* OutfitSuggestorWatch.app */;
+			productType = "com.apple.product-type.application";
+		};
+		WRC0TG000000000000000001 /* OutfitSuggestorWatchWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = WRC0CL000000000000000001 /* Build configuration list for PBXNativeTarget "OutfitSuggestorWatchWidgets" */;
+			buildPhases = (
+				WRC0SP000000000000000001 /* Sources */,
+				WRC0FW000000000000000001 /* Frameworks */,
+				WRC0RP000000000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = OutfitSuggestorWatchWidgets;
+			packageProductDependencies = (
+			);
+			productName = OutfitSuggestorWatchWidgets;
+			productReference = WRC0FR00000000000000000A /* OutfitSuggestorWatchWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -647,7 +836,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1430;
+				LastUpgradeCheck = 2700;
 				TargetAttributes = {
 					34FD16507CAAB378C8FCA24D = {
 						ProvisioningStyle = Automatic;
@@ -658,6 +847,12 @@
 					EA3252C02C75444A81E2E791 = {
 						ProvisioningStyle = Automatic;
 						TestTargetID = 73E8DE2A1D94825B55F8B785;
+					};
+					WCH0TG000000000000000001 = {
+						ProvisioningStyle = Automatic;
+					};
+					WRC0TG000000000000000001 = {
+						ProvisioningStyle = Automatic;
 					};
 				};
 			};
@@ -681,6 +876,8 @@
 				73E8DE2A1D94825B55F8B785 /* OutfitSuggestor */,
 				34FD16507CAAB378C8FCA24D /* OutfitSuggestorTests */,
 				EA3252C02C75444A81E2E791 /* OutfitSuggestorUITests */,
+				WCH0TG000000000000000001 /* OutfitSuggestorWatch */,
+				WRC0TG000000000000000001 /* OutfitSuggestorWatchWidgets */,
 			);
 		};
 /* End PBXProject section */
@@ -694,6 +891,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		WCH0RP000000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				WCH0BF000000000000000006 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		WRC0RP000000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				WRC0BF00000000000000000E /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -701,6 +914,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				WCH0BF000000000000000001 /* WatchWeekSnapshot.swift in Sources */,
+				WCH0BF000000000000000008 /* PhoneWatchSync.swift in Sources */,
+				WCH0BF000000000000000009 /* WatchWeekSnapshotBuilder.swift in Sources */,
+				WRC0BF000000000000000001 /* WatchComplication.swift in Sources */,
+				WRC0BF000000000000000002 /* WatchReminder.swift in Sources */,
+				WRC0BF000000000000000003 /* WatchSnapshotStorage.swift in Sources */,
+				WIM0BF000000000000000001 /* WidgetImage.swift in Sources */,
 				WP01BF0000000000000001 /* WeekPlanModels.swift in Sources */,
 				WP01BF0000000000000002 /* WeekPlanNotificationScheduler.swift in Sources */,
 				WP01BF0000000000000003 /* WeekPlannerViewModel.swift in Sources */,
@@ -807,6 +1027,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				WCH0BF00000000000000000A /* WatchWeekSnapshotTests.swift in Sources */,
+				WRC0BF00000000000000000C /* WatchReminderComplicationTests.swift in Sources */,
 				WP01BF0000000000000005 /* WeekPlannerViewModelTests.swift in Sources */,
 				WPDCBF000000000000000001 /* WeekPlanDayCardDisplayTests.swift in Sources */,
 				WPPPBF0000000000000001 /* WeekPlanPresetPinsTests.swift in Sources */,
@@ -856,6 +1078,33 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		WCH0SP000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				WCH0BF000000000000000002 /* WatchWeekSnapshot.swift in Sources */,
+				WCH0BF000000000000000003 /* OutfitSuggestorWatchApp.swift in Sources */,
+				WCH0BF000000000000000004 /* WatchSnapshotStore.swift in Sources */,
+				WCH0BF000000000000000005 /* TodayOutfitView.swift in Sources */,
+				WRC0BF000000000000000004 /* WatchReminder.swift in Sources */,
+				WRC0BF000000000000000005 /* WatchSnapshotStorage.swift in Sources */,
+				WRC0BF000000000000000006 /* WatchAppDelegate.swift in Sources */,
+				WRC0BF000000000000000007 /* WatchNotificationView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		WRC0SP000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				WRC0BF000000000000000008 /* WatchWeekSnapshot.swift in Sources */,
+				WRC0BF000000000000000009 /* WatchComplication.swift in Sources */,
+				WRC0BF00000000000000000A /* WatchSnapshotStorage.swift in Sources */,
+				WRC0BF00000000000000000B /* OutfitSuggestorWatchWidgets.swift in Sources */,
+				WIM0BF000000000000000002 /* WidgetImage.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -869,6 +1118,16 @@
 			target = 73E8DE2A1D94825B55F8B785 /* OutfitSuggestor */;
 			targetProxy = C4AA4111F038841A8E622B9A /* PBXContainerItemProxy */;
 		};
+		WCH0TD000000000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = WCH0TG000000000000000001 /* OutfitSuggestorWatch */;
+			targetProxy = WCH0PX000000000000000001 /* PBXContainerItemProxy */;
+		};
+		WRC0TD000000000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = WRC0TG000000000000000001 /* OutfitSuggestorWatchWidgets */;
+			targetProxy = WRC0PX000000000000000001 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -879,7 +1138,7 @@
 				CODE_SIGNING_ALLOWED = NO;
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = "$(RECOMMENDED_IPHONEOS_DEPLOYMENT_TARGET)";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -921,7 +1180,7 @@
 				CODE_SIGNING_ALLOWED = NO;
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = "$(RECOMMENDED_IPHONEOS_DEPLOYMENT_TARGET)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.sajad.outfitsuggestor.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -968,6 +1227,7 @@
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -988,6 +1248,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -1022,7 +1283,7 @@
 				CODE_SIGNING_ALLOWED = NO;
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = "$(RECOMMENDED_IPHONEOS_DEPLOYMENT_TARGET)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.sajad.outfitsuggestor.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -1069,6 +1330,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -1082,6 +1344,7 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
@@ -1095,7 +1358,7 @@
 				CODE_SIGNING_ALLOWED = NO;
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = "$(RECOMMENDED_IPHONEOS_DEPLOYMENT_TARGET)";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1106,6 +1369,116 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OutfitSuggestor.app/OutfitSuggestor";
+			};
+			name = Release;
+		};
+		WCH0BC000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = OutfitSuggestorWatch/OutfitSuggestorWatch.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7UVB6XM3R7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Outfit;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.sajad.outfitsuggestor;
+				IPHONEOS_DEPLOYMENT_TARGET = "$(RECOMMENDED_IPHONEOS_DEPLOYMENT_TARGET)";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sajad.outfitsuggestor.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+		WCH0BC000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = OutfitSuggestorWatch/OutfitSuggestorWatch.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7UVB6XM3R7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Outfit;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.sajad.outfitsuggestor;
+				IPHONEOS_DEPLOYMENT_TARGET = "$(RECOMMENDED_IPHONEOS_DEPLOYMENT_TARGET)";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sajad.outfitsuggestor.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
+		WRC0BC000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = OutfitSuggestorWatchWidgets/OutfitSuggestorWatchWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7UVB6XM3R7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = OutfitSuggestorWatchWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Outfit;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sajad.outfitsuggestor.watchkitapp.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+		WRC0BC000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = OutfitSuggestorWatchWidgets/OutfitSuggestorWatchWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7UVB6XM3R7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = OutfitSuggestorWatchWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Outfit;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sajad.outfitsuggestor.watchkitapp.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
 			};
 			name = Release;
 		};
@@ -1144,6 +1517,24 @@
 			buildConfigurations = (
 				263E0CF038DA5A3D292998A0 /* Debug */,
 				F0EFA67DD53FD0CDC33AEF92 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		WCH0CL000000000000000001 /* Build configuration list for PBXNativeTarget "OutfitSuggestorWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				WCH0BC000000000000000001 /* Debug */,
+				WCH0BC000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		WRC0CL000000000000000001 /* Build configuration list for PBXNativeTarget "OutfitSuggestorWatchWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				WRC0BC000000000000000001 /* Debug */,
+				WRC0BC000000000000000002 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

@@ -16,6 +16,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+        PhoneWatchSync.shared.activate()
+        WatchPlanRefresher.register()
+        WatchPlanRefresher.schedule()
         return true
     }
 

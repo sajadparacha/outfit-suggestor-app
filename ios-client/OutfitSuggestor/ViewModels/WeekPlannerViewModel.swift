@@ -74,6 +74,7 @@ final class WeekPlannerViewModel: ObservableObject {
 
     private let api: WeekPlanAPIClient
     private let notifier: WeekPlanNotificationScheduling
+    private let watchSync: WatchSnapshotSending
     private let reminderSettings: WeekPlanReminderSettings
     private let timezoneProvider: () -> String
     /// Day requested by a reminder tap, applied once the plan is loaded.
@@ -91,11 +92,13 @@ final class WeekPlannerViewModel: ObservableObject {
     init(
         api: WeekPlanAPIClient = APIService.shared,
         notifier: WeekPlanNotificationScheduling = DefaultWeekPlanNotifier(),
+        watchSync: WatchSnapshotSending = PhoneWatchSync.shared,
         reminderSettings: WeekPlanReminderSettings = WeekPlanReminderSettings(),
         timezoneProvider: @escaping () -> String = { TimeZone.current.identifier }
     ) {
         self.api = api
         self.notifier = notifier
+        self.watchSync = watchSync
         self.reminderSettings = reminderSettings
         self.reminderEnabled = reminderSettings.isEnabled
         self.reminderTime = reminderSettings.time
@@ -1036,6 +1039,7 @@ final class WeekPlannerViewModel: ObservableObject {
     }
 
     private func syncNotifications() async {
+        watchSync.send(WatchWeekSnapshotBuilder.make(plan: plan))
         let enabledWithOutfits = plan.days.filter {
             $0.enabled && !($0.outfit?.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
         }

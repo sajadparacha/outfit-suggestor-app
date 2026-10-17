@@ -1,0 +1,12 @@
+{
+  "Simulator Target Bundle": "com.sajad.outfitsuggestor.watchkitapp",
+  "aps": {
+    "alert": {
+      "title": "Today’s outfit",
+      "body": "Smart office look"
+    },
+    "category": "WEEK_PLAN_TODAY",
+    "sound": "default"
+  },
+  "week_plan_day_of_week": 0
+}

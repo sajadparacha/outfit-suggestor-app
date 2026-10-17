@@ -17,6 +17,7 @@ final class WeekPlanNotificationSchedulerTests: XCTestCase {
         var removedIdentifiers: [[String]] = []
         var removeAllWeekPlanCallCount = 0
         var pending: [UNNotificationRequest] = []
+        var registeredCategories: [Set<UNNotificationCategory>] = []
 
         func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool {
             authorizationCallCount += 1
@@ -43,6 +44,10 @@ final class WeekPlanNotificationSchedulerTests: XCTestCase {
         func removeAllPendingWeekPlanNotifications() {
             removeAllWeekPlanCallCount += 1
             pending.removeAll { $0.identifier.hasPrefix(WeekPlanNotificationScheduler.idPrefix) }
+        }
+
+        func setNotificationCategories(_ categories: Set<UNNotificationCategory>) {
+            registeredCategories.append(categories)
         }
     }
 
@@ -120,6 +125,30 @@ final class WeekPlanNotificationSchedulerTests: XCTestCase {
             request.content.userInfo[WeekPlanNotificationScheduler.dayOfWeekUserInfoKey] as? Int,
             3
         )
+    }
+
+    func testRescheduleSetsWatchCategoryAndKeepsContent() async throws {
+        let center = MockCenter()
+        var plan = WeekPlanResponse.empty(timezone: "UTC")
+        plan.reminder_time = "08:00"
+        plan.days[4].enabled = true
+        plan.days[4].outfit = WeekPlanOutfitResponse(summary: "Friday look")
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = calendar.date(from: DateComponents(year: 2026, month: 7, day: 20, hour: 9, minute: 0))!
+
+        _ = await WeekPlanNotificationScheduler.reschedule(plan: plan, center: center, now: now, calendar: calendar)
+
+        let request = try XCTUnwrap(center.addedRequests.first)
+        XCTAssertEqual(request.content.categoryIdentifier, "WEEK_PLAN_TODAY")
+        XCTAssertEqual(request.identifier, "week-plan.day.4")
+        XCTAssertEqual(request.content.title, "Today’s outfit")
+        XCTAssertEqual(request.content.body, "Friday look")
+        XCTAssertEqual(request.content.userInfo.count, 1)
+        XCTAssertEqual(request.content.userInfo["week_plan_day_of_week"] as? Int, 4)
+        XCTAssertEqual(center.registeredCategories.last?.map(\.identifier), ["WEEK_PLAN_TODAY"])
+        XCTAssertEqual(center.registeredCategories.last?.first?.actions.count, 0)
     }
 
     func testReminderTimeOverridesPlanTime() {

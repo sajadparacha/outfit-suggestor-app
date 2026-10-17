@@ -175,6 +175,7 @@ class AuthService: ObservableObject {
         authToken = nil
         currentUser = nil
         TokenStorage.remove()
+        PhoneWatchSync.shared.send(.signedOut())
     }
 }
 

@@ -217,6 +217,41 @@ final class WeekPlannerViewModelTests: XCTestCase {
         }
     }
 
+    private final class MockWatchSync: WatchSnapshotSending {
+        var sent: [WatchWeekSnapshot] = []
+
+        func send(_ snapshot: WatchWeekSnapshot) {
+            sent.append(snapshot)
+        }
+    }
+
+    func testLoadSendsWeekSnapshotToWatch() async {
+        let api = MockAPI()
+        api.plan.days[2].enabled = true
+        api.plan.days[2].occasion = "work"
+        api.plan.days[2].outfit = WeekPlanOutfitResponse(
+            summary: "Navy look",
+            shirt: "White oxford shirt — crisp base",
+            shoes: "Brown loafers"
+        )
+        let watchSync = MockWatchSync()
+        let vm = WeekPlannerViewModel(
+            api: api,
+            notifier: MockNotifier(),
+            watchSync: watchSync,
+            timezoneProvider: { "UTC" }
+        )
+
+        await vm.load()
+
+        let snapshot = try? XCTUnwrap(watchSync.sent.last)
+        XCTAssertEqual(snapshot?.isSignedIn, true)
+        XCTAssertEqual(snapshot?.days.count, 7)
+        let wednesday = snapshot?.days.first { $0.dayOfWeek == 2 }
+        XCTAssertEqual(wednesday?.enabled, true)
+        XCTAssertEqual(wednesday?.items.map(\.name), ["White oxford shirt", "Brown loafers"])
+    }
+
     func testLoadPopulatesPlanAndToday() async {
         let api = MockAPI()
         api.plan.days[0].enabled = true

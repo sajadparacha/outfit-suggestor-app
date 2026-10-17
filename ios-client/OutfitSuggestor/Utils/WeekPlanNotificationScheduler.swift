@@ -23,6 +23,7 @@ protocol WeekPlanNotificationCenterProtocol {
     func add(_ request: UNNotificationRequest) async throws
     func removePendingNotificationRequests(withIdentifiers identifiers: [String])
     func removeAllPendingWeekPlanNotifications()
+    func setNotificationCategories(_ categories: Set<UNNotificationCategory>)
 }
 
 extension UNUserNotificationCenter: WeekPlanNotificationCenterProtocol {
@@ -105,9 +106,11 @@ struct WeekPlanReminderSettings {
 }
 
 enum WeekPlanNotificationScheduler {
-    static let idPrefix = "week-plan.day."
+    static let idPrefix = WatchReminder.identifierPrefix
     static let title = "Today’s outfit"
-    static let dayOfWeekUserInfoKey = "week_plan_day_of_week"
+    static let dayOfWeekUserInfoKey = WatchReminder.dayOfWeekUserInfoKey
+    /// Lets Apple Watch show the reminder with its custom outfit view; no actions, so iPhone looks unchanged.
+    static let categoryIdentifier = WatchReminder.categoryIdentifier
 
     static func identifier(for dayOfWeek: Int) -> String {
         "\(idPrefix)\(dayOfWeek)"
@@ -115,14 +118,7 @@ enum WeekPlanNotificationScheduler {
 
     /// Backend day (0=Mon … 6=Sun) for a tapped reminder, or nil if it isn’t a week-plan reminder.
     static func dayOfWeek(fromUserInfo userInfo: [AnyHashable: Any], identifier: String? = nil) -> Int? {
-        if let day = userInfo[dayOfWeekUserInfoKey] as? Int, (0...6).contains(day) {
-            return day
-        }
-        if let identifier, identifier.hasPrefix(idPrefix),
-           let day = Int(identifier.dropFirst(idPrefix.count)), (0...6).contains(day) {
-            return day
-        }
-        return nil
+        WatchReminder.dayOfWeek(userInfo: userInfo, identifier: identifier)
     }
 
     /// Builds notification payloads for enabled days that have an outfit summary.
@@ -179,6 +175,7 @@ enum WeekPlanNotificationScheduler {
             return []
         }
         guard granted else { return [] }
+        center.setNotificationCategories([WatchReminder.category])
 
         let schedules = buildSchedules(for: plan, reminderTime: reminderTime, now: now, calendar: calendar)
         for item in schedules {
@@ -187,6 +184,7 @@ enum WeekPlanNotificationScheduler {
             content.body = item.body
             content.sound = .default
             content.userInfo = [dayOfWeekUserInfoKey: item.dayOfWeek]
+            content.categoryIdentifier = categoryIdentifier
 
             let comps = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: item.fireDate)
             let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
