@@ -161,6 +161,22 @@ Backend should be running on http://localhost:8001
 2. Select a simulator or connected device
 3. Click Run (Cmd+R)
 
+### 3. Apple Watch companion (physical devices)
+
+Running the `OutfitSuggestor` scheme on a physical iPhone also installs the watch app on the paired
+Apple Watch: a Run pre-action waits for the iPhone app to launch, then pushes
+`OutfitSuggestorWatch.app` with `devicectl` (log: `/tmp/outfit-watch-install.log`, macOS
+notification when done). Keep the watch awake, unlocked and on Wi-Fi.
+
+Without Xcode, or to retry:
+
+```bash
+ios-client/scripts/install-watch-companion.sh --install-phone --phone "Sajjad iphone"  # iPhone, then watch
+ios-client/scripts/install-watch-companion.sh                                          # watch only
+```
+
+Set `SKIP_WATCH_INSTALL=1` to turn the automatic watch install off.
+
 ## Usage
 
 1. **Launch App**: Open the app on your device/simulator

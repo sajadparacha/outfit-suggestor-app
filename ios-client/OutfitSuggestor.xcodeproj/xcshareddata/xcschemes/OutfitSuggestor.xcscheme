@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "1430"
+   LastUpgradeVersion = "2700"
    version = "1.7">
    <BuildAction
       parallelizeBuildables = "YES"
-      buildImplicitDependencies = "YES"
-      runPostActionsOnFailure = "NO">
+      buildImplicitDependencies = "YES">
       <BuildActionEntries>
          <BuildActionEntry
             buildForTesting = "YES"
@@ -41,8 +40,7 @@
       buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
-      shouldUseLaunchSchemeArgsEnv = "YES"
-      onlyGenerateCoverageForSpecifiedTargets = "NO">
+      shouldUseLaunchSchemeArgsEnv = "YES">
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
@@ -65,8 +63,7 @@
             </BuildableReference>
          </TestableReference>
          <TestableReference
-            skipped = "NO"
-            parallelizable = "NO">
+            skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "EA3252C02C75444A81E2E791"
@@ -76,8 +73,6 @@
             </BuildableReference>
          </TestableReference>
       </Testables>
-      <CommandLineArguments>
-      </CommandLineArguments>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
@@ -89,6 +84,25 @@
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
       allowLocationSimulation = "YES">
+      <PreActions>
+         <ExecutionAction
+            ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
+            <ActionContent
+               title = "Install watch companion"
+               scriptText = "# Dev builds are not auto-installed on the watch; push it once the iPhone app is launched.&#10;if [ &quot;$PLATFORM_NAME&quot; = &quot;iphoneos&quot; ]; then&#10;  nohup &quot;$PROJECT_DIR/scripts/install-watch-companion.sh&quot; --wait-for-phone-launch --app &quot;$CODESIGNING_FOLDER_PATH&quot; &gt; /tmp/outfit-watch-install.log 2&gt;&amp;1 &lt; /dev/null &amp;&#10;fi&#10;"
+               shellToInvoke = "/bin/bash">
+               <EnvironmentBuildable>
+                  <BuildableReference
+                     BuildableIdentifier = "primary"
+                     BlueprintIdentifier = "73E8DE2A1D94825B55F8B785"
+                     BuildableName = "OutfitSuggestor.app"
+                     BlueprintName = "OutfitSuggestor"
+                     ReferencedContainer = "container:OutfitSuggestor.xcodeproj">
+                  </BuildableReference>
+               </EnvironmentBuildable>
+            </ActionContent>
+         </ExecutionAction>
+      </PreActions>
       <BuildableProductRunnable
          runnableDebuggingMode = "0">
          <BuildableReference
@@ -99,8 +113,6 @@
             ReferencedContainer = "container:OutfitSuggestor.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
-      <CommandLineArguments>
-      </CommandLineArguments>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
@@ -118,8 +130,6 @@
             ReferencedContainer = "container:OutfitSuggestor.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
-      <CommandLineArguments>
-      </CommandLineArguments>
    </ProfileAction>
    <AnalyzeAction
       buildConfiguration = "Debug">
