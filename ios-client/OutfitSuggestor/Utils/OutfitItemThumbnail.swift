@@ -92,7 +92,7 @@ enum OutfitItemThumbnail {
     }
 
     static func wardrobeUIImage(from item: MatchingWardrobeItem?) -> UIImage? {
-        guard let b64 = item?.image_data else { return nil }
+        guard let b64 = item?.thumbnailOrFullImageData else { return nil }
         let cleaned = b64.replacingOccurrences(of: "\\s", with: "", options: .regularExpression)
         guard let data = Data(base64Encoded: cleaned) else { return nil }
         return UIImage(data: data)

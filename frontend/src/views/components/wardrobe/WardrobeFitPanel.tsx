@@ -19,6 +19,7 @@ import {
 } from '../../../utils/wardrobeFitCopy';
 import { INSIGHTS_DRESS_CODE_OPTIONS, INSIGHTS_LIFESTYLE_OPTIONS } from '../../../utils/constants';
 import { wardrobeCategoryLabel } from '../../../utils/wardrobeCategory';
+import { fetchFullWardrobeItem } from '../../../utils/fullImageCache';
 
 export interface FitGoalDraft {
   dress_code: string;
@@ -205,9 +206,28 @@ const WardrobeFitPanel: React.FC<WardrobeFitPanelProps> = ({
 
   if (!isOpen) return null;
 
+  const candidateFullImage = isAttributeMode
+    ? null
+    : result?.candidate.image_data || item?.image_data || null;
   const candidateThumb = isAttributeMode
     ? localImageUrl ?? thumbSrc(result?.candidate.image_data)
-    : thumbSrc(result?.candidate.image_data ?? item?.image_data);
+    : thumbSrc(candidateFullImage || item?.image_thumbnail);
+
+  /** List items only carry a thumbnail: show it, then swap in the full photo. */
+  const openCandidateViewer = () => {
+    if (!candidateThumb) return;
+    setViewingImage(candidateThumb);
+    if (candidateFullImage || !item) return;
+    const itemId = item.id;
+    fetchFullWardrobeItem(itemId)
+      .then((full) => {
+        const fullSrc = thumbSrc(full.image_data);
+        if (fullSrc && viewingImageRef.current === candidateThumb) {
+          setViewingImage(fullSrc);
+        }
+      })
+      .catch(() => undefined);
+  };
   const pairs = result?.pairs_with ?? [];
   const hasPairs = pairs.some((p) => p.count > 0);
 
@@ -370,7 +390,7 @@ const WardrobeFitPanel: React.FC<WardrobeFitPanelProps> = ({
                 {candidateThumb ? (
                   <button
                     type="button"
-                    onClick={() => setViewingImage(candidateThumb)}
+                    onClick={openCandidateViewer}
                     className="flex-shrink-0 cursor-pointer rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue"
                     aria-label="View full image"
                     data-testid="wardrobe-fit-candidate-thumb-button"

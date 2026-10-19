@@ -1,7 +1,7 @@
 """Wardrobe Service - Business logic for wardrobe operations"""
 import random
 from typing import Optional, List, Dict, Any, Set, Tuple, Union
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer
 from sqlalchemy import or_, and_
 from datetime import datetime
 import imagehash
@@ -12,6 +12,7 @@ import base64
 from models.wardrobe import WardrobeItem
 from models.user import User
 from services.outfit_service import OutfitService
+from utils.image_processor import make_thumbnail
 
 # Default threshold - will be overridden by Config if available
 DEFAULT_IMAGE_SIMILARITY_THRESHOLD = 5
@@ -163,6 +164,7 @@ class WardrobeService:
             brand=None,  # Not used in simplified version
             size=None,  # Not used in simplified version
             image_data=image_data,
+            image_thumbnail=make_thumbnail(image_data),
             tags=None,  # Not used in simplified version
             condition=None,  # Not used in simplified version
             wear_count=0
@@ -180,7 +182,8 @@ class WardrobeService:
         category: Optional[str] = None,
         search: Optional[str] = None,
         limit: Optional[int] = None,
-        offset: Optional[int] = None
+        offset: Optional[int] = None,
+        include_image_data: bool = True,
     ) -> tuple[List[WardrobeItem], int]:
         """
         Get user's wardrobe items with pagination and search
@@ -192,11 +195,14 @@ class WardrobeService:
             search: Optional search query (searches in description, color, name)
             limit: Optional limit for pagination
             offset: Optional offset for pagination
+            include_image_data: False defers loading the full photo column
             
         Returns:
             Tuple of (List of WardrobeItem objects, total count)
         """
         query = db.query(WardrobeItem).filter(WardrobeItem.user_id == user_id)
+        if not include_image_data:
+            query = query.options(defer(WardrobeItem.image_data))
         
         if category:
             query = query.filter(WardrobeItem.category == category.lower())
@@ -356,6 +362,7 @@ class WardrobeService:
         new_image = kwargs.get('image_data')
         if new_image is not None and new_image != item.image_data:
             OutfitService.copy_wardrobe_photo_into_history(db, item)
+            item.image_thumbnail = make_thumbnail(new_image)
         
         for field, value in kwargs.items():
             if field in allowed_fields and value is not None:

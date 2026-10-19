@@ -12,6 +12,19 @@ from datetime import datetime
 from models.outfit import OutfitSuggestion
 from models.outfit_history import OutfitHistory
 from models.wardrobe import WardrobeItem
+from services.photo_thumbnails import history_thumbnails, wardrobe_thumbnails
+from utils.image_processor import make_thumbnail
+
+HISTORY_SLOT_ID_COLUMNS = (
+    "shirt_id",
+    "trouser_id",
+    "blazer_id",
+    "shoes_id",
+    "belt_id",
+    "sweater_id",
+    "outerwear_id",
+    "tie_id",
+)
 
 # Default threshold - will be overridden by Config if available
 DEFAULT_IMAGE_SIMILARITY_THRESHOLD = 5
@@ -62,6 +75,7 @@ class OutfitService:
             "user_id": user_id,
             "text_input": text_input,
             "image_data": image_data,
+            "image_thumbnail": make_thumbnail(image_data),
             "shirt": suggestion.shirt,
             "trouser": suggestion.trouser,
             "blazer": suggestion.blazer,
@@ -187,7 +201,11 @@ class OutfitService:
             OutfitHistory.image_from_wardrobe.is_(True),
             OutfitHistory.image_data.is_(None),
         ).update(
-            {"image_data": item.image_data, "image_from_wardrobe": False},
+            {
+                "image_data": item.image_data,
+                "image_thumbnail": item.image_thumbnail or make_thumbnail(item.image_data),
+                "image_from_wardrobe": False,
+            },
             synchronize_session=False,
         )
     
@@ -195,26 +213,118 @@ class OutfitService:
         self,
         db: Session,
         user_id: int,
-        limit: int = 20
-    ) -> List[OutfitHistory]:
+        limit: int = 20,
+        offset: int = 0,
+        wardrobe_item_id: Optional[int] = None,
+        include_images: bool = True,
+    ) -> List[SimpleNamespace]:
         """
-        Get user's outfit history
-        
+        Get a page of the user's outfit history, newest first.
+
+        Entries carry image_thumbnail (256px) and image_data=None; use get_history_entry
+        for the full photo.
+
         Args:
             db: Database session
             user_id: User ID
             limit: Maximum number of entries to return
-            
+            offset: Number of entries to skip
+            wardrobe_item_id: Only entries made from or using this wardrobe item
+            include_images: False leaves image_thumbnail and model_image empty
+
         Returns:
-            List of OutfitHistory entries
+            List of history entries
         """
         columns = self._get_outfit_history_columns(db)
+        where = ["user_id = :user_id"]
+        params: Dict[str, object] = {"user_id": user_id, "limit": limit, "offset": offset}
+        if wardrobe_item_id is not None:
+            where.append(self._references_wardrobe_item_sql(columns))
+            params["wardrobe_item_id"] = wardrobe_item_id
+        history = self._select_history(
+            db, columns, " AND ".join(where), params, paginate=True, full_image=False,
+            include_images=include_images,
+        )
+        if include_images:
+            self._attach_thumbnails(db, user_id, history)
+        return history
+
+    def get_history_entry(
+        self, db: Session, user_id: int, entry_id: int
+    ) -> Optional[SimpleNamespace]:
+        """One history entry with the full input photo (image_data) and its thumbnail."""
+        columns = self._get_outfit_history_columns(db)
+        history = self._select_history(
+            db,
+            columns,
+            "user_id = :user_id AND id = :entry_id",
+            {"user_id": user_id, "entry_id": entry_id},
+            paginate=False,
+            full_image=True,
+            include_images=True,
+        )
+        if not history:
+            return None
+        entry = history[0]
+        if getattr(entry, "image_from_wardrobe", False) and not entry.image_data:
+            images = self.load_wardrobe_images(db, user_id, [entry.source_wardrobe_item_id])
+            entry.image_data = images.get(entry.source_wardrobe_item_id)
+        self._attach_thumbnails(db, user_id, history)
+        return entry
+
+    @staticmethod
+    def _references_wardrobe_item_sql(columns: Set[str]) -> str:
+        conditions = [
+            f"{column} = :wardrobe_item_id"
+            for column in ("source_wardrobe_item_id", *HISTORY_SLOT_ID_COLUMNS)
+            if column in columns
+        ]
+        # Rows saved before item IDs were stored only share the identical photo
+        conditions.append(
+            "(image_data IS NOT NULL AND image_data = ("
+            "SELECT image_data FROM wardrobe_items "
+            "WHERE id = :wardrobe_item_id AND user_id = :user_id))"
+        )
+        return "(" + " OR ".join(conditions) + ")"
+
+    def _attach_thumbnails(self, db: Session, user_id: int, history: List[SimpleNamespace]) -> None:
+        """Fill image_thumbnail from the row, a backfill, or the source wardrobe item."""
+        from_wardrobe = [
+            entry for entry in history
+            if getattr(entry, "image_from_wardrobe", False) and not entry.has_image_data
+        ]
+        needs_backfill = [
+            entry.id for entry in history
+            if entry.has_image_data and not entry.image_thumbnail
+        ]
+        backfilled = history_thumbnails(db, needs_backfill)
+        wardrobe_thumbs = wardrobe_thumbnails(
+            db, user_id, (entry.source_wardrobe_item_id for entry in from_wardrobe)
+        )
+        for entry in history:
+            if entry.id in backfilled:
+                entry.image_thumbnail = backfilled[entry.id]
+        for entry in from_wardrobe:
+            entry.image_thumbnail = wardrobe_thumbs.get(entry.source_wardrobe_item_id)
+        if backfilled or wardrobe_thumbs:
+            db.commit()
+
+    def _select_history(
+        self,
+        db: Session,
+        columns: Set[str],
+        where_sql: str,
+        params: Dict[str, object],
+        paginate: bool,
+        full_image: bool,
+        include_images: bool,
+    ) -> List[SimpleNamespace]:
         select_preference = [
             "id",
             "created_at",
             "user_id",
             "text_input",
-            "image_data",
+            "image_thumbnail",
             "model_image",
             "shirt",
             "trouser",
@@ -239,31 +349,41 @@ class OutfitService:
             "season",
             "style",
         ]
+        if not include_images:
+            select_preference = [
+                c for c in select_preference if c not in ("image_thumbnail", "model_image")
+            ]
         select_columns = [column for column in select_preference if column in columns]
         if not select_columns:
             return []
+        if "image_data" in columns:
+            select_columns.append(
+                "image_data" if full_image else "(image_data IS NOT NULL) AS has_image_data"
+            )
 
         query = text(
             f"""
                 SELECT {", ".join(select_columns)}
                 FROM outfit_history
-                WHERE user_id = :user_id
-                ORDER BY created_at DESC
-                LIMIT :limit
+                WHERE {where_sql}
+                ORDER BY created_at DESC, id DESC
+                {"LIMIT :limit OFFSET :offset" if paginate else ""}
             """
         )
-        rows = db.execute(query, {"user_id": user_id, "limit": limit}).fetchall()
-        history = [SimpleNamespace(**dict(row._mapping)) for row in rows]
-        from_wardrobe = [
-            entry
-            for entry in history
-            if getattr(entry, "image_from_wardrobe", False) and not entry.image_data
-        ]
-        images = self.load_wardrobe_images(
-            db, user_id, (entry.source_wardrobe_item_id for entry in from_wardrobe)
-        )
-        for entry in from_wardrobe:
-            entry.image_data = images.get(entry.source_wardrobe_item_id)
+        rows = db.execute(query, params).fetchall()
+        history = []
+        for row in rows:
+            entry = SimpleNamespace(**dict(row._mapping))
+            if full_image:
+                entry.has_image_data = bool(getattr(entry, "image_data", None))
+            else:
+                entry.image_data = None
+                entry.has_image_data = bool(getattr(entry, "has_image_data", False))
+            if not hasattr(entry, "image_thumbnail"):
+                entry.image_thumbnail = None
+            if not hasattr(entry, "model_image"):
+                entry.model_image = None
+            history.append(entry)
         return history
     
     def delete_history_entry(

@@ -13,6 +13,7 @@ from exceptions import GuestLimitReachedException
 from services.ai_service import AIService
 from services.outfit_service import OutfitService
 from services.guest_usage_service import GuestUsageService
+from services.photo_thumbnails import wardrobe_thumbnails
 from services.wardrobe_matcher import WardrobeMatcher
 from utils.image_processor import compress_generated_image, encode_image, validate_image
 from utils.outfit_upload_category import slot_text_has_upload_marker, text_suggests_outerwear
@@ -623,43 +624,33 @@ class OutfitController:
         if ordered_items and not suggestion.source_wardrobe_item_id:
             suggestion.source_wardrobe_item_id = ordered_items[0].id
 
+    _HISTORY_SLOTS = ("shirt", "trouser", "blazer", "shoes", "belt", "sweater", "outerwear", "tie")
+
     def _build_history_matching_items(
         self,
         db: Session,
         user_id: int,
         entry: object,
+        items_by_id: Optional[Dict[int, object]] = None,
+        thumbnails: Optional[Dict[int, Optional[str]]] = None,
     ) -> Dict[str, List[Dict]]:
-        matching_items: Dict[str, List[Dict]] = {
-            "shirt": [],
-            "trouser": [],
-            "blazer": [],
-            "shoes": [],
-            "belt": [],
-            "sweater": [],
-            "outerwear": [],
-            "tie": [],
-        }
-        selected_ids = {
-            "shirt": getattr(entry, "shirt_id", None),
-            "trouser": getattr(entry, "trouser_id", None),
-            "blazer": getattr(entry, "blazer_id", None),
-            "shoes": getattr(entry, "shoes_id", None),
-            "belt": getattr(entry, "belt_id", None),
-            "sweater": getattr(entry, "sweater_id", None),
-            "outerwear": getattr(entry, "outerwear_id", None),
-            "tie": getattr(entry, "tie_id", None),
-        }
+        """Matched wardrobe items per slot, with thumbnails instead of full photos."""
+        matching_items: Dict[str, List[Dict]] = {slot: [] for slot in self._HISTORY_SLOTS}
+        selected_ids = {slot: getattr(entry, f"{slot}_id", None) for slot in self._HISTORY_SLOTS}
         id_values = [item_id for item_id in selected_ids.values() if item_id]
         if not id_values:
             return matching_items
 
-        items = (
-            db.query(WardrobeItem)
-            .filter(WardrobeItem.user_id == user_id)
-            .filter(WardrobeItem.id.in_(id_values))
-            .all()
-        )
-        items_by_id = {item.id: item for item in items}
+        if items_by_id is None:
+            items = (
+                db.query(WardrobeItem)
+                .filter(WardrobeItem.user_id == user_id)
+                .filter(WardrobeItem.id.in_(id_values))
+                .all()
+            )
+            items_by_id = {item.id: item for item in items}
+            thumbnails = wardrobe_thumbnails(db, user_id, items_by_id.keys())
+        thumbnails = thumbnails or {}
 
         for category, item_id in selected_ids.items():
             if not item_id:
@@ -669,7 +660,14 @@ class OutfitController:
                 continue
             normalized_item_category = self._normalize_item_category_for_outfit(wardrobe_item.category or "")
             if self._wardrobe_item_matches_outfit_slot(wardrobe_item.category or "", category) or normalized_item_category == category:
-                matching_items[category] = [self._serialize_wardrobe_item(wardrobe_item)]
+                matching_items[category] = [{
+                    "id": wardrobe_item.id,
+                    "category": wardrobe_item.category,
+                    "color": wardrobe_item.color,
+                    "description": wardrobe_item.description,
+                    "image_data": None,
+                    "image_thumbnail": thumbnails.get(wardrobe_item.id),
+                }]
 
         return matching_items
     
@@ -1262,80 +1260,149 @@ class OutfitController:
         self,
         limit: int,
         db: Session,
-        current_user: Optional[User]
+        current_user: Optional[User],
+        offset: int = 0,
+        wardrobe_item_id: Optional[int] = None,
+        include_images: bool = True,
     ) -> List[Dict]:
         """
-        Get outfit suggestion history
-        
+        Get a page of outfit suggestion history (thumbnails only).
+
         Args:
             limit: Maximum number of history entries to return
             db: Database session
             current_user: Current authenticated user (optional)
-            
+            offset: Number of entries to skip
+            wardrobe_item_id: Only entries made from or using this wardrobe item
+            include_images: False omits all photos (thumbnails and model images)
+
         Returns:
             List of outfit history entries
         """
         try:
-            # Must be authenticated to see history
             if not current_user:
                 return []
-            
-            # Use outfit service to get history
+
             history = self.outfit_service.get_user_history(
                 db=db,
                 user_id=current_user.id,
-                limit=limit
+                limit=limit,
+                offset=offset,
+                wardrobe_item_id=wardrobe_item_id,
+                include_images=include_images,
             )
-            
-            # Format response
-            result = []
-            for entry in history:
-                created_at = getattr(entry, "created_at", None)
-                if hasattr(created_at, "isoformat"):
-                    created_at_str = created_at.isoformat()
-                elif created_at is not None:
-                    created_at_str = str(created_at)
-                else:
-                    created_at_str = ""
-                matching_items = self._build_history_matching_items(
-                    db=db,
-                    user_id=current_user.id,
-                    entry=entry,
-                )
-                result.append({
-                    "id": entry.id,
-                    "created_at": created_at_str,
-                    "text_input": entry.text_input,
-                    "image_data": entry.image_data,
-                    "model_image": getattr(entry, 'model_image', None),
-                    "shirt": entry.shirt,
-                    "trouser": entry.trouser,
-                    "blazer": entry.blazer,
-                    "shoes": entry.shoes,
-                    "belt": entry.belt,
-                    "reasoning": entry.reasoning,
-                    "sweater": getattr(entry, "sweater", None),
-                    "outerwear": getattr(entry, "outerwear", None),
-                    "tie": getattr(entry, "tie", None),
-                    "shirt_id": getattr(entry, "shirt_id", None),
-                    "trouser_id": getattr(entry, "trouser_id", None),
-                    "blazer_id": getattr(entry, "blazer_id", None),
-                    "shoes_id": getattr(entry, "shoes_id", None),
-                    "belt_id": getattr(entry, "belt_id", None),
-                    "sweater_id": getattr(entry, "sweater_id", None),
-                    "outerwear_id": getattr(entry, "outerwear_id", None),
-                    "tie_id": getattr(entry, "tie_id", None),
-                    "source_wardrobe_item_id": getattr(entry, "source_wardrobe_item_id", None),
-                    "matching_wardrobe_items": matching_items,
-                })
-            
-            return result
-            
+            matching = self._build_history_matching_items_batch(
+                db=db,
+                user_id=current_user.id,
+                entries=history,
+                include_images=include_images,
+            )
+            return [
+                self._format_history_entry(entry, matching_items)
+                for entry, matching_items in zip(history, matching)
+            ]
+
         except Exception as e:
             raise HTTPException(
                 status_code=500,
                 detail=f"Error fetching history: {str(e)}"
             )
+
+    async def get_outfit_history_entry(
+        self,
+        entry_id: int,
+        db: Session,
+        current_user: Optional[User],
+    ) -> Dict:
+        """One history entry with the full input photo in image_data."""
+        if not current_user:
+            raise HTTPException(status_code=401, detail="Authentication required")
+        entry = self.outfit_service.get_history_entry(
+            db=db, user_id=current_user.id, entry_id=entry_id
+        )
+        if entry is None:
+            raise HTTPException(status_code=404, detail="History entry not found")
+        matching = self._build_history_matching_items_batch(
+            db=db, user_id=current_user.id, entries=[entry], include_images=True
+        )
+        return self._format_history_entry(entry, matching[0])
+
+    def _build_history_matching_items_batch(
+        self,
+        db: Session,
+        user_id: int,
+        entries: List[object],
+        include_images: bool,
+    ) -> List[Dict[str, List[Dict]]]:
+        ids = {
+            getattr(entry, f"{slot}_id", None)
+            for entry in entries
+            for slot in self._HISTORY_SLOTS
+        } - {None}
+        items_by_id = {}
+        thumbnails: Dict[int, Optional[str]] = {}
+        if ids:
+            rows = (
+                db.query(
+                    WardrobeItem.id,
+                    WardrobeItem.category,
+                    WardrobeItem.color,
+                    WardrobeItem.description,
+                )
+                .filter(WardrobeItem.user_id == user_id, WardrobeItem.id.in_(ids))
+                .all()
+            )
+            items_by_id = {row.id: row for row in rows}
+            if include_images:
+                thumbnails = wardrobe_thumbnails(db, user_id, items_by_id.keys())
+                db.commit()
+        return [
+            self._build_history_matching_items(
+                db=db,
+                user_id=user_id,
+                entry=entry,
+                items_by_id=items_by_id,
+                thumbnails=thumbnails,
+            )
+            for entry in entries
+        ]
+
+    @staticmethod
+    def _format_history_entry(entry: object, matching_items: Dict[str, List[Dict]]) -> Dict:
+        created_at = getattr(entry, "created_at", None)
+        if hasattr(created_at, "isoformat"):
+            created_at_str = created_at.isoformat()
+        elif created_at is not None:
+            created_at_str = str(created_at)
+        else:
+            created_at_str = ""
+        return {
+            "id": entry.id,
+            "created_at": created_at_str,
+            "text_input": entry.text_input,
+            "image_data": getattr(entry, "image_data", None),
+            "image_thumbnail": getattr(entry, "image_thumbnail", None),
+            "model_image": getattr(entry, "model_image", None),
+            "shirt": entry.shirt,
+            "trouser": entry.trouser,
+            "blazer": entry.blazer,
+            "shoes": entry.shoes,
+            "belt": entry.belt,
+            "reasoning": entry.reasoning,
+            "sweater": getattr(entry, "sweater", None),
+            "outerwear": getattr(entry, "outerwear", None),
+            "tie": getattr(entry, "tie", None),
+            "shirt_id": getattr(entry, "shirt_id", None),
+            "trouser_id": getattr(entry, "trouser_id", None),
+            "blazer_id": getattr(entry, "blazer_id", None),
+            "shoes_id": getattr(entry, "shoes_id", None),
+            "belt_id": getattr(entry, "belt_id", None),
+            "sweater_id": getattr(entry, "sweater_id", None),
+            "outerwear_id": getattr(entry, "outerwear_id", None),
+            "tie_id": getattr(entry, "tie_id", None),
+            "source_wardrobe_item_id": getattr(entry, "source_wardrobe_item_id", None),
+            "matching_wardrobe_items": matching_items,
+        }
     
     async def delete_outfit_history(
         self,

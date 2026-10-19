@@ -232,10 +232,36 @@ final class WardrobeCardUxTests: XCTestCase {
         XCTAssertEqual(loader.suggestions.count, 1)
     }
 
-    func testHistoryEntryReferencesItemMatchesSourceWardrobeItemId() {
-        let item = wardrobeItem(id: 7, category: "shirt")
-        let entry = makeHistoryEntry(id: 1, sourceWardrobeItemId: 7)
-        XCTAssertTrue(WardrobePastSuggestionsMatching.historyEntryReferencesItem(entry, item: item))
+    @MainActor
+    func testPastSuggestionsLoaderUsesServerFilterWithoutClientFiltering() async {
+        let mock = WardrobePastSuggestionsMockAPIService()
+        // Server already filtered by wardrobe_item_id; the client must not drop rows.
+        mock.historyResult = .success([
+            makeHistoryEntry(id: 1, sourceWardrobeItemId: nil),
+            makeHistoryEntry(id: 2, sourceWardrobeItemId: 99)
+        ])
+        let loader = WardrobePastSuggestionsLoader(apiService: mock)
+
+        await loader.open(for: wardrobeItem(id: 7, category: "shirt"))
+
+        XCTAssertEqual(loader.suggestions.map(\.id), [1, 2])
+        XCTAssertEqual(mock.historyRequests.count, 1)
+        XCTAssertEqual(mock.historyRequests.first?.wardrobeItemId, 7)
+        XCTAssertEqual(mock.historyRequests.first?.limit, 20)
+        XCTAssertEqual(mock.historyRequests.first?.offset, 0)
+        XCTAssertNil(loader.error)
+    }
+
+    @MainActor
+    func testPastSuggestionsLoaderEmptyCopyUnchanged() async {
+        let mock = WardrobePastSuggestionsMockAPIService()
+        mock.historyResult = .success([])
+        let loader = WardrobePastSuggestionsLoader(apiService: mock)
+
+        await loader.open(for: wardrobeItem(id: 7, category: "shirt"))
+
+        XCTAssertTrue(loader.showSheet)
+        XCTAssertEqual(loader.error, "No history suggestions found for this wardrobe item yet.")
     }
 
     func testMenuActionsOrderIncludesHistory() {
@@ -517,7 +543,9 @@ final class WardrobeCardUxTests: XCTestCase {
 private final class WardrobePastSuggestionsMockAPIService: APIServiceProtocol {
     var historyFetchDelayNanos: UInt64 = 0
     var historyResult: Result<[OutfitHistoryEntry], Error> = .success([])
+    var historyPages: [[OutfitHistoryEntry]] = []
     private(set) var historyCalls = 0
+    private(set) var historyRequests: [(limit: Int, offset: Int, wardrobeItemId: Int?)] = []
 
     func getSuggestion(
         image: UIImage,
@@ -558,12 +586,29 @@ private final class WardrobePastSuggestionsMockAPIService: APIServiceProtocol {
         throw APIServiceError.invalidResponse
     }
 
-    func getOutfitHistory(limit: Int) async throws -> [OutfitHistoryEntry] {
+    func getOutfitHistory(
+        limit: Int,
+        offset: Int,
+        wardrobeItemId: Int?,
+        includeImages: Bool
+    ) async throws -> [OutfitHistoryEntry] {
         historyCalls += 1
+        historyRequests.append((limit: limit, offset: offset, wardrobeItemId: wardrobeItemId))
         if historyFetchDelayNanos > 0 {
             try await Task.sleep(nanoseconds: historyFetchDelayNanos)
         }
+        if !historyPages.isEmpty {
+            return historyPages.removeFirst()
+        }
         return try historyResult.get()
+    }
+
+    func getOutfitHistoryEntry(id: Int) async throws -> OutfitHistoryEntry {
+        throw APIServiceError.invalidResponse
+    }
+
+    func getWardrobeItem(id: Int) async throws -> WardrobeItem {
+        throw APIServiceError.invalidResponse
     }
 
     func checkOutfitDuplicate(image: UIImage) async throws -> OutfitDuplicateResponse {

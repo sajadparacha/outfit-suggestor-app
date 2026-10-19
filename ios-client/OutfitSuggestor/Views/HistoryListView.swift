@@ -9,18 +9,26 @@ import Foundation
 
 struct HistoryListView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @State private var entries: [OutfitHistoryEntry] = []
-    @State private var isLoading = true
-    @State private var errorMessage: String?
+    @StateObject private var pager = HistoryPageLoader()
     @State private var hasLoaded = false
-    @State private var isRequestInFlight = false
     @State private var searchText = ""
     @State private var appliedSearchText = ""
     @State private var sortNewestFirst = true
-    @State private var hasLoadedAll = false
     @State private var fullScreenImage: UIImage?
+    @State private var fullScreenEntryId: Int?
     @State private var pendingDeleteEntry: OutfitHistoryEntry?
     var onSelectEntry: (OutfitHistoryEntry) -> Void
+
+    private var entries: [OutfitHistoryEntry] { pager.entries }
+
+    private var isLoading: Bool { !pager.hasLoadedFirstPage && pager.errorMessage == nil }
+
+    private var errorMessage: String? { pager.hasLoadedFirstPage ? nil : pager.errorMessage }
+
+    /// Client-side search / oldest-first sort need every page so results match the full history.
+    private var needsAllPages: Bool {
+        !appliedSearchText.trimmingCharacters(in: .whitespaces).isEmpty || !sortNewestFirst
+    }
     
     private var filteredAndSorted: [OutfitHistoryEntry] {
         var list = entries
@@ -67,7 +75,7 @@ struct HistoryListView: View {
                         Text(err)
                             .foregroundColor(.red)
                             .multilineTextAlignment(.center)
-                        Button("Retry") { Task { await load(limit: hasLoadedAll ? 200 : 2) } }
+                        Button("Retry") { Task { await load() } }
                             .buttonStyle(.borderedProminent)
                             .tint(AppTheme.accent)
                     }
@@ -92,16 +100,30 @@ struct HistoryListView: View {
                         VStack(alignment: .leading, spacing: 14) {
                             headerSection
                             searchAndSortSection
+                            let visible = filteredAndSorted
+                            let visibleIds = visible.map(\.id)
                             LazyVStack(spacing: 14) {
-                                ForEach(Array(filteredAndSorted.enumerated()), id: \.element.id) { index, entry in
+                                ForEach(visible, id: \.id) { entry in
                                     WebStyleHistoryCardView(
                                         entry: entry,
                                         onSelect: { onSelectEntry(entry) },
                                         onDelete: { pendingDeleteEntry = entry },
-                                        onViewImage: { image in fullScreenImage = image }
+                                        onViewImage: { image in showImage(image, entryId: nil) },
+                                        onViewInputImage: { image in showImage(image, entryId: entry.id) }
                                     )
                                     .accessibilityElement(children: .contain)
                                     .accessibilityIdentifier("history.card.\(entry.id)")
+                                    .onAppear {
+                                        Task { await pager.loadMoreIfNeeded(currentEntryId: entry.id, visibleIds: visibleIds) }
+                                    }
+                                }
+                                if pager.isLoadingMore {
+                                    ProgressView()
+                                        .tint(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 12)
+                                        .accessibilityLabel(HistoryPageLoader.loadingMoreAccessibilityLabel)
+                                        .accessibilityIdentifier("history.loadingMore")
                                 }
                             }
                         }
@@ -119,10 +141,15 @@ struct HistoryListView: View {
             hasLoaded = true
             Task { await load() }
         }
-        .fullScreenCover(isPresented: Binding(get: { fullScreenImage != nil }, set: { if !$0 { fullScreenImage = nil } })) {
+        .onChange(of: needsAllPages) { needsAll in
+            guard needsAll else { return }
+            Task { await pager.loadAllRemaining() }
+        }
+        .fullScreenCover(isPresented: Binding(get: { fullScreenImage != nil }, set: { if !$0 { fullScreenImage = nil; fullScreenEntryId = nil } })) {
             if let img = fullScreenImage {
                 FullScreenImageView(image: img) {
                     fullScreenImage = nil
+                    fullScreenEntryId = nil
                 }
             }
         }
@@ -154,30 +181,11 @@ struct HistoryListView: View {
     private var headerSection: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Showing last \(entries.count) entries. Click load all to see more.")
+                Text(pager.headerText)
                     .font(.caption)
                     .foregroundColor(AppTheme.textSecondary)
             }
             Spacer()
-            if !hasLoadedAll {
-                Button {
-                    Task { await load(limit: 200) }
-                } label: {
-                    Label("Load All", systemImage: "arrow.clockwise.circle.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(AppTheme.surface)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .stroke(AppTheme.border, lineWidth: 1)
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("history.loadAllButton")
-            }
         }
     }
     
@@ -260,20 +268,25 @@ struct HistoryListView: View {
     }
     
     @MainActor
-    private func load(limit: Int = 2) async {
-        guard !isRequestInFlight else { return }
-        isRequestInFlight = true
-        isLoading = true
-        errorMessage = nil
-        defer { isRequestInFlight = false }
-        do {
-            let list = try await APIService.shared.getOutfitHistory(limit: limit)
-            entries = list
-            hasLoadedAll = limit > 2
-            isLoading = false
-        } catch {
-            errorMessage = error.localizedDescription
-            isLoading = false
+    private func load() async {
+        await pager.loadFirstPage()
+        if needsAllPages {
+            await pager.loadAllRemaining()
+        }
+    }
+
+    /// Shows the list thumbnail immediately; for the input photo, swaps in the full image from the detail endpoint.
+    @MainActor
+    private func showImage(_ image: UIImage, entryId: Int?) {
+        fullScreenImage = image
+        fullScreenEntryId = entryId
+        guard let entryId else { return }
+        Task { @MainActor in
+            guard let full = await FullImageLoader.historyInputFullImageData(entryId: entryId),
+                  let fullImage = WardrobeImageData.decodeUIImage(from: full),
+                  fullScreenEntryId == entryId,
+                  fullScreenImage != nil else { return }
+            fullScreenImage = fullImage
         }
     }
     
@@ -281,7 +294,10 @@ struct HistoryListView: View {
         Task {
             do {
                 try await APIService.shared.deleteOutfitHistory(entryId: entry.id)
-                await MainActor.run { entries.removeAll { $0.id == entry.id } }
+                await MainActor.run {
+                    pager.remove(entryId: entry.id)
+                    FullImageCache.shared.invalidateHistoryEntry(id: entry.id)
+                }
             } catch { }
         }
     }
@@ -296,9 +312,11 @@ struct WebStyleHistoryCardView: View {
     let onSelect: () -> Void
     let onDelete: () -> Void
     var onViewImage: ((UIImage) -> Void)?
+    /// Input-photo tap; falls back to `onViewImage`. List rows only carry the thumbnail.
+    var onViewInputImage: ((UIImage) -> Void)? = nil
     
     private var inputImage: UIImage? {
-        decodeBase64Image(entry.image_data)
+        decodeBase64Image(entry.inputThumbnailOrFullImageData)
     }
     
     private var modelImage: UIImage? {
@@ -393,7 +411,7 @@ struct WebStyleHistoryCardView: View {
             if let onView = onViewImage, inputImage != nil || modelImage != nil {
                 HStack(spacing: 8) {
                     if let image = inputImage {
-                        Button(action: { onView(image) }) { thumbnail(image: image) }
+                        Button(action: { (onViewInputImage ?? onView)(image) }) { thumbnail(image: image) }
                             .buttonStyle(.plain)
                     }
                     if let image = modelImage {

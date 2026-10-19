@@ -3,9 +3,10 @@
  * Pure presentation component - displays a list of past outfit suggestions
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { OutfitHistoryEntry } from '../../models/OutfitModels';
 import { useHistorySearchController } from '../../controllers/useHistorySearchController';
+import { fetchFullHistoryEntry, thumbnailBase64 } from '../../utils/fullImageCache';
 import ConfirmationModal from './ConfirmationModal';
 
 interface OutfitHistoryProps {
@@ -13,6 +14,11 @@ interface OutfitHistoryProps {
   loading: boolean;
   error: string | null;
   isFullView: boolean;
+  /** More pages available on the server (a page returned the full page size). */
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  /** Load the next page; resolve false on failure so the next scroll retries. */
+  onLoadMore?: () => Promise<boolean | void>;
   onRefresh: () => void;
   onEnsureFullHistory: () => Promise<unknown>;
   onDelete: (entryId: number) => Promise<void>;
@@ -24,6 +30,9 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
   loading,
   error,
   isFullView,
+  hasMore = false,
+  loadingMore = false,
+  onLoadMore,
   onRefresh,
   onEnsureFullHistory,
   onDelete,
@@ -34,7 +43,8 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
   const defaultSearchController = useHistorySearchController(
     history,
     onEnsureFullHistory,
-    isFullView
+    isFullView,
+    hasMore
   );
   
   // Use provided search controller or the default one
@@ -56,8 +66,16 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
   const [viewingImage, setViewingImage] = useState<string | null>(null);
   const [viewingImageType, setViewingImageType] = useState<'model' | 'upload' | null>(null);
   const [pendingDeleteEntryId, setPendingDeleteEntryId] = useState<number | null>(null);
+  const viewingEntryIdRef = useRef<number | null>(null);
+
+  const closeViewer = () => {
+    viewingEntryIdRef.current = null;
+    setViewingImage(null);
+    setViewingImageType(null);
+  };
 
   const handleViewImage = (imageData: string, type: 'model' | 'upload') => {
+    viewingEntryIdRef.current = null;
     if (type === 'model') {
       setViewingImage(`data:image/png;base64,${imageData}`);
     } else {
@@ -65,6 +83,57 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
     }
     setViewingImageType(type);
   };
+
+  /** Show the thumbnail right away, then swap in the full photo from the detail endpoint. */
+  const handleViewUploadImage = (entry: OutfitHistoryEntry) => {
+    const preview = thumbnailBase64(entry);
+    if (!preview) return;
+    handleViewImage(preview, 'upload');
+    if (entry.image_data) return;
+    viewingEntryIdRef.current = entry.id;
+    fetchFullHistoryEntry(entry.id)
+      .then((full) => {
+        if (viewingEntryIdRef.current === entry.id && full.image_data) {
+          setViewingImage(`data:image/jpeg;base64,${full.image_data}`);
+        }
+      })
+      .catch((err) => {
+        console.error(`Error loading full image for history entry ${entry.id}:`, err);
+      });
+  };
+
+  const [loadMorePaused, setLoadMorePaused] = useState(false);
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+  const loadingMoreRef = useRef(loadingMore);
+  loadingMoreRef.current = loadingMore;
+  const onLoadMoreRef = useRef(onLoadMore);
+  onLoadMoreRef.current = onLoadMore;
+  const showLoadMoreSentinel = hasMore && !!onLoadMore && !loading && !error && !loadMorePaused;
+
+  useEffect(() => {
+    const sentinel = loadMoreSentinelRef.current;
+    if (!showLoadMoreSentinel || !sentinel || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        if (loadingMoreRef.current || !onLoadMoreRef.current) return;
+        void Promise.resolve(onLoadMoreRef.current()).then((ok) => {
+          if (ok === false) setLoadMorePaused(true);
+        });
+      },
+      { rootMargin: '400px 0px' }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [showLoadMoreSentinel, history.length]);
+
+  // After a failed page, wait for the next scroll before observing again.
+  useEffect(() => {
+    if (!loadMorePaused) return;
+    const resume = () => setLoadMorePaused(false);
+    window.addEventListener('scroll', resume, { once: true, passive: true });
+    return () => window.removeEventListener('scroll', resume);
+  }, [loadMorePaused]);
 
   const handleDeleteClick = (entryId: number) => {
     setPendingDeleteEntryId(entryId);
@@ -140,12 +209,12 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
           <h2 className="text-2xl font-bold text-white">
             Outfit History
           </h2>
-          {!isFullView && history.length > 0 && (
+          {hasMore && history.length > 0 && (
             <p className="text-sm text-slate-400 mt-1">
-              Showing last {history.length} {history.length === 1 ? 'entry' : 'entries'}. Click load all to see more.
+              Showing last {history.length} {history.length === 1 ? 'entry' : 'entries'}.
             </p>
           )}
-          {isFullView && history.length > 0 && (
+          {!hasMore && history.length > 0 && (
             <p className="text-sm text-slate-400 mt-1">
               Showing all {history.length} {history.length === 1 ? 'entry' : 'entries'}
             </p>
@@ -157,7 +226,7 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
             className="px-4 py-2 text-brand-blue hover:bg-white/10 rounded-xl transition-colors flex items-center space-x-2 border border-white/10"
           >
             <span>🔄</span>
-            <span>{isFullView ? 'Refresh' : 'Load All'}</span>
+            <span>Refresh</span>
           </button>
         )}
       </div>
@@ -292,14 +361,15 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
                     </div>
                   </div>
                 </div>
-              ) : entry.image_data ? (
+              ) : thumbnailBase64(entry) ? (
                 <div 
                   className="w-full h-48 bg-slate-800/80 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity relative"
-                  onClick={() => handleViewImage(entry.image_data!, 'upload')}
+                  onClick={() => handleViewUploadImage(entry)}
                   title="Click to view full size"
+                  data-testid={`history-entry-upload-${entry.id}`}
                 >
                   <img
-                    src={`data:image/jpeg;base64,${entry.image_data}`}
+                    src={`data:image/jpeg;base64,${thumbnailBase64(entry)}`}
                     alt="Uploaded outfit"
                     className="w-full h-full object-cover"
                   />
@@ -413,6 +483,19 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
         </div>
       )}
 
+      {showLoadMoreSentinel && (
+        <div ref={loadMoreSentinelRef} aria-hidden="true" data-testid="history-load-more-sentinel" className="h-px" />
+      )}
+      {loadingMore && history.length > 0 && (
+        <div className="flex justify-center py-6">
+          <div
+            role="status"
+            aria-label="Loading more looks"
+            className="h-8 w-8 animate-spin rounded-full border-b-2 border-brand-blue"
+          />
+        </div>
+      )}
+
       <ConfirmationModal
         isOpen={pendingDeleteEntryId !== null}
         title="Delete history entry?"
@@ -427,10 +510,7 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
       {viewingImage && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4"
-          onClick={() => {
-            setViewingImage(null);
-            setViewingImageType(null);
-          }}
+          onClick={closeViewer}
         >
           <div className="relative max-w-7xl max-h-[90vh] w-full h-full flex items-center justify-center">
             <img
@@ -445,10 +525,7 @@ const OutfitHistory: React.FC<OutfitHistoryProps> = ({
               </div>
             )}
             <button
-              onClick={() => {
-                setViewingImage(null);
-                setViewingImageType(null);
-              }}
+              onClick={closeViewer}
               className="absolute top-4 right-4 text-white bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full p-3 text-2xl transition-all"
               title="Close"
             >

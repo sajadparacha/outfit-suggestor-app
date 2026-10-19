@@ -11,6 +11,7 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
         super.setUp()
         originalToken = AuthService.shared.authToken
         originalUser = AuthService.shared.currentUser
+        FullImageCache.shared.removeAll()
     }
 
     override func tearDown() {
@@ -569,7 +570,7 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
         XCTAssertTrue(OutfitViewModel.OutfitVariationModifier.wardrobeOnly.forcesWardrobeOnly)
     }
 
-    func testPreloadWardrobeItemForSuggestionClearsPriorResultAndPreviewState() {
+    func testPreloadWardrobeItemForSuggestionClearsPriorResultAndPreviewState() async {
         AuthService.shared.authToken = "test-token"
         AuthService.shared.currentUser = makeUser()
         let viewModel = OutfitViewModel(apiService: MockAPIService())
@@ -577,7 +578,7 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
         viewModel.flowPreviewImage = makeTestImage()
         viewModel.loadedFromRandomPick = true
 
-        let loaded = viewModel.preloadWardrobeItemForSuggestion(item: makeWardrobeItem(id: 42))
+        let loaded = await viewModel.preloadWardrobeItemForSuggestion(item: makeWardrobeItem(id: 42))
 
         XCTAssertTrue(loaded)
         XCTAssertNil(viewModel.currentSuggestion)
@@ -590,13 +591,13 @@ final class OutfitViewModelIntegrationTests: XCTestCase {
         XCTAssertTrue(viewModel.highlightGenerateButton)
     }
 
-    func testPreloadWardrobeItemForSuggestionRequiresImageData() {
+    func testPreloadWardrobeItemForSuggestionRequiresImageData() async {
         AuthService.shared.authToken = "test-token"
         AuthService.shared.currentUser = makeUser()
         let viewModel = OutfitViewModel(apiService: MockAPIService())
         viewModel.currentSuggestion = makePreviousSuggestion()
 
-        let loaded = viewModel.preloadWardrobeItemForSuggestion(
+        let loaded = await viewModel.preloadWardrobeItemForSuggestion(
             item: makeWardrobeItem(id: 7, includeImage: false)
         )
 
@@ -1013,12 +1014,28 @@ private final class MockAPIService: APIServiceProtocol {
         return try wardrobeItemsResult.get()
     }
 
-    func getOutfitHistory(limit: Int) async throws -> [OutfitHistoryEntry] {
+    func getOutfitHistory(
+        limit: Int,
+        offset: Int,
+        wardrobeItemId: Int?,
+        includeImages: Bool
+    ) async throws -> [OutfitHistoryEntry] {
         historyCalls += 1
         if historyFetchDelayNanos > 0 {
             try await Task.sleep(nanoseconds: historyFetchDelayNanos)
         }
         return try historyResult.get()
+    }
+
+    func getOutfitHistoryEntry(id: Int) async throws -> OutfitHistoryEntry {
+        guard let entry = try historyResult.get().first(where: { $0.id == id }) else {
+            throw APIServiceError.invalidResponse
+        }
+        return entry
+    }
+
+    func getWardrobeItem(id: Int) async throws -> WardrobeItem {
+        throw APIServiceError.invalidResponse
     }
 
     func checkOutfitDuplicate(image: UIImage) async throws -> OutfitDuplicateResponse {

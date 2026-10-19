@@ -50,6 +50,8 @@ class WardrobeItem(Base):
     
     # Image storage (base64 encoded)
     image_data: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # 256px JPEG of image_data for list responses; filled on write or lazily on first list read
+    image_thumbnail: Mapped[str | None] = mapped_column(Text, nullable=True)
     
     # Additional metadata
     tags: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON string or comma-separated

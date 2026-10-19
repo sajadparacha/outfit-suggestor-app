@@ -226,21 +226,26 @@ function App() {
     loading: historyLoading,
     error: historyError,
     isFullView,
+    hasMore: historyHasMore,
+    loadingMore: historyLoadingMore,
     refreshHistory,
     fetchRecentHistory,
+    loadMoreHistory,
     ensureFullHistory,
     fetchHistoryForRandomPick,
     deleteHistoryEntry,
   } = useHistoryController({
     userId: user?.id ?? null,
     isAuthenticated: isAuthenticated,
+    autoLoadFullHistory: location.pathname === ROUTES.HISTORY,
   });
 
   // History search controller
   const historySearchController = useHistorySearchController(
     history,
     ensureFullHistory,
-    isFullView
+    isFullView,
+    historyHasMore
   );
 
   const { toast, showToast, hideToast } = useToastController();
@@ -442,7 +447,7 @@ function App() {
 
   const handleGetRandomFromHistory = async () => {
     try {
-      const result = await loadRandomFromHistory(() => fetchHistoryForRandomPick(150));
+      const result = await loadRandomFromHistory(fetchHistoryForRandomPick);
       if (result.status === 'empty') {
         showToast('No history yet. Get some outfit suggestions first! 📋', 'error');
         return;
@@ -862,6 +867,11 @@ function App() {
                   // Suggestion is already set by the outfit controller's getSuggestion
                   setCurrentSuggestion(suggestion);
                 }}
+                onSuggestionImageReady={(suggestionId, imageUrl) => {
+                  setCurrentSuggestion((prev) =>
+                    prev && prev.id === suggestionId ? { ...prev, imageUrl } : prev
+                  );
+                }}
                 onNavigateToMain={() => {
                   navigate(ROUTES.MAIN);
                 }}
@@ -1030,6 +1040,9 @@ function App() {
               loading={historyLoading}
               error={historyError}
               isFullView={isFullView}
+              hasMore={historyHasMore}
+              loadingMore={historyLoadingMore}
+              onLoadMore={loadMoreHistory}
               onRefresh={refreshHistory}
               onEnsureFullHistory={ensureFullHistory}
               onDelete={deleteHistoryEntry}

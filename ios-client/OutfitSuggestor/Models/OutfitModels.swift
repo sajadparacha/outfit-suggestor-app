@@ -14,6 +14,12 @@ struct MatchingWardrobeItem: Codable {
     let color: String?
     let description: String?
     let image_data: String?
+    /// ≤256 px JPEG from history list/detail responses (`image_data` is null there).
+    var image_thumbnail: String? = nil
+
+    var thumbnailOrFullImageData: String? {
+        ImageThumbnailData.thumbnailOrFull(thumbnail: image_thumbnail, full: image_data)
+    }
 }
 
 // MARK: - Matching items by category (core five + optional layers)

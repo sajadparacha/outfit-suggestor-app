@@ -54,7 +54,8 @@ export function resolveWeekPlanItemThumbnail(
   const resolved = resolveOutfitItemThumbnail(suggestion, categoryKey);
   if (resolved.imageSrc) return resolved;
 
-  const image = outfit.matching_wardrobe_items?.[categoryKey]?.[0]?.image_data;
+  const firstMatch = outfit.matching_wardrobe_items?.[categoryKey]?.[0];
+  const image = firstMatch?.image_thumbnail || firstMatch?.image_data;
   if (image) {
     return {
       imageSrc: image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`,

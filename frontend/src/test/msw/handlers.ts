@@ -1,6 +1,120 @@
-import { rest } from 'msw';
+import { rest, RestRequest } from 'msw';
+import type { MatchingWardrobeItems, OutfitHistoryEntry } from '../../models/OutfitModels';
 
 const API_BASE = 'http://localhost:8001';
+
+/** Detail-shaped history entry (full `image_data`); list handlers strip it like the backend. */
+export type MockHistoryEntry = OutfitHistoryEntry & { image_thumbnail: string | null };
+
+export function makeHistoryEntry(id: number, overrides: Partial<MockHistoryEntry> = {}): MockHistoryEntry {
+  return {
+    id,
+    created_at: new Date(Date.UTC(2026, 0, 1) + id * 60000).toISOString(),
+    text_input: '',
+    image_data: `full-photo-${id}`,
+    image_thumbnail: `thumb-photo-${id}`,
+    model_image: null,
+    shirt: `Shirt ${id}`,
+    trouser: `Trouser ${id}`,
+    blazer: `Blazer ${id}`,
+    shoes: `Shoes ${id}`,
+    belt: `Belt ${id}`,
+    reasoning: `Reasoning ${id}`,
+    ...overrides,
+  };
+}
+
+const HISTORY_SLOT_ID_FIELDS = [
+  'shirt_id',
+  'trouser_id',
+  'blazer_id',
+  'shoes_id',
+  'belt_id',
+  'sweater_id',
+  'outerwear_id',
+  'tie_id',
+] as const;
+
+function toHistoryListEntry(entry: MockHistoryEntry, includeImages: boolean) {
+  const matching = entry.matching_wardrobe_items
+    ? Object.fromEntries(
+        Object.entries(entry.matching_wardrobe_items).map(([slot, items]) => [
+          slot,
+          (items ?? []).map((item: MatchingWardrobeItems['shirt'][number]) => ({
+            ...item,
+            image_data: null,
+            image_thumbnail: includeImages ? item.image_thumbnail ?? null : null,
+          })),
+        ])
+      ) as unknown as MatchingWardrobeItems
+    : entry.matching_wardrobe_items;
+  return {
+    ...entry,
+    image_data: null,
+    image_thumbnail: includeImages ? entry.image_thumbnail : null,
+    model_image: includeImages ? entry.model_image : null,
+    matching_wardrobe_items: matching,
+  };
+}
+
+export type HistoryRequestLog = Array<{
+  limit: number;
+  offset: number;
+  wardrobeItemId: number | null;
+  includeImages: boolean;
+}>;
+
+/**
+ * Contract-accurate GET /api/outfit-history (paging, clamp 100, wardrobe_item_id filter,
+ * include_images) + GET /api/outfit-history/:id over `entries` (newest first).
+ */
+export function createHistoryHandlers(
+  entries: MockHistoryEntry[],
+  options: {
+    requests?: HistoryRequestLog;
+    detailRequests?: number[];
+    /** Optional per-request delay (ms) for list pages, e.g. to observe the load-more spinner. */
+    listDelay?: (query: HistoryRequestLog[number]) => number;
+  } = {}
+) {
+  const parseQuery = (req: RestRequest) => {
+    const limit = Math.min(Number(req.url.searchParams.get('limit') ?? 20), 100);
+    const offset = Number(req.url.searchParams.get('offset') ?? 0);
+    const rawItemId = req.url.searchParams.get('wardrobe_item_id');
+    const wardrobeItemId = rawItemId != null ? Number(rawItemId) : null;
+    const includeImages = req.url.searchParams.get('include_images') !== 'false';
+    return { limit, offset, wardrobeItemId, includeImages };
+  };
+
+  return [
+    rest.get(`${API_BASE}/api/outfit-history`, (req, res, ctx) => {
+      const query = parseQuery(req);
+      options.requests?.push(query);
+      const filtered =
+        query.wardrobeItemId == null
+          ? entries
+          : entries.filter(
+              (entry) =>
+                entry.source_wardrobe_item_id === query.wardrobeItemId ||
+                HISTORY_SLOT_ID_FIELDS.some((field) => entry[field] === query.wardrobeItemId)
+            );
+      const page = filtered
+        .slice(query.offset, query.offset + query.limit)
+        .map((entry) => toHistoryListEntry(entry, query.includeImages));
+      const delayMs = options.listDelay?.(query) ?? 0;
+      return delayMs > 0 ? res(ctx.delay(delayMs), ctx.json(page)) : res(ctx.json(page));
+    }),
+    rest.get(`${API_BASE}/api/outfit-history/:id`, (req, res, ctx) => {
+      const id = Number(req.params.id);
+      options.detailRequests?.push(id);
+      const entry = entries.find((candidate) => candidate.id === id);
+      if (!entry) {
+        return res(ctx.status(404), ctx.json({ detail: 'History entry not found' }));
+      }
+      return res(ctx.json(entry));
+    }),
+  ];
+}
 
 const mockPresetLimit = 4;
 let mockPresets: Array<{
@@ -23,10 +137,8 @@ let mockPresets: Array<{
 let mockPresetIdSeq = 1;
 
 export const handlers = [
-  // Default: App fetches recent history after a suggestion; tests can override with server.use.
-  rest.get(`${API_BASE}/api/outfit-history`, (_req, res, ctx) => {
-    return res(ctx.json([]));
-  }),
+  // Default: empty history (list + 404 detail); tests override with server.use(...createHistoryHandlers(entries)).
+  ...createHistoryHandlers([]),
 
   rest.get(`${API_BASE}/api/guest-usage`, (_req, res, ctx) => {
     return res(
@@ -76,7 +188,7 @@ export const handlers = [
   }),
 
   rest.get(`${API_BASE}/api/wardrobe`, (req, res, ctx) => {
-    // Minimal payload needed by the UI (id/category/color/description/image_data)
+    // List shape: image_data is always null; image_thumbnail carries the photo (null = no photo).
     const limit = Number(req.url.searchParams.get('limit') ?? 10);
     const offset = Number(req.url.searchParams.get('offset') ?? 0);
 
@@ -89,12 +201,38 @@ export const handlers = [
             color: 'Blue',
             description: 'Integration test shirt',
             image_data: null,
+            image_thumbnail: null,
             name: null,
           },
         ],
         total: 1,
         limit,
         offset,
+      })
+    );
+  }),
+
+  // Detail shape: full image_data + image_thumbnail. Non-numeric paths (summary, random-outfit…) fall through.
+  rest.get(`${API_BASE}/api/wardrobe/:id`, (req, res, ctx) => {
+    const raw = String(req.params.id);
+    if (!/^\d+$/.test(raw)) return undefined;
+    const id = Number(raw);
+    return res(
+      ctx.json({
+        id,
+        category: 'shirt',
+        name: null,
+        description: 'Integration test shirt',
+        color: 'Blue',
+        brand: null,
+        size: null,
+        image_data: btoa(`full-wardrobe-${id}`),
+        image_thumbnail: btoa(`thumb-wardrobe-${id}`),
+        tags: null,
+        condition: null,
+        wear_count: 0,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
       })
     );
   }),

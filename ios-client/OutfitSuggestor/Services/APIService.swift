@@ -47,7 +47,17 @@ protocol APIServiceProtocol {
         previousOutfitText: String?,
         avoidOutfitTexts: [String]?
     ) async throws -> OutfitSuggestion
-    func getOutfitHistory(limit: Int) async throws -> [OutfitHistoryEntry]
+    /// Newest-first page; a page shorter than `limit` is the last one. `limit` is clamped to 1...100.
+    func getOutfitHistory(
+        limit: Int,
+        offset: Int,
+        wardrobeItemId: Int?,
+        includeImages: Bool
+    ) async throws -> [OutfitHistoryEntry]
+    /// Single entry with the full input photo in `image_data`.
+    func getOutfitHistoryEntry(id: Int) async throws -> OutfitHistoryEntry
+    /// Wardrobe item detail with the full photo in `image_data`.
+    func getWardrobeItem(id: Int) async throws -> WardrobeItem
     func checkOutfitDuplicate(image: UIImage) async throws -> OutfitDuplicateResponse
     func getRandomOutfit(occasion: String, season: String, style: String) async throws -> OutfitSuggestion
 }
@@ -370,13 +380,61 @@ class APIService {
 
     // MARK: - Outfit History
     
-    func getOutfitHistory(limit: Int = 50) async throws -> [OutfitHistoryEntry] {
+    static let outfitHistoryMaxLimit = 100
+
+    static func outfitHistoryURL(
+        baseURL: String,
+        limit: Int,
+        offset: Int = 0,
+        wardrobeItemId: Int? = nil,
+        includeImages: Bool = true
+    ) -> URL? {
+        guard var comp = URLComponents(string: "\(baseURL)/api/outfit-history") else { return nil }
+        let clampedLimit = min(max(limit, 1), outfitHistoryMaxLimit)
+        var items = [
+            URLQueryItem(name: "limit", value: "\(clampedLimit)"),
+            URLQueryItem(name: "offset", value: "\(max(offset, 0))")
+        ]
+        if let wardrobeItemId {
+            items.append(URLQueryItem(name: "wardrobe_item_id", value: "\(wardrobeItemId)"))
+        }
+        if !includeImages {
+            items.append(URLQueryItem(name: "include_images", value: "false"))
+        }
+        comp.queryItems = items
+        return comp.url
+    }
+
+    static func outfitHistoryEntryURL(baseURL: String, id: Int) -> URL? {
+        URL(string: "\(baseURL)/api/outfit-history/\(id)")
+    }
+
+    static func wardrobeItemURL(baseURL: String, id: Int) -> URL? {
+        URL(string: "\(baseURL)/api/wardrobe/\(id)")
+    }
+
+    func getOutfitHistory(
+        limit: Int = 20,
+        offset: Int = 0,
+        wardrobeItemId: Int? = nil,
+        includeImages: Bool = true
+    ) async throws -> [OutfitHistoryEntry] {
         await beginRequestActivity()
         defer { endRequestActivity() }
         if AppConfig.isUITestMode {
-            return uiTestStore.history(limit: limit)
+            return uiTestStore.history(
+                limit: min(max(limit, 1), Self.outfitHistoryMaxLimit),
+                offset: offset,
+                wardrobeItemId: wardrobeItemId
+            )
         }
-        guard let url = URL(string: "\(baseURL)/api/outfit-history?limit=\(limit)") else { throw APIServiceError.invalidURL }
+        guard let url = Self.outfitHistoryURL(
+            baseURL: baseURL,
+            limit: limit,
+            offset: offset,
+            wardrobeItemId: wardrobeItemId,
+            includeImages: includeImages
+        ) else { throw APIServiceError.invalidURL }
         var request = URLRequest(url: url)
         setAuthIfNeeded(&request)
         request.timeoutInterval = 20
@@ -391,6 +449,29 @@ class APIService {
             throw APIServiceError.serverError("History decode failed: \(error.localizedDescription)")
         }
     }
+
+    func getOutfitHistoryEntry(id: Int) async throws -> OutfitHistoryEntry {
+        await beginRequestActivity()
+        defer { endRequestActivity() }
+        if AppConfig.isUITestMode {
+            guard let entry = uiTestStore.historyEntry(id: id) else { throw APIServiceError.invalidResponse }
+            return entry
+        }
+        guard let url = Self.outfitHistoryEntryURL(baseURL: baseURL, id: id) else { throw APIServiceError.invalidURL }
+        var request = URLRequest(url: url)
+        setAuthIfNeeded(&request)
+        request.timeoutInterval = 20
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            if let err = try? JSONDecoder().decode(APIError.self, from: data) { throw APIServiceError.serverError(err.detail) }
+            throw APIServiceError.invalidResponse
+        }
+        do {
+            return try JSONDecoder().decode(OutfitHistoryEntry.self, from: data)
+        } catch {
+            throw APIServiceError.serverError("History decode failed: \(error.localizedDescription)")
+        }
+    }
     
     func deleteOutfitHistory(entryId: Int) async throws {
         await beginRequestActivity()
@@ -399,7 +480,7 @@ class APIService {
             uiTestStore.deleteHistory(entryId: entryId)
             return
         }
-        guard let url = URL(string: "\(baseURL)/api/outfit-history/\(entryId)") else { throw APIServiceError.invalidURL }
+        guard let url = Self.outfitHistoryEntryURL(baseURL: baseURL, id: entryId) else { throw APIServiceError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         setAuthIfNeeded(&request)
@@ -458,7 +539,7 @@ class APIService {
             }
             return item
         }
-        guard let url = URL(string: "\(baseURL)/api/wardrobe/\(id)") else { throw APIServiceError.invalidURL }
+        guard let url = Self.wardrobeItemURL(baseURL: baseURL, id: id) else { throw APIServiceError.invalidURL }
         var request = URLRequest(url: url)
         setAuthIfNeeded(&request)
         let (data, response) = try await session.data(for: request)
@@ -1331,10 +1412,25 @@ final class UITestDataStore {
         )
     }
 
-    func history(limit: Int) -> [OutfitHistoryEntry] {
+    func history(limit: Int, offset: Int = 0, wardrobeItemId: Int? = nil) -> [OutfitHistoryEntry] {
         lock.lock()
         defer { lock.unlock() }
-        return Array(historyEntries.prefix(limit))
+        var entries = historyEntries
+        if let wardrobeItemId {
+            entries = entries.filter { entry in
+                entry.source_wardrobe_item_id == wardrobeItemId
+                    || [entry.shirt_id, entry.trouser_id, entry.blazer_id, entry.shoes_id, entry.belt_id,
+                        entry.sweater_id, entry.outerwear_id, entry.tie_id].contains(wardrobeItemId)
+            }
+        }
+        guard offset < entries.count else { return [] }
+        return Array(entries[max(offset, 0)...].prefix(limit))
+    }
+
+    func historyEntry(id: Int) -> OutfitHistoryEntry? {
+        lock.lock()
+        defer { lock.unlock() }
+        return historyEntries.first { $0.id == id }
     }
 
     func deleteHistory(entryId: Int) {

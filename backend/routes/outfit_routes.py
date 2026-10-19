@@ -1,5 +1,5 @@
 """Outfit suggestion API routes - Thin HTTP layer using controllers"""
-from fastapi import APIRouter, File, UploadFile, Form, Depends, Body, Request
+from fastapi import APIRouter, File, UploadFile, Form, Depends, Body, Request, Query
 from typing import Optional, List
 from sqlalchemy.orm import Session
 
@@ -13,6 +13,8 @@ from services.guest_usage_service import GuestUsageService
 
 
 router = APIRouter(prefix="/api", tags=["outfit"])
+# Larger requests are clamped rather than rejected so older app builds keep working
+HISTORY_MAX_PAGE_SIZE = 100
 guest_usage_service = GuestUsageService()
 
 
@@ -235,26 +237,46 @@ async def suggest_outfit_from_wardrobe_only(
 
 @router.get("/outfit-history", response_model=List[dict])
 async def get_outfit_history(
-    limit: int = 20,
+    limit: int = Query(20, ge=1, description=f"Page size (capped at {HISTORY_MAX_PAGE_SIZE})"),
+    offset: int = Query(0, ge=0, description="Number of entries to skip"),
+    wardrobe_item_id: Optional[int] = Query(
+        None, description="Only entries made from or using this wardrobe item"
+    ),
+    include_images: bool = Query(
+        True, description="False omits thumbnails and model images (text-only pool)"
+    ),
     outfit_controller: OutfitController = Depends(get_outfit_controller),
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_optional_user)
 ):
     """
-    Get outfit suggestion history
-    
-    Args:
-        limit: Maximum number of history entries to return (default: 20)
-        outfit_controller: Outfit controller dependency injection
-        db: Database session dependency injection
-        current_user: Current authenticated user (optional)
-        
-    Returns:
-        List of outfit history entries
+    Get a page of outfit suggestion history, newest first.
+
+    Photos are 256px thumbnails in `image_thumbnail` (`image_data` is null), including
+    matched wardrobe items. Fetch `GET /api/outfit-history/{entry_id}` for the full photo.
+    A page shorter than `limit` is the last page.
     """
     return await outfit_controller.get_outfit_history(
-        limit=limit,
+        limit=min(limit, HISTORY_MAX_PAGE_SIZE),
+        offset=offset,
+        wardrobe_item_id=wardrobe_item_id,
+        include_images=include_images,
         db=db,
         current_user=current_user
+    )
+
+
+@router.get("/outfit-history/{entry_id}")
+async def get_outfit_history_entry(
+    entry_id: int,
+    outfit_controller: OutfitController = Depends(get_outfit_controller),
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_optional_user)
+):
+    """One history entry with the full input photo in `image_data`."""
+    return await outfit_controller.get_outfit_history_entry(
+        entry_id=entry_id,
+        db=db,
+        current_user=current_user,
     )
 

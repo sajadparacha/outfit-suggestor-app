@@ -97,6 +97,7 @@ function fillPinnedSlotOnOutfit(
       color: item.color,
       description: item.description,
       image_data: item.image_data,
+      image_thumbnail: item.image_thumbnail ?? null,
     },
   ];
   let wardrobe_item_ids = [...(outfit.wardrobe_item_ids ?? [])];

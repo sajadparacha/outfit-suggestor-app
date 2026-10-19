@@ -787,7 +787,8 @@ final class WeekPlannerViewModel: ObservableObject {
             category: item.category,
             color: item.color,
             description: item.description,
-            image_data: item.image_data
+            image_data: item.image_data,
+            image_thumbnail: item.image_thumbnail
         )
 
         switch slotKey {

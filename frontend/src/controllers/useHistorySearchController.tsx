@@ -4,7 +4,7 @@
  * This is the "Controller" in the MVC pattern for history search
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { OutfitHistoryEntry } from '../models/OutfitModels';
 
 interface UseHistorySearchControllerReturn {
@@ -26,7 +26,8 @@ interface UseHistorySearchControllerReturn {
 export const useHistorySearchController = (
   history: OutfitHistoryEntry[],
   onEnsureFullHistory?: () => Promise<unknown>,
-  isFullView?: boolean
+  isFullView?: boolean,
+  hasMore?: boolean
 ): UseHistorySearchControllerReturn => {
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,12 +37,19 @@ export const useHistorySearchController = (
    * Handle search - ensures full history is loaded if needed
    */
   const handleSearch = useCallback(async () => {
-    // If searching and not in full view, load all history first
-    if (searchInput.trim() && !isFullView && onEnsureFullHistory) {
+    // Search is client-side: load every remaining page before applying the query
+    if (searchInput.trim() && (!isFullView || hasMore) && onEnsureFullHistory) {
       await onEnsureFullHistory();
     }
     setSearchQuery(searchInput);
-  }, [searchInput, isFullView, onEnsureFullHistory]);
+  }, [searchInput, isFullView, hasMore, onEnsureFullHistory]);
+
+  // Oldest-first needs every entry to order correctly: drain remaining pages while it is selected.
+  useEffect(() => {
+    if (sortBy === 'oldest' && (!isFullView || hasMore) && onEnsureFullHistory) {
+      void onEnsureFullHistory();
+    }
+  }, [sortBy, isFullView, hasMore, onEnsureFullHistory]);
 
   /**
    * Clear search

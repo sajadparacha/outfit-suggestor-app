@@ -16,6 +16,8 @@ export interface MatchingWardrobeItem {
   color: string | null;
   description: string | null;
   image_data: string | null;
+  /** ≤256px JPEG; history list/detail send this with `image_data: null`. */
+  image_thumbnail?: string | null;
 }
 
 export interface MatchingWardrobeItems {
@@ -123,7 +125,10 @@ export interface OutfitHistoryEntry {
   id: number;
   created_at: string;
   text_input: string;
+  /** Full input photo — only filled by GET /api/outfit-history/{id}; null in list responses. */
   image_data: string | null;
+  /** ≤256px JPEG of the input photo (list + detail). */
+  image_thumbnail?: string | null;
   model_image: string | null; // Generated model image if available
   shirt: string;
   trouser: string;

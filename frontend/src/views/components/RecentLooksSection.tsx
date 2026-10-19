@@ -1,5 +1,6 @@
 import React from 'react';
 import { OutfitHistoryEntry } from '../../models/OutfitModels';
+import { thumbnailBase64 } from '../../utils/fullImageCache';
 
 interface RecentLooksSectionProps {
   history: OutfitHistoryEntry[];
@@ -89,10 +90,11 @@ const RecentLooksSection: React.FC<RecentLooksSectionProps> = ({
       ) : (
         <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none">
           {recent.map((entry) => {
+            const thumbnail = thumbnailBase64(entry);
             const imageSrc = entry.model_image
               ? `data:image/png;base64,${entry.model_image}`
-              : entry.image_data
-                ? `data:image/jpeg;base64,${entry.image_data}`
+              : thumbnail
+                ? `data:image/jpeg;base64,${thumbnail}`
                 : null;
 
             return (

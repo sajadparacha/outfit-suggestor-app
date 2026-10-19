@@ -39,6 +39,19 @@ import {
 import { getGuestSessionId } from '../utils/guestSession';
 import { reportClientError, setClientErrorReporter } from '../utils/reportClientError';
 
+export const OUTFIT_HISTORY_PAGE_SIZE = 20;
+/** Backend clamps larger values; never request more. */
+export const OUTFIT_HISTORY_MAX_LIMIT = 100;
+
+export interface OutfitHistoryQuery {
+  limit?: number;
+  offset?: number;
+  /** Server-side Past Suggestions filter (source item, any slot id, or identical legacy photo). */
+  wardrobeItemId?: number | null;
+  /** false → text-only entries (no thumbnails / model images); used for the random-pick pool. */
+  includeImages?: boolean;
+}
+
 class ApiService {
   private baseUrl: string;
   private authToken: string | null = null;
@@ -435,41 +448,61 @@ class ApiService {
   }
 
   /**
-   * Get outfit history from backend API
-   * @param limit - Maximum number of history entries to retrieve (default: 20)
-   * @returns Promise with array of outfit history entries
+   * Get one page of outfit history (newest first). A page shorter than `limit` is the last page.
+   * List entries carry `image_thumbnail` only (`image_data` is null); use getOutfitHistoryEntry for the full photo.
    */
-  async getOutfitHistory(limit: number = 20): Promise<OutfitHistoryEntry[]> {
+  async getOutfitHistory(options: OutfitHistoryQuery = {}): Promise<OutfitHistoryEntry[]> {
     try {
-      const url = `${this.baseUrl}/api/outfit-history?limit=${limit}`;
+      const limit = Math.min(Math.max(1, Math.floor(options.limit ?? OUTFIT_HISTORY_PAGE_SIZE)), OUTFIT_HISTORY_MAX_LIMIT);
+      const params = new URLSearchParams();
+      params.append('limit', String(limit));
+      params.append('offset', String(Math.max(0, Math.floor(options.offset ?? 0))));
+      if (options.wardrobeItemId != null) {
+        params.append('wardrobe_item_id', String(options.wardrobeItemId));
+      }
+      if (options.includeImages === false) {
+        params.append('include_images', 'false');
+      }
+      const url = `${this.baseUrl}/api/outfit-history?${params.toString()}`;
       const response = await this.fetchWithLogging(url, {
         headers: this.getHeaders(),
       });
-      
+
       if (!response.ok) {
         const error: ApiError = await response.json();
         throw new Error(error.detail || 'Failed to get outfit history');
       }
 
-      const data: OutfitHistoryEntry[] = await response.json();
-      
-      // Debug: Log history entries with model images
-      const entriesWithModelImage = data.filter(entry => entry.model_image);
-      if (entriesWithModelImage.length > 0) {
-        console.log(`📋 History: ${entriesWithModelImage.length} entries have model images`);
-        entriesWithModelImage.forEach(entry => {
-          console.log(`  Entry ${entry.id}: model_image length = ${entry.model_image?.length || 0}`);
-        });
-      } else {
-        console.log('📋 History: No entries have model images');
-      }
-      
-      return data;
+      return await response.json();
     } catch (error) {
       if (error instanceof Error) {
         throw error;
       }
       throw new Error('Failed to fetch outfit history');
+    }
+  }
+
+  /**
+   * Get a single history entry with the full input photo in `image_data`.
+   */
+  async getOutfitHistoryEntry(entryId: number): Promise<OutfitHistoryEntry> {
+    try {
+      const url = `${this.baseUrl}/api/outfit-history/${entryId}`;
+      const response = await this.fetchWithLogging(url, {
+        headers: this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        const error: ApiError = await response.json().catch(() => ({ detail: '' }));
+        throw new Error(error.detail || 'Failed to get outfit history entry');
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to get outfit history entry');
     }
   }
 

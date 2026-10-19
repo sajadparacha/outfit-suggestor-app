@@ -115,6 +115,7 @@
 		R1E2G3E4N5L6O7G8I9C001 /* MainFlowResultRegenerateLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = R1E2G3E4N5L6O7G8I9C002 /* MainFlowResultRegenerateLogic.swift */; };
 		R1E2G3E4N5L6O7G8I9C003 /* MainFlowResultRegenerateLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = R1E2G3E4N5L6O7G8I9C004 /* MainFlowResultRegenerateLogicTests.swift */; };
 		R1H2I3S4T5O6R7Y8S9E0L01 /* RandomHistorySelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = R1H2I3S4T5O6R7Y8S9E0L02 /* RandomHistorySelection.swift */; };
+		ARS0000000000000000000A1 /* ImageThumbnailData.swift in Sources */ = {isa = PBXBuildFile; fileRef = ARS0000000000000000000A2 /* ImageThumbnailData.swift */; };
 		R1H2I3S4T5O6R7Y8S9E0L03 /* RandomHistorySelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = R1H2I3S4T5O6R7Y8S9E0L04 /* RandomHistorySelectionTests.swift */; };
 		RLH01BF0000000000000001 /* RecentLooksHistoryIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = RLH01FR0000000000000001 /* RecentLooksHistoryIntegrationTests.swift */; };
 		RLT01BF0000000000000001 /* RecentLooksThumbnailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = RLT01FR0000000000000001 /* RecentLooksThumbnailTests.swift */; };
@@ -123,6 +124,7 @@
 		TMI01BF0000000000000001 /* TopMissingItemsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TMI01FR0000000000000001 /* TopMissingItemsView.swift */; };
 		W1A2B3C4D5E6F708192A3B51 /* WardrobeCardUx.swift in Sources */ = {isa = PBXBuildFile; fileRef = W1A2B3C4D5E6F708192A3B50 /* WardrobeCardUx.swift */; };
 		W2A3B4C5D6E7F809293A4B61 /* WardrobeCardUxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = W2A3B4C5D6E7F809293A4B60 /* WardrobeCardUxTests.swift */; };
+		ARS0000000000000000000C1 /* APIResponseSizeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ARS0000000000000000000C2 /* APIResponseSizeTests.swift */; };
 		WCF01BF0000000000000001 /* WardrobeCategoryDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCF01FR0000000000000001 /* WardrobeCategoryDisplay.swift */; };
 		WCF01BF0000000000000002 /* WardrobeCategoryFilterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCF01FR0000000000000002 /* WardrobeCategoryFilterTests.swift */; };
 		WCG01BF0000000000000001 /* WardrobeCoverageGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCG01FR0000000000000001 /* WardrobeCoverageGridView.swift */; };
@@ -164,6 +166,7 @@
 		WP01BF0000000000000001 /* WeekPlanModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = WP01FR0000000000000001 /* WeekPlanModels.swift */; };
 		WP01BF0000000000000002 /* WeekPlanNotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = WP01FR0000000000000002 /* WeekPlanNotificationScheduler.swift */; };
 		WP01BF0000000000000003 /* WeekPlannerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = WP01FR0000000000000003 /* WeekPlannerViewModel.swift */; };
+		ARS0000000000000000000B1 /* HistoryPageLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = ARS0000000000000000000B2 /* HistoryPageLoader.swift */; };
 		WP01BF0000000000000004 /* WeekPlannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WP01FR0000000000000004 /* WeekPlannerView.swift */; };
 		WP01BF0000000000000005 /* WeekPlannerViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WP01FR0000000000000005 /* WeekPlannerViewModelTests.swift */; };
 		WP01BF0000000000000006 /* WeekPlanNotificationSchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WP01FR0000000000000006 /* WeekPlanNotificationSchedulerTests.swift */; };
@@ -345,6 +348,7 @@
 		R1E2G3E4N5L6O7G8I9C002 /* MainFlowResultRegenerateLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlowResultRegenerateLogic.swift; sourceTree = "<group>"; };
 		R1E2G3E4N5L6O7G8I9C004 /* MainFlowResultRegenerateLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlowResultRegenerateLogicTests.swift; sourceTree = "<group>"; };
 		R1H2I3S4T5O6R7Y8S9E0L02 /* RandomHistorySelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RandomHistorySelection.swift; sourceTree = "<group>"; };
+		ARS0000000000000000000A2 /* ImageThumbnailData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageThumbnailData.swift; sourceTree = "<group>"; };
 		R1H2I3S4T5O6R7Y8S9E0L04 /* RandomHistorySelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RandomHistorySelectionTests.swift; sourceTree = "<group>"; };
 		RLH01FR0000000000000001 /* RecentLooksHistoryIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentLooksHistoryIntegrationTests.swift; sourceTree = "<group>"; };
 		RLT01FR0000000000000001 /* RecentLooksThumbnailTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentLooksThumbnailTests.swift; sourceTree = "<group>"; };
@@ -353,6 +357,7 @@
 		TMI01FR0000000000000001 /* TopMissingItemsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopMissingItemsView.swift; sourceTree = "<group>"; };
 		W1A2B3C4D5E6F708192A3B50 /* WardrobeCardUx.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCardUx.swift; sourceTree = "<group>"; };
 		W2A3B4C5D6E7F809293A4B60 /* WardrobeCardUxTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCardUxTests.swift; sourceTree = "<group>"; };
+		ARS0000000000000000000C2 /* APIResponseSizeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIResponseSizeTests.swift; sourceTree = "<group>"; };
 		WCF01FR0000000000000001 /* WardrobeCategoryDisplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCategoryDisplay.swift; sourceTree = "<group>"; };
 		WCF01FR0000000000000002 /* WardrobeCategoryFilterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCategoryFilterTests.swift; sourceTree = "<group>"; };
 		WCG01FR0000000000000001 /* WardrobeCoverageGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCoverageGridView.swift; sourceTree = "<group>"; };
@@ -390,6 +395,7 @@
 		WP01FR0000000000000001 /* WeekPlanModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekPlanModels.swift; sourceTree = "<group>"; };
 		WP01FR0000000000000002 /* WeekPlanNotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekPlanNotificationScheduler.swift; sourceTree = "<group>"; };
 		WP01FR0000000000000003 /* WeekPlannerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekPlannerViewModel.swift; sourceTree = "<group>"; };
+		ARS0000000000000000000B2 /* HistoryPageLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryPageLoader.swift; sourceTree = "<group>"; };
 		WP01FR0000000000000004 /* WeekPlannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekPlannerView.swift; sourceTree = "<group>"; };
 		WP01FR0000000000000005 /* WeekPlannerViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekPlannerViewModelTests.swift; sourceTree = "<group>"; };
 		WP01FR0000000000000006 /* WeekPlanNotificationSchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekPlanNotificationSchedulerTests.swift; sourceTree = "<group>"; };
@@ -446,6 +452,7 @@
 				APP01FR0000000000000001 /* AiProgressPanelViewTests.swift */,
 				D86343F4A060EB70A1831EAA /* OutfitViewModelIntegrationTests.swift */,
 				W2A3B4C5D6E7F809293A4B60 /* WardrobeCardUxTests.swift */,
+				ARS0000000000000000000C2 /* APIResponseSizeTests.swift */,
 				WFE04FR0000000000000001 /* WardrobeFitEvaluateTests.swift */,
 				RLT01FR0000000000000001 /* RecentLooksThumbnailTests.swift */,
 				ILB01FR0000000000000002 /* IosLayoutBugFixPresentationTests.swift */,
@@ -534,6 +541,7 @@
 			isa = PBXGroup;
 			children = (
 				WP01FR0000000000000003 /* WeekPlannerViewModel.swift */,
+				ARS0000000000000000000B2 /* HistoryPageLoader.swift */,
 				14E774459799783475D23A6C /* OutfitViewModel.swift */,
 				A1R2E3P4O5R6T7M8O9D0E03 /* ReportsViewModel.swift */,
 				WFE02FR0000000000000001 /* WardrobeFitEvaluateViewModel.swift */,
@@ -573,6 +581,7 @@
 				ILB01FR0000000000000001 /* IosLayoutBugFixPresentation.swift */,
 				R1E2G3E4N5L6O7G8I9C002 /* MainFlowResultRegenerateLogic.swift */,
 				R1H2I3S4T5O6R7Y8S9E0L02 /* RandomHistorySelection.swift */,
+				ARS0000000000000000000A2 /* ImageThumbnailData.swift */,
 				WRS01FR0000000000000001 /* WardrobeRandomSession.swift */,
 				OPU01FR0000000000000001 /* OutfitPromptUtils.swift */,
 				M1F2L3O4W5U6X7C8O9P0Y02 /* MainFlowUxCopy.swift */,
@@ -924,6 +933,7 @@
 				WP01BF0000000000000001 /* WeekPlanModels.swift in Sources */,
 				WP01BF0000000000000002 /* WeekPlanNotificationScheduler.swift in Sources */,
 				WP01BF0000000000000003 /* WeekPlannerViewModel.swift in Sources */,
+				ARS0000000000000000000B1 /* HistoryPageLoader.swift in Sources */,
 				WP01BF0000000000000004 /* WeekPlannerView.swift in Sources */,
 				D49CCC05C1C483C20F5B066E /* APIService.swift in Sources */,
 				F3A4B5C6D7E8F90A394A5B6F /* AdminIntegrationTestRunnerView.swift in Sources */,
@@ -987,6 +997,7 @@
 				ILB01BF0000000000000001 /* IosLayoutBugFixPresentation.swift in Sources */,
 				R1E2G3E4N5L6O7G8I9C001 /* MainFlowResultRegenerateLogic.swift in Sources */,
 				R1H2I3S4T5O6R7Y8S9E0L01 /* RandomHistorySelection.swift in Sources */,
+				ARS0000000000000000000A1 /* ImageThumbnailData.swift in Sources */,
 				WRS01BF0000000000000001 /* WardrobeRandomSession.swift in Sources */,
 				OPU01BF0000000000000001 /* OutfitPromptUtils.swift in Sources */,
 				A1R2E3P4O5R6T7M8O9D0E02 /* ReportsModels.swift in Sources */,
@@ -1045,6 +1056,7 @@
 				M4A5B6C7D8E9012345678A04 /* MicroHelpCopyTests.swift in Sources */,
 				BDC51E614A7C765FB3FA7572 /* OutfitViewModelIntegrationTests.swift in Sources */,
 				W2A3B4C5D6E7F809293A4B61 /* WardrobeCardUxTests.swift in Sources */,
+				ARS0000000000000000000C1 /* APIResponseSizeTests.swift in Sources */,
 				WFE04BF0000000000000001 /* WardrobeFitEvaluateTests.swift in Sources */,
 				RLT01BF0000000000000001 /* RecentLooksThumbnailTests.swift in Sources */,
 				ILB01BF0000000000000002 /* IosLayoutBugFixPresentationTests.swift in Sources */,

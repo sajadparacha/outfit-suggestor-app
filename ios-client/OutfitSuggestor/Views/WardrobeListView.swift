@@ -40,6 +40,7 @@ struct WardrobeListView: View {
     @StateObject private var fitEvaluateViewModel = WardrobeFitEvaluateViewModel()
     @State private var editingItem: WardrobeItem?
     @State private var fullScreenImage: UIImage?
+    @State private var fullScreenItemId: Int?
     @AppStorage("wardrobe_flow_tip_dismissed") private var flowTipDismissed = false
     @State private var isCompletionSelectionMode = false
     @State private var completionSelection = WardrobeMultiSelectState()
@@ -225,7 +226,7 @@ struct WardrobeListView: View {
                                     || (wardrobePickSession?.matchesWardrobeItem(item) ?? false)
                                 WardrobeCardView(
                                     item: item,
-                                    image: WardrobeImageData.decodeUIImage(from: item.image_data),
+                                    image: WardrobeImageData.decodeUIImage(from: item.thumbnailOrFullImageData),
                                     onGetSuggestion: isWeekPlanPickMode
                                         ? nil
                                         : (onGetSuggestionFromItem == nil ? nil : { onGetSuggestionFromItem?(item) }),
@@ -236,7 +237,7 @@ struct WardrobeListView: View {
                                     isPastSuggestionsLoading: pastSuggestionsLoader.loadingItemId == item.id,
                                     onEdit: { editingItem = item },
                                     onDelete: { scheduleDelete(item: item) },
-                                    onShowImage: { image in fullScreenImage = image },
+                                    onShowImage: { image in showWardrobeImage(image, itemId: item.id) },
                                     isCompletionSelectionMode: isCompletionSelectionMode && !isWeekPlanPickMode,
                                     isSelectedForCompletion: isSelected,
                                     isCompletionEligible: completionSelection.isEligible(item),
@@ -384,16 +385,34 @@ struct WardrobeListView: View {
         .sheet(item: $editingItem) { item in
             WardrobeFormView(
                 item: item,
-                onSaved: { Task { await load() } },
+                onSaved: {
+                    FullImageCache.shared.invalidateWardrobeItem(id: item.id)
+                    Task { await load() }
+                },
                 onCancel: { editingItem = nil }
             )
         }
-        .fullScreenCover(isPresented: Binding(get: { fullScreenImage != nil }, set: { if !$0 { fullScreenImage = nil } })) {
+        .fullScreenCover(isPresented: Binding(get: { fullScreenImage != nil }, set: { if !$0 { fullScreenImage = nil; fullScreenItemId = nil } })) {
             if let image = fullScreenImage {
                 FullScreenImageView(image: image) {
                     fullScreenImage = nil
+                    fullScreenItemId = nil
                 }
             }
+        }
+    }
+
+    /// Opens the viewer with the list thumbnail, then swaps in the full photo from `GET /api/wardrobe/{id}`.
+    @MainActor
+    private func showWardrobeImage(_ thumbnail: UIImage, itemId: Int) {
+        fullScreenImage = thumbnail
+        fullScreenItemId = itemId
+        Task { @MainActor in
+            guard let full = await FullImageLoader.wardrobeFullImageData(itemId: itemId),
+                  let fullImage = WardrobeImageData.decodeUIImage(from: full),
+                  fullScreenItemId == itemId,
+                  fullScreenImage != nil else { return }
+            fullScreenImage = fullImage
         }
     }
     
@@ -730,10 +749,10 @@ struct WardrobeListView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: isRegularWidth ? 10 : 8) {
                     ForEach(items) { item in
-                        if let image = WardrobeImageData.decodeUIImage(from: item.image_data) {
+                        if let image = WardrobeImageData.decodeUIImage(from: item.thumbnailOrFullImageData) {
                             ZStack(alignment: .topTrailing) {
                                 Button {
-                                    fullScreenImage = image
+                                    showWardrobeImage(image, itemId: item.id)
                                 } label: {
                                     Image(uiImage: image)
                                         .resizable()
@@ -927,6 +946,7 @@ struct WardrobeListView: View {
 
         do {
             try await APIService.shared.deleteWardrobeItem(id: item.id)
+            FullImageCache.shared.invalidateWardrobeItem(id: item.id)
             pendingDeleteItem = nil
             await load()
         } catch {
@@ -1016,7 +1036,7 @@ struct WardrobeListView: View {
             VStack(spacing: 14) {
                 if let sourceItem = pastSuggestionsLoader.sourceItem {
                     HStack(spacing: 12) {
-                        if let image = WardrobeImageData.decodeUIImage(from: sourceItem.image_data) {
+                        if let image = WardrobeImageData.decodeUIImage(from: sourceItem.thumbnailOrFullImageData) {
                             Image(uiImage: image)
                                 .resizable()
                                 .scaledToFill()
@@ -1050,6 +1070,16 @@ struct WardrobeListView: View {
                                     onSelectHistorySuggestion?(entry)
                                     pastSuggestionsLoader.showSheet = false
                                 }
+                                .onAppear {
+                                    Task { await pastSuggestionsLoader.loadMoreIfNeeded(currentEntryId: entry.id) }
+                                }
+                            }
+                            if pastSuggestionsLoader.isLoadingMore {
+                                ProgressView()
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .accessibilityLabel(HistoryPageLoader.loadingMoreAccessibilityLabel)
+                                    .accessibilityIdentifier("wardrobe.historySuggestionsLoadingMore")
                             }
                         }
                         .padding(.horizontal, 16)

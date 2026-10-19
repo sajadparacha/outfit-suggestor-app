@@ -229,7 +229,7 @@ enum WardrobeCompletionThumbnails {
 
     static func thumbnailItemsInOrder(selectedItemIds: [Int], allItems: [WardrobeItem]) -> [WardrobeItem] {
         selectedItemsInOrder(selectedItemIds: selectedItemIds, allItems: allItems)
-            .filter { hasDecodableImageData($0.image_data) }
+            .filter { hasDecodableImageData($0.thumbnailOrFullImageData) }
     }
 
     static func hasDecodableImageData(_ value: String?) -> Bool {
@@ -237,31 +237,20 @@ enum WardrobeCompletionThumbnails {
     }
 }
 
-enum WardrobePastSuggestionsMatching {
-    static func historyEntryReferencesItem(_ entry: OutfitHistoryEntry, item: WardrobeItem) -> Bool {
-        if entry.source_wardrobe_item_id == item.id {
-            return true
-        }
-        let slotIds = [entry.shirt_id, entry.trouser_id, entry.blazer_id, entry.shoes_id, entry.belt_id]
-        if slotIds.contains(where: { $0 == item.id }) {
-            return true
-        }
-        guard let itemImage = item.image_data, let entryImage = entry.image_data else {
-            return false
-        }
-        return itemImage == entryImage
-    }
-}
-
+/// Past Suggestions sheet: server filters by `wardrobe_item_id`; pages of 20 load on scroll.
 @MainActor
 final class WardrobePastSuggestionsLoader: ObservableObject {
+    static let emptyMessage = "No history suggestions found for this wardrobe item yet."
+
     @Published private(set) var loadingItemId: Int?
     @Published var showSheet = false
     @Published var suggestions: [OutfitHistoryEntry] = []
     @Published var error: String?
     @Published var sourceItem: WardrobeItem?
+    @Published private(set) var isLoadingMore = false
 
     private let apiService: APIServiceProtocol
+    private var pager: HistoryPageLoader?
 
     init(apiService: APIServiceProtocol = APIService.shared) {
         self.apiService = apiService
@@ -284,21 +273,36 @@ final class WardrobePastSuggestionsLoader: ObservableObject {
         sourceItem = item
         error = nil
         suggestions = []
+        isLoadingMore = false
         defer { loadingItemId = nil }
 
-        do {
-            let allHistory = try await apiService.getOutfitHistory(limit: 100)
-            let matches = allHistory.filter { entry in
-                WardrobePastSuggestionsMatching.historyEntryReferencesItem(entry, item: item)
+        let pager = HistoryPageLoader(apiService: apiService, wardrobeItemId: item.id)
+        self.pager = pager
+        await pager.loadFirstPage()
+        guard self.pager === pager else { return }
+        if let message = pager.errorMessage {
+            error = message
+        } else {
+            suggestions = pager.entries
+            if suggestions.isEmpty {
+                error = Self.emptyMessage
             }
-            suggestions = matches
-            if matches.isEmpty {
-                error = "No history suggestions found for this wardrobe item yet."
-            }
-            showSheet = true
-        } catch {
-            self.error = error.localizedDescription
-            showSheet = true
         }
+        showSheet = true
+    }
+
+    var hasMore: Bool { pager?.hasMore ?? false }
+
+    /// Row `onAppear` hook in the sheet; loads the next page near the end of the list.
+    func loadMoreIfNeeded(currentEntryId: Int) async {
+        guard let pager, pager.hasMore, !pager.isBusy else { return }
+        let ids = suggestions.map(\.id)
+        guard let index = ids.firstIndex(of: currentEntryId),
+              index >= ids.count - HistoryPageLoader.prefetchThreshold else { return }
+        isLoadingMore = true
+        await pager.loadMore()
+        isLoadingMore = false
+        guard self.pager === pager else { return }
+        suggestions = pager.entries
     }
 }

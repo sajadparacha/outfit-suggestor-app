@@ -4,7 +4,7 @@
  * This is the "Controller" in the MVC pattern
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 import { AiOperationType } from '../utils/aiProgressSteps';
 import {
   InputPanelSource,
@@ -37,6 +37,7 @@ import {
   resolveSourceWardrobeItemFromSuggestion,
 } from '../utils/historyUtils';
 import { MAIN_FLOW_UX_COPY } from '../utils/mainFlowUxCopy';
+import { fetchFullHistoryEntry, hasPhoto, resolveFullWardrobeItem } from '../utils/fullImageCache';
 import {
   PickRandomHistoryResult,
   RandomHistorySession,
@@ -78,7 +79,7 @@ interface UseOutfitControllerReturn {
   setImage: (file: File | null) => void;
   setFilters: (filters: Filters) => void;
   setPreferenceText: (text: string) => void;
-  setCurrentSuggestion: (suggestion: OutfitSuggestion | null) => void;
+  setCurrentSuggestion: Dispatch<SetStateAction<OutfitSuggestion | null>>;
   setGenerateModelImage: (generate: boolean) => void;
   setImageModel: (model: string) => void;
   setUseWardrobeOnly: (use: boolean) => void;
@@ -644,8 +645,8 @@ export const useOutfitController = (options?: {
           session: randomHistorySessionRef.current,
         });
 
-        const randomEntry = pickResult.entry;
-        if (!randomEntry) {
+        const pickedEntry = pickResult.entry;
+        if (!pickedEntry) {
           return { status: 'empty' };
         }
 
@@ -654,6 +655,12 @@ export const useOutfitController = (options?: {
         }
 
         setLoadingMessage('Preparing your look...');
+
+        // Pool is text-only (include_images=false); the detail call adds photos + model image.
+        const randomEntry = await fetchFullHistoryEntry(pickedEntry.id);
+        if (signal.aborted) {
+          return { status: 'empty' };
+        }
 
         setImage(null);
         setSourceWardrobeItem(null);
@@ -718,7 +725,12 @@ export const useOutfitController = (options?: {
     abortControllerRef.current = null;
   }, []);
 
-  const prepareStyleFromWardrobeItem = useCallback(async (item: WardrobeItem) => {
+  const prepareStyleFromWardrobeItem = useCallback(async (listItem: WardrobeItem) => {
+    if (!hasPhoto(listItem)) {
+      throw new Error("This item doesn't have an image. Please add an image first.");
+    }
+
+    const item = await resolveFullWardrobeItem(listItem);
     if (!item.image_data) {
       throw new Error("This item doesn't have an image. Please add an image first.");
     }

@@ -11,7 +11,10 @@ struct OutfitHistoryEntry: Codable, Identifiable {
     let id: Int
     let created_at: String
     let text_input: String?
+    /// Full input photo — only from `GET /api/outfit-history/{id}`; null in list responses.
     let image_data: String?
+    /// ≤256 px input-photo thumbnail (list + detail responses).
+    let image_thumbnail: String?
     let model_image: String?
     let shirt: String
     let trouser: String
@@ -41,6 +44,7 @@ struct OutfitHistoryEntry: Codable, Identifiable {
         case created_at
         case text_input
         case image_data
+        case image_thumbnail
         case model_image
         case shirt
         case trouser
@@ -72,6 +76,7 @@ struct OutfitHistoryEntry: Codable, Identifiable {
         created_at = try c.decodeIfPresent(String.self, forKey: .created_at) ?? ""
         text_input = try c.decodeIfPresent(String.self, forKey: .text_input)
         image_data = try c.decodeIfPresent(String.self, forKey: .image_data)
+        image_thumbnail = try c.decodeIfPresent(String.self, forKey: .image_thumbnail)
         model_image = try c.decodeIfPresent(String.self, forKey: .model_image)
         shirt = try c.decodeIfPresent(String.self, forKey: .shirt) ?? ""
         trouser = try c.decodeIfPresent(String.self, forKey: .trouser) ?? ""
@@ -102,6 +107,7 @@ struct OutfitHistoryEntry: Codable, Identifiable {
         created_at: String,
         text_input: String?,
         image_data: String?,
+        image_thumbnail: String? = nil,
         model_image: String?,
         shirt: String,
         trouser: String,
@@ -130,6 +136,7 @@ struct OutfitHistoryEntry: Codable, Identifiable {
         self.created_at = created_at
         self.text_input = text_input
         self.image_data = image_data
+        self.image_thumbnail = image_thumbnail
         self.model_image = model_image
         self.shirt = shirt
         self.trouser = trouser
@@ -157,22 +164,32 @@ struct OutfitHistoryEntry: Codable, Identifiable {
 }
 
 extension OutfitHistoryEntry {
+    /// Input photo for list rows/cards: thumbnail, else full photo (detail / legacy payloads).
+    var inputThumbnailOrFullImageData: String? {
+        ImageThumbnailData.thumbnailOrFull(thumbnail: image_thumbnail, full: image_data)
+    }
+
+    /// Input photo for flows that need the real photo: full (detail response) when present, else thumbnail.
+    var inputFullOrThumbnailImageData: String? {
+        ImageThumbnailData.fullOrThumbnail(full: image_data, thumbnail: image_thumbnail)
+    }
+
     /// Prefer generated model image, then upload, then shirt wardrobe thumbnail.
     var recentLookThumbnailData: String? {
         if let model_image, !model_image.isEmpty { return model_image }
-        if let image_data, !image_data.isEmpty { return image_data }
-        if let shirtThumb = matching_wardrobe_items?.shirt?.first?.image_data, !shirtThumb.isEmpty {
+        if let input = inputThumbnailOrFullImageData { return input }
+        if let shirtThumb = matching_wardrobe_items?.shirt?.first?.thumbnailOrFullImageData {
             return shirtThumb
         }
         if let sourceId = source_wardrobe_item_id,
-           let match = matching_wardrobe_items?.firstItem(withId: sourceId)?.image_data,
-           !match.isEmpty {
+           let match = matching_wardrobe_items?.firstItem(withId: sourceId)?.thumbnailOrFullImageData {
             return match
         }
         return nil
     }
 
-    /// Map to OutfitSuggestion for display in main suggestion view
+    /// Map to OutfitSuggestion for display in main suggestion view.
+    /// `imageData` is the full photo from a detail response, else the list thumbnail.
     func toOutfitSuggestion() -> OutfitSuggestion {
         OutfitSuggestion(
             id: String(id),
@@ -182,7 +199,7 @@ extension OutfitHistoryEntry {
             shoes: shoes,
             belt: belt,
             reasoning: reasoning,
-            imageData: image_data.flatMap { Data(base64Encoded: $0) },
+            imageData: inputFullOrThumbnailImageData.flatMap { Data(base64Encoded: $0) },
             model_image: model_image,
             matching_wardrobe_items: matching_wardrobe_items,
             sweater: sweater,

@@ -275,7 +275,7 @@ final class OutfitAppE2ETests: XCTestCase {
 
     private func openHistory() {
         openTab("Looks")
-        XCTAssertTrue(waitFor(app.buttons["history.loadAllButton"]))
+        XCTAssertTrue(waitFor(app.textFields["history.searchField"]))
         waitForAppUnlocked()
     }
 
@@ -306,7 +306,11 @@ final class OutfitAppE2ETests: XCTestCase {
     }
 
     private func waitForHistoryEntryCount(_ count: Int, timeout: TimeInterval = 12) -> Bool {
-        let predicate = NSPredicate(format: "label CONTAINS 'Showing last \(count) entries'")
+        let predicate = NSPredicate(
+            format: "label CONTAINS %@ OR label CONTAINS %@",
+            "Showing last \(count) entries",
+            "Showing all \(count) entries"
+        )
         let marker = app.staticTexts.containing(predicate).firstMatch
         return marker.waitForExistence(timeout: timeout)
     }
@@ -611,18 +615,17 @@ final class OutfitAppE2ETests: XCTestCase {
     func testHistorySearchSortAndLoadAll() {
         openHistory()
 
-        XCTAssertFalse(historyCard(entryId: 102).exists)
-        safeTap(app.buttons["history.loadAllButton"])
+        // First page (20) already holds all 3 seeded entries; more pages load on scroll.
         XCTAssertTrue(waitForHistoryIdle(timeout: 12), "History loading spinner did not dismiss")
         XCTAssertTrue(
             waitForHistoryEntryCount(3, timeout: 12),
-            "Expected 3 history entries after Load All"
+            "Expected 3 history entries on the first page"
         )
         XCTAssertTrue(
             historyCard(entryId: 100).waitForExistence(timeout: 8),
-            "Expected newest history entry 100 after Load All"
+            "Expected newest history entry 100 on the first page"
         )
-        XCTAssertTrue(scrollToHistoryCard(entryId: 102, timeout: 16), "Expected history entry 102 after Load All")
+        XCTAssertTrue(scrollToHistoryCard(entryId: 102, timeout: 16), "Expected history entry 102 on the first page")
 
         let searchField = app.textFields["history.searchField"]
         enterText(searchField, "brogues")
@@ -753,7 +756,7 @@ final class OutfitAppE2ETests: XCTestCase {
         openTab("Looks")
         XCTAssertTrue(
             app.navigationBars["Looks"].waitForExistence(timeout: 5)
-                || app.buttons["history.loadAllButton"].waitForExistence(timeout: 2),
+                || app.textFields["history.searchField"].waitForExistence(timeout: 2),
             "Expected Looks tab content while suggestion runs"
         )
 

@@ -6,6 +6,7 @@ import { rest } from 'msw';
 import { renderApp } from '../../test/renderWithRouter';
 import ApiService from '../../services/ApiService';
 import { server } from '../../test/msw/server';
+import { createHistoryHandlers, HistoryRequestLog, MockHistoryEntry } from '../../test/msw/handlers';
 import { MAIN_FLOW_UX_COPY } from '../../utils/mainFlowUxCopy';
 import { formatPreviousOutfitForPrompt } from '../../utils/outfitPromptUtils';
 import { outfitFingerprint } from '../../utils/randomHistorySelection';
@@ -23,7 +24,8 @@ jest.mock('../../utils/imageUtils', () => {
 
 const API_BASE = 'http://localhost:8001';
 
-const mockHistoryEntry = {
+/** Detail shape (GET /api/outfit-history/100); list responses strip image_data like the backend. */
+const mockHistoryEntry: MockHistoryEntry = {
   id: 100,
   created_at: '2024-06-15T10:30:00Z',
   text_input: 'casual friday',
@@ -31,6 +33,7 @@ const mockHistoryEntry = {
   season: 'summer',
   style: 'modern',
   image_data: 'historyPreviewBase64',
+  image_thumbnail: 'historyThumbBase64',
   model_image: null,
   shirt: 'Blue casual shirt',
   trouser: 'Khaki pants',
@@ -40,7 +43,14 @@ const mockHistoryEntry = {
   reasoning: 'Relaxed weekend look.',
   matching_wardrobe_items: {
     shirt: [
-      { id: 1, category: 'shirt', color: 'blue', description: 'Blue shirt', image_data: 'wardrobeShirtThumb' },
+      {
+        id: 1,
+        category: 'shirt',
+        color: 'blue',
+        description: 'Blue shirt',
+        image_data: null,
+        image_thumbnail: 'wardrobeShirtThumb',
+      },
     ],
     trouser: [],
     blazer: [],
@@ -57,17 +67,19 @@ const mockUser = {
 };
 
 describe('Random from History integration', () => {
+  let requests: HistoryRequestLog;
+  let detailRequests: number[];
+
   beforeEach(() => {
+    requests = [];
+    detailRequests = [];
     localStorage.setItem('auth_token', 'test-token');
     localStorage.setItem('first_run_coach_dismissed', 'true');
     server.use(
       rest.get(`${API_BASE}/api/auth/me`, (_req, res, ctx) => {
         return res(ctx.json(mockUser));
       }),
-      rest.get(`${API_BASE}/api/outfit-history`, (req, res, ctx) => {
-        const limit = Number(req.url.searchParams.get('limit') ?? 2);
-        return res(ctx.json([mockHistoryEntry]));
-      })
+      ...createHistoryHandlers([mockHistoryEntry], { requests, detailRequests })
     );
   });
 
@@ -114,6 +126,10 @@ describe('Random from History integration', () => {
 
     expect(compactSummary).toHaveTextContent('Summer');
     expect(compactSummary).not.toHaveTextContent(/Wardrobe ·/i);
+
+    expect(requests).toContainEqual({ limit: 100, offset: 0, wardrobeItemId: null, includeImages: false });
+    expect(requests.every((query) => query.limit <= 100)).toBe(true);
+    expect(detailRequests).toEqual([100]);
   });
 
   it('clears stale wardrobe preview when loading random history entry', async () => {
@@ -274,13 +290,7 @@ describe('Random from History integration', () => {
       rest.get(`${API_BASE}/api/auth/me`, (_req, res, ctx) => {
         return res(ctx.json(mockUser));
       }),
-      rest.get(`${API_BASE}/api/outfit-history`, (req, res, ctx) => {
-        const limit = Number(req.url.searchParams.get('limit') ?? 2);
-        if (limit >= 100) {
-          return res(ctx.json([duplicateOlder, duplicateNewer, distinctLook]));
-        }
-        return res(ctx.json([duplicateNewer]));
-      })
+      ...createHistoryHandlers([distinctLook, duplicateNewer, duplicateOlder])
     );
 
     renderApp();
@@ -320,11 +330,7 @@ describe('Random from History integration', () => {
   });
 
   it('shows error toast when history is empty', async () => {
-    server.use(
-      rest.get(`${API_BASE}/api/outfit-history`, (_req, res, ctx) => {
-        return res(ctx.json([]));
-      })
-    );
+    server.use(...createHistoryHandlers([]));
 
     renderApp();
 

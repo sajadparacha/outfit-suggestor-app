@@ -5,6 +5,8 @@ import { OUTFIT_VARIATION_MODIFIERS } from '../utils/outfitPromptUtils';
 import { GuestLimitReachedError } from '../models/GuestModels';
 import { DEFAULT_FILTERS } from '../utils/outfitPreferences';
 import type { OutfitHistoryEntry, OutfitSuggestion } from '../models/OutfitModels';
+import { useHistoryController } from './useHistoryController';
+import { clearFullImageCache } from '../utils/fullImageCache';
 
 jest.mock('../utils/imageUtils', () => ({
   compressImageForOutfit: async (file: File) => file,
@@ -232,6 +234,38 @@ describe('useOutfitController prepareStyleFromWardrobeItem', () => {
     expect(hook.result.current.image).toBeInstanceOf(File);
     expect(hook.result.current.image?.name).toBe('wardrobe-item-7.jpg');
   });
+
+  it('fetches the full photo for a thumbnail-only list item before loading it', async () => {
+    clearFullImageCache();
+    const listItem = {
+      id: 8,
+      category: 'shirt',
+      color: 'Blue',
+      image_data: null,
+      image_thumbnail: 'thumb-8',
+      name: null,
+      description: null,
+      brand: null,
+      size: null,
+      tags: null,
+      condition: null,
+      wear_count: 0,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    };
+    const getWardrobeItem = jest
+      .spyOn(ApiService, 'getWardrobeItem')
+      .mockResolvedValue({ ...listItem, image_data: 'full-8' });
+    const hook = renderHook(() => useOutfitController());
+
+    await act(async () => {
+      await hook.result.current.prepareStyleFromWardrobeItem(listItem);
+    });
+
+    expect(getWardrobeItem).toHaveBeenCalledWith(8);
+    expect(hook.result.current.flowPreviewUrl).toBe('data:image/jpeg;base64,full-8');
+    expect(hook.result.current.image?.name).toBe('wardrobe-item-8.jpg');
+  });
 });
 
 describe('useOutfitController resetMainFlowState', () => {
@@ -336,6 +370,54 @@ describe('useOutfitController loadRandomFromHistory', () => {
     belt: 'Brown belt',
     reasoning: 'Test look',
   };
+
+  beforeEach(() => {
+    clearFullImageCache();
+    jest.spyOn(ApiService, 'getOutfitHistoryEntry').mockImplementation(async (id: number) => ({
+      ...historyEntry,
+      id,
+      image_data: `full-${id}`,
+      image_thumbnail: `thumb-${id}`,
+    }));
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('fetches a text-only pool (limit=100, include_images=false) then the detail for the picked id', async () => {
+    const getOutfitHistory = jest
+      .spyOn(ApiService, 'getOutfitHistory')
+      .mockResolvedValue([{ ...historyEntry, image_thumbnail: null }]);
+    const historyHook = renderHook(() => useHistoryController());
+    const hook = renderHook(() => useOutfitController());
+
+    await act(async () => {
+      await hook.result.current.loadRandomFromHistory(historyHook.result.current.fetchHistoryForRandomPick);
+    });
+
+    expect(getOutfitHistory).toHaveBeenCalledTimes(1);
+    expect(getOutfitHistory).toHaveBeenCalledWith({ limit: 100, offset: 0, includeImages: false });
+    expect(ApiService.getOutfitHistoryEntry).toHaveBeenCalledWith(42);
+    expect(hook.result.current.currentSuggestion?.id).toBe('42');
+    expect(hook.result.current.currentSuggestion?.imageUrl).toBe('data:image/jpeg;base64,full-42');
+    expect(hook.result.current.flowPreviewUrl).toBe('data:image/jpeg;base64,full-42');
+    expect(hook.result.current.inputPanelSource).toBe('history');
+  });
+
+  it('keeps the previous result and rejects when the picked entry detail fails', async () => {
+    (ApiService.getOutfitHistoryEntry as jest.Mock).mockRejectedValue(new Error('History entry not found'));
+    const hook = renderHook(() => useOutfitController());
+
+    await act(async () => {
+      await expect(
+        hook.result.current.loadRandomFromHistory(async () => [historyEntry])
+      ).rejects.toThrow('History entry not found');
+    });
+
+    expect(hook.result.current.currentSuggestion).toBeNull();
+    expect(hook.result.current.loading).toBe(false);
+  });
 
   it('sets loading and random-history operation while fetching', async () => {
     let resolveFetch: (entries: OutfitHistoryEntry[]) => void = () => {};

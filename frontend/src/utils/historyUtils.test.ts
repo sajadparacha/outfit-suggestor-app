@@ -122,3 +122,30 @@ describe('historyEntryToSuggestion', () => {
     expect(summary).toEqual(DEFAULT_FILTERS);
   });
 });
+
+describe('historyEntryToSuggestion thumbnails', () => {
+  const listEntry: OutfitHistoryEntry = {
+    id: 9,
+    created_at: '2026-01-01T00:00:00Z',
+    text_input: '',
+    image_data: null,
+    image_thumbnail: 'thumb-9',
+    model_image: null,
+    shirt: 's',
+    trouser: 't',
+    blazer: 'b',
+    shoes: 'sh',
+    belt: 'be',
+    reasoning: 'r',
+  };
+
+  it('falls back to image_thumbnail for list entries', () => {
+    expect(historyEntryToSuggestion(listEntry).imageUrl).toBe('data:image/jpeg;base64,thumb-9');
+  });
+
+  it('prefers the full image_data from the detail endpoint', () => {
+    expect(historyEntryToSuggestion({ ...listEntry, image_data: 'full-9' }).imageUrl).toBe(
+      'data:image/jpeg;base64,full-9'
+    );
+  });
+});

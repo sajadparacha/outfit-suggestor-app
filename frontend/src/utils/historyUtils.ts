@@ -51,8 +51,8 @@ export function historyEntryToSuggestion(entry: OutfitHistoryEntry): OutfitSugge
     shoes: entry.shoes,
     belt: entry.belt,
     reasoning: entry.reasoning,
-    imageUrl: entry.image_data
-      ? `data:image/jpeg;base64,${entry.image_data}`
+    imageUrl: (entry.image_data || entry.image_thumbnail)
+      ? `data:image/jpeg;base64,${entry.image_data || entry.image_thumbnail}`
       : undefined,
     model_image: entry.model_image,
     shirt_id: entry.shirt_id,

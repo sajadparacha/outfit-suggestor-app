@@ -63,6 +63,13 @@ def _history_api(client, auth_headers):
     return response.json()
 
 
+def _history_detail(client, auth_headers):
+    entry_id = _history_api(client, auth_headers)[0]["id"]
+    response = client.get(f"/api/outfit-history/{entry_id}", headers=auth_headers)
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
 def _suggest_from_item(client, auth_headers, item_id):
     response = client.post(
         f"/api/suggest-outfit-from-wardrobe-item/{item_id}",
@@ -96,7 +103,7 @@ class TestWardrobePhotoByReference:
         assert row.image_data is None
         assert row.image_from_wardrobe
         assert row.source_wardrobe_item_id == item.id
-        assert _history_api(client, auth_headers)[0]["image_data"] == item.image_data
+        assert _history_detail(client, auth_headers)["image_data"] == item.image_data
 
     def test_upload_of_wardrobe_photo_stores_reference(self, client, auth_headers, db, test_user):
         item = _add_item(db, test_user)
@@ -105,7 +112,7 @@ class TestWardrobePhotoByReference:
         (row,) = _history_rows(db)
         assert row.image_data is None
         assert row.image_from_wardrobe
-        assert _history_api(client, auth_headers)[0]["image_data"] == item.image_data
+        assert _history_detail(client, auth_headers)["image_data"] == item.image_data
 
     def test_upload_of_different_photo_keeps_its_own_copy(self, client, auth_headers, db, test_user):
         item = _add_item(db, test_user, seed=1)
@@ -114,7 +121,7 @@ class TestWardrobePhotoByReference:
         (row,) = _history_rows(db)
         assert row.image_data
         assert not row.image_from_wardrobe
-        assert _history_api(client, auth_headers)[0]["image_data"] == row.image_data
+        assert _history_detail(client, auth_headers)["image_data"] == row.image_data
 
     def test_upload_without_source_item_keeps_photo(self, client, auth_headers, db, test_user):
         _add_item(db, test_user)
@@ -135,7 +142,7 @@ class TestWardrobePhotoByReference:
             db=db, user_id=test_user.id, text_input="", image_data=None,
             model_image=None, suggestion=suggestion,
         )
-        assert _history_api(client, auth_headers)[0]["image_data"] is None
+        assert _history_detail(client, auth_headers)["image_data"] is None
 
     def test_photo_is_not_read_from_another_users_item(self, client, auth_headers, db, test_user, test_user2):
         other_item = _add_item(db, test_user2)
@@ -147,7 +154,7 @@ class TestWardrobePhotoByReference:
             db=db, user_id=test_user.id, text_input="", image_data=other_item.image_data,
             model_image=None, suggestion=suggestion, image_from_wardrobe=True,
         )
-        assert _history_api(client, auth_headers)[0]["image_data"] is None
+        assert _history_detail(client, auth_headers)["image_data"] is None
 
     def test_deleting_wardrobe_item_copies_photo_into_history(self, client, auth_headers, db, test_user):
         item = _add_item(db, test_user)
@@ -160,7 +167,7 @@ class TestWardrobePhotoByReference:
         (row,) = _history_rows(db)
         assert row.image_data == photo
         assert not row.image_from_wardrobe
-        assert _history_api(client, auth_headers)[0]["image_data"] == photo
+        assert _history_detail(client, auth_headers)["image_data"] == photo
 
     def test_replacing_wardrobe_photo_keeps_old_photo_in_history(self, client, auth_headers, db, test_user):
         item = _add_item(db, test_user)
@@ -175,7 +182,7 @@ class TestWardrobePhotoByReference:
 
         (row,) = _history_rows(db)
         assert row.image_data == old_photo
-        assert _history_api(client, auth_headers)[0]["image_data"] == old_photo
+        assert _history_detail(client, auth_headers)["image_data"] == old_photo
 
     def test_editing_other_fields_keeps_reference(self, db, test_user):
         item = _add_item(db, test_user)

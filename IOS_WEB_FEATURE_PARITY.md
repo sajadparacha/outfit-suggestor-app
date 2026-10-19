@@ -120,6 +120,8 @@ This document tracks feature parity between the **web app** and the **iOS app** 
 
 **Wardrobe item card actions (web + iOS)**: Primary **Style this item** + overflow menu (View image, Edit, **Past Suggestions**, Delete). Past Suggestions opens per-item outfit history modal/sheet.
 
+**Response size (web + iOS, `api-response-size`)**: list responses carry 256 px `image_thumbnail` only (`image_data` null) for wardrobe items, history input photos and matched wardrobe items; both clients fetch `GET /api/wardrobe/{id}` / `GET /api/outfit-history/{id}` for the full photo on enlarge or when loading into the main flow, cached by id per session. History pages of 20 with load-more on scroll (header "Showing last N entries." → "Showing all N entries"; no Load All); search and Oldest First load remaining pages. Past Suggestions uses `?wardrobe_item_id=` (server filter). Random pick: `?limit=100&include_images=false` pool, then detail for the picked entry. Server gzips responses.
+
 **iOS status**: Full parity. List, add (with "Analyze with AI" and duplicate check), edit, delete, category filter (core + extended chips when owned), human-readable category badges, "Get suggestion" from item, multi-select complete outfit with AI (jacket/coat→outerwear, sweater slot, upper-body exclusivity); history has full-screen image viewer.
 
 **API endpoints**:

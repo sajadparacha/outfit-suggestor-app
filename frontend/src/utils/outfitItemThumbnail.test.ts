@@ -324,3 +324,31 @@ describe('outfitItemThumbnail', () => {
     expect(resolved.imageSrc).toContain('coat_img');
   });
 });
+
+describe('history/list thumbnails (image_data null + image_thumbnail)', () => {
+  const suggestion: OutfitSuggestion = {
+    id: 'h-1',
+    shirt: 'Blue shirt',
+    trouser: 'Gray trousers',
+    blazer: 'Navy blazer',
+    shoes: 'Black shoes',
+    belt: 'Black belt',
+    reasoning: 'r',
+    shirt_id: 3,
+    matching_wardrobe_items: {
+      shirt: [{ id: 3, category: 'shirt', color: 'blue', description: null, image_data: null, image_thumbnail: 'thumb-3' }],
+      trouser: [],
+      blazer: [],
+      shoes: [],
+      belt: [],
+    },
+  };
+
+  it('uses image_thumbnail when image_data is null', () => {
+    expect(resolveOutfitItemThumbnail(suggestion, 'shirt')).toEqual({
+      imageSrc: 'data:image/jpeg;base64,thumb-3',
+      tag: 'wardrobe',
+    });
+    expect(firstWardrobePreviewUrl(suggestion)).toBe('data:image/jpeg;base64,thumb-3');
+  });
+});

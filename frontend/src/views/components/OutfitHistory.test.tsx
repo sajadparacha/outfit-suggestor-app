@@ -111,21 +111,23 @@ describe('OutfitHistory', () => {
       expect(screen.getByText(/Classic combination for a professional look/)).toBeInTheDocument();
     });
 
-    it('displays Load All when not full view and has entries', () => {
+    it('shows Refresh (never Load All) and "Showing last" while more pages remain', () => {
       render(
         <OutfitHistory
           history={[baseEntry]}
           loading={false}
           error={null}
           isFullView={false}
+          hasMore={true}
           onRefresh={mockOnRefresh}
           onEnsureFullHistory={mockOnEnsureFullHistory}
           onDelete={mockOnDelete}
         />
       );
-      const loadAllBtn = screen.getByRole('button', { name: /Load All/i });
-      expect(loadAllBtn).toBeInTheDocument();
-      fireEvent.click(loadAllBtn);
+      expect(screen.getByText('Showing last 1 entry.')).toBeInTheDocument();
+      expect(screen.queryByText(/load all/i)).not.toBeInTheDocument();
+      const refreshBtn = screen.getByRole('button', { name: /Refresh/i });
+      fireEvent.click(refreshBtn);
       expect(mockOnRefresh).toHaveBeenCalledTimes(1);
     });
   });

@@ -63,6 +63,31 @@ def encode_image(image_file) -> str:
     return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
 
+THUMBNAIL_MAX_PX = 256
+THUMBNAIL_JPEG_QUALITY = 75
+
+
+def make_thumbnail(image_base64: str | None) -> str | None:
+    """Base64 JPEG no larger than THUMBNAIL_MAX_PX on either side, or None if undecodable."""
+    if not image_base64:
+        return None
+    try:
+        image = Image.open(io.BytesIO(base64.b64decode(image_base64)))
+        if image.mode in ('RGBA', 'LA', 'P'):
+            image = image.convert('RGBA')
+            background = Image.new('RGB', image.size, (255, 255, 255))
+            background.paste(image, mask=image.getchannel('A'))
+            image = background
+        elif image.mode != 'RGB':
+            image = image.convert('RGB')
+        image.thumbnail((THUMBNAIL_MAX_PX, THUMBNAIL_MAX_PX), Image.Resampling.LANCZOS)
+        buffer = io.BytesIO()
+        image.save(buffer, format='JPEG', quality=THUMBNAIL_JPEG_QUALITY, optimize=True)
+    except Exception:
+        return None
+    return base64.b64encode(buffer.getvalue()).decode('utf-8')
+
+
 GENERATED_IMAGE_JPEG_QUALITY = 80
 
 

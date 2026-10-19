@@ -83,7 +83,12 @@ class OutfitViewModel: ObservableObject {
     @Published var guestRequiresSignup = false
     @Published var infoToastMessage: String?
     
+    /// Text-only pool size for random pick (`include_images=false`); history requests never exceed 100.
+    static let randomHistoryPoolLimit = 100
+
     private let apiService: APIServiceProtocol
+    private let fullImageCache: FullImageCache
+    private var historyDetailTask: Task<Void, Never>?
     private var cancellables = Set<AnyCancellable>()
     private var cachedHistory: [OutfitHistoryEntry] = []
     private var hasLoadedHistory = false
@@ -110,8 +115,9 @@ class OutfitViewModel: ObservableObject {
         aiOperationType != nil
     }
     
-    init(apiService: APIServiceProtocol = APIService.shared) {
+    init(apiService: APIServiceProtocol = APIService.shared, fullImageCache: FullImageCache = .shared) {
         self.apiService = apiService
+        self.fullImageCache = fullImageCache
         $filters
             .map { ($0.occasion, $0.season, $0.style) }
             .removeDuplicates(by: ==)
@@ -229,6 +235,9 @@ class OutfitViewModel: ObservableObject {
         hasLoadedHistory = false
         cachedHistory = []
         currentHistoryEntryId = nil
+        historyDetailTask?.cancel()
+        historyDetailTask = nil
+        fullImageCache.removeAll()
         randomHistorySelection.reset()
         wardrobeRandomSession.reset()
         infoToastMessage = nil
@@ -531,10 +540,29 @@ class OutfitViewModel: ObservableObject {
         }
     }
     
-    /// Load a suggestion from history (e.g. after tapping in History tab)
+    /// Load a suggestion from history (e.g. after tapping in History tab).
+    /// Shows the list entry immediately, then swaps in the full input photo from the detail endpoint.
     func loadFromHistory(_ entry: OutfitHistoryEntry) {
         currentHistoryEntryId = entry.id
         currentSuggestion = entry.toOutfitSuggestion()
+        historyDetailTask?.cancel()
+        historyDetailTask = Task { [weak self] in
+            await self?.hydrateHistoryEntryPhoto(entryId: entry.id)
+        }
+    }
+
+    /// Exposed for tests; failures keep the thumbnail already shown.
+    func hydrateHistoryEntryPhoto(entryId: Int) async {
+        guard let detail = try? await FullImageLoader.historyEntryDetail(
+            id: entryId,
+            api: apiService,
+            cache: fullImageCache
+        ) else { return }
+        guard !Task.isCancelled,
+              currentHistoryEntryId == entryId,
+              currentSuggestion?.id == String(entryId),
+              let full = detail.image_data.flatMap({ Data(base64Encoded: $0) }) else { return }
+        currentSuggestion?.imageData = full
     }
     
     /// Set suggestion directly (e.g. from wardrobe "Get suggestion" or API)
@@ -545,7 +573,7 @@ class OutfitViewModel: ObservableObject {
     /// Load a wardrobe item into the Suggest flow so the user can tune preferences before generating.
     func preloadWardrobeItemForSuggestion(id: Int) async -> Bool {
         do {
-            let item = try await APIService.shared.getWardrobeItem(id: id)
+            let item = try await FullImageLoader.wardrobeItemDetail(id: id, api: apiService, cache: fullImageCache)
             return applyWardrobeItemToSuggestFlow(item)
         } catch let error as APIServiceError {
             showErrorMessage(error.errorDescription ?? "An error occurred")
@@ -555,9 +583,13 @@ class OutfitViewModel: ObservableObject {
         return false
     }
 
-    /// Preload from an item already shown in the wardrobe list (no extra fetch).
-    func preloadWardrobeItemForSuggestion(item: WardrobeItem) -> Bool {
-        applyWardrobeItemToSuggestFlow(item)
+    /// Preload from a wardrobe list item. List items carry only `image_thumbnail`,
+    /// so the full photo comes from the (session-cached) detail endpoint.
+    func preloadWardrobeItemForSuggestion(item: WardrobeItem) async -> Bool {
+        if let full = item.image_data, !full.isEmpty {
+            return applyWardrobeItemToSuggestFlow(item)
+        }
+        return await preloadWardrobeItemForSuggestion(id: item.id)
     }
 
     @discardableResult
@@ -870,7 +902,12 @@ class OutfitViewModel: ObservableObject {
         do {
             try Task.checkCancellation()
             hasLoadedHistory = false
-            cachedHistory = try await apiService.getOutfitHistory(limit: 100)
+            cachedHistory = try await apiService.getOutfitHistory(
+                limit: Self.randomHistoryPoolLimit,
+                offset: 0,
+                wardrobeItemId: nil,
+                includeImages: false
+            )
             hasLoadedHistory = true
 
             let excludeCurrentId = inputPanelSource == .history ? currentHistoryEntryId : nil
@@ -878,10 +915,17 @@ class OutfitViewModel: ObservableObject {
                 from: cachedHistory,
                 excludeCurrentId: excludeCurrentId
             )
-            guard let entry = pickResult.entry else {
+            guard let picked = pickResult.entry else {
                 showErrorMessage("No history yet. Get some outfit suggestions first.")
                 return
             }
+            try Task.checkCancellation()
+            let entry = try await FullImageLoader.historyEntryDetail(
+                id: picked.id,
+                api: apiService,
+                cache: fullImageCache
+            )
+            try Task.checkCancellation()
             if pickResult.shouldShowSingleLookToast {
                 infoToastMessage = MainFlowUxCopy.randomHistoryOnlyOneLook
             }
@@ -895,7 +939,7 @@ class OutfitViewModel: ObservableObject {
             summaryPreferenceText = entry.text_input ?? ""
             let suggestion = entry.toOutfitSuggestion()
             currentSuggestion = suggestion
-            flowPreviewImage = entry.image_data.flatMap { Self.decodeBase64Image($0) }
+            flowPreviewImage = entry.inputFullOrThumbnailImageData.flatMap { Self.decodeBase64Image($0) }
                 ?? Self.previewImageFromWardrobeMatches(suggestion)
             if let sourceId = entry.source_wardrobe_item_id {
                 sourceWardrobeItem = Self.resolveWardrobeSource(from: entry, suggestion: suggestion, itemId: sourceId)

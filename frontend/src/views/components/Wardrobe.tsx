@@ -8,7 +8,14 @@ import {
   WEEK_PLAN_CORE_SLOTS,
 } from '../../models/WeekPlanModels';
 import type { WardrobePickSession } from '../../navigation/routes';
-import ApiService from '../../services/ApiService';
+import ApiService, { OUTFIT_HISTORY_PAGE_SIZE } from '../../services/ApiService';
+import {
+  fetchFullHistoryEntry,
+  fetchFullWardrobeItem,
+  hasPhoto,
+  resolveFullWardrobeItem,
+  thumbnailBase64,
+} from '../../utils/fullImageCache';
 import { isValidImageSize, formatFileSize } from '../../utils/imageUtils';
 import { WARDROBE_MAX_SIZE_MB } from '../../constants/imageLimits';
 import { FILTER_OPTIONS, UI_CONFIG } from '../../utils/constants';
@@ -97,6 +104,7 @@ interface WardrobeProps {
   onPickForWeekPlan?: (item: WardrobeItem) => void;
   onCancelWeekPlanPick?: () => void;
   onSuggestionReady?: (suggestion: any) => void; // Callback when outfit suggestion is ready
+  onSuggestionImageReady?: (suggestionId: string, imageUrl: string) => void; // Full photo for a look shown with its thumbnail
   onNavigateToMain?: () => void; // Callback to navigate to main view
   onSourceImageLoaded?: () => void; // Callback after source wardrobe image is preloaded in main flow
   onAnalyzeWardrobe?: () => void;
@@ -132,6 +140,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
   onPickForWeekPlan,
   onCancelWeekPlanPick,
   onSuggestionReady,
+  onSuggestionImageReady,
   onNavigateToMain,
   onSourceImageLoaded,
   outfitController,
@@ -196,6 +205,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
     if (!viewingImage) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        viewingItemIdRef.current = null;
         setViewingImage(null);
       }
     };
@@ -212,6 +222,15 @@ const Wardrobe: React.FC<WardrobeProps> = ({
   const [historySuggestions, setHistorySuggestions] = useState<OutfitHistoryEntry[]>([]);
   const [historySuggestionsError, setHistorySuggestionsError] = useState<string | null>(null);
   const [historySourceItem, setHistorySourceItem] = useState<WardrobeItem | null>(null);
+  const [historySuggestionsHasMore, setHistorySuggestionsHasMore] = useState(false);
+  const [historySuggestionsLoadingMore, setHistorySuggestionsLoadingMore] = useState(false);
+  const [historySuggestionsLoadMorePaused, setHistorySuggestionsLoadMorePaused] = useState(false);
+  const [historySuggestionsSentinelEl, setHistorySuggestionsSentinelEl] = useState<HTMLDivElement | null>(null);
+  const historySuggestionsRequestRef = useRef(0);
+  const historySuggestionsLoadingMoreRef = useRef(false);
+  const viewingItemIdRef = useRef<number | null>(null);
+  const editingItemIdRef = useRef<number | null>(null);
+  const editImagePickedRef = useRef(false);
   const [flowTipDismissed, setFlowTipDismissed] = useState(
     () => localStorage.getItem('wardrobe_flow_tip_dismissed') === 'true'
   );
@@ -350,8 +369,11 @@ const Wardrobe: React.FC<WardrobeProps> = ({
     setFlowTipDismissed(true);
   };
 
-  const loadWardrobeItemImageIntoFlow = async (item: WardrobeItem) => {
-    if (!item.image_data || !outfitController) return;
+  const loadWardrobeItemImageIntoFlow = async (listItem: WardrobeItem) => {
+    if (!hasPhoto(listItem) || !outfitController) return;
+
+    const item = await resolveFullWardrobeItem(listItem);
+    if (!item.image_data) return;
 
     const response = await fetch(`data:image/jpeg;base64,${item.image_data}`);
     const blob = await response.blob();
@@ -377,25 +399,6 @@ const Wardrobe: React.FC<WardrobeProps> = ({
 
     await loadWardrobeItemImageIntoFlow(item);
   };
-
-  const historyEntryReferencesItem = React.useCallback((entry: OutfitHistoryEntry, item: WardrobeItem): boolean => {
-    if (entry.source_wardrobe_item_id === item.id) {
-      return true;
-    }
-
-    const slotIds = [
-      entry.shirt_id,
-      entry.trouser_id,
-      entry.blazer_id,
-      entry.shoes_id,
-      entry.belt_id,
-    ];
-    if (slotIds.some((id) => id === item.id)) {
-      return true;
-    }
-
-    return !!item.image_data && !!entry.image_data && entry.image_data === item.image_data;
-  }, []);
 
   const categories = WARDROBE_FORM_CATEGORIES;
 
@@ -570,11 +573,26 @@ const Wardrobe: React.FC<WardrobeProps> = ({
       color: item.color || '',
       description: item.description || '',
     });
-    setEditImagePreview(item.image_data ? `data:image/jpeg;base64,${item.image_data}` : null);
+    const preview = thumbnailBase64(item);
+    setEditImagePreview(preview ? `data:image/jpeg;base64,${preview}` : null);
     setEditImageFile(null);
+    editingItemIdRef.current = item.id;
+    editImagePickedRef.current = false;
+    if (!item.image_data && item.image_thumbnail) {
+      fetchFullWardrobeItem(item.id)
+        .then((full) => {
+          if (editingItemIdRef.current === item.id && !editImagePickedRef.current && full.image_data) {
+            setEditImagePreview(`data:image/jpeg;base64,${full.image_data}`);
+          }
+        })
+        .catch((err) => {
+          console.error(`Error loading full image for wardrobe item ${item.id}:`, err);
+        });
+    }
   };
 
   const handleEditImageUpload = async (file: File) => {
+    editImagePickedRef.current = true;
     setEditImageFile(file);
     setEditAnalyzing(true);
     
@@ -623,6 +641,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
   };
 
   const handleCloseEditModal = () => {
+    editingItemIdRef.current = null;
     setEditingItem(null);
     setEditFormData({
       category: 'shirt',
@@ -638,11 +657,35 @@ const Wardrobe: React.FC<WardrobeProps> = ({
   };
 
   const handleViewImage = (imageData: string) => {
+    viewingItemIdRef.current = null;
     setViewingImage(`data:image/jpeg;base64,${imageData}`);
   };
 
+  /** Show the list thumbnail right away, then swap in the full photo from GET /api/wardrobe/{id}. */
+  const handleViewItemImage = (item: WardrobeItem) => {
+    const preview = thumbnailBase64(item);
+    if (!preview) return;
+    handleViewImage(preview);
+    if (item.image_data) return;
+    viewingItemIdRef.current = item.id;
+    fetchFullWardrobeItem(item.id)
+      .then((full) => {
+        if (viewingItemIdRef.current === item.id && full.image_data) {
+          setViewingImage(`data:image/jpeg;base64,${full.image_data}`);
+        }
+      })
+      .catch((err) => {
+        console.error(`Error loading full image for wardrobe item ${item.id}:`, err);
+      });
+  };
+
+  const closeImageViewer = () => {
+    viewingItemIdRef.current = null;
+    setViewingImage(null);
+  };
+
   const handleGetAISuggestion = async (item: WardrobeItem) => {
-    if (!item.image_data) {
+    if (!hasPhoto(item)) {
       setSuggestionError("This item doesn't have an image. Please add an image first.");
       return;
     }
@@ -673,22 +716,26 @@ const Wardrobe: React.FC<WardrobeProps> = ({
       setSuggestionError(null);
 
       try {
-        const data = await ApiService.getSuggestionFromWardrobeItem(
-          item.id,
-          '', // text_input - can be enhanced later
-          false, // generate_model_image - default to false
-          null,
-          'dalle3',
-          false // useWardrobeOnly: fallback path has no outfitController, default to free generation
-        );
+        const [data, fullItem] = await Promise.all([
+          ApiService.getSuggestionFromWardrobeItem(
+            item.id,
+            '', // text_input - can be enhanced later
+            false, // generate_model_image - default to false
+            null,
+            'dalle3',
+            false // useWardrobeOnly: fallback path has no outfitController, default to free generation
+          ),
+          resolveFullWardrobeItem(item).catch(() => item),
+        ]);
+        const photo = fullItem.image_data || thumbnailBase64(item);
 
         const suggestion = {
           ...data,
           id: Date.now().toString(),
-          imageUrl: item.image_data ? `data:image/jpeg;base64,${item.image_data}` : null,
+          imageUrl: photo ? `data:image/jpeg;base64,${photo}` : null,
           model_image: data.model_image || null,
           raw: data,
-          meta: { source: 'wardrobe_item', wardrobeItemId: item.id, base64Image: item.image_data }
+          meta: { source: 'wardrobe_item', wardrobeItemId: item.id, base64Image: photo }
         };
 
         if (onSuggestionReady) {
@@ -788,17 +835,24 @@ const Wardrobe: React.FC<WardrobeProps> = ({
     setHistorySuggestions([]);
     setHistorySourceItem(item);
 
+    setHistorySuggestionsHasMore(false);
+    setHistorySuggestionsLoadMorePaused(false);
+    const requestId = ++historySuggestionsRequestRef.current;
+
     try {
       setHistoryLoadingMessage('Loading your saved looks…');
-      const allHistory = await ApiService.getOutfitHistory(100);
-
-      setHistoryLoadingMessage('Finding outfits for this item…');
-      const matchingByItem = allHistory.filter((entry) => historyEntryReferencesItem(entry, item));
+      const firstPage = await ApiService.getOutfitHistory({
+        wardrobeItemId: item.id,
+        limit: OUTFIT_HISTORY_PAGE_SIZE,
+        offset: 0,
+      });
+      if (requestId !== historySuggestionsRequestRef.current) return;
 
       setHistoryLoadingMessage('Preparing suggestions…');
-      setHistorySuggestions(matchingByItem);
+      setHistorySuggestions(firstPage);
+      setHistorySuggestionsHasMore(firstPage.length >= OUTFIT_HISTORY_PAGE_SIZE);
       setShowHistorySuggestionsModal(true);
-      if (matchingByItem.length === 0) {
+      if (firstPage.length === 0) {
         setHistorySuggestionsError('No history suggestions found for this wardrobe item yet.');
       }
     } catch (err) {
@@ -811,8 +865,63 @@ const Wardrobe: React.FC<WardrobeProps> = ({
     }
   };
 
+  const handleLoadMoreHistorySuggestions = useCallback(async () => {
+    const item = historySourceItem;
+    if (!item || historySuggestionsLoadingMoreRef.current) return;
+    const requestId = historySuggestionsRequestRef.current;
+    historySuggestionsLoadingMoreRef.current = true;
+    setHistorySuggestionsLoadingMore(true);
+    try {
+      const page = await ApiService.getOutfitHistory({
+        wardrobeItemId: item.id,
+        limit: OUTFIT_HISTORY_PAGE_SIZE,
+        offset: historySuggestions.length,
+      });
+      if (requestId !== historySuggestionsRequestRef.current) return;
+      setHistorySuggestions((current) => {
+        const seen = new Set(current.map((entry) => entry.id));
+        return [...current, ...page.filter((entry) => !seen.has(entry.id))];
+      });
+      setHistorySuggestionsHasMore(page.length >= OUTFIT_HISTORY_PAGE_SIZE);
+    } catch (err) {
+      console.error('Error loading more past suggestions:', err);
+      setHistorySuggestionsLoadMorePaused(true);
+    } finally {
+      historySuggestionsLoadingMoreRef.current = false;
+      setHistorySuggestionsLoadingMore(false);
+    }
+  }, [historySourceItem, historySuggestions.length]);
+
+  const showHistorySuggestionsSentinel =
+    showHistorySuggestionsModal &&
+    historySuggestionsHasMore &&
+    !historySuggestionsLoadMorePaused &&
+    historySuggestions.length > 0;
+
+  useEffect(() => {
+    const sentinel = historySuggestionsSentinelEl;
+    if (!showHistorySuggestionsSentinel || !sentinel || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        void handleLoadMoreHistorySuggestions();
+      }
+    });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [showHistorySuggestionsSentinel, historySuggestionsSentinelEl, handleLoadMoreHistorySuggestions]);
+
+  const closeHistorySuggestionsModal = () => {
+    historySuggestionsRequestRef.current += 1;
+    setShowHistorySuggestionsModal(false);
+    setHistorySuggestions([]);
+    setHistorySuggestionsError(null);
+    setHistorySourceItem(null);
+    setHistorySuggestionsHasMore(false);
+    setHistorySuggestionsLoadMorePaused(false);
+  };
+
   const handleSelectHistorySuggestion = async (entry: OutfitHistoryEntry) => {
-    if (!historySourceItem?.image_data) {
+    if (!historySourceItem || !hasPhoto(historySourceItem)) {
       setHistorySuggestionsError('Could not load source item image for this history suggestion.');
       return;
     }
@@ -824,11 +933,19 @@ const Wardrobe: React.FC<WardrobeProps> = ({
 
       const suggestion = historyEntryToSuggestion(entry);
       onSuggestionReady?.(suggestion);
-      setShowHistorySuggestionsModal(false);
-      setHistorySuggestions([]);
-      setHistorySuggestionsError(null);
-      setHistorySourceItem(null);
+      closeHistorySuggestionsModal();
       onNavigateToMain?.();
+
+      if (!entry.image_data) {
+        fetchFullHistoryEntry(entry.id)
+          .then((full) => {
+            const fullImageUrl = historyEntryToSuggestion({ ...entry, ...full }).imageUrl;
+            if (full.image_data && fullImageUrl) {
+              onSuggestionImageReady?.(suggestion.id, fullImageUrl);
+            }
+          })
+          .catch(() => undefined);
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load selected history suggestion';
       setHistorySuggestionsError(errorMessage);
@@ -1090,13 +1207,13 @@ const Wardrobe: React.FC<WardrobeProps> = ({
             )}
 
             <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-              {selectedCompleteOutfitItems.some((item) => item.image_data) && (
+              {selectedCompleteOutfitItems.some((item) => hasPhoto(item)) && (
                 <div
                   className="scrollbar-none flex min-w-0 flex-1 items-center gap-2 overflow-x-auto overflow-y-hidden pt-1 pb-1 sm:order-first sm:mr-auto"
                   data-testid="wardrobe-selection-thumbnails"
                 >
                   {selectedCompleteOutfitItems
-                    .filter((item) => item.image_data)
+                    .filter((item) => hasPhoto(item))
                     .map((item) => {
                       const slot = normalizeCompleteOutfitSlot(item.category);
                       const slotLabel = slot ? formatCompleteOutfitSlotLabel(slot) : item.category;
@@ -1107,13 +1224,13 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                         >
                           <button
                             type="button"
-                            onClick={() => handleViewImage(item.image_data!)}
+                            onClick={() => handleViewItemImage(item)}
                             className="h-full w-full overflow-hidden rounded-lg border border-white/10 bg-slate-800/80 transition hover:border-brand-blue/40 focus:outline-none focus:ring-2 focus:ring-brand-blue/50"
                             aria-label={`View ${slotLabel}`}
                             data-testid={`wardrobe-selection-thumb-${item.id}`}
                           >
                             <img
-                              src={`data:image/jpeg;base64,${item.image_data}`}
+                              src={`data:image/jpeg;base64,${thumbnailBase64(item)}`}
                               alt=""
                               className="h-full w-full object-cover"
                             />
@@ -1248,12 +1365,12 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                 }${openMenuItemId === item.id ? ' relative z-50' : ''}`}
               >
                 <div className="flex gap-3 sm:gap-4">
-                  {item.image_data ? (
+                  {hasPhoto(item) ? (
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleViewImage(item.image_data!);
+                        handleViewItemImage(item);
                       }}
                       className="h-20 w-20 min-h-[44px] min-w-[44px] flex-shrink-0 overflow-hidden rounded-xl border border-white/10 bg-slate-800/80 transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue sm:h-32 sm:w-32"
                       aria-label={`View ${wardrobeCategoryLabel(item.category)} full size`}
@@ -1261,7 +1378,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                       data-testid={`wardrobe-item-enlarge-${item.id}`}
                     >
                       <img
-                        src={`data:image/jpeg;base64,${item.image_data}`}
+                        src={`data:image/jpeg;base64,${thumbnailBase64(item)}`}
                         alt={item.category}
                         className="h-full w-full object-cover"
                       />
@@ -1365,7 +1482,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                     <button
                       onClick={() => handleGetAISuggestion(item)}
                       disabled={
-                        !item.image_data ||
+                        !hasPhoto(item) ||
                         suggestionLoading === item.id ||
                         (outfitController?.loading ?? false)
                       }
@@ -1409,10 +1526,10 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                           <button
                             type="button"
                             role="menuitem"
-                            disabled={!item.image_data}
+                            disabled={!hasPhoto(item)}
                             onClick={() => {
-                              if (item.image_data) {
-                                handleViewImage(item.image_data);
+                              if (hasPhoto(item)) {
+                                handleViewItemImage(item);
                                 setOpenMenuItemId(null);
                               }
                             }}
@@ -2059,7 +2176,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
         {viewingImage && (
           <div 
             className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4"
-            onClick={() => setViewingImage(null)}
+            onClick={closeImageViewer}
             data-testid="wardrobe-image-viewer"
             role="dialog"
             aria-modal="true"
@@ -2074,7 +2191,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
               />
               <button
                 type="button"
-                onClick={() => setViewingImage(null)}
+                onClick={closeImageViewer}
                 className="absolute top-4 right-4 text-white bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full p-3 text-2xl transition-all"
                 title="Close"
                 aria-label="Close"
@@ -2094,9 +2211,9 @@ const Wardrobe: React.FC<WardrobeProps> = ({
               <div className="space-y-4">
                 <p className="text-center text-slate-200">We found a similar item already in your wardrobe:</p>
                 <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-                  {duplicateItem.image_data && (
+                  {hasPhoto(duplicateItem) && (
                     <img
-                      src={`data:image/jpeg;base64,${duplicateItem.image_data}`}
+                      src={`data:image/jpeg;base64,${thumbnailBase64(duplicateItem)}`}
                       alt="Existing item"
                       className="w-full max-h-32 object-contain mb-3 rounded"
                     />
@@ -2138,17 +2255,18 @@ const Wardrobe: React.FC<WardrobeProps> = ({
         {/* History Suggestions Modal */}
         {showHistorySuggestionsModal && (
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-            <div className="rounded-2xl bg-slate-900 border border-white/10 shadow-2xl max-w-3xl w-full max-h-[85vh] overflow-y-auto backdrop-blur">
+            <div
+              className="rounded-2xl bg-slate-900 border border-white/10 shadow-2xl max-w-3xl w-full max-h-[85vh] overflow-y-auto backdrop-blur"
+              onScroll={() => {
+                if (historySuggestionsLoadMorePaused) setHistorySuggestionsLoadMorePaused(false);
+              }}
+              data-testid="history-suggestions-modal"
+            >
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-2xl font-bold text-white">📚 History Suggestions</h2>
                   <button
-                    onClick={() => {
-                      setShowHistorySuggestionsModal(false);
-                      setHistorySuggestions([]);
-                      setHistorySuggestionsError(null);
-                      setHistorySourceItem(null);
-                    }}
+                    onClick={closeHistorySuggestionsModal}
                     className="text-slate-400 hover:text-white text-2xl"
                   >
                     ✕
@@ -2218,6 +2336,23 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                         </div>
                       </div>
                     ))}
+                    {showHistorySuggestionsSentinel && (
+                      <div
+                        ref={setHistorySuggestionsSentinelEl}
+                        aria-hidden="true"
+                        className="h-px"
+                        data-testid="history-suggestions-load-more-sentinel"
+                      />
+                    )}
+                    {historySuggestionsLoadingMore && (
+                      <div className="flex justify-center py-4">
+                        <div
+                          role="status"
+                          aria-label="Loading more looks"
+                          className="h-6 w-6 animate-spin rounded-full border-b-2 border-brand-blue"
+                        />
+                      </div>
+                    )}
                   </div>
                 ) : (
                   !historySuggestionsError && (

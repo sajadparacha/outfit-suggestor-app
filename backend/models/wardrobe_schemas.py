@@ -44,6 +44,7 @@ class WardrobeItemResponse(BaseModel):
     brand: Optional[str]
     size: Optional[str]
     image_data: Optional[str]
+    image_thumbnail: Optional[str] = None
     tags: Optional[str]
     condition: Optional[str]
     wear_count: int

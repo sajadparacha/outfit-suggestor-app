@@ -10,7 +10,10 @@ export interface WardrobeItem {
   color: string | null;
   brand: string | null;
   size: string | null;
+  /** Full photo — only filled by GET /api/wardrobe/{id} and POST/PUT responses; null in list. */
   image_data: string | null;
+  /** ≤256px JPEG (list + detail). */
+  image_thumbnail?: string | null;
   tags: string | null;
   condition: string | null;
   wear_count: number;

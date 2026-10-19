@@ -5,6 +5,7 @@ Refactored with proper service architecture for multi-platform client support
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 import uvicorn
 import os
@@ -85,6 +86,8 @@ try:
 except ImportError:
     print("⚠️  Access logging middleware not available")
 
+app.add_middleware(GZipMiddleware, minimum_size=1024)
+
 # Create database tables (simple auto-migration for now)
 Base.metadata.create_all(bind=engine)
 
@@ -108,6 +111,13 @@ try:
     ensure_outfit_history_schema(engine)
 except Exception as exc:  # pragma: no cover — never block boot on alter edge cases
     print(f"⚠️  Outfit history schema ensure skipped: {exc}")
+
+try:
+    from utils.ensure_outfit_history_schema import ensure_wardrobe_schema
+
+    ensure_wardrobe_schema(engine)
+except Exception as exc:  # pragma: no cover — never block boot on alter edge cases
+    print(f"⚠️  Wardrobe schema ensure skipped: {exc}")
 
 
 @app.exception_handler(GuestLimitReachedException)

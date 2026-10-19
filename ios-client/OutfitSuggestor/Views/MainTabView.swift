@@ -117,8 +117,10 @@ struct MainTabView: View {
                             routeCoordinator.selectedTab = .week
                         },
                         onGetSuggestionFromItem: { item in
-                            if viewModel.preloadWardrobeItemForSuggestion(item: item) {
-                                routeCoordinator.selectedTab = .suggest
+                            Task { @MainActor in
+                                if await viewModel.preloadWardrobeItemForSuggestion(item: item) {
+                                    routeCoordinator.selectedTab = .suggest
+                                }
                             }
                         },
                         onCompleteOutfitFromSelection: { items in

@@ -508,7 +508,7 @@ describe('Wardrobe page', () => {
     const setImage = jest.fn();
     const setSourceWardrobeItem = jest.fn();
 
-    jest.spyOn(ApiService, 'getOutfitHistory').mockResolvedValue([
+    const getOutfitHistory = jest.spyOn(ApiService, 'getOutfitHistory').mockResolvedValue([
       {
         id: 101,
         created_at: '2026-05-04T09:00:00.000Z',
@@ -547,6 +547,7 @@ describe('Wardrobe page', () => {
 
     clickPastSuggestionsFromMenu();
     expect(await screen.findByRole('heading', { name: /History Suggestions/i })).toBeInTheDocument();
+    expect(getOutfitHistory).toHaveBeenCalledWith({ wardrobeItemId: 1, limit: 20, offset: 0 });
     fireEvent.click(screen.getByRole('button', { name: /Use This/i }));
 
     await waitFor(() => {
@@ -569,21 +570,8 @@ describe('Wardrobe page', () => {
     };
     mockWardrobeItems.push(itemWithImage);
 
-    jest.spyOn(ApiService, 'getOutfitHistory').mockResolvedValue([
-      {
-        id: 202,
-        created_at: '2026-05-04T10:00:00.000Z',
-        text_input: 'Different item',
-        image_data: 'other-image-data',
-        model_image: null,
-        shirt: 'Black polo',
-        trouser: 'Beige chinos',
-        blazer: 'None',
-        shoes: 'White sneakers',
-        belt: 'Brown belt',
-        reasoning: 'Different source image from current wardrobe item.',
-      },
-    ]);
+    // Server applies the wardrobe_item_id filter; unrelated entries never reach the client.
+    const getOutfitHistory = jest.spyOn(ApiService, 'getOutfitHistory').mockResolvedValue([]);
 
     render(<Wardrobe />);
 
@@ -593,6 +581,36 @@ describe('Wardrobe page', () => {
     expect(
       screen.getByText(/No history suggestions found for this wardrobe item yet/i)
     ).toBeInTheDocument();
+    expect(getOutfitHistory).toHaveBeenCalledWith({ wardrobeItemId: 1, limit: 20, offset: 0 });
+  });
+
+  it('renders all server-filtered Past Suggestions without a client-side photo/slot filter', async () => {
+    mockWardrobeItems.push({ ...mockWardrobeItem, image_thumbnail: 'thumb-a' });
+
+    jest.spyOn(ApiService, 'getOutfitHistory').mockResolvedValue([
+      {
+        id: 606,
+        created_at: '2026-05-04T10:00:00.000Z',
+        text_input: 'Legacy identical photo match',
+        image_data: null,
+        image_thumbnail: 'other-thumb',
+        model_image: null,
+        shirt: 'Black polo',
+        trouser: 'Beige chinos',
+        blazer: 'None',
+        shoes: 'White sneakers',
+        belt: 'Brown belt',
+        reasoning: 'Matched on the server by identical legacy photo.',
+      },
+    ]);
+
+    render(<Wardrobe />);
+    clickPastSuggestionsFromMenu();
+
+    expect(await screen.findByText('Suggestion #606')).toBeInTheDocument();
+    expect(
+      screen.queryByText(/No history suggestions found for this wardrobe item yet/i)
+    ).not.toBeInTheDocument();
   });
 
   it('opens history from Past Suggestions when history links by source_wardrobe_item_id', async () => {

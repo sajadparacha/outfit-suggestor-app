@@ -43,8 +43,9 @@ export function resolveMatchingWardrobeItem(
 }
 
 export function wardrobeItemThumbnailSrc(item: MatchingWardrobeItem | undefined): string | null {
-  if (!item?.image_data) return null;
-  return `data:image/jpeg;base64,${item.image_data}`;
+  const base64 = item?.image_thumbnail || item?.image_data;
+  if (!base64) return null;
+  return `data:image/jpeg;base64,${base64}`;
 }
 
 const CATEGORY_ALIASES: Record<string, OutfitCategoryKey> = {

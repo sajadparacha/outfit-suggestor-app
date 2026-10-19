@@ -36,6 +36,9 @@ class OutfitHistory(Base):
     
     # Store the uploaded image as base64 string
     image_data: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # 256px JPEG of image_data for list responses; NULL when image_from_wardrobe
+    # (the wardrobe item's thumbnail is used instead)
+    image_thumbnail: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # True when the input photo is the source wardrobe item's photo: image_data is left
     # empty and the photo is read from wardrobe_items (source_wardrobe_item_id).

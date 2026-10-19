@@ -14,6 +14,7 @@ from models.wardrobe_schemas import (
     WardrobeFitEvaluateRequest,
     WardrobeFitEvaluateResponse,
 )
+from services.photo_thumbnails import wardrobe_thumbnails
 from services.wardrobe_service import WardrobeService
 from services.wardrobe_ai_service import WardrobeAIService
 from services.wardrobe_fit_service import WardrobeFitService
@@ -195,11 +196,36 @@ class WardrobeController:
                 category=category,
                 search=search,
                 limit=limit,
-                offset=offset
+                offset=offset,
+                include_image_data=False,
             )
-            
+            thumbnails = wardrobe_thumbnails(
+                db, current_user.id, (item.id for item in items if item.image_thumbnail is None)
+            )
+            response_items = [
+                WardrobeItemResponse(
+                    id=item.id,
+                    category=item.category,
+                    name=item.name,
+                    description=item.description,
+                    color=item.color,
+                    brand=item.brand,
+                    size=item.size,
+                    image_data=None,
+                    image_thumbnail=item.image_thumbnail or thumbnails.get(item.id),
+                    tags=item.tags,
+                    condition=item.condition,
+                    wear_count=item.wear_count,
+                    created_at=item.created_at,
+                    updated_at=item.updated_at,
+                )
+                for item in items
+            ]
+            if thumbnails:
+                db.commit()
+
             return {
-                "items": [WardrobeItemResponse.model_validate(item) for item in items],
+                "items": response_items,
                 "total": total_count,
                 "limit": limit,
                 "offset": offset or 0

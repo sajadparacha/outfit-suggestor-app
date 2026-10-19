@@ -7,6 +7,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { WardrobeItem, WardrobeItemCreate, WardrobeItemUpdate, WardrobeSummary } from '../models/WardrobeModels';
 import ApiService from '../services/ApiService';
 import { compressImageForWardrobe } from '../utils/imageUtils';
+import { invalidateWardrobeItem, primeWardrobeItem } from '../utils/fullImageCache';
 import { apiCategoryParamForFilter, usesClientSideCategoryFilter } from '../utils/wardrobeCategory';
 
 const CLIENT_SIDE_FILTER_LOAD_LIMIT = 100;
@@ -168,7 +169,11 @@ export const useWardrobeController = (): UseWardrobeControllerReturn => {
     
     try {
       const imageToSend = image ? await compressImageForWardrobe(image) : undefined;
-      await ApiService.updateWardrobeItem(itemId, itemData, imageToSend);
+      invalidateWardrobeItem(itemId);
+      const updated = await ApiService.updateWardrobeItem(itemId, itemData, imageToSend);
+      if (updated && typeof updated === 'object') {
+        primeWardrobeItem(updated);
+      }
       // Reload wardrobe after updating
       await reloadWardrobeForCurrentFilter(currentPage);
       await loadSummary();
@@ -190,6 +195,7 @@ export const useWardrobeController = (): UseWardrobeControllerReturn => {
     
     try {
       await ApiService.deleteWardrobeItem(itemId);
+      invalidateWardrobeItem(itemId);
       // Reload wardrobe after deleting (may need to go back a page if current page is empty)
       const newPage = wardrobeItems.length === 1 && currentPage > 1 ? currentPage - 1 : currentPage;
       await reloadWardrobeForCurrentFilter(newPage);

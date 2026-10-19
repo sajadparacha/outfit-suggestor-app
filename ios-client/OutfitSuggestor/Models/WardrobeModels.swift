@@ -15,12 +15,18 @@ struct WardrobeItem: Codable, Identifiable {
     let color: String?
     let brand: String?
     let size: String?
+    /// Full photo; null in `GET /api/wardrobe` list responses (use `image_thumbnail`).
     let image_data: String?
+    let image_thumbnail: String?
     let tags: String?
     let condition: String?
     let wear_count: Int
     let created_at: String
     let updated_at: String
+
+    var thumbnailOrFullImageData: String? {
+        ImageThumbnailData.thumbnailOrFull(thumbnail: image_thumbnail, full: image_data)
+    }
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -31,6 +37,7 @@ struct WardrobeItem: Codable, Identifiable {
         case brand
         case size
         case image_data
+        case image_thumbnail
         case tags
         case condition
         case wear_count
@@ -48,6 +55,7 @@ struct WardrobeItem: Codable, Identifiable {
         brand = try c.decodeIfPresent(String.self, forKey: .brand)
         size = try c.decodeIfPresent(String.self, forKey: .size)
         image_data = try c.decodeIfPresent(String.self, forKey: .image_data)
+        image_thumbnail = try c.decodeIfPresent(String.self, forKey: .image_thumbnail)
         tags = try c.decodeIfPresent(String.self, forKey: .tags)
         condition = try c.decodeIfPresent(String.self, forKey: .condition)
         wear_count = try c.decodeIfPresent(Int.self, forKey: .wear_count) ?? 0
@@ -64,6 +72,7 @@ struct WardrobeItem: Codable, Identifiable {
         brand: String? = nil,
         size: String? = nil,
         image_data: String? = nil,
+        image_thumbnail: String? = nil,
         tags: String? = nil,
         condition: String? = nil,
         wear_count: Int = 0,
@@ -78,6 +87,7 @@ struct WardrobeItem: Codable, Identifiable {
         self.brand = brand
         self.size = size
         self.image_data = image_data
+        self.image_thumbnail = image_thumbnail
         self.tags = tags
         self.condition = condition
         self.wear_count = wear_count

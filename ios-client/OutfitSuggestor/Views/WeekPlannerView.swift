@@ -1362,6 +1362,15 @@ struct WeekPlannerView: View {
         if allowsEnlarge, ThumbnailEnlargeUx.canOpen(image: thumb), let thumb {
             Button {
                 fullScreenImage = thumb
+                let match = OutfitItemThumbnail.resolveMatchingItem(suggestion: suggestion, category: slot.category)
+                if let match, (match.image_data ?? "").isEmpty {
+                    Task { @MainActor in
+                        guard let full = await FullImageLoader.wardrobeFullImageData(itemId: match.id),
+                              let fullImage = WardrobeImageData.decodeUIImage(from: full),
+                              fullScreenImage === thumb else { return }
+                        fullScreenImage = fullImage
+                    }
+                }
             } label: {
                 visual
             }
