@@ -7,10 +7,11 @@ from datetime import datetime
 from typing import Any, Optional
 from zoneinfo import ZoneInfo
 
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, object_session
 
 from services.outfit_layer_sanitize import sanitize_outfit_layers
 from models.outfit import OutfitSuggestion
+from models.wardrobe import WardrobeItem
 from models.week_plan import (
     DEFAULT_OCCASION,
     DEFAULT_REMINDER_TIME,
@@ -44,6 +45,95 @@ from models.user import User
 
 
 _REMINDER_RE = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)$")
+
+# Older snapshots are deleted; the History list never shows more than this.
+HISTORY_KEEP_PER_USER = 20
+
+
+def without_matching_item_images(outfit: Any) -> Any:
+    """Copy of an outfit payload with wardrobe photos removed from matched items.
+
+    Photos live in wardrobe_items and are re-attached on read, so plan rows and
+    history snapshots store only item references.
+    """
+    if not isinstance(outfit, dict):
+        return outfit
+    matching = outfit.get("matching_wardrobe_items")
+    if not isinstance(matching, dict):
+        return outfit
+    slim: dict[str, Any] = {}
+    for slot, items in matching.items():
+        if isinstance(items, list):
+            slim[slot] = [
+                {k: v for k, v in item.items() if k != "image_data"}
+                if isinstance(item, dict)
+                else item
+                for item in items
+            ]
+        else:
+            slim[slot] = items
+    return {**outfit, "matching_wardrobe_items": slim}
+
+
+def _matched_ids_missing_images(payload: dict[str, Any]) -> set[int]:
+    ids: set[int] = set()
+    matching = payload.get("matching_wardrobe_items")
+    if not isinstance(matching, dict):
+        return ids
+    for items in matching.values():
+        for item in items if isinstance(items, list) else []:
+            if (
+                isinstance(item, dict)
+                and isinstance(item.get("id"), int)
+                and not item.get("image_data")
+            ):
+                ids.add(item["id"])
+    return ids
+
+
+def _attach_matching_item_images(
+    payload: dict[str, Any], images: dict[int, Optional[str]]
+) -> None:
+    matching = payload.get("matching_wardrobe_items")
+    if not isinstance(matching, dict):
+        return
+    for items in matching.values():
+        for item in items if isinstance(items, list) else []:
+            if isinstance(item, dict) and not item.get("image_data"):
+                image = images.get(item.get("id"))
+                if image:
+                    item["image_data"] = image
+
+
+def load_wardrobe_images(
+    db: Optional[Session], user_id: int, item_ids: set[int]
+) -> dict[int, Optional[str]]:
+    if db is None or not item_ids:
+        return {}
+    rows = (
+        db.query(WardrobeItem.id, WardrobeItem.image_data)
+        .filter(WardrobeItem.user_id == user_id, WardrobeItem.id.in_(item_ids))
+        .all()
+    )
+    return {row.id: row.image_data for row in rows}
+
+
+def _outfit_payload(row: WeeklyPlanOutfit) -> dict[str, Any]:
+    try:
+        payload = json.loads(row.outfit_json or "{}")
+    except json.JSONDecodeError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def load_plan_item_images(
+    db: Optional[Session], plan: WeeklyPlan
+) -> dict[int, Optional[str]]:
+    ids: set[int] = set()
+    for day in plan.days:
+        if day.outfit is not None:
+            ids |= _matched_ids_missing_images(_outfit_payload(day.outfit))
+    return load_wardrobe_images(db, plan.user_id, ids)
 
 
 def validate_reminder_time(value: str) -> str:
@@ -346,13 +436,11 @@ def outfit_row_to_response(
     season: Optional[str] = None,
     occasion: Optional[str] = None,
     style: Optional[str] = None,
+    item_images: Optional[dict[int, Optional[str]]] = None,
 ) -> WeekPlanOutfitResponse:
-    try:
-        payload = json.loads(row.outfit_json or "{}")
-    except json.JSONDecodeError:
-        payload = {}
-    if not isinstance(payload, dict):
-        payload = {}
+    payload = _outfit_payload(row)
+    if item_images:
+        _attach_matching_item_images(payload, item_images)
     sanitize_outfit_layers(
         payload, season=season, occasion=occasion, style=style
     )
@@ -459,6 +547,7 @@ def day_to_response(
     *,
     admin_outfit_fields: Optional[dict[str, Any]] = None,
     season: Optional[str] = None,
+    item_images: Optional[dict[int, Optional[str]]] = None,
 ) -> WeekPlanDayResponse:
     outfit = None
     if day.outfit is not None:
@@ -468,6 +557,7 @@ def day_to_response(
             season=season,
             occasion=day.occasion or DEFAULT_OCCASION,
             style=getattr(day, "style", None) or DEFAULT_STYLE,
+            item_images=item_images,
         )
     return WeekPlanDayResponse(
         day_of_week=day.day_of_week,
@@ -486,9 +576,15 @@ def plan_to_response(
     wardrobe_empty: bool = False,
     message: Optional[str] = None,
     admin_outfit_by_day: Optional[dict[int, dict[str, Any]]] = None,
+    include_item_images: bool = True,
 ) -> WeekPlanResponse:
     days_by_dow = {d.day_of_week: d for d in plan.days}
     season = plan.shared_season or DEFAULT_SEASON
+    item_images = (
+        load_plan_item_images(object_session(plan), plan)
+        if include_item_images
+        else None
+    )
     days: list[WeekPlanDayResponse] = []
     for dow in range(7):
         if dow in days_by_dow:
@@ -500,6 +596,7 @@ def plan_to_response(
                     days_by_dow[dow],
                     admin_outfit_fields=admin_fields,
                     season=season,
+                    item_images=item_images,
                 )
             )
         else:
@@ -725,6 +822,7 @@ class WeekPlanService:
             occasion=day.occasion or DEFAULT_OCCASION,
             style=getattr(day, "style", None) or DEFAULT_STYLE,
         )
+        payload = without_matching_item_images(payload)
         item_ids = [
             int(payload[key])
             for key in (
@@ -931,6 +1029,11 @@ class WeekPlanService:
                 season=plan.shared_season or DEFAULT_SEASON,
                 occasion=day.occasion or DEFAULT_OCCASION,
                 style=getattr(day, "style", None) or DEFAULT_STYLE,
+                item_images=load_wardrobe_images(
+                    db,
+                    user_id,
+                    _matched_ids_missing_images(_outfit_payload(day.outfit)),
+                ),
             )
             if day.outfit
             else None
@@ -965,7 +1068,9 @@ class WeekPlanService:
         plan = self.get_plan(db, user_id)
         if plan is None or not self.plan_has_content(plan):
             return None
-        payload = plan_to_response(plan).model_dump()
+        payload = plan_to_response(plan, include_item_images=False).model_dump()
+        for day in payload.get("days") or []:
+            day["outfit"] = without_matching_item_images(day.get("outfit"))
         row = WeeklyPlanHistory(
             user_id=user_id,
             label=self._history_label(plan),
@@ -974,7 +1079,26 @@ class WeekPlanService:
         )
         db.add(row)
         db.flush()
+        self.prune_history(db, user_id)
         return row
+
+    def prune_history(
+        self, db: Session, user_id: int, keep: int = HISTORY_KEEP_PER_USER
+    ) -> int:
+        stale_ids = [
+            row.id
+            for row in db.query(WeeklyPlanHistory.id)
+            .filter(WeeklyPlanHistory.user_id == user_id)
+            .order_by(WeeklyPlanHistory.created_at.desc(), WeeklyPlanHistory.id.desc())
+            .offset(keep)
+            .all()
+        ]
+        if stale_ids:
+            db.query(WeeklyPlanHistory).filter(
+                WeeklyPlanHistory.id.in_(stale_ids)
+            ).delete(synchronize_session=False)
+            db.flush()
+        return len(stale_ids)
 
     def list_history(
         self, db: Session, user_id: int, limit: int = 20
@@ -1068,7 +1192,7 @@ class WeekPlanService:
                 outfit_row = WeeklyPlanOutfit(
                     day_id=day.id,
                     summary=outfit_raw.get("summary") or "",
-                    outfit_json=json.dumps(outfit_raw),
+                    outfit_json=json.dumps(without_matching_item_images(outfit_raw)),
                     wardrobe_item_ids_json=json.dumps(
                         [int(x) for x in item_ids if isinstance(x, int)]
                     ),
