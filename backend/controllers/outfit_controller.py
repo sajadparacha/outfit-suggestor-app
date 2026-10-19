@@ -14,7 +14,7 @@ from services.ai_service import AIService
 from services.outfit_service import OutfitService
 from services.guest_usage_service import GuestUsageService
 from services.wardrobe_matcher import WardrobeMatcher
-from utils.image_processor import encode_image, validate_image
+from utils.image_processor import compress_generated_image, encode_image, validate_image
 from utils.outfit_upload_category import slot_text_has_upload_marker, text_suggests_outerwear
 from services.outfit_formality_guard import (
     apply_formality_post_check,
@@ -869,6 +869,11 @@ class OutfitController:
                 occasion=occasion,
                 season=season,
                 style=style,
+                image_from_wardrobe=(
+                    source_wardrobe_item is not None
+                    and suggestion.source_wardrobe_item_id == source_wardrobe_item.id
+                    and self.outfit_service.is_wardrobe_photo(image_base64, source_wardrobe_item)
+                ),
             )
             
             # Ensure cost_info has model_image_cost set
@@ -1163,7 +1168,7 @@ class OutfitController:
                 location_details=location_details if location_details else None,
                 model=model
             )
-            return result, cost
+            return compress_generated_image(result), cost
         except HTTPException as http_err:
             # If alternative model fails, try DALL-E 3 as fallback
             if model in ["stable-diffusion", "nano-banana"]:
@@ -1177,20 +1182,20 @@ class OutfitController:
                         location_details=location_details if location_details else None,
                         model="dalle3"
                     )
-                    return result, cost
+                    return compress_generated_image(result), cost
                 except Exception as fallback_err:
                     print(f"❌ DALL-E 3 fallback also failed: {str(fallback_err)}")
-                    return None
+                    return None, 0.0
             else:
                 # DALL-E 3 failed, just return None
                 print(f"❌ ERROR: Failed to generate model image with {model}: {str(http_err)}")
-                return None
+                return None, 0.0
         except Exception as e:
             # Log error but don't fail the request
             print(f"❌ ERROR: Failed to generate model image: {str(e)}")
             import traceback
             traceback.print_exc()
-            return None
+            return None, 0.0
     
     async def check_duplicate(
         self,
@@ -1539,6 +1544,7 @@ class OutfitController:
                 occasion=occasion,
                 season=season,
                 style=style,
+                image_from_wardrobe=suggestion.source_wardrobe_item_id == wardrobe_item.id,
             )
             
             # Ensure cost_info has model_image_cost set

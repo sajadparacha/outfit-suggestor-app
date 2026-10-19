@@ -62,3 +62,32 @@ def encode_image(image_file) -> str:
     
     return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
+
+GENERATED_IMAGE_JPEG_QUALITY = 80
+
+
+def compress_generated_image(image_base64: str | None) -> str | None:
+    """
+    Re-encode a generated model image (PNG from DALL-E / Stable Diffusion) as JPEG.
+
+    Keeps the original resolution. Returns the input unchanged if it cannot be decoded
+    or the JPEG would not be smaller.
+    """
+    if not image_base64:
+        return image_base64
+    try:
+        image = Image.open(io.BytesIO(base64.b64decode(image_base64)))
+        if image.mode in ('RGBA', 'LA', 'P'):
+            image = image.convert('RGBA')
+            background = Image.new('RGB', image.size, (255, 255, 255))
+            background.paste(image, mask=image.getchannel('A'))
+            image = background
+        elif image.mode != 'RGB':
+            image = image.convert('RGB')
+        buffer = io.BytesIO()
+        image.save(buffer, format='JPEG', quality=GENERATED_IMAGE_JPEG_QUALITY, optimize=True)
+        compressed = base64.b64encode(buffer.getvalue()).decode('utf-8')
+    except Exception:
+        return image_base64
+    return compressed if len(compressed) < len(image_base64) else image_base64
+

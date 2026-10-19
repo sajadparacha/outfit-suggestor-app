@@ -11,6 +11,7 @@ import base64
 
 from models.wardrobe import WardrobeItem
 from models.user import User
+from services.outfit_service import OutfitService
 
 # Default threshold - will be overridden by Config if available
 DEFAULT_IMAGE_SIMILARITY_THRESHOLD = 5
@@ -351,6 +352,10 @@ class WardrobeService:
             'name', 'description', 'color', 'brand', 'size',
             'image_data', 'tags', 'condition', 'category'
         ]
+
+        new_image = kwargs.get('image_data')
+        if new_image is not None and new_image != item.image_data:
+            OutfitService.copy_wardrobe_photo_into_history(db, item)
         
         for field, value in kwargs.items():
             if field in allowed_fields and value is not None:
@@ -385,6 +390,7 @@ class WardrobeService:
         if not item:
             return False
         
+        OutfitService.copy_wardrobe_photo_into_history(db, item)
         db.delete(item)
         db.commit()
         return True

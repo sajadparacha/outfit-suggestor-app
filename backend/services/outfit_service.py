@@ -1,7 +1,7 @@
 """Outfit Service - Business logic for outfit operations"""
-from typing import Optional, List, Set
+from typing import Dict, Iterable, Optional, List, Set
 from sqlalchemy.orm import Session
-from sqlalchemy import text
+from sqlalchemy import or_, text
 import imagehash
 from PIL import Image
 import io
@@ -11,6 +11,7 @@ from datetime import datetime
 
 from models.outfit import OutfitSuggestion
 from models.outfit_history import OutfitHistory
+from models.wardrobe import WardrobeItem
 
 # Default threshold - will be overridden by Config if available
 DEFAULT_IMAGE_SIMILARITY_THRESHOLD = 5
@@ -30,6 +31,7 @@ class OutfitService:
         occasion: Optional[str] = None,
         season: Optional[str] = None,
         style: Optional[str] = None,
+        image_from_wardrobe: bool = False,
     ) -> OutfitHistory:
         """
         Save outfit suggestion to history
@@ -41,11 +43,21 @@ class OutfitService:
             image_data: Base64 encoded uploaded image
             model_image: Base64 encoded model image (optional)
             suggestion: Outfit suggestion object
+            image_from_wardrobe: image_data is the photo of suggestion.source_wardrobe_item_id;
+                store a reference instead of a copy
             
         Returns:
             Created OutfitHistory entry
         """
         columns = self._get_outfit_history_columns(db)
+        if (
+            image_from_wardrobe
+            and "image_from_wardrobe" in columns
+            and getattr(suggestion, "source_wardrobe_item_id", None) is not None
+        ):
+            image_data = None
+        else:
+            image_from_wardrobe = False
         payload = {
             "user_id": user_id,
             "text_input": text_input,
@@ -73,6 +85,7 @@ class OutfitService:
             "outerwear_id": getattr(suggestion, "outerwear_id", None),
             "tie_id": getattr(suggestion, "tie_id", None),
             "source_wardrobe_item_id": getattr(suggestion, "source_wardrobe_item_id", None),
+            "image_from_wardrobe": image_from_wardrobe,
             "occasion": occasion,
             "season": season,
             "style": style,
@@ -114,17 +127,69 @@ class OutfitService:
         history = (
             db.query(OutfitHistory)
             .filter(OutfitHistory.user_id == user_id)
-            .filter(OutfitHistory.image_data.isnot(None))
+            .filter(
+                or_(
+                    OutfitHistory.image_data.isnot(None),
+                    OutfitHistory.image_from_wardrobe.is_(True),
+                )
+            )
             .order_by(OutfitHistory.created_at.desc())
             .all()
+        )
+        wardrobe_images = self.load_wardrobe_images(
+            db,
+            user_id,
+            (e.source_wardrobe_item_id for e in history if e.image_data is None),
         )
         
         # Check for duplicate using perceptual hashing
         for entry in history:
-            if self._images_are_similar(image_base64, entry.image_data):
+            stored = entry.image_data or wardrobe_images.get(entry.source_wardrobe_item_id)
+            if stored and self._images_are_similar(image_base64, stored):
                 return entry
         
         return None
+
+    def is_wardrobe_photo(self, image_base64: str, item: Optional[WardrobeItem]) -> bool:
+        """True when image_base64 shows the same photo as the wardrobe item's image."""
+        if item is None or not item.image_data or not image_base64:
+            return False
+        return image_base64 == item.image_data or self._images_are_similar(
+            image_base64, item.image_data
+        )
+
+    @staticmethod
+    def load_wardrobe_images(
+        db: Session, user_id: int, item_ids: Iterable[Optional[int]]
+    ) -> Dict[int, Optional[str]]:
+        ids = {i for i in item_ids if i is not None}
+        if not ids:
+            return {}
+        rows = (
+            db.query(WardrobeItem.id, WardrobeItem.image_data)
+            .filter(WardrobeItem.user_id == user_id, WardrobeItem.id.in_(ids))
+            .all()
+        )
+        return {row.id: row.image_data for row in rows}
+
+    @staticmethod
+    def copy_wardrobe_photo_into_history(db: Session, item: WardrobeItem) -> None:
+        """Store the item's current photo on history rows that reference it.
+
+        Call before the item is deleted or its photo replaced, so those rows keep the
+        photo they were made from. Does not commit.
+        """
+        if not item.image_data:
+            return
+        db.query(OutfitHistory).filter(
+            OutfitHistory.user_id == item.user_id,
+            OutfitHistory.source_wardrobe_item_id == item.id,
+            OutfitHistory.image_from_wardrobe.is_(True),
+            OutfitHistory.image_data.is_(None),
+        ).update(
+            {"image_data": item.image_data, "image_from_wardrobe": False},
+            synchronize_session=False,
+        )
     
     def get_user_history(
         self,
@@ -169,6 +234,7 @@ class OutfitService:
             "outerwear_id",
             "tie_id",
             "source_wardrobe_item_id",
+            "image_from_wardrobe",
             "occasion",
             "season",
             "style",
@@ -188,6 +254,16 @@ class OutfitService:
         )
         rows = db.execute(query, {"user_id": user_id, "limit": limit}).fetchall()
         history = [SimpleNamespace(**dict(row._mapping)) for row in rows]
+        from_wardrobe = [
+            entry
+            for entry in history
+            if getattr(entry, "image_from_wardrobe", False) and not entry.image_data
+        ]
+        images = self.load_wardrobe_images(
+            db, user_id, (entry.source_wardrobe_item_id for entry in from_wardrobe)
+        )
+        for entry in from_wardrobe:
+            entry.image_data = images.get(entry.source_wardrobe_item_id)
         return history
     
     def delete_history_entry(

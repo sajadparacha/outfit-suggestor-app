@@ -1,7 +1,7 @@
 """ORM models for persisting outfit suggestion history."""
 from datetime import datetime
 
-from sqlalchemy import Integer, String, DateTime, Text, ForeignKey
+from sqlalchemy import Boolean, Integer, String, DateTime, Text, ForeignKey, false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -36,6 +36,12 @@ class OutfitHistory(Base):
     
     # Store the uploaded image as base64 string
     image_data: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # True when the input photo is the source wardrobe item's photo: image_data is left
+    # empty and the photo is read from wardrobe_items (source_wardrobe_item_id).
+    image_from_wardrobe: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false()
+    )
     
     # Store the generated model image as base64 string
     model_image: Mapped[str | None] = mapped_column(Text, nullable=True)
