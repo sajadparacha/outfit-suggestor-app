@@ -26,6 +26,9 @@ FAILING_TSV=""
 
 TMP_DIR=""
 OVERALL_EXIT=0
+IOS_LOCK_DIR=""
+# Max seconds to wait for another run to release the simulator.
+IOS_LOCK_TIMEOUT="${IOS_LOCK_TIMEOUT:-3600}"
 
 declare -a SUMMARY_NAMES=()
 declare -a SUMMARY_PASSED=()
@@ -34,12 +37,46 @@ declare -a SUMMARY_TOTAL=()
 declare -a SUMMARY_STATUS=()
 declare -a SUMMARY_LOGS=()
 
+release_ios_lock() {
+  if [[ -n "$IOS_LOCK_DIR" && "$(cat "$IOS_LOCK_DIR/pid" 2>/dev/null)" == "$$" ]]; then
+    rm -rf "$IOS_LOCK_DIR"
+  fi
+  IOS_LOCK_DIR=""
+}
+
 cleanup() {
+  release_ios_lock
   if [[ -n "$TMP_DIR" && -d "$TMP_DIR" ]]; then
     rm -rf "$TMP_DIR"
   fi
 }
 trap cleanup EXIT
+
+# Two runs on one simulator relaunch/terminate each other's app, so UITests die
+# with "Test crashed with signal kill". Serialize iOS suites per simulator.
+acquire_ios_lock() {
+  local slug holder waited=0
+  slug="$(printf '%s' "$IOS_SIM" | tr -c 'A-Za-z0-9' '_')"
+  local lock_dir="/tmp/outfit-suggestor-ios-tests-${slug}.lock"
+  while ! mkdir "$lock_dir" 2>/dev/null; do
+    holder="$(cat "$lock_dir/pid" 2>/dev/null || true)"
+    if [[ -n "$holder" ]] && ! kill -0 "$holder" 2>/dev/null; then
+      rm -rf "$lock_dir"
+      continue
+    fi
+    if [[ "$waited" -eq 0 ]]; then
+      echo "Simulator \"$IOS_SIM\" is in use by another test run (pid ${holder:-unknown}); waiting..."
+    fi
+    if [[ "$waited" -ge "$IOS_LOCK_TIMEOUT" ]]; then
+      echo "ERROR: timed out after ${waited}s waiting for simulator \"$IOS_SIM\" ($lock_dir)." >&2
+      return 1
+    fi
+    sleep 5
+    waited=$((waited + 5))
+  done
+  echo "$$" > "$lock_dir/pid"
+  IOS_LOCK_DIR="$lock_dir"
+}
 
 usage() {
   cat <<'EOF'
@@ -190,12 +227,30 @@ parse_pytest_counts() {
   echo "$passed $failed $total"
 }
 
+# Tests listed in xcodebuild's trailing "Failing tests:" block. Unlike per-test
+# "failed" lines, this includes tests that crashed (e.g. "Test crashed with signal kill").
+xcodebuild_failing_block() {
+  awk '/^Failing tests:/{f=1; next} f && /^[[:space:]]*$/{f=0} f{sub(/^[[:space:]]+/, ""); print}' "$1"
+}
+
 parse_xcodebuild_counts() {
   local log_file="$1"
   local total failures passed
 
-  total="$(grep -E 'Executed [0-9]+ tests, with' "$log_file" | tail -1 | sed -n 's/.*Executed \([0-9][0-9]*\) tests.*/\1/p' || true)"
-  failures="$(grep -E 'Executed [0-9]+ tests, with' "$log_file" | tail -1 | sed -n 's/.*with \([0-9][0-9]*\) failures.*/\1/p' || true)"
+  # After a crash xcodebuild relaunches the runner and prints a fresh "Executed N tests"
+  # summary per launch, so the last summary undercounts. Count per-test results instead.
+  passed="$(grep -E "^Test Case '-\\[[^]]+\\]' passed" "$log_file" | sed -E "s/^Test Case '-\\[([^]]+)\\]'.*/\1/" | sort -u | wc -l | tr -d ' ')"
+  failures="$(xcodebuild_failing_block "$log_file" | sort -u | wc -l | tr -d ' ')"
+  if [[ "$failures" -eq 0 ]]; then
+    failures="$(grep -E "^Test Case '-\\[[^]]+\\]' failed" "$log_file" | sed -E "s/^Test Case '-\\[([^]]+)\\]'.*/\1/" | sort -u | wc -l | tr -d ' ')"
+  fi
+  if [[ "$((passed + failures))" -gt 0 ]]; then
+    echo "$passed $failures $((passed + failures))"
+    return
+  fi
+
+  total="$(grep -E 'Executed [0-9]+ tests?, with' "$log_file" | tail -1 | sed -n 's/.*Executed \([0-9][0-9]*\) tests\{0,1\},.*/\1/p' || true)"
+  failures="$(grep -E 'Executed [0-9]+ tests?, with' "$log_file" | tail -1 | sed -n 's/.*with \([0-9][0-9]*\) failures\{0,1\}.*/\1/p' || true)"
 
   total="${total:-0}"
   failures="${failures:-0}"
@@ -250,6 +305,11 @@ list_failing_tests() {
       grep -E '^ERROR[[:space:]]+' "$log_file" | sed -E 's/^ERROR[[:space:]]+//; s/[[:space:]]+-[[:space:]].*$//' | awk '!seen[$0]++'
       ;;
     xcode)
+      # Trailing "Failing tests:" block covers assertion failures and crashes.
+      if xcodebuild_failing_block "$log_file" | grep -q .; then
+        xcodebuild_failing_block "$log_file" | awk '!seen[$0]++'
+        return
+      fi
       # Test Case '-[ClassName testMethod]' failed (...)
       grep -E "Test Case '-\\[[^]]+\\]' failed" "$log_file" \
         | sed -E "s/.*Test Case '-\\[([^]]+)\\]' failed.*/\1/" \
@@ -472,20 +532,31 @@ run_ios_tests() {
   # Hardware keyboard makes XCUITest typeText hang on some simulators (iOS 26).
   defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool false >/dev/null 2>&1 || true
 
-  local exit_code=0
-  if [[ "$PRODUCTION_MODE" -eq 1 ]]; then
-    echo "API_BASE_URL=$API_BASE_URL (configuration: $IOS_XCODE_CONFIGURATION)"
-    run_logged "$log_file" env API_BASE_URL="$API_BASE_URL" xcodebuild test \
-      -scheme OutfitSuggestor \
-      -configuration "$IOS_XCODE_CONFIGURATION" \
-      -destination "platform=iOS Simulator,name=${IOS_SIM}" \
-      -only-testing:"$only_testing" || exit_code=$?
-  else
-    run_logged "$log_file" xcodebuild test \
-      -scheme OutfitSuggestor \
-      -destination "platform=iOS Simulator,name=${IOS_SIM}" \
-      -only-testing:"$only_testing" || exit_code=$?
-  fi
+  local exit_code=0 attempt
+  for attempt in 1 2; do
+    exit_code=0
+    if [[ "$PRODUCTION_MODE" -eq 1 ]]; then
+      echo "API_BASE_URL=$API_BASE_URL (configuration: $IOS_XCODE_CONFIGURATION)"
+      run_logged "$log_file" env API_BASE_URL="$API_BASE_URL" xcodebuild test \
+        -scheme OutfitSuggestor \
+        -configuration "$IOS_XCODE_CONFIGURATION" \
+        -destination "platform=iOS Simulator,name=${IOS_SIM}" \
+        -only-testing:"$only_testing" || exit_code=$?
+    else
+      run_logged "$log_file" xcodebuild test \
+        -scheme OutfitSuggestor \
+        -destination "platform=iOS Simulator,name=${IOS_SIM}" \
+        -only-testing:"$only_testing" || exit_code=$?
+    fi
+    # macOS occasionally SIGKILLs xcodebuild right after launch (before any test runs);
+    # retry once in that case only, so real test failures are never masked.
+    if [[ "$exit_code" -eq 137 && "$attempt" -eq 1 ]] && ! grep -q "^Test Case '" "$log_file"; then
+      echo "xcodebuild was killed (signal 9) before running tests; retrying once in 5s..."
+      sleep 5
+      continue
+    fi
+    break
+  done
 
   read -r passed failed total <<<"$(parse_xcodebuild_counts "$log_file")"
   record_summary "$target_label" "$passed" "$failed" "$total" "$(status_from_counts "$exit_code" "$passed" "$failed" "$total")" "$log_file"
@@ -610,8 +681,14 @@ if [[ "$RUN_BACKEND" -eq 1 ]]; then
 fi
 
 if [[ "$RUN_IOS" -eq 1 ]]; then
-  run_ios_tests "iOS unit/integration" "OutfitSuggestorTests" "$TMP_DIR/ios-unit.log"
-  run_ios_tests "iOS UITests" "OutfitSuggestorUITests" "$TMP_DIR/ios-ui.log"
+  if acquire_ios_lock; then
+    run_ios_tests "iOS unit/integration" "OutfitSuggestorTests" "$TMP_DIR/ios-unit.log"
+    run_ios_tests "iOS UITests" "OutfitSuggestorUITests" "$TMP_DIR/ios-ui.log"
+    release_ios_lock
+  else
+    record_summary "iOS unit/integration" 0 0 0 "ERROR" ""
+    record_summary "iOS UITests" 0 0 0 "ERROR" ""
+  fi
 fi
 
 print_summary_table
