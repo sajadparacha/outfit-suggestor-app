@@ -203,6 +203,28 @@ class TestWardrobePhotoByReference:
         assert row.image_data is None
         assert row.image_from_wardrobe
 
+    def test_similar_photo_match_returns_python_bool(self, db, test_user, monkeypatch):
+        """psycopg2 cannot bind numpy.bool_; perceptual-hash matches must yield bool."""
+        import imagehash
+        import numpy as np
+
+        # NumPy 2 makes ImageHash subtraction return numpy.int64 instead of int.
+        original_sub = imagehash.ImageHash.__sub__
+        monkeypatch.setattr(
+            imagehash.ImageHash, "__sub__", lambda self, other: np.int64(original_sub(self, other))
+        )
+        item = _add_item(db, test_user)
+        reencoded = io.BytesIO()
+        Image.open(io.BytesIO(base64.b64decode(item.image_data))).save(reencoded, format="JPEG", quality=60)
+        upload = base64.b64encode(reencoded.getvalue()).decode()
+        assert upload != item.image_data
+
+        from services.wardrobe_service import WardrobeService
+
+        matched = OutfitService().is_wardrobe_photo(upload, item)
+        assert matched is True
+        assert type(WardrobeService()._images_are_similar(upload, item.image_data, 5)) is bool
+
     def test_duplicate_check_matches_referenced_wardrobe_photo(self, client, auth_headers, db, test_user):
         item = _add_item(db, test_user)
         _suggest_from_item(client, auth_headers, item.id)

@@ -63,6 +63,7 @@ class OutfitService:
             Created OutfitHistory entry
         """
         columns = self._get_outfit_history_columns(db)
+        image_from_wardrobe = bool(image_from_wardrobe)
         if (
             image_from_wardrobe
             and "image_from_wardrobe" in columns
@@ -457,7 +458,7 @@ class OutfitService:
             hash2 = imagehash.phash(img2)
             
             # Calculate Hamming distance
-            distance = hash1 - hash2
+            distance = int(hash1 - hash2)
             
             return distance <= threshold
             

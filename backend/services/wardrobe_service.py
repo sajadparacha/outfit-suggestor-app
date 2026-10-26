@@ -656,7 +656,7 @@ class WardrobeService:
             hash2 = imagehash.phash(img2)
             
             # Calculate Hamming distance
-            distance = hash1 - hash2
+            distance = int(hash1 - hash2)
             
             return distance <= threshold
             
