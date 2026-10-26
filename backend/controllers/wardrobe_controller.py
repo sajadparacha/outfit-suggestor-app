@@ -1,5 +1,5 @@
 """Wardrobe Controller - Handles wardrobe-related request orchestration"""
-from typing import Optional
+from typing import Any, Dict, Optional
 from fastapi import UploadFile, HTTPException
 from sqlalchemy.orm import Session
 
@@ -624,8 +624,16 @@ class WardrobeController:
             from config import Config
 
             pair_ranker = None
+            ranking_usage: Optional[Dict[str, Any]] = None
             if Config.WARDROBE_FIT_AI_ENABLED:
-                pair_ranker = getattr(self.wardrobe_ai_service, "rank_pairings", None)
+                rank_with_usage = getattr(self.wardrobe_ai_service, "rank_pairings_with_usage", None)
+                if rank_with_usage is not None:
+                    def pair_ranker(candidate, owned_items, goal):
+                        nonlocal ranking_usage
+                        pairs, ranking_usage = rank_with_usage(candidate, owned_items, goal)
+                        return pairs
+                else:
+                    pair_ranker = getattr(self.wardrobe_ai_service, "rank_pairings", None)
 
             fit_service = WardrobeFitService(self.wardrobe_service)
             result = fit_service.evaluate(
@@ -638,6 +646,15 @@ class WardrobeController:
                 style_primary=style_primary,
                 text_input=request.text_input or "",
             )
+            if getattr(current_user, "is_admin", False):
+                result["cost"] = ranking_usage or {
+                    "model": None,
+                    "input_tokens": 0,
+                    "output_tokens": 0,
+                    "gpt4_cost": 0.0,
+                    "total_cost": 0.0,
+                    "cached": False,
+                }
             return WardrobeFitEvaluateResponse(**result)
         except HTTPException:
             raise

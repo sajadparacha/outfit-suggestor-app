@@ -210,6 +210,10 @@ struct WardrobeFitResultSheet: View {
 
             missingSection(result.missing_for_goal, stylePrimary: result.goal.style_primary ?? viewModel.stylePrimary)
 
+            if let cost = result.cost {
+                adminCostRow(cost)
+            }
+
             secondaryActions
         }
     }
@@ -437,6 +441,20 @@ struct WardrobeFitResultSheet: View {
         .background(AppTheme.accentSoft)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityIdentifier("wardrobe.fit.missing")
+    }
+
+    private func adminCostRow(_ cost: WardrobeFitCost) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(WardrobeFitEvaluateCopy.adminCostAmount(cost))
+                .font(.caption.weight(.semibold))
+            Text(WardrobeFitEvaluateCopy.adminCostDetail(cost))
+                .font(.caption2)
+        }
+        .foregroundColor(AppTheme.textSecondary)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 4)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("wardrobe-fit-admin-cost")
     }
 
     private var secondaryActions: some View {

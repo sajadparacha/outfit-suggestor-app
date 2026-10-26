@@ -293,6 +293,79 @@ describe('WardrobeFitEvaluate integration', () => {
     expect(document.activeElement).toBe(trigger);
   });
 
+  describe('admin AI cost row', () => {
+    async function openWithCost(cost: unknown) {
+      server.use(
+        rest.post(`${API_BASE}/api/wardrobe/evaluate-fit`, (_req, res, ctx) =>
+          res(
+            ctx.json({
+              candidate: { id: 1, category: 'shirt', label: 'Blue shirt', color: 'Blue', image_data: null },
+              goal: {
+                label: 'goal',
+                dress_code: 'smart-casual',
+                lifestyle_mix: ['work'],
+                primary_lifestyle: 'work',
+                style_primary: 'classic',
+                text_input: '',
+              },
+              pairs_with: [],
+              outfit_multiplier: 0,
+              verdict: 'weak_fit',
+              missing_for_goal: {
+                category: 'shoes',
+                label: 'pair of shoes',
+                reason: 'Add shoes.',
+                candidate_fills_this_gap: false,
+              },
+              summary_text: 'Limited pairing options yet.',
+              cost,
+            })
+          )
+        )
+      );
+      render(<Wardrobe isAuthenticated />);
+      expect(await screen.findByText('Integration test shirt')).toBeInTheDocument();
+      fireEvent.click(screen.getByTestId('wardrobe-how-this-fits-1'));
+      await screen.findByTestId('wardrobe-fit-result');
+    }
+
+    it('shows AI cost and model token detail for a non-cached admin result', async () => {
+      await openWithCost({
+        model: 'gpt-4o-mini',
+        input_tokens: 1000,
+        output_tokens: 200,
+        gpt4_cost: 0.00027,
+        total_cost: 0.00027,
+        cached: false,
+      });
+
+      const row = screen.getByTestId('wardrobe-fit-admin-cost');
+      expect(row).toHaveTextContent('AI cost: $0.0003');
+      expect(row).toHaveTextContent('gpt-4o-mini · 1000 in / 200 out tokens');
+    });
+
+    it('hides the row when cost is null', async () => {
+      await openWithCost(null);
+      expect(screen.queryByTestId('wardrobe-fit-admin-cost')).not.toBeInTheDocument();
+    });
+
+    it('shows Cached — no charge for a cached result', async () => {
+      await openWithCost({
+        model: 'gpt-4o-mini',
+        input_tokens: 0,
+        output_tokens: 0,
+        gpt4_cost: 0,
+        total_cost: 0,
+        cached: true,
+      });
+
+      const row = screen.getByTestId('wardrobe-fit-admin-cost');
+      expect(row).toHaveTextContent('AI cost: $0.0000');
+      expect(row).toHaveTextContent(WARDROBE_FIT_COPY.adminCostCached);
+      expect(row).toHaveTextContent('Cached — no charge');
+    });
+  });
+
   describe('expandable images', () => {
     function useImageFitResponse() {
       server.use(

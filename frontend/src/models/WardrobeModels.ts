@@ -177,5 +177,17 @@ export interface WardrobeFitEvaluateResponse {
   verdict: WardrobeFitVerdict;
   missing_for_goal: WardrobeFitMissing;
   summary_text: string;
+  /** Admin-only AI cost for this evaluation; null/absent for non-admins. */
+  cost?: WardrobeFitCost | null;
+}
+
+export interface WardrobeFitCost {
+  /** null when no AI call was made (rules-only ranking). */
+  model: string | null;
+  input_tokens: number;
+  output_tokens: number;
+  gpt4_cost: number;
+  total_cost: number;
+  cached: boolean;
 }
 

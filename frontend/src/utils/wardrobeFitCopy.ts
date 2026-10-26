@@ -2,7 +2,7 @@
  * Shared copy for wardrobe fit evaluate (“How this fits”).
  */
 
-import type { WardrobeFitVerdict } from '../models/WardrobeModels';
+import type { WardrobeFitCost, WardrobeFitVerdict } from '../models/WardrobeModels';
 import { INSIGHTS_LIFESTYLE_STORAGE_KEY, loadInsightsLifestyle } from './insightsLifestyle';
 
 export const WARDROBE_FIT_COPY = {
@@ -20,6 +20,8 @@ export const WARDROBE_FIT_COPY = {
   checkBeforeBuyAction: 'Check before you buy',
   checkBeforeBuyLoading: 'Checking how this would fit your wardrobe…',
   addToWardrobe: 'Add to wardrobe',
+  adminCostCached: 'Cached — no charge',
+  adminCostRulesOnly: 'Rules only — no AI charge',
   guideStep:
     'Tap How this fits on a saved piece (sign in required) to see a Strong fit, Weak fit, or Already covered verdict, how many of your items it pairs with, and what’s missing for your goal. The goal starts from your last fit check, then your Insights preferences, otherwise smart-casual, work + everyday, classic. Matches are ranked by AI when available. Tap a photo to view it full screen. Under Works with what you own, each category shows the first three matches; tap View all (N) to see the rest, or Show less to collapse.',
   checkBeforeBuyGuideStep:
@@ -53,6 +55,22 @@ export const WARDROBE_FIT_LAST_GOAL_KEY = 'wardrobe_fit_last_goal';
 
 export function wardrobeFitPairCountLabel(count: number): string {
   return `Pairs with ${count}`;
+}
+
+export function formatWardrobeFitCost(amount: number): string {
+  if (amount < 0.01) return `$${amount.toFixed(4)}`;
+  if (amount < 0.1) return `$${amount.toFixed(3)}`;
+  return `$${amount.toFixed(2)}`;
+}
+
+export function wardrobeFitAdminCostLabel(cost: WardrobeFitCost): string {
+  return `AI cost: ${formatWardrobeFitCost(cost.total_cost)}`;
+}
+
+export function wardrobeFitAdminCostDetail(cost: WardrobeFitCost): string {
+  if (cost.cached) return WARDROBE_FIT_COPY.adminCostCached;
+  if (cost.model == null) return WARDROBE_FIT_COPY.adminCostRulesOnly;
+  return `${cost.model} · ${cost.input_tokens} in / ${cost.output_tokens} out tokens`;
 }
 
 export function wardrobeFitGoalHint(goal: FitGoal): string {

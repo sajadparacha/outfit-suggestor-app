@@ -2,8 +2,11 @@ import {
   DEFAULT_FIT_GOAL,
   WARDROBE_FIT_COPY,
   WARDROBE_FIT_LAST_GOAL_KEY,
+  formatWardrobeFitCost,
   loadInitialFitGoal,
   saveLastFitGoal,
+  wardrobeFitAdminCostDetail,
+  wardrobeFitAdminCostLabel,
   wardrobeFitGoalHint,
   wardrobeFitPairCountLabel,
   wardrobeFitVerdictLabel,
@@ -81,6 +84,27 @@ describe('wardrobeFitCopy', () => {
     expect(WARDROBE_FIT_COPY.error).toBe('Couldn’t evaluate this piece. Try again.');
     expect(WARDROBE_FIT_COPY.loading).toBe(
       'Checking how this works with your wardrobe…'
+    );
+  });
+
+  it('formats admin AI cost amount and detail', () => {
+    expect(formatWardrobeFitCost(0.00027)).toBe('$0.0003');
+    expect(formatWardrobeFitCost(0.0456)).toBe('$0.046');
+    expect(formatWardrobeFitCost(0.5)).toBe('$0.50');
+
+    const base = {
+      model: 'gpt-4o-mini' as string | null,
+      input_tokens: 1000,
+      output_tokens: 200,
+      gpt4_cost: 0.00027,
+      total_cost: 0.00027,
+      cached: false,
+    };
+    expect(wardrobeFitAdminCostLabel(base)).toBe('AI cost: $0.0003');
+    expect(wardrobeFitAdminCostDetail(base)).toBe('gpt-4o-mini · 1000 in / 200 out tokens');
+    expect(wardrobeFitAdminCostDetail({ ...base, cached: true })).toBe('Cached — no charge');
+    expect(wardrobeFitAdminCostDetail({ ...base, model: null })).toBe(
+      'Rules only — no AI charge'
     );
   });
 

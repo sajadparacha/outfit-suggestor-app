@@ -547,4 +547,16 @@ struct WardrobeFitEvaluateResponse: Codable {
     let verdict: WardrobeFitVerdict
     let missing_for_goal: WardrobeFitMissing
     let summary_text: String
+    /// Admin-only AI cost; `nil` for non-admins or when the key is absent.
+    var cost: WardrobeFitCost? = nil
+}
+
+/// AI cost for a fit evaluation. `model == nil` means rules only (no AI call).
+struct WardrobeFitCost: Codable, Equatable {
+    let model: String?
+    let input_tokens: Int
+    let output_tokens: Int
+    let gpt4_cost: Double
+    let total_cost: Double
+    let cached: Bool
 }

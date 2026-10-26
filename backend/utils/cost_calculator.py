@@ -8,6 +8,12 @@ class CostCalculator:
     # OpenAI GPT-4o pricing (as of 2024)
     GPT4O_INPUT_COST_PER_1M = 2.50  # $2.50 per 1M input tokens
     GPT4O_OUTPUT_COST_PER_1M = 10.00  # $10.00 per 1M output tokens
+
+    # Per-1M-token (input, output) pricing for text chat models; unknown models use GPT-4o
+    CHAT_MODEL_PRICING_PER_1M = {
+        "gpt-4o": (2.50, 10.00),
+        "gpt-4o-mini": (0.15, 0.60),
+    }
     
     # GPT-4 Vision pricing (for image analysis)
     # Standard quality: 85 tokens per image
@@ -49,6 +55,25 @@ class CostCalculator:
         image_cost = CostCalculator.GPT4_VISION_IMAGE_COST if has_image else 0.0
         
         total = input_cost + output_cost + image_cost
+        return round(total, 6)
+
+    @staticmethod
+    def calculate_chat_cost(model: str, input_tokens: int, output_tokens: int) -> float:
+        """
+        Calculate cost for a text-only chat completion on a given model
+
+        Args:
+            model: OpenAI model name (e.g. "gpt-4o-mini")
+            input_tokens: Number of input tokens
+            output_tokens: Number of output tokens
+
+        Returns:
+            Cost in USD
+        """
+        input_rate, output_rate = CostCalculator.CHAT_MODEL_PRICING_PER_1M.get(
+            model, CostCalculator.CHAT_MODEL_PRICING_PER_1M["gpt-4o"]
+        )
+        total = (input_tokens / 1_000_000) * input_rate + (output_tokens / 1_000_000) * output_rate
         return round(total, 6)
     
     @staticmethod

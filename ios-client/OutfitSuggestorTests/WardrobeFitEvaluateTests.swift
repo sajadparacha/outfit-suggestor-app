@@ -103,6 +103,106 @@ final class WardrobeFitEvaluateTests: XCTestCase {
         XCTAssertTrue(decoded.summary_text.contains("blazer"))
     }
 
+    // MARK: - Admin cost
+
+    private static func fitJSON(costFragment: String?) -> Data {
+        let costLine = costFragment.map { ",\n  \"cost\": \($0)" } ?? ""
+        return """
+        {
+          "candidate": { "id": 1, "category": "shirt", "label": "White shirt", "color": "white", "image_data": null },
+          "goal": {
+            "label": "smart-casual",
+            "dress_code": "smart-casual",
+            "lifestyle_mix": ["work"],
+            "primary_lifestyle": "work",
+            "style_primary": "classic",
+            "text_input": ""
+          },
+          "pairs_with": [],
+          "outfit_multiplier": 0,
+          "verdict": "weak_fit",
+          "missing_for_goal": {
+            "category": null,
+            "label": "nothing",
+            "reason": "All set.",
+            "candidate_fills_this_gap": false
+          },
+          "summary_text": "Summary"\(costLine)
+        }
+        """.data(using: .utf8)!
+    }
+
+    func testDecodeFitEvaluateWithCostObject() throws {
+        let json = Self.fitJSON(costFragment: """
+        { "model": "gpt-4o-mini", "input_tokens": 1000, "output_tokens": 200, "gpt4_cost": 0.00027, "total_cost": 0.00027, "cached": false }
+        """)
+        let decoded = try JSONDecoder().decode(WardrobeFitEvaluateResponse.self, from: json)
+        let cost = try XCTUnwrap(decoded.cost)
+        XCTAssertEqual(cost.model, "gpt-4o-mini")
+        XCTAssertEqual(cost.input_tokens, 1000)
+        XCTAssertEqual(cost.output_tokens, 200)
+        XCTAssertEqual(cost.gpt4_cost, 0.00027, accuracy: 1e-9)
+        XCTAssertEqual(cost.total_cost, 0.00027, accuracy: 1e-9)
+        XCTAssertFalse(cost.cached)
+    }
+
+    func testDecodeFitEvaluateWithNullCost() throws {
+        let decoded = try JSONDecoder().decode(
+            WardrobeFitEvaluateResponse.self,
+            from: Self.fitJSON(costFragment: "null")
+        )
+        XCTAssertNil(decoded.cost)
+    }
+
+    func testDecodeFitEvaluateWithoutCostKey() throws {
+        let decoded = try JSONDecoder().decode(
+            WardrobeFitEvaluateResponse.self,
+            from: Self.fitJSON(costFragment: nil)
+        )
+        XCTAssertNil(decoded.cost)
+    }
+
+    func testDecodeFitEvaluateRulesOnlyCostHasNilModel() throws {
+        let json = Self.fitJSON(costFragment: """
+        { "model": null, "input_tokens": 0, "output_tokens": 0, "gpt4_cost": 0, "total_cost": 0, "cached": false }
+        """)
+        let decoded = try JSONDecoder().decode(WardrobeFitEvaluateResponse.self, from: json)
+        XCTAssertNil(try XCTUnwrap(decoded.cost).model)
+    }
+
+    func testAdminCostCopyNonCached() {
+        let cost = WardrobeFitCost(
+            model: "gpt-4o-mini", input_tokens: 1000, output_tokens: 200,
+            gpt4_cost: 0.00027, total_cost: 0.00027, cached: false
+        )
+        XCTAssertEqual(WardrobeFitEvaluateCopy.adminCostAmount(cost), "AI cost: $0.0003")
+        XCTAssertEqual(
+            WardrobeFitEvaluateCopy.adminCostDetail(cost),
+            "gpt-4o-mini · 1000 in / 200 out tokens"
+        )
+    }
+
+    func testAdminCostCopyCached() {
+        let cost = WardrobeFitCost(
+            model: "gpt-4o-mini", input_tokens: 0, output_tokens: 0,
+            gpt4_cost: 0, total_cost: 0, cached: true
+        )
+        XCTAssertEqual(WardrobeFitEvaluateCopy.adminCostDetail(cost), "Cached — no charge")
+        XCTAssertEqual(WardrobeFitEvaluateCopy.adminCostAmount(cost), "AI cost: $0.0000")
+    }
+
+    func testAdminCostCopyRulesOnly() {
+        let cost = WardrobeFitCost(
+            model: nil, input_tokens: 0, output_tokens: 0,
+            gpt4_cost: 0, total_cost: 0, cached: false
+        )
+        XCTAssertEqual(WardrobeFitEvaluateCopy.adminCostDetail(cost), "Rules only — no AI charge")
+    }
+
+    func testSampleResponseDefaultsToNoCost() {
+        XCTAssertNil(Self.sampleResponse(verdict: .strongFit).cost)
+    }
+
     func testDecodeWeakAndRedundantVerdicts() throws {
         for raw in ["weak_fit", "redundant"] {
             let json = """

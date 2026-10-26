@@ -233,4 +233,8 @@ class WardrobeFitEvaluateResponse(BaseModel):
     missing_for_goal: WardrobeFitMissing
     summary_text: str
     ranking_source: Literal["ai", "rules"] = "rules"
+    cost: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Admin-only: AI pairing ranking cost in USD (null for non-admins).",
+    )
 

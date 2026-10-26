@@ -7,6 +7,8 @@ from fastapi import HTTPException
 
 import openai
 
+from utils.cost_calculator import CostCalculator
+
 FIT_RANK_CACHE_SIZE = 256
 FIT_RANK_DESCRIPTION_CHARS = 160
 FIT_RANK_PROMPT_VERSION = "v4"
@@ -68,6 +70,21 @@ class WardrobeAIService:
         Callers must validate ids and apply score thresholds.
         Raises on API / parse failure so callers can fall back to rule scoring.
         """
+        pairs, _usage = self.rank_pairings_with_usage(candidate, owned_items, goal)
+        return pairs
+
+    def rank_pairings_with_usage(
+        self,
+        candidate: Dict[str, Any],
+        owned_items: List[Dict[str, Any]],
+        goal: Dict[str, Any],
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        """
+        Same as rank_pairings, plus the OpenAI usage/cost for this call.
+
+        Usage: {"model", "input_tokens", "output_tokens", "gpt4_cost", "total_cost", "cached"}.
+        Cache hits make no API call, so they report zero tokens and zero cost.
+        """
         payload = {
             "goal": goal,
             "candidate": self._fit_item_text(candidate),
@@ -80,7 +97,7 @@ class WardrobeAIService:
         cached = self._fit_cache.get(cache_key)
         if cached is not None:
             self._fit_cache.move_to_end(cache_key)
-            return cached
+            return cached, self._fit_usage(0, 0, cached=True)
 
         # No automatic retries: a timed-out ranking falls back to rules instead of
         # multiplying the user's wait.
@@ -101,7 +118,28 @@ class WardrobeAIService:
         self._fit_cache[cache_key] = pairs
         if len(self._fit_cache) > FIT_RANK_CACHE_SIZE:
             self._fit_cache.popitem(last=False)
-        return pairs
+
+        usage = getattr(response, "usage", None)
+        return pairs, self._fit_usage(
+            self._token_count(getattr(usage, "prompt_tokens", 0)),
+            self._token_count(getattr(usage, "completion_tokens", 0)),
+            cached=False,
+        )
+
+    def _fit_usage(self, input_tokens: int, output_tokens: int, cached: bool) -> Dict[str, Any]:
+        cost = CostCalculator.calculate_chat_cost(self.fit_model, input_tokens, output_tokens)
+        return {
+            "model": self.fit_model,
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "gpt4_cost": cost,
+            "total_cost": cost,
+            "cached": cached,
+        }
+
+    @staticmethod
+    def _token_count(value: Any) -> int:
+        return value if isinstance(value, int) and value >= 0 else 0
 
     @staticmethod
     def _parse_fit_ranking(parsed: Any) -> List[Dict[str, Any]]:

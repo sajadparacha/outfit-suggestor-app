@@ -13,6 +13,8 @@ import {
   WARDROBE_FIT_COPY,
   loadInitialFitGoal,
   saveLastFitGoal,
+  wardrobeFitAdminCostDetail,
+  wardrobeFitAdminCostLabel,
   wardrobeFitGoalHint,
   wardrobeFitPairCountLabel,
   wardrobeFitVerdictLabel,
@@ -523,6 +525,18 @@ const WardrobeFitPanel: React.FC<WardrobeFitPanelProps> = ({
                   </button>
                 )}
               </section>
+
+              {result.cost && (
+                <div
+                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-400"
+                  data-testid="wardrobe-fit-admin-cost"
+                >
+                  <p className="font-medium text-slate-300">
+                    {wardrobeFitAdminCostLabel(result.cost)}
+                  </p>
+                  <p className="mt-0.5">{wardrobeFitAdminCostDetail(result.cost)}</p>
+                </div>
+              )}
 
               <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                 {isAttributeMode && onAddToWardrobe && attributeCandidate && (

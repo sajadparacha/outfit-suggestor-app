@@ -28,6 +28,19 @@ enum WardrobeFitEvaluateCopy {
 
     static let viewFullImage = "View full image"
 
+    static let adminCostCached = "Cached — no charge"
+    static let adminCostRulesOnly = "Rules only — no AI charge"
+
+    static func adminCostAmount(_ cost: WardrobeFitCost) -> String {
+        "AI cost: \(formatInsightsCost(cost.total_cost))"
+    }
+
+    static func adminCostDetail(_ cost: WardrobeFitCost) -> String {
+        if cost.cached { return adminCostCached }
+        guard let model = cost.model else { return adminCostRulesOnly }
+        return "\(model) · \(cost.input_tokens) in / \(cost.output_tokens) out tokens"
+    }
+
     static func viewFullImageLabel(itemLabel: String) -> String {
         "View full image of \(itemLabel)"
     }
