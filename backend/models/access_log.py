@@ -1,5 +1,5 @@
 """Access log model for tracking application usage."""
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from sqlalchemy import Integer, String, DateTime, Text, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -44,7 +44,7 @@ class AccessLog(Base):
     
     # Timestamp
     timestamp: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False, index=True
+        DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True
     )
     
     # Additional metadata
