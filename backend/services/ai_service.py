@@ -1091,8 +1091,9 @@ Required JSON shape:
             suggestion.sweater = None
             suggestion.sweater_id = None
             if not (suggestion.outerwear or "").strip() or (suggestion.outerwear or "").strip().lower() in {"null", "none"}:
-                label = "coat" if normalized in {"coat", "coats"} else "jacket"
-                suggestion.outerwear = f"Your wardrobe {label} (uploaded item)"
+                # Leave empty so the controller can fill in the wardrobe item's real
+                # description/colour instead of a generic placeholder.
+                suggestion.outerwear = None
         elif normalized in {"blazer", "blazers", "suit", "sport_coat", "sport coat", "sportcoat"}:
             suggestion.source_slot = "blazer"
             suggestion.upload_matched_category = "blazer"
@@ -1297,7 +1298,10 @@ LAYERING RULES (strict):
         upload_intro = (
             "Analyze the uploaded image of a clothing item and provide a complete outfit suggestion. "
             "If the upload is a jacket, coat, overshirt, shacket, or corduroy outer layer (not a structured blazer "
-            "or dress shirt), set source_slot to \"outerwear\" — never \"shirt\"."
+            "or dress shirt), set source_slot to \"outerwear\" — never \"shirt\". "
+            "Always describe the uploaded piece in its own slot with its colour and material "
+            "(for example \"Navy corduroy jacket\"). Never leave its slot null and never write a generic "
+            "placeholder such as \"uploaded item\"."
         )
         if normalized_source in {"jacket", "jackets", "coat", "coats", "outerwear"}:
             label = "coat" if normalized_source in {"coat", "coats"} else "jacket"
@@ -1306,6 +1310,7 @@ LAYERING RULES (strict):
 SOURCE ITEM CONTEXT (strict):
 - The uploaded image IS the user's wardrobe {label} — casual outerwear, NOT a structured blazer.
 - Put this piece in the "outerwear" slot and set source_slot to "outerwear".
+- Describe it with its colour and material (for example "Tan wool overcoat") — never null, never "uploaded item".
 - Do NOT recommend an additional structured blazer on top unless occasion is business/formal AND their wardrobe lists a blazer.
 - For casual/smart-casual looks, set "blazer" to "No structured blazer — outfit built around your outerwear" (not a second layer to buy).
 - Build shirt, trouser, shoes, and belt around this outerwear piece.

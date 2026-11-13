@@ -16,7 +16,11 @@ from services.guest_usage_service import GuestUsageService
 from services.photo_thumbnails import wardrobe_thumbnails
 from services.wardrobe_matcher import WardrobeMatcher
 from utils.image_processor import compress_generated_image, encode_image, validate_image
-from utils.outfit_upload_category import slot_text_has_upload_marker, text_suggests_outerwear
+from utils.outfit_upload_category import (
+    clean_upload_marker_text,
+    slot_text_has_upload_marker,
+    text_suggests_outerwear,
+)
 from services.outfit_formality_guard import (
     apply_formality_post_check,
     filter_wardrobe_slots_for_formality,
@@ -57,6 +61,41 @@ class OutfitController:
         if idx is not None and idx > 0:
             items_list.insert(0, items_list.pop(idx))
 
+    @staticmethod
+    def _outerwear_label_from_category(category: Optional[str]) -> Optional[str]:
+        """'coat' for coats, 'jacket' for jackets, None when the category is not outerwear."""
+        normalized = (category or "").strip().lower()
+        if normalized in {"coat", "coats"} or "coat" in normalized:
+            return "coat"
+        if normalized in {"jacket", "jackets", "outerwear"} or "jacket" in normalized:
+            return "jacket"
+        return None
+
+    @classmethod
+    def _outerwear_upload_text(
+        cls,
+        *,
+        label: Optional[str] = None,
+        color: Optional[str] = None,
+        description: Optional[str] = None,
+    ) -> str:
+        """
+        Best available copy for an uploaded jacket/coat.
+
+        Never emits an "(uploaded item)" placeholder — that reads like a different
+        garment than the one in the photo. Keep in sync with
+        frontend/src/utils/outfitLayerExclusivity.ts and
+        ios-client/.../Utils/OutfitLayerExclusivity.swift.
+        """
+        cleaned_description = (description or "").strip()
+        if cleaned_description:
+            return cleaned_description
+        resolved_label = (label or "").strip() or "jacket"
+        cleaned_color = (color or "").strip()
+        if cleaned_color:
+            return f"Your wardrobe {resolved_label} — {cleaned_color}"
+        return f"The {resolved_label} in your photo"
+
     def _apply_source_wardrobe_match_overrides(
         self,
         suggestion: OutfitSuggestion,
@@ -74,16 +113,13 @@ class OutfitController:
             suggestion.upload_matched_category = normalized_upload
         if normalized_upload == "outerwear":
             suggestion.outerwear_id = wardrobe_item.id
-            outerwear_text = (suggestion.outerwear or "").strip()
-            if not outerwear_text or outerwear_text.lower() in {"null", "none", "n/a"}:
-                label = "coat" if (wardrobe_item.category or "").lower() in {"coat", "coats"} else "jacket"
-                parts = [f"Your wardrobe {label}"]
-                if wardrobe_item.color:
-                    parts.append(f"— {wardrobe_item.color}")
-                if wardrobe_item.description:
-                    suggestion.outerwear = wardrobe_item.description
-                else:
-                    suggestion.outerwear = " ".join(parts) + " (uploaded item)"
+            usable_text = clean_upload_marker_text(suggestion.outerwear)
+            suggestion.outerwear = usable_text or self._outerwear_upload_text(
+                label=self._outerwear_label_from_category(wardrobe_item.category or "")
+                or "jacket",
+                color=wardrobe_item.color,
+                description=wardrobe_item.description,
+            )
 
     def _resolve_upper_body_anchor(self, suggestion: OutfitSuggestion) -> Optional[str]:
         """Return 'outerwear' or 'blazer' when the upload anchors an upper-body layer."""
@@ -169,6 +205,7 @@ class OutfitController:
         season: Optional[str] = None,
         occasion: Optional[str] = None,
         style: Optional[str] = None,
+        outerwear_label: Optional[str] = None,
     ) -> None:
         """
         At most one of blazer or casual jacket/outerwear.
@@ -183,9 +220,10 @@ class OutfitController:
             suggestion.sweater_id = None
             self._promote_mislotted_upload_text_to_outerwear(suggestion)
             self._clear_non_anchor_optional_outerwear(suggestion)
-            outerwear_text = (suggestion.outerwear or "").strip()
-            if not outerwear_text or outerwear_text.lower() in {"null", "none", "n/a"}:
-                suggestion.outerwear = "Your wardrobe jacket (uploaded item)"
+            usable_text = clean_upload_marker_text(suggestion.outerwear)
+            suggestion.outerwear = usable_text or self._outerwear_upload_text(
+                label=outerwear_label
+            )
             if matching_items is not None:
                 matching_items.pop("sweater", None)
         elif anchor == "blazer":
@@ -301,6 +339,7 @@ class OutfitController:
         outerwear_text = (suggestion.outerwear or "").strip()
 
         if slot_text_has_upload_marker(outerwear_text):
+            suggestion.outerwear = clean_upload_marker_text(outerwear_text) or outerwear_text
             suggestion.outerwear_id = anchor_id
             return
 
@@ -355,14 +394,18 @@ class OutfitController:
             suggestion.shirt_id = None
         if suggestion.blazer_id == similar_item.id:
             suggestion.blazer_id = None
-        existing_outerwear = (suggestion.outerwear or "").strip()
-        if (
-            not existing_outerwear
-            or existing_outerwear.lower() in {"null", "none", "n/a"}
-            or not slot_text_has_upload_marker(existing_outerwear)
-        ):
-            description = (similar_item.description or "").strip()
-            suggestion.outerwear = description or "Your wardrobe jacket (uploaded item)"
+        # The visually-matched item is authoritative — its own description wins,
+        # then any usable AI text, then a generated fallback.
+        preferred_description = (similar_item.description or "").strip()
+        if preferred_description:
+            suggestion.outerwear = preferred_description
+        else:
+            suggestion.outerwear = clean_upload_marker_text(
+                suggestion.outerwear
+            ) or self._outerwear_upload_text(
+                label=self._outerwear_label_from_category(similar_item.category or ""),
+                color=similar_item.color,
+            )
 
     def _reconcile_outerwear_upload_slot(
         self,
@@ -422,8 +465,11 @@ class OutfitController:
                 suggestion.blazer_id = None
             existing_outerwear = (suggestion.outerwear or "").strip()
             if not existing_outerwear or existing_outerwear.lower() in {"null", "none", "n/a"}:
-                description = (item.get("description") or "").strip()
-                suggestion.outerwear = description or "Your wardrobe jacket (uploaded item)"
+                suggestion.outerwear = self._outerwear_upload_text(
+                    label=self._outerwear_label_from_category(item.get("category") or ""),
+                    color=item.get("color"),
+                    description=item.get("description"),
+                )
             return
 
     def _wardrobe_item_matches_outfit_slot(self, wardrobe_category: str, outfit_slot: str) -> bool:
@@ -845,6 +891,9 @@ class OutfitController:
                     season=season,
                     occasion=occasion,
                     style=style,
+                    outerwear_label=self._outerwear_label_from_category(
+                        getattr(source_wardrobe_item or similar_item, "category", None)
+                    ),
                 )
                 apply_formality_post_check(
                     suggestion,
@@ -1592,6 +1641,7 @@ class OutfitController:
                 season=season,
                 occasion=occasion,
                 style=style,
+                outerwear_label=self._outerwear_label_from_category(wardrobe_item.category or ""),
             )
             apply_formality_post_check(
                 suggestion,
