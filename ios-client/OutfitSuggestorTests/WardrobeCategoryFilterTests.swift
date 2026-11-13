@@ -34,11 +34,42 @@ final class WardrobeCategoryFilterTests: XCTestCase {
         XCTAssertEqual(WardrobeCategoryDisplay.wardrobeCategoryLabel("watch"), "Other")
     }
 
-    func testMatchesCategoryFilterGroupedCoreShirtCategories() {
+    func testShirtFilterExcludesPolosAndTShirts() {
         XCTAssertTrue(WardrobeCategoryDisplay.matchesCategoryFilter("shirt", filter: "shirt"))
-        XCTAssertTrue(WardrobeCategoryDisplay.matchesCategoryFilter("polo", filter: "shirt"))
-        XCTAssertTrue(WardrobeCategoryDisplay.matchesCategoryFilter("t_shirt", filter: "shirt"))
+        XCTAssertTrue(WardrobeCategoryDisplay.matchesCategoryFilter("shirts", filter: "shirt"))
+        XCTAssertFalse(WardrobeCategoryDisplay.matchesCategoryFilter("polo", filter: "shirt"))
+        XCTAssertFalse(WardrobeCategoryDisplay.matchesCategoryFilter("t_shirt", filter: "shirt"))
+        XCTAssertFalse(WardrobeCategoryDisplay.matchesCategoryFilter("t-shirt", filter: "shirt"))
+        XCTAssertFalse(WardrobeCategoryDisplay.matchesCategoryFilter("tee", filter: "shirt"))
         XCTAssertFalse(WardrobeCategoryDisplay.matchesCategoryFilter("jeans", filter: "shirt"))
+    }
+
+    func testTShirtFilterCollectsEveryTShirtAlias() {
+        for category in ["t_shirt", "t-shirt", "tshirt", "T-Shirt", "tee", "tees"] {
+            XCTAssertTrue(WardrobeCategoryDisplay.matchesCategoryFilter(category, filter: "t_shirt"), category)
+        }
+        XCTAssertFalse(WardrobeCategoryDisplay.matchesCategoryFilter("polo", filter: "t_shirt"))
+    }
+
+    func testPoloFilterIsTheOnlyHomeForPolos() {
+        for category in ["polo", "polos", "polo_shirt"] {
+            XCTAssertTrue(WardrobeCategoryDisplay.matchesCategoryFilter(category, filter: "polo"), category)
+            XCTAssertFalse(WardrobeCategoryDisplay.matchesCategoryFilter(category, filter: "shirt"), category)
+            XCTAssertFalse(WardrobeCategoryDisplay.matchesCategoryFilter(category, filter: "t_shirt"), category)
+        }
+    }
+
+    func testSummaryCountsKeepShirtPoloAndTShirtSeparate() {
+        let summary = WardrobeSummary(
+            total_items: 30,
+            by_category: ["shirt": 9, "polo": 9, "t_shirt": 12],
+            by_color: [:],
+            categories: []
+        )
+
+        XCTAssertEqual(WardrobeCategoryDisplay.filterChipCount(from: summary, filterKey: "shirt"), 9)
+        XCTAssertEqual(WardrobeCategoryDisplay.filterChipCount(from: summary, filterKey: "polo"), 9)
+        XCTAssertEqual(WardrobeCategoryDisplay.filterChipCount(from: summary, filterKey: "t_shirt"), 12)
     }
 
     func testMatchesCategoryFilterGroupedCoreTrouserCategories() {
@@ -62,7 +93,7 @@ final class WardrobeCategoryFilterTests: XCTestCase {
     func testRebuildCategoryCountsGroupsCoreAndCountsExtendedExactly() {
         let counts = WardrobeCategoryDisplay.rebuildCategoryCounts(from: sampleItems)
 
-        XCTAssertEqual(counts["shirt"], 4)
+        XCTAssertEqual(counts["shirt"], 2)
         XCTAssertEqual(counts["trouser"], 3)
         XCTAssertEqual(counts["blazer"], 1)
         XCTAssertEqual(counts["polo"], 1)
@@ -150,7 +181,8 @@ final class WardrobeCategoryFilterTests: XCTestCase {
         )
 
         XCTAssertEqual(WardrobeCategoryDisplay.filterChipCount(from: summary, filterKey: "All"), 73)
-        XCTAssertEqual(WardrobeCategoryDisplay.filterChipCount(from: summary, filterKey: "shirt"), 25)
+        XCTAssertEqual(WardrobeCategoryDisplay.filterChipCount(from: summary, filterKey: "shirt"), 20)
+        XCTAssertEqual(WardrobeCategoryDisplay.filterChipCount(from: summary, filterKey: "polo"), 5)
         XCTAssertEqual(WardrobeCategoryDisplay.filterChipCount(from: summary, filterKey: "trouser"), 1)
         XCTAssertEqual(WardrobeCategoryDisplay.filterChipCount(from: summary, filterKey: "blazer"), 3)
         XCTAssertEqual(WardrobeCategoryDisplay.filterChipCount(from: summary, filterKey: "jacket"), 4)

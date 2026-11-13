@@ -34,7 +34,7 @@ export const WARDROBE_EXTENDED_FILTER_CHIPS: WardrobeFilterChip[] = [
 ];
 
 const CORE_GROUP_MATCHERS: Record<string, readonly string[]> = {
-  shirt: ['shirt', 't_shirt', 't-shirt', 'polo', 'tshirt', 'tee'],
+  shirt: ['shirt', 'shirts'],
   trouser: ['trouser', 'trousers', 'pants', 'jeans', 'shorts'],
   blazer: ['blazer', 'blazers', 'suit', 'sport_coat', 'sportcoat'],
   shoes: ['shoe', 'shoes'],
@@ -42,8 +42,8 @@ const CORE_GROUP_MATCHERS: Record<string, readonly string[]> = {
 };
 
 const EXTENDED_MATCHERS: Record<string, readonly string[]> = {
-  polo: ['polo'],
-  t_shirt: ['t_shirt', 't-shirt', 'tshirt'],
+  polo: ['polo', 'polos', 'polo_shirt', 'polo shirt'],
+  t_shirt: ['t_shirt', 't-shirt', 'tshirt', 't shirt', 'tee', 'tees'],
   jeans: ['jeans'],
   shorts: ['shorts'],
   sweater: ['sweater', 'sweaters'],
@@ -54,10 +54,17 @@ const EXTENDED_MATCHERS: Record<string, readonly string[]> = {
 
 const CATEGORY_BADGE_LABELS: Record<string, string> = {
   shirt: 'Shirt',
+  shirts: 'Shirt',
   polo: 'Polo',
+  polos: 'Polo',
+  polo_shirt: 'Polo',
+  'polo shirt': 'Polo',
   t_shirt: 'T-shirt',
   't-shirt': 'T-shirt',
   tshirt: 'T-shirt',
+  't shirt': 'T-shirt',
+  tee: 'T-shirt',
+  tees: 'T-shirt',
   trouser: 'Trousers',
   trousers: 'Trousers',
   pants: 'Trousers',
@@ -88,6 +95,8 @@ const ALL_EXTENDED_MATCH_VALUES = new Set(
 
 export const WARDROBE_FORM_CATEGORIES = [
   'shirt',
+  'polo',
+  't_shirt',
   'trouser',
   'blazer',
   'jacket',
@@ -114,10 +123,15 @@ const COMPLETE_OUTFIT_SLOT_ALIASES: Record<string, CompleteOutfitSlot> = {
   shirt: 'shirt',
   shirts: 'shirt',
   polo: 'shirt',
+  polos: 'shirt',
+  polo_shirt: 'shirt',
+  'polo shirt': 'shirt',
   t_shirt: 'shirt',
   't-shirt': 'shirt',
   tshirt: 'shirt',
+  't shirt': 'shirt',
   tee: 'shirt',
+  tees: 'shirt',
   trouser: 'trouser',
   trousers: 'trouser',
   pant: 'trouser',
@@ -354,7 +368,7 @@ export const usesClientSideCategoryFilter = (filterKey: string | null): boolean 
     return true;
   }
 
-  return ['t_shirt', 'sweater', 'jacket', 'coat', 'tie'].includes(filterKey);
+  return ['polo', 't_shirt', 'sweater', 'jacket', 'coat', 'tie'].includes(filterKey);
 };
 
 export const apiCategoryParamForFilter = (filterKey: string | null): string | undefined => {

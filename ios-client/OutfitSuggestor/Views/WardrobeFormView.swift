@@ -8,7 +8,7 @@
 import SwiftUI
 import UIKit
 
-private let wardrobeCategories = ["shirt", "trouser", "blazer", "jacket", "coat", "shoes", "belt", "other"]
+private let wardrobeCategories = ["shirt", "polo", "t_shirt", "trouser", "blazer", "jacket", "coat", "shoes", "belt", "other"]
 
 struct WardrobeFormView: View {
     let item: WardrobeItem?

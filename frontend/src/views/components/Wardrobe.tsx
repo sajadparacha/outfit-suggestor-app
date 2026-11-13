@@ -1753,7 +1753,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                       >
                         {categories.map((cat) => (
                           <option key={cat} value={cat}>
-                            {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                            {wardrobeCategoryLabel(cat)}
                           </option>
                         ))}
                       </select>
@@ -1852,7 +1852,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                             >
                               {categories.map((cat) => (
                                 <option key={cat} value={cat}>
-                                  {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                                  {wardrobeCategoryLabel(cat)}
                                 </option>
                               ))}
                             </select>
@@ -1997,7 +1997,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                             >
                               {categories.map((cat) => (
                                 <option key={cat} value={cat}>
-                                  {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                                  {wardrobeCategoryLabel(cat)}
                                 </option>
                               ))}
                             </select>
@@ -2088,7 +2088,7 @@ const Wardrobe: React.FC<WardrobeProps> = ({
                           >
                             {categories.map((cat) => (
                               <option key={cat} value={cat}>
-                                {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                                {wardrobeCategoryLabel(cat)}
                               </option>
                             ))}
                           </select>

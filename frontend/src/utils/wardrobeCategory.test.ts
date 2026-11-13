@@ -55,11 +55,29 @@ describe('wardrobeCategory helpers', () => {
   });
 
   describe('matchesWardrobeCategoryFilter', () => {
-    it('matches grouped core shirt categories', () => {
+    it('keeps polos and t-shirts out of the shirt filter', () => {
       expect(matchesWardrobeCategoryFilter('shirt', 'shirt')).toBe(true);
-      expect(matchesWardrobeCategoryFilter('polo', 'shirt')).toBe(true);
-      expect(matchesWardrobeCategoryFilter('t_shirt', 'shirt')).toBe(true);
+      expect(matchesWardrobeCategoryFilter('shirts', 'shirt')).toBe(true);
+      expect(matchesWardrobeCategoryFilter('polo', 'shirt')).toBe(false);
+      expect(matchesWardrobeCategoryFilter('t_shirt', 'shirt')).toBe(false);
+      expect(matchesWardrobeCategoryFilter('t-shirt', 'shirt')).toBe(false);
+      expect(matchesWardrobeCategoryFilter('tee', 'shirt')).toBe(false);
       expect(matchesWardrobeCategoryFilter('jeans', 'shirt')).toBe(false);
+    });
+
+    it('collects every t-shirt alias under the t-shirt filter', () => {
+      ['t_shirt', 't-shirt', 'tshirt', 'T-Shirt', 'tee', 'tees'].forEach((category) => {
+        expect(matchesWardrobeCategoryFilter(category, 't_shirt')).toBe(true);
+      });
+      expect(matchesWardrobeCategoryFilter('polo', 't_shirt')).toBe(false);
+    });
+
+    it('collects polos only under the polo filter', () => {
+      ['polo', 'polos', 'polo_shirt'].forEach((category) => {
+        expect(matchesWardrobeCategoryFilter(category, 'polo')).toBe(true);
+        expect(matchesWardrobeCategoryFilter(category, 'shirt')).toBe(false);
+        expect(matchesWardrobeCategoryFilter(category, 't_shirt')).toBe(false);
+      });
     });
 
     it('matches grouped core trouser categories', () => {
@@ -102,8 +120,18 @@ describe('wardrobeCategory helpers', () => {
   });
 
   describe('count helpers', () => {
+    it('counts shirts without polos or t-shirts', () => {
+      const demoSummary = {
+        total_items: 30,
+        by_category: { shirt: 9, polo: 9, t_shirt: 12 },
+      };
+      expect(getFilterChipCount(demoSummary, 'shirt')).toBe(9);
+      expect(getFilterChipCount(demoSummary, 'polo')).toBe(9);
+      expect(getFilterChipCount(demoSummary, 't_shirt')).toBe(12);
+    });
+
     it('groups core shirt counts and separates blazer from jacket', () => {
-      expect(getCoreFilterCount(sampleSummary, 'shirt')).toBe(4);
+      expect(getCoreFilterCount(sampleSummary, 'shirt')).toBe(2);
       expect(getCoreFilterCount(sampleSummary, 'trouser')).toBe(3);
       expect(getCoreFilterCount(sampleSummary, 'blazer')).toBe(1);
       expect(getExtendedFilterCount(sampleSummary, 'jacket')).toBe(1);
@@ -162,6 +190,12 @@ describe('wardrobeCategory helpers', () => {
       expect(WARDROBE_FORM_CATEGORIES).toEqual(
         expect.arrayContaining(['blazer', 'jacket', 'coat'])
       );
+    });
+
+    it('offers polo and t-shirt as their own add/edit form categories', () => {
+      expect(WARDROBE_FORM_CATEGORIES).toEqual(expect.arrayContaining(['shirt', 'polo', 't_shirt']));
+      expect(wardrobeCategoryLabel('t_shirt')).toBe('T-shirt');
+      expect(wardrobeCategoryLabel('tee')).toBe('T-shirt');
     });
 
     it('maps jacket and coat to outerwear completion slot', () => {
@@ -224,8 +258,8 @@ describe('wardrobeCategory helpers', () => {
     });
 
     it('allows API category param for single-alias extended filters', () => {
-      expect(apiCategoryParamForFilter('polo')).toBe('polo');
       expect(apiCategoryParamForFilter('jeans')).toBe('jeans');
+      expect(apiCategoryParamForFilter('polo')).toBeUndefined();
       expect(apiCategoryParamForFilter('t_shirt')).toBeUndefined();
     });
   });

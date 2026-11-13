@@ -40,7 +40,7 @@ enum WardrobeCategoryDisplay {
     ]
 
     private static let coreGroupMatchers: [String: [String]] = [
-        "shirt": ["shirt", "t_shirt", "t-shirt", "polo", "tshirt", "tee"],
+        "shirt": ["shirt", "shirts"],
         "trouser": ["trouser", "trousers", "pants", "jeans", "shorts"],
         "blazer": ["blazer", "blazers", "suit", "sport_coat", "sport coat", "sportcoat"],
         "shoes": ["shoe", "shoes"],
@@ -48,8 +48,8 @@ enum WardrobeCategoryDisplay {
     ]
 
     private static let extendedMatchers: [String: [String]] = [
-        "polo": ["polo"],
-        "t_shirt": ["t_shirt", "t-shirt", "tshirt"],
+        "polo": ["polo", "polos", "polo_shirt", "polo shirt"],
+        "t_shirt": ["t_shirt", "t-shirt", "tshirt", "t shirt", "tee", "tees"],
         "jeans": ["jeans"],
         "shorts": ["shorts"],
         "sweater": ["sweater", "sweaters"],
@@ -60,10 +60,17 @@ enum WardrobeCategoryDisplay {
 
     private static let categoryBadgeLabels: [String: String] = [
         "shirt": "Shirt",
+        "shirts": "Shirt",
         "polo": "Polo",
+        "polos": "Polo",
+        "polo_shirt": "Polo",
+        "polo shirt": "Polo",
         "t_shirt": "T-shirt",
         "t-shirt": "T-shirt",
         "tshirt": "T-shirt",
+        "t shirt": "T-shirt",
+        "tee": "T-shirt",
+        "tees": "T-shirt",
         "trouser": "Trousers",
         "trousers": "Trousers",
         "pants": "Trousers",
