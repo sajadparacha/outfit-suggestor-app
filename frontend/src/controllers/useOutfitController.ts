@@ -31,6 +31,7 @@ import {
 } from '../utils/outfitPreferences';
 import type { OutfitCategoryKey } from '../utils/outfitItemThumbnail';
 import { firstWardrobePreviewUrl, inferOutfitSlotFromWardrobeCategory, previewUrlForSelectedWardrobeItems } from '../utils/outfitItemThumbnail';
+import { cleanUploadMarkerText, describeUploadedOuterwear } from '../utils/outfitLayerExclusivity';
 import {
   historyEntrySummaryFilters,
   historyEntryToSuggestion,
@@ -333,14 +334,28 @@ export const useOutfitController = (options?: {
       }
 
       if (normalizedUploadCategory === 'outerwear' && sourceWardrobeItem) {
-        if (
-          outerwear == null ||
-          String(outerwear).trim() === '' ||
-          ['null', 'none', 'n/a'].includes(String(outerwear).trim().toLowerCase())
-        ) {
-          const label = sourceWardrobeItem.category?.toLowerCase().includes('coat') ? 'coat' : 'jacket';
-          const colorSuffix = sourceWardrobeItem.color ? ` — ${sourceWardrobeItem.color}` : '';
-          outerwear = `Your wardrobe ${label}${colorSuffix} (uploaded item)`;
+        // Keep any real description around a legacy marker; never emit the bare placeholder.
+        const cleanedOuterwear = cleanUploadMarkerText(outerwear);
+        if (cleanedOuterwear != null) {
+          outerwear = cleanedOuterwear;
+        } else {
+          let matchedDescription: string | null = null;
+          if (data.matching_wardrobe_items) {
+            for (const items of Object.values(data.matching_wardrobe_items)) {
+              const match = items?.find(
+                (item: MatchingWardrobeItem) => item.id === sourceWardrobeItem.id
+              );
+              if (match) {
+                matchedDescription = match.description ?? null;
+                break;
+              }
+            }
+          }
+          outerwear = describeUploadedOuterwear({
+            category: sourceWardrobeItem.category,
+            color: sourceWardrobeItem.color,
+            description: sourceWardrobeItem.description ?? matchedDescription,
+          });
         }
         if (outerwear_id == null) {
           outerwear_id = sourceWardrobeItem.id;
@@ -749,6 +764,7 @@ export const useOutfitController = (options?: {
       id: item.id,
       category: item.category,
       color: item.color,
+      description: item.description,
     });
     setImage(file);
   }, [clearInputPanelSummary]);

@@ -132,6 +132,66 @@ describe('useOutfitController getSuggestion variations', () => {
     expect(hook.result.current.currentSuggestion?.shirt_id).toBeFalsy();
   });
 
+  it('uses the source wardrobe description when the AI returns the legacy uploaded-item placeholder', async () => {
+    jest.spyOn(ApiService, 'getSuggestion').mockResolvedValue({
+      ...mockApiResponse,
+      source_slot: 'blazer',
+      upload_matched_category: 'blazer',
+      outerwear: 'Your wardrobe jacket (uploaded item)',
+      source_wardrobe_item_id: 12,
+    });
+
+    const hook = renderHook(() => useOutfitController());
+    const uploadFile = new File(['photo-bytes'], 'jacket.jpg', { type: 'image/jpeg' });
+
+    act(() => {
+      hook.result.current.setImage(uploadFile);
+      hook.result.current.setSourceWardrobeItem({
+        id: 12,
+        category: 'jacket',
+        color: 'Tan',
+        description: 'Tan suede jacket',
+      });
+    });
+
+    await act(async () => {
+      await hook.result.current.getSuggestion(true);
+    });
+
+    const outerwear = hook.result.current.currentSuggestion?.outerwear;
+    expect(outerwear).toBe('Tan suede jacket');
+    expect(outerwear).not.toMatch(/uploaded (item|image)|your upload/i);
+  });
+
+  it('keeps the colour from marker text instead of falling back to the photo phrase', async () => {
+    jest.spyOn(ApiService, 'getSuggestion').mockResolvedValue({
+      ...mockApiResponse,
+      source_slot: 'outerwear',
+      upload_matched_category: 'outerwear',
+      outerwear: 'From your upload — navy bomber jacket',
+      source_wardrobe_item_id: 12,
+    });
+
+    const hook = renderHook(() => useOutfitController());
+    const uploadFile = new File(['photo-bytes'], 'jacket.jpg', { type: 'image/jpeg' });
+
+    act(() => {
+      hook.result.current.setImage(uploadFile);
+      hook.result.current.setSourceWardrobeItem({
+        id: 12,
+        category: 'jacket',
+        color: 'Navy',
+        description: null,
+      });
+    });
+
+    await act(async () => {
+      await hook.result.current.getSuggestion(true);
+    });
+
+    expect(hook.result.current.currentSuggestion?.outerwear).toBe('navy bomber jacket');
+  });
+
   it('clears wrong shirt_id when API pins jacket source to shirt slot', async () => {
     jest.spyOn(ApiService, 'getSuggestion').mockResolvedValue({
       ...mockApiResponse,
@@ -230,6 +290,7 @@ describe('useOutfitController prepareStyleFromWardrobeItem', () => {
       id: 7,
       category: 'shirt',
       color: 'Blue',
+      description: null,
     });
     expect(hook.result.current.image).toBeInstanceOf(File);
     expect(hook.result.current.image?.name).toBe('wardrobe-item-7.jpg');

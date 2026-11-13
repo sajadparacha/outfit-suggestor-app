@@ -21,7 +21,12 @@ export function resolveSourceWardrobeItemFromSuggestion(
   for (const category of SOURCE_WARDROBE_CATEGORIES) {
     const match = suggestion.matching_wardrobe_items[category]?.find((item) => item.id === sourceId);
     if (match) {
-      return { id: match.id, category: match.category, color: match.color };
+      return {
+        id: match.id,
+        category: match.category,
+        color: match.color,
+        description: match.description,
+      };
     }
   }
   return null;

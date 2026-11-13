@@ -8,6 +8,8 @@ export interface SourceWardrobeItem {
   id: number;
   category: string;
   color?: string | null;
+  /** Wardrobe description — preferred copy for the uploaded outerwear slot. */
+  description?: string | null;
 }
 
 export interface MatchingWardrobeItem {
