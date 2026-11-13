@@ -177,10 +177,13 @@ enum OutfitItemCardSourceTag {
             return suggestion
         }
         var updated = suggestion
-        let existing = updated.outerwear?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        if existing.isEmpty || ["null", "none", "n/a"].contains(existing.lowercased()) {
-            let label = normalizedSource.contains("coat") ? "coat" : "jacket"
-            updated.outerwear = "Your wardrobe \(label) (uploaded item)"
+        if let cleaned = OutfitUploadCategory.cleanUploadMarkerText(updated.outerwear) {
+            updated.outerwear = cleaned
+        } else {
+            updated.outerwear = OutfitLayerExclusivity.uploadOuterwearText(
+                suggestion: updated,
+                sourceWardrobeCategory: sourceCategory
+            )
         }
         return updated
     }

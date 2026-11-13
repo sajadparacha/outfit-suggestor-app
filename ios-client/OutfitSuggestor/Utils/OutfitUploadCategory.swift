@@ -32,6 +32,70 @@ enum OutfitUploadCategory {
     private static let dressShirtOnlyPattern =
         "\\b(dress shirt|oxford shirt|button[- ]down shirt|formal shirt)\\b"
 
+    /// True when text was written by older builds as an upload placeholder
+    /// (e.g. "Your wardrobe jacket (uploaded item)"). Detection only — never displayed.
+    static func textHasUploadMarker(_ text: String?) -> Bool {
+        guard let lower = text?.lowercased(), !lower.isEmpty else { return false }
+        return uploadTextMarkers.contains(where: { lower.contains($0) })
+    }
+
+    private static let nullishText: Set<String> = ["null", "none", "n/a", "-", ""]
+
+    /// Bare placeholders that carry no garment information once markers are stripped.
+    private static let genericUploadText: Set<String> = [
+        "your wardrobe jacket",
+        "your wardrobe coat",
+        "your wardrobe item",
+        "your jacket",
+        "your coat",
+        "wardrobe jacket",
+        "wardrobe coat",
+        "the jacket",
+        "the coat",
+        "jacket",
+        "coat",
+        "item",
+    ]
+
+    private static let uploadMarkerPattern =
+        "(?:\\(|\\[)?\\s*(?:uploaded item|from your upload|your upload|uploaded image)\\s*(?:\\)|\\])?"
+
+    private static let edgeTrimCharacters = CharacterSet(charactersIn: " -—–,;:.")
+
+    /// Strip legacy upload markers while keeping any real description around them.
+    /// Mirrors backend `clean_upload_marker_text` in utils/outfit_upload_category.py.
+    ///
+    /// Returns nil when nothing usable is left (empty, null-ish, or a bare
+    /// "your wardrobe jacket (uploaded item)" placeholder) so callers can fall back
+    /// to a generated description. "From your upload — navy bomber jacket" keeps
+    /// "navy bomber jacket" instead of being thrown away.
+    static func cleanUploadMarkerText(_ text: String?) -> String? {
+        guard let text else { return nil }
+        let stripped = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if nullishText.contains(stripped.lowercased()) {
+            return nil
+        }
+        guard textHasUploadMarker(stripped) else { return stripped }
+
+        var cleaned = stripped.replacingOccurrences(
+            of: uploadMarkerPattern,
+            with: " ",
+            options: [.regularExpression, .caseInsensitive]
+        )
+        cleaned = cleaned.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        cleaned = cleaned.trimmingCharacters(in: edgeTrimCharacters)
+        cleaned = cleaned.replacingOccurrences(
+            of: "^(?:from|the)\\s+",
+            with: "",
+            options: [.regularExpression, .caseInsensitive]
+        )
+        cleaned = cleaned.trimmingCharacters(in: edgeTrimCharacters)
+        if cleaned.isEmpty || genericUploadText.contains(cleaned.lowercased()) {
+            return nil
+        }
+        return cleaned
+    }
+
     static func textSuggestsOuterwear(_ text: String?) -> Bool {
         guard let trimmed = text?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else {
             return false
@@ -146,16 +210,18 @@ enum OutfitUploadCategory {
         }
 
         let existing = updated.outerwear?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        if existing.isEmpty || ["null", "none", "n/a"].contains(existing.lowercased()) {
-            if let itemId = sourceId,
-               let item = findMatchingWardrobeItemById(suggestion: updated, itemId: itemId),
-               let description = item.description?.trimmingCharacters(in: .whitespacesAndNewlines),
-               !description.isEmpty {
-                updated.outerwear = description
-            } else {
-                let label = (sourceWardrobeCategory ?? "").lowercased().contains("coat") ? "coat" : "jacket"
-                updated.outerwear = "Your wardrobe \(label) (uploaded item)"
-            }
+        if let cleaned = cleanUploadMarkerText(existing) {
+            updated.outerwear = cleaned
+        } else if let itemId = sourceId,
+                  let item = findMatchingWardrobeItemById(suggestion: updated, itemId: itemId),
+                  let description = item.description?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !description.isEmpty {
+            updated.outerwear = description
+        } else {
+            updated.outerwear = OutfitLayerExclusivity.uploadOuterwearText(
+                suggestion: updated,
+                sourceWardrobeCategory: sourceWardrobeCategory
+            )
         }
 
         return updated

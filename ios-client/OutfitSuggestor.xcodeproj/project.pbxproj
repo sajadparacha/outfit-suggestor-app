@@ -125,6 +125,7 @@
 		W1A2B3C4D5E6F708192A3B51 /* WardrobeCardUx.swift in Sources */ = {isa = PBXBuildFile; fileRef = W1A2B3C4D5E6F708192A3B50 /* WardrobeCardUx.swift */; };
 		W2A3B4C5D6E7F809293A4B61 /* WardrobeCardUxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = W2A3B4C5D6E7F809293A4B60 /* WardrobeCardUxTests.swift */; };
 		ARS0000000000000000000C1 /* APIResponseSizeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ARS0000000000000000000C2 /* APIResponseSizeTests.swift */; };
+		A0E0000000000000000000C1 /* OutfitLayerExclusivityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0E0000000000000000000C2 /* OutfitLayerExclusivityTests.swift */; };
 		WCF01BF0000000000000001 /* WardrobeCategoryDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCF01FR0000000000000001 /* WardrobeCategoryDisplay.swift */; };
 		WCF01BF0000000000000002 /* WardrobeCategoryFilterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCF01FR0000000000000002 /* WardrobeCategoryFilterTests.swift */; };
 		WCG01BF0000000000000001 /* WardrobeCoverageGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WCG01FR0000000000000001 /* WardrobeCoverageGridView.swift */; };
@@ -358,6 +359,7 @@
 		W1A2B3C4D5E6F708192A3B50 /* WardrobeCardUx.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCardUx.swift; sourceTree = "<group>"; };
 		W2A3B4C5D6E7F809293A4B60 /* WardrobeCardUxTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCardUxTests.swift; sourceTree = "<group>"; };
 		ARS0000000000000000000C2 /* APIResponseSizeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIResponseSizeTests.swift; sourceTree = "<group>"; };
+		A0E0000000000000000000C2 /* OutfitLayerExclusivityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutfitLayerExclusivityTests.swift; sourceTree = "<group>"; };
 		WCF01FR0000000000000001 /* WardrobeCategoryDisplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCategoryDisplay.swift; sourceTree = "<group>"; };
 		WCF01FR0000000000000002 /* WardrobeCategoryFilterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCategoryFilterTests.swift; sourceTree = "<group>"; };
 		WCG01FR0000000000000001 /* WardrobeCoverageGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WardrobeCoverageGridView.swift; sourceTree = "<group>"; };
@@ -453,6 +455,7 @@
 				D86343F4A060EB70A1831EAA /* OutfitViewModelIntegrationTests.swift */,
 				W2A3B4C5D6E7F809293A4B60 /* WardrobeCardUxTests.swift */,
 				ARS0000000000000000000C2 /* APIResponseSizeTests.swift */,
+				A0E0000000000000000000C2 /* OutfitLayerExclusivityTests.swift */,
 				WFE04FR0000000000000001 /* WardrobeFitEvaluateTests.swift */,
 				RLT01FR0000000000000001 /* RecentLooksThumbnailTests.swift */,
 				ILB01FR0000000000000002 /* IosLayoutBugFixPresentationTests.swift */,
@@ -1057,6 +1060,7 @@
 				BDC51E614A7C765FB3FA7572 /* OutfitViewModelIntegrationTests.swift in Sources */,
 				W2A3B4C5D6E7F809293A4B61 /* WardrobeCardUxTests.swift in Sources */,
 				ARS0000000000000000000C1 /* APIResponseSizeTests.swift in Sources */,
+				A0E0000000000000000000C1 /* OutfitLayerExclusivityTests.swift in Sources */,
 				WFE04BF0000000000000001 /* WardrobeFitEvaluateTests.swift in Sources */,
 				RLT01BF0000000000000001 /* RecentLooksThumbnailTests.swift in Sources */,
 				ILB01BF0000000000000002 /* IosLayoutBugFixPresentationTests.swift in Sources */,
