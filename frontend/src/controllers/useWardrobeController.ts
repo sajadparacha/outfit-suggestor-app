@@ -10,7 +10,10 @@ import { compressImageForWardrobe } from '../utils/imageUtils';
 import { invalidateWardrobeItem, primeWardrobeItem } from '../utils/fullImageCache';
 import { apiCategoryParamForFilter, usesClientSideCategoryFilter } from '../utils/wardrobeCategory';
 
+/** Page size for bulk loads (backend caps `limit` at 100). */
 const CLIENT_SIDE_FILTER_LOAD_LIMIT = 100;
+/** Safety cap so a bad `total` can never loop forever. */
+const BULK_FETCH_MAX_PAGES = 100;
 
 interface UseWardrobeControllerReturn {
   // State
@@ -48,6 +51,47 @@ export const useWardrobeController = (): UseWardrobeControllerReturn => {
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   /**
+   * Fetch every page of the wardrobe (used when the list is filtered client-side,
+   * e.g. grouped chips such as Trousers = trouser/trousers/jeans/shorts).
+   * Chips read their count from the summary endpoint, so stopping at the first
+   * page would show fewer items than the count.
+   */
+  const fetchAllWardrobePages = useCallback(async (
+    category?: string,
+    search?: string
+  ): Promise<{ items: WardrobeItem[]; total: number }> => {
+    const collected: WardrobeItem[] = [];
+    let total = 0;
+    let offset = 0;
+
+    for (let guard = 0; guard < BULK_FETCH_MAX_PAGES; guard += 1) {
+      const response = await ApiService.getWardrobe(
+        category,
+        search,
+        CLIENT_SIDE_FILTER_LOAD_LIMIT,
+        offset
+      );
+
+      if (Array.isArray(response)) {
+        return { items: response, total: response.length };
+      }
+
+      const pageItems = Array.isArray(response?.items) ? response.items : [];
+      total = typeof response?.total === 'number'
+        ? response.total
+        : collected.length + pageItems.length;
+      collected.push(...pageItems);
+
+      if (pageItems.length === 0 || collected.length >= total) {
+        break;
+      }
+      offset += pageItems.length;
+    }
+
+    return { items: collected, total };
+  }, []);
+
+  /**
    * Load wardrobe items with pagination and search
    */
   const loadWardrobe = useCallback(async (
@@ -60,6 +104,19 @@ export const useWardrobeController = (): UseWardrobeControllerReturn => {
     setError(null);
     
     try {
+      if (limit) {
+        // Bulk mode: pull the whole (optionally search-filtered) wardrobe so the
+        // client-side category filter can match items past the first page.
+        const { items, total } = await fetchAllWardrobePages(category, search);
+        setWardrobeItems(items);
+        setTotalCount(total);
+        setCurrentPage(1);
+        if (search !== undefined) {
+          setSearchQuery(search);
+        }
+        return;
+      }
+
       const pageSize = limit ?? itemsPerPage;
       const offset = (page - 1) * pageSize;
       const response = await ApiService.getWardrobe(category, search, pageSize, offset);
@@ -88,7 +145,7 @@ export const useWardrobeController = (): UseWardrobeControllerReturn => {
     } finally {
       setLoading(false);
     }
-  }, [itemsPerPage]);
+  }, [fetchAllWardrobePages, itemsPerPage]);
 
   const reloadWardrobeForCurrentFilter = useCallback(async (page: number = 1) => {
     const apiCategory = apiCategoryParamForFilter(selectedCategory);
