@@ -207,6 +207,35 @@ def test_detected_upload_category_overrides_mis_slotted_shirt():
     assert corrected.upload_matched_category == "outerwear"
 
 
+def test_text_only_suggestion_drops_spurious_upload_slot(monkeypatch):
+    ai = AIService(api_key="test-key")
+    raw = (
+        '{"shirt":"White shirt","trouser":"Navy chinos","blazer":"Charcoal blazer",'
+        '"shoes":"Loafers","belt":"Brown belt","outerwear":null,"source_slot":"outerwear",'
+        '"detected_upload_category":"outerwear","reasoning":"Casual"}'
+    )
+
+    class _Message:
+        content = raw
+
+    class _Choice:
+        message = _Message()
+
+    class _Response:
+        choices = [_Choice()]
+        usage = None
+
+    monkeypatch.setattr(
+        ai.client.chat.completions, "create", lambda **_kwargs: _Response()
+    )
+
+    suggestion, _ = ai.get_outfit_suggestion_text_only(text_input="Occasion: casual")
+
+    assert suggestion.source_slot is None
+    assert suggestion.upload_matched_category is None
+    assert suggestion.outerwear is None
+
+
 def test_jacket_source_slot_maps_to_outerwear_not_blazer():
     ai = AIService(api_key="test-key")
     raw = (

@@ -216,7 +216,7 @@ class AIService:
             )
 
             content = response.choices[0].message.content
-            suggestion = self._parse_response(content)
+            suggestion = self._strip_upload_anchor(self._parse_response(content))
             suggestion.ai_prompt = prompt
             suggestion.ai_raw_response = content
 
@@ -234,6 +234,13 @@ class AIService:
                 status_code=500,
                 detail=f"Error calling OpenAI API (text-only): {str(e)}"
             )
+
+    @staticmethod
+    def _strip_upload_anchor(suggestion: OutfitSuggestion) -> OutfitSuggestion:
+        """Text-only requests have no uploaded image, so any upload slot the model returns is spurious."""
+        suggestion.source_slot = None
+        suggestion.upload_matched_category = None
+        return suggestion
 
     def analyze_wardrobe_gaps_with_chatgpt(
         self,

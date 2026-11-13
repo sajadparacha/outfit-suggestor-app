@@ -680,6 +680,49 @@ class TestOutfitEndpoints:
             prompt = data.get("ai_prompt") or ""
             assert "PREV:Shirt: white" in prompt or "white" in prompt.lower()
 
+    def test_wardrobe_only_ignores_spurious_upload_slot_from_ai(
+        self, client, auth_headers, wardrobe_item
+    ):
+        """Random from wardrobe has no upload; an AI-returned source_slot must not create an 'uploaded item' jacket."""
+        from config import get_outfit_controller
+        from controllers.outfit_controller import OutfitController
+        from main import app
+        from models.outfit import OutfitSuggestion
+        from services.outfit_service import OutfitService
+
+        class _SpuriousSlotAI:
+            def get_outfit_suggestion_text_only(self, **_kwargs):
+                return (
+                    OutfitSuggestion(
+                        shirt="Navy oxford shirt",
+                        trouser="Grey chinos",
+                        blazer="Charcoal blazer",
+                        shoes="Brown loafers",
+                        belt="Brown belt",
+                        outerwear=None,
+                        source_slot="outerwear",
+                        reasoning="Smart casual",
+                    ),
+                    {"gpt4_cost": 0.0, "model_image_cost": 0.0, "total_cost": 0.0},
+                )
+
+        app.dependency_overrides[get_outfit_controller] = lambda: OutfitController(
+            _SpuriousSlotAI(), OutfitService()
+        )
+
+        response = client.post(
+            "/api/suggest-outfit-from-wardrobe",
+            json={"occasion": "casual", "season": "winter", "style": "modern"},
+            headers=auth_headers,
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        body = response.json()
+        assert "uploaded item" not in (body.get("outerwear") or "").lower()
+        assert body.get("source_slot") is None
+        assert body.get("upload_matched_category") is None
+        assert body["blazer"] == "Charcoal blazer"
+
 
 class TestOutfitSuggestionOptionalLayers:
     """Schema tests for optional sweater/outerwear/tie fields."""

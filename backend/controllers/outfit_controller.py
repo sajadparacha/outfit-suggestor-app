@@ -1061,6 +1061,8 @@ class OutfitController:
                 previous_outfit_text=previous_outfit_text,
                 avoid_outfit_texts=avoid_outfit_texts,
             )
+            suggestion.source_slot = None
+            suggestion.upload_matched_category = None
             self._pin_selected_items_to_suggestion(
                 suggestion,
                 selected_by_slot,
